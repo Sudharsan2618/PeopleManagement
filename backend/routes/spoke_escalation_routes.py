@@ -6,7 +6,7 @@ from services.spoke_escalation_service import SpokeEscalationService
 router = APIRouter(prefix="/spoke-escalations", tags=["spoke-escalations"])
 
 
-@router.get("/", response_model=List[SpokeEscalation])
+@router.get("", response_model=List[SpokeEscalation])
 def get_all_escalations():
     """Get all spoke escalations."""
     try:
@@ -45,7 +45,7 @@ def get_unresolved_escalations():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=SpokeEscalation, status_code=201)
+@router.post("", response_model=SpokeEscalation, status_code=201)
 def create_escalation(escalation: SpokeEscalationCreate):
     """Create a new spoke escalation."""
     try:

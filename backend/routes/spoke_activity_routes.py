@@ -6,7 +6,7 @@ from services.spoke_activity_service import SpokeActivityService
 router = APIRouter(prefix="/spoke-activities", tags=["spoke-activities"])
 
 
-@router.get("/", response_model=List[SpokeActivity])
+@router.get("", response_model=List[SpokeActivity])
 def get_all_activities():
     """Get all spoke activities."""
     try:
@@ -35,7 +35,7 @@ def get_activities_by_report(report_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=SpokeActivity, status_code=201)
+@router.post("", response_model=SpokeActivity, status_code=201)
 def create_activity(activity: SpokeActivityCreate):
     """Create a new spoke activity."""
     try:

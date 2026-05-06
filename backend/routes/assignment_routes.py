@@ -7,7 +7,7 @@ from services.assignment_service import AssignmentService
 router = APIRouter(prefix="/assignments", tags=["assignments"])
 
 
-@router.get("/", response_model=List[ProspectAssignment])
+@router.get("", response_model=List[ProspectAssignment])
 def get_all_assignments():
     """Get all prospect assignments."""
     try:
@@ -55,7 +55,7 @@ def get_assignment_by_prospect_and_date(prospect_id: int, assigned_date: date):
     return assignment
 
 
-@router.post("/", response_model=ProspectAssignment, status_code=201)
+@router.post("", response_model=ProspectAssignment, status_code=201)
 def create_assignment(assignment: ProspectAssignmentCreate):
     """Create a new prospect assignment."""
     try:

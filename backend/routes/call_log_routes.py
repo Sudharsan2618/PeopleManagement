@@ -6,7 +6,7 @@ from services.call_log_service import CallLogService
 router = APIRouter(prefix="/call-logs", tags=["call-logs"])
 
 
-@router.get("/", response_model=List[CallLog])
+@router.get("", response_model=List[CallLog])
 def get_all_call_logs():
     """Get all call logs."""
     try:
@@ -55,7 +55,7 @@ def get_pending_callbacks():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=CallLog, status_code=201)
+@router.post("", response_model=CallLog, status_code=201)
 def create_call_log(call_log: CallLogCreate):
     """Create a new call log."""
     try:

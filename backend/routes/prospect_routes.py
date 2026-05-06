@@ -6,7 +6,7 @@ from services.prospect_service import ProspectService
 router = APIRouter(prefix="/prospects", tags=["prospects"])
 
 
-@router.get("/", response_model=List[Prospect])
+@router.get("", response_model=List[Prospect])
 def get_all_prospects():
     """Get all prospects."""
     try:
@@ -45,7 +45,7 @@ def get_prospects_by_creator(created_by: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=Prospect, status_code=201)
+@router.post("", response_model=Prospect, status_code=201)
 def create_prospect(prospect: ProspectCreate):
     """Create a new prospect."""
     try:

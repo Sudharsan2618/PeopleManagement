@@ -6,7 +6,7 @@ from services.user_service import UserService
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/", response_model=List[User])
+@router.get("", response_model=List[User])
 def get_all_users():
     """Get all users."""
     try:
@@ -46,7 +46,7 @@ def get_users_by_role(role: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=User, status_code=201)
+@router.post("", response_model=User, status_code=201)
 def create_user(user: UserCreate):
     """Create a new user."""
     try:

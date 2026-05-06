@@ -6,7 +6,7 @@ from services.followup_task_service import FollowUpTaskService
 router = APIRouter(prefix="/followup-tasks", tags=["followup-tasks"])
 
 
-@router.get("/", response_model=List[FollowUpTask])
+@router.get("", response_model=List[FollowUpTask])
 def get_all_tasks():
     """Get all follow-up tasks."""
     try:
@@ -55,7 +55,7 @@ def get_overdue_tasks():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=FollowUpTask, status_code=201)
+@router.post("", response_model=FollowUpTask, status_code=201)
 def create_task(task: FollowUpTaskCreate):
     """Create a new follow-up task."""
     try:

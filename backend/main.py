@@ -15,7 +15,8 @@ from routes import (
 app = FastAPI(
     title="Course Enrollment Management System API",
     description="Backend API for Course Enrollment Management System (CEMS)",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False
 )
 
 # CORS middleware configuration

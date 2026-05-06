@@ -6,7 +6,7 @@ from services.spoke_report_service import SpokeReportService
 router = APIRouter(prefix="/spoke-reports", tags=["spoke-reports"])
 
 
-@router.get("/", response_model=List[SpokeReport])
+@router.get("", response_model=List[SpokeReport])
 def get_all_reports():
     """Get all spoke reports."""
     try:
@@ -45,7 +45,7 @@ def get_draft_reports():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=SpokeReport, status_code=201)
+@router.post("", response_model=SpokeReport, status_code=201)
 def create_report(report: SpokeReportCreate):
     """Create a new spoke report."""
     try:

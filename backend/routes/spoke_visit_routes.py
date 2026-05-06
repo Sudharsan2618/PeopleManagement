@@ -6,7 +6,7 @@ from services.spoke_visit_service import SpokeVisitService
 router = APIRouter(prefix="/spoke-visits", tags=["spoke-visits"])
 
 
-@router.get("/", response_model=List[SpokeVisitEntry])
+@router.get("", response_model=List[SpokeVisitEntry])
 def get_all_visits():
     """Get all spoke visit entries."""
     try:
@@ -35,7 +35,7 @@ def get_visits_by_report(report_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/", response_model=SpokeVisitEntry, status_code=201)
+@router.post("", response_model=SpokeVisitEntry, status_code=201)
 def create_visit(visit: SpokeVisitEntryCreate):
     """Create a new spoke visit entry."""
     try:
