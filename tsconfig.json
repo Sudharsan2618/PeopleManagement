@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["UI/*"]
+    }
+  },
+  "exclude": ["node_modules", "backend"]
+}
