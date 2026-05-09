@@ -106,36 +106,28 @@ class FollowUpTaskService:
         """Update task details."""
         updates = []
         params = []
-        param_count = 1
         
         if assigned_to_role is not None:
-            updates.append(f"assigned_to_role = ${param_count}")
+            updates.append("assigned_to_role = %s")
             params.append(assigned_to_role)
-            param_count += 1
         if assigned_to_user_id is not None:
-            updates.append(f"assigned_to_user_id = ${param_count}")
+            updates.append("assigned_to_user_id = %s")
             params.append(assigned_to_user_id)
-            param_count += 1
         if institution_name is not None:
-            updates.append(f"institution_name = ${param_count}")
+            updates.append("institution_name = %s")
             params.append(institution_name)
-            param_count += 1
         if action_description is not None:
-            updates.append(f"action_description = ${param_count}")
+            updates.append("action_description = %s")
             params.append(action_description)
-            param_count += 1
         if follow_up_date is not None:
-            updates.append(f"follow_up_date = ${param_count}")
+            updates.append("follow_up_date = %s")
             params.append(follow_up_date)
-            param_count += 1
         if status is not None:
-            updates.append(f"status = ${param_count}")
+            updates.append("status = %s")
             params.append(status)
-            param_count += 1
         if resolution_note is not None:
-            updates.append(f"resolution_note = ${param_count}")
+            updates.append("resolution_note = %s")
             params.append(resolution_note)
-            param_count += 1
         
         if not updates:
             return 0
@@ -144,7 +136,7 @@ class FollowUpTaskService:
         query = f"""
             UPDATE follow_up_tasks
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

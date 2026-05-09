@@ -1,25 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   History,
-  Search,
-  Calendar,
   Phone,
-  PhoneOff,
+  Search,
+  Loader2,
+  RefreshCw,
   Clock,
-  XCircle,
-  Ban,
-  Globe,
-  ThumbsUp,
-  CheckCircle2,
-  GraduationCap,
-  Download,
+  Filter,
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -36,234 +32,264 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import {
-  type CallOutcome,
-  mockCallAttempts,
-  mockProspects,
-  mockCourses,
-} from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
+import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
 
-const outcomeConfig: Record<
-  CallOutcome,
-  { label: string; icon: React.ComponentType<{ className?: string }>; color: string }
-> = {
-  NotAnswered: { label: "Not Answered", icon: PhoneOff, color: "text-orange-500" },
-  Busy: { label: "Busy", icon: Phone, color: "text-yellow-500" },
-  WrongNumber: { label: "Wrong Number", icon: XCircle, color: "text-red-500" },
-  CallBack: { label: "Callback", icon: Clock, color: "text-blue-500" },
-  NotInterested: { label: "Not Interested", icon: XCircle, color: "text-gray-500" },
-  DNC: { label: "DNC", icon: Ban, color: "text-red-600" },
-  LanguageBarrier: { label: "Language Barrier", icon: Globe, color: "text-amber-500" },
-  Interested: { label: "Interested", icon: ThumbsUp, color: "text-green-500" },
-  Qualified: { label: "Qualified", icon: CheckCircle2, color: "text-emerald-600" },
-  EnrolledElsewhere: { label: "Enrolled Elsewhere", icon: GraduationCap, color: "text-purple-500" },
+const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
+  not_answered: { label: "Not Answered", color: "bg-orange-100 text-orange-800" },
+  busy: { label: "Busy", color: "bg-yellow-100 text-yellow-800" },
+  wrong_number: { label: "Wrong Number", color: "bg-red-100 text-red-800" },
+  callback: { label: "Callback", color: "bg-blue-100 text-blue-800" },
+  not_interested: { label: "Not Interested", color: "bg-gray-100 text-gray-800" },
+  dnc: { label: "DNC", color: "bg-red-100 text-red-800" },
+  language_barrier: { label: "Language Barrier", color: "bg-amber-100 text-amber-800" },
+  interested: { label: "Interested", color: "bg-green-100 text-green-800" },
+  qualified: { label: "Qualified", color: "bg-emerald-100 text-emerald-800" },
+  enrolled_elsewhere: { label: "Enrolled Elsewhere", color: "bg-purple-100 text-purple-800" },
 }
 
-// Combine call attempts with prospect data
-const callHistoryWithDetails = mockCallAttempts.map((call) => {
-  const prospect = mockProspects.find((p) => p.id === call.prospectId)
-  return {
-    ...call,
-    prospectName: prospect?.name || "Unknown",
-    prospectMobile: prospect?.mobile || "",
-    prospectLocation: prospect?.location || "",
-    courseInterest: prospect?.courseInterest || "Unknown",
-  }
-})
-
 export default function CallHistoryPage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [callLogs, setCallLogs] = useState<CallLog[]>([])
+  const [prospects, setProspects] = useState<Record<number, Prospect>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [dateFilter, setDateFilter] = useState<string>("all")
-  const [outcomeFilter, setOutcomeFilter] = useState<string>("all")
+  const [outcomeFilter, setOutcomeFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState("all")
 
-  // Filter call history
-  const filteredHistory = callHistoryWithDetails.filter((call) => {
-    const matchesSearch =
-      call.prospectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      call.prospectMobile.includes(searchQuery)
-    const matchesOutcome = outcomeFilter === "all" || call.outcome === outcomeFilter
+  const telecallerId = user ? Number(user.id) : 0
 
-    // Date filtering
-    let matchesDate = true
-    if (dateFilter !== "all") {
-      const callDate = new Date(call.calledAt)
-      const today = new Date()
-      if (dateFilter === "today") {
-        matchesDate = callDate.toDateString() === today.toDateString()
-      } else if (dateFilter === "yesterday") {
-        const yesterday = new Date(today)
-        yesterday.setDate(yesterday.getDate() - 1)
-        matchesDate = callDate.toDateString() === yesterday.toDateString()
-      } else if (dateFilter === "week") {
-        const weekAgo = new Date(today)
-        weekAgo.setDate(weekAgo.getDate() - 7)
-        matchesDate = callDate >= weekAgo
-      } else if (dateFilter === "month") {
-        const monthAgo = new Date(today)
-        monthAgo.setMonth(monthAgo.getMonth() - 1)
-        matchesDate = callDate >= monthAgo
-      }
+  const fetchData = async () => {
+    if (!telecallerId) return
+    try {
+      setIsLoading(true)
+      const [logs, allProspects] = await Promise.all([
+        callLogsApi.getByTelecaller(telecallerId),
+        prospectsApi.getAll(),
+      ])
+
+      const prospectMap: Record<number, Prospect> = {}
+      allProspects.forEach((p: Prospect) => {
+        prospectMap[p.id] = p
+      })
+      setProspects(prospectMap)
+      setCallLogs(logs)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch call history")
+      toast({
+        title: "Error fetching call history",
+        description: err instanceof Error ? err.message : "Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    return matchesSearch && matchesOutcome && matchesDate
-  })
+  useEffect(() => {
+    fetchData()
+  }, [telecallerId])
 
-  // Sort by most recent first
-  const sortedHistory = [...filteredHistory].sort(
-    (a, b) => new Date(b.calledAt).getTime() - new Date(a.calledAt).getTime()
-  )
+  // Filter logs
+  const filteredLogs = useMemo(() => {
+    return callLogs.filter((log) => {
+      const prospect = prospects[log.prospect_id]
+
+      // Search
+      const matchesSearch =
+        searchQuery === "" ||
+        (prospect &&
+          (prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            prospect.mobile.includes(searchQuery)))
+
+      // Outcome filter
+      const matchesOutcome =
+        outcomeFilter === "all" || log.outcome === outcomeFilter
+
+      // Date filter
+      let matchesDate = true
+      if (dateFilter !== "all") {
+        const logDate = new Date(log.called_at)
+        const now = new Date()
+        const todayStr = now.toISOString().split("T")[0]
+        const logDateStr = logDate.toISOString().split("T")[0]
+
+        if (dateFilter === "today") {
+          matchesDate = logDateStr === todayStr
+        } else if (dateFilter === "week") {
+          const weekAgo = new Date(now)
+          weekAgo.setDate(weekAgo.getDate() - 7)
+          matchesDate = logDate >= weekAgo
+        } else if (dateFilter === "month") {
+          const monthAgo = new Date(now)
+          monthAgo.setMonth(monthAgo.getMonth() - 1)
+          matchesDate = logDate >= monthAgo
+        }
+      }
+
+      return matchesSearch && matchesOutcome && matchesDate
+    })
+  }, [callLogs, prospects, searchQuery, outcomeFilter, dateFilter])
+
+  // Outcome summary stats
+  const outcomeCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    callLogs.forEach((log) => {
+      counts[log.outcome] = (counts[log.outcome] || 0) + 1
+    })
+    return counts
+  }, [callLogs])
+
+  if (isLoading) {
+    return <PageSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-destructive">{error}</p>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Retry
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Call History</h1>
           <p className="text-muted-foreground">
-            View all your past call attempts and outcomes
+            {callLogs.length} total calls logged
           </p>
         </div>
-        <Button variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Export
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
         </Button>
+      </div>
+
+      {/* Outcome Summary */}
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(outcomeCounts).map(([outcome, count]) => {
+          const config = OUTCOME_CONFIG[outcome]
+          return (
+            <Badge
+              key={outcome}
+              variant="outline"
+              className={cn("text-xs px-3 py-1", config?.color)}
+            >
+              {config?.label || outcome}: {count}
+            </Badge>
+          )
+        })}
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or mobile..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="week">Last 7 Days</SelectItem>
-                <SelectItem value="month">Last 30 Days</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
-              <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="Outcome" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Outcomes</SelectItem>
-                {Object.entries(outcomeConfig).map(([key, config]) => (
-                  <SelectItem key={key} value={key}>
-                    {config.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Call History Table */}
-      <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Call Log
-          </CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" /> Call Log
+            </CardTitle>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search prospect..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-full sm:w-56"
+                />
+              </div>
+              <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
+                <SelectTrigger className="w-full sm:w-44">
+                  <SelectValue placeholder="Outcome" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Outcomes</SelectItem>
+                  {Object.entries(OUTCOME_CONFIG).map(([key, cfg]) => (
+                    <SelectItem key={key} value={key}>
+                      {cfg.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-36">
+                  <SelectValue placeholder="Date" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Student Name</TableHead>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead>Prospect</TableHead>
                   <TableHead>Mobile</TableHead>
-                  <TableHead>Location</TableHead>
                   <TableHead>Outcome</TableHead>
+                  <TableHead>Status After</TableHead>
                   <TableHead>Notes</TableHead>
+                  <TableHead>Called At</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedHistory.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <History className="h-8 w-8" />
-                        <p>No call history found</p>
+                        <p>No call logs found</p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedHistory.map((call) => {
-                    const config = outcomeConfig[call.outcome]
-                    const Icon = config.icon
+                  filteredLogs.map((log, index) => {
+                    const prospect = prospects[log.prospect_id]
+                    const outcomeConf = OUTCOME_CONFIG[log.outcome]
 
                     return (
-                      <TableRow key={call.id}>
-                        <TableCell>
-                          <div className="text-sm">
-                            <p className="font-medium">
-                              {new Date(call.calledAt).toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {new Date(call.calledAt).toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
+                      <TableRow key={log.id}>
+                        <TableCell className="text-muted-foreground">
+                          {index + 1}
                         </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{call.prospectName}</p>
-                            <Badge variant="secondary" className="text-xs mt-1">
-                              {call.courseInterest === "Unknown"
-                                ? "Unknown"
-                                : mockCourses.find(
-                                    (c) =>
-                                      c.code ===
-                                      call.courseInterest.replace("Course", "")
-                                  )?.code || call.courseInterest}
-                            </Badge>
-                          </div>
+                        <TableCell className="font-medium">
+                          {prospect?.name || `Prospect #${log.prospect_id}`}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {call.prospectMobile}
+                          {prospect?.mobile || "—"}
                         </TableCell>
-                        <TableCell>{call.prospectLocation}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Icon className={cn("h-4 w-4", config.color)} />
-                            <span className="text-sm">{config.label}</span>
-                          </div>
-                          {call.callbackDatetime && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Callback:{" "}
-                              {new Date(call.callbackDatetime).toLocaleString("en-IN", {
-                                dateStyle: "short",
-                                timeStyle: "short",
-                              })}
-                            </p>
-                          )}
+                          <Badge
+                            variant="outline"
+                            className={cn(outcomeConf?.color)}
+                          >
+                            {outcomeConf?.label || log.outcome}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="max-w-xs">
-                          <p className="text-sm text-muted-foreground truncate">
-                            {call.notes || "-"}
-                          </p>
+                        <TableCell className="text-sm">
+                          {log.status_after_call || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                          {log.notes || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {new Date(log.called_at).toLocaleString("en-IN", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
                         </TableCell>
                       </TableRow>
                     )
@@ -273,7 +299,7 @@ export default function CallHistoryPage() {
             </Table>
           </div>
           <div className="mt-4 text-sm text-muted-foreground">
-            Showing {sortedHistory.length} of {callHistoryWithDetails.length} calls
+            Showing {filteredLogs.length} of {callLogs.length} call logs
           </div>
         </CardContent>
       </Card>

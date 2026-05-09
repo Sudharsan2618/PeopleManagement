@@ -50,6 +50,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import {
+  spokeReportsApi,
+  spokeVisitsApi,
+  spokeActivitiesApi,
+  spokeEscalationsApi,
+  followUpTasksApi,
+} from "@/lib/api-client"
 
 interface InstitutionEntry {
   id: string
@@ -108,8 +117,12 @@ function Section({
 
 export default function NewFieldReportPage() {
   const router = useRouter()
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
+  const spokeId = user ? Number(user.id) : 0
 
   // Section states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -227,10 +240,119 @@ export default function NewFieldReportPage() {
     )
   }
 
+  const saveReport = async (isDraft: boolean) => {
+    if (!areaLocation.trim()) {
+      toast({ title: "Area/Location is required", variant: "destructive" })
+      return
+    }
+    if (!spokeId) {
+      toast({ title: "Not logged in", variant: "destructive" })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      // 1. Create the report
+      const report = await spokeReportsApi.create({
+        spoke_id: spokeId,
+        report_date: reportDate,
+        area_location: areaLocation.trim(),
+        is_draft: isDraft,
+      })
+
+      const reportId = report.id
+
+      // 2. If submitting (not draft), mark submitted_at
+      if (!isDraft) {
+        await spokeReportsApi.update(reportId, {
+          is_draft: false,
+          submitted_at: new Date().toISOString(),
+        })
+      }
+
+      // 3. Create visit entries for each institution type
+      const allEntries = [
+        ...schoolEntries.map((e) => ({ ...e, type: "school" })),
+        ...coachingEntries.map((e) => ({ ...e, type: "coaching_centre" })),
+        ...admissionEntries.map((e) => ({ ...e, type: "admission_partner" })),
+      ]
+
+      for (const entry of allEntries) {
+        if (!entry.contactDetails.trim()) continue
+
+        const visitEntry = await spokeVisitsApi.create({
+          report_id: reportId,
+          visit_type: entry.type,
+          institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
+          contact_name: entry.contactDetails.split("|")[1]?.trim() || null,
+          contact_email: entry.contactDetails.split("|")[2]?.trim() || null,
+          contact_mobile: entry.contactDetails.split("|")[3]?.trim() || null,
+          next_action: entry.nextStep || null,
+          follow_up_role: entry.assignedTo === "Telecaller" ? "telecaller" : "self",
+          follow_up_date: entry.followUpDate || null,
+        })
+
+        // 4. Create follow-up task if needed
+        if (entry.followUpDate && !isDraft) {
+          await followUpTasksApi.create({
+            source_entry_id: visitEntry.id,
+            assigned_to_role: entry.assignedTo === "Telecaller" ? "telecaller" : "spoke",
+            assigned_to_user_id: entry.assignedTo === "Telecaller" ? null : spokeId,
+            institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
+            action_description: entry.nextStep || "Follow up on visit",
+            follow_up_date: entry.followUpDate,
+          })
+        }
+      }
+
+      // 5. Create activities
+      const activities = [
+        { type: "branding", done: brandingDone === "Yes", notes: brandingNotes },
+        { type: "alumni", done: alumniOutreach === "Yes", notes: alumniNotes },
+        { type: "corporate", done: corporateOutreach === "Yes", notes: corporateDetails },
+        { type: "referral", done: referralNetwork === "Yes", notes: referralNotes },
+      ]
+
+      for (const act of activities) {
+        if (act.done) {
+          await spokeActivitiesApi.create({
+            report_id: reportId,
+            activity_type: act.type,
+            done: true,
+            notes: act.notes || null,
+          })
+        }
+      }
+
+      // 6. Create escalation if challenges noted
+      if (challenges.trim()) {
+        await spokeEscalationsApi.create({
+          report_id: reportId,
+          description: challenges.trim(),
+          observations: observations.trim() || null,
+        })
+      }
+
+      toast({
+        title: isDraft ? "Draft saved" : "Report submitted successfully",
+        description: isDraft
+          ? "You can resume editing later."
+          : "Follow-up tasks have been created.",
+      })
+      router.push("/spoke/dashboard")
+    } catch (err) {
+      toast({
+        title: "Failed to save report",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleSaveDraft = () => {
-    // In a real app, this would save to API
-    console.log("Saving draft...")
-    router.push("/spoke/dashboard")
+    saveReport(true)
   }
 
   const handleSubmit = () => {
@@ -238,11 +360,7 @@ export default function NewFieldReportPage() {
   }
 
   const confirmSubmit = async () => {
-    setIsSubmitting(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    console.log("Report submitted!")
-    router.push("/spoke/dashboard")
+    await saveReport(false)
   }
 
   const renderInstitutionEntries = (

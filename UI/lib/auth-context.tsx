@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import { type UserRole } from "./mock-data"
 import { authApi, type User as ApiUser } from "./api-client"
 
@@ -21,12 +21,15 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoading: boolean
+  isInitialized: boolean
   error: string | null
-  login: (email: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<User | null>
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const STORAGE_KEY = "cems_user"
 
 // Convert API user to UI user format
 function convertApiUserToUser(apiUser: ApiUser): User {
@@ -46,41 +49,53 @@ function convertApiUserToUser(apiUser: ApiUser): User {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        setUser(parsed)
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
+    } finally {
+      setIsInitialized(true)
+    }
+  }, [])
+
+  const login = useCallback(async (email: string, password: string): Promise<User | null> => {
     setIsLoading(true)
     setError(null)
 
     try {
-      // Authenticate with backend
+      // Authenticate with backend — password is verified server-side
       const apiUser = await authApi.login(email, password)
+      const uiUser = convertApiUserToUser(apiUser)
       
-      // Simple password check (in production, backend should handle this)
-      // For now, we'll accept any password if user exists
-      if (apiUser && apiUser.is_active) {
-        setUser(convertApiUserToUser(apiUser))
-        setIsLoading(false)
-        return true
-      } else {
-        setError("Invalid email or password or account is inactive")
-        setIsLoading(false)
-        return false
-      }
+      // Persist to localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(uiUser))
+      setUser(uiUser)
+      setIsLoading(false)
+      return uiUser
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
       setIsLoading(false)
-      return false
+      return null
     }
   }, [])
 
   const logout = useCallback(() => {
     setUser(null)
     setError(null)
+    localStorage.removeItem(STORAGE_KEY)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isInitialized, error, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

@@ -86,32 +86,25 @@ class CallLogService:
         """Update call log details."""
         updates = []
         params = []
-        param_count = 1
         
         if outcome is not None:
-            updates.append(f"outcome = ${param_count}")
+            updates.append("outcome = %s")
             params.append(outcome)
-            param_count += 1
         if status_after_call is not None:
-            updates.append(f"status_after_call = ${param_count}")
+            updates.append("status_after_call = %s")
             params.append(status_after_call)
-            param_count += 1
         if reason is not None:
-            updates.append(f"reason = ${param_count}")
+            updates.append("reason = %s")
             params.append(reason)
-            param_count += 1
         if notes is not None:
-            updates.append(f"notes = ${param_count}")
+            updates.append("notes = %s")
             params.append(notes)
-            param_count += 1
         if course_interest is not None:
-            updates.append(f"course_interest = ${param_count}")
+            updates.append("course_interest = %s")
             params.append(course_interest)
-            param_count += 1
         if callback_scheduled_at is not None:
-            updates.append(f"callback_scheduled_at = ${param_count}")
+            updates.append("callback_scheduled_at = %s")
             params.append(callback_scheduled_at)
-            param_count += 1
         
         if not updates:
             return 0
@@ -120,7 +113,7 @@ class CallLogService:
         query = f"""
             UPDATE call_logs
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

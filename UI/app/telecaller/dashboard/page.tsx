@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import {
   Phone,
   Users,
@@ -8,9 +8,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Search,
-  Filter,
   PhoneCall,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -32,71 +35,183 @@ import {
 } from "@/components/ui/table"
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/auth-context"
 import {
-  type ProspectStatus,
   type CallOutcome,
   mockCourses,
 } from "@/lib/mock-data"
-import { prospectsApi, assignmentsApi, adaptApiProspectToUiProspect } from "@/lib/api-client"
+import {
+  prospectsApi,
+  assignmentsApi,
+  callLogsApi,
+  adaptApiProspectToUiProspect,
+  type CallLog,
+} from "@/lib/api-client"
 
-const statusColors: Record<string, string> = {
-  Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  InProgress: "bg-blue-100 text-blue-800 border-blue-200",
-  Callback: "bg-orange-100 text-orange-800 border-orange-200",
-  Qualified: "bg-green-100 text-green-800 border-green-200",
-  NotInterested: "bg-gray-100 text-gray-800 border-gray-200",
-  DNC: "bg-red-100 text-red-800 border-red-200",
-  Enrolled: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  Archived: "bg-slate-100 text-slate-800 border-slate-200",
+// ─── Outcome → DB mapping ────────────────────────────────────
+// UI uses PascalCase, DB uses snake_case
+const OUTCOME_TO_DB: Record<string, string> = {
+  NotAnswered: "not_answered",
+  Busy: "busy",
+  WrongNumber: "wrong_number",
+  CallBack: "callback",
+  NotInterested: "not_interested",
+  DNC: "dnc",
+  LanguageBarrier: "language_barrier",
+  Interested: "interested",
+  Qualified: "qualified",
+  EnrolledElsewhere: "enrolled_elsewhere",
+}
+
+// ─── Outcome → Prospect status_after_call ─────────────────────
+// This is the CRM state-machine: what happens to the prospect after
+// each type of call outcome
+const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
+  NotAnswered: "contacted",
+  Busy: "contacted",
+  WrongNumber: "cold_no_response",
+  CallBack: "warm",
+  NotInterested: "cold_not_interested",
+  DNC: "cold_not_interested",
+  LanguageBarrier: "contacted",
+  Interested: "hot",
+  Qualified: "visit_scheduled",
+  EnrolledElsewhere: "lost",
+}
+
+// ─── Status display config ─────────────────────────────────────
+const statusConfig: Record<string, { label: string; color: string }> = {
+  new: { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  contacted: { label: "Contacted", color: "bg-sky-100 text-sky-800 border-sky-200" },
+  warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
+  visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800 border-gray-200" },
+  cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800 border-slate-200" },
+  lost: { label: "Lost", color: "bg-red-50 text-red-600 border-red-200" },
 }
 
 export default function TelecallerDashboard() {
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [prospects, setProspects] = useState<any[]>([])
+  const [callLogs, setCallLogs] = useState<CallLog[]>([])
+  const [assignments, setAssignments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true)
-        const [apiProspects, apiAssignments] = await Promise.all([
-          prospectsApi.getAll(),
-          assignmentsApi.getAll(),
-        ])
-        
-        // Filter prospects assigned to telecaller ID 2 (Priya from dummy data)
-        const today = new Date().toISOString().split('T')[0]
-        const todayAssignments = apiAssignments.filter((a: any) => 
-          a.telecaller_id === 2 && a.assigned_date === today
-        )
-        
-        const uiProspects = apiProspects
-          .filter((p: any) => todayAssignments.some((a: any) => a.prospect_id === p.id))
-          .map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments))
-        
-        setProspects(uiProspects)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch data")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchData()
-  }, [])
+  const telecallerId = user ? Number(user.id) : 0
 
-  // Calculate stats from real data
-  const telecallerStats = {
-    todaysProspects: prospects.length,
-    called: 0, // Will need call logs API
-    pending: prospects.filter((p: any) => p.status === "Pending").length,
-    callbacksDue: prospects.filter((p: any) => p.status === "Callback").length,
-    qualified: prospects.filter((p: any) => p.status === "Qualified").length,
-  }
+  // ─── Fetch data ───────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    if (!telecallerId) return
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const [apiProspects, apiAssignments, apiCallLogs] = await Promise.all([
+        prospectsApi.getAll(),
+        assignmentsApi.getByTelecaller(telecallerId),
+        callLogsApi.getByTelecaller(telecallerId),
+      ])
+
+      setAssignments(apiAssignments)
+      setCallLogs(apiCallLogs)
+
+      // Build prospect list from today's assignments
+      const assignedProspectIds = new Set(
+        apiAssignments.map((a: any) => a.prospect_id)
+      )
+
+      // Enrich each prospect with last call info
+      const enrichedProspects = apiProspects
+        .filter((p: any) => assignedProspectIds.has(p.id))
+        .map((p: any) => {
+          const prospectLogs = apiCallLogs
+            .filter((cl: any) => cl.prospect_id === p.id)
+            .sort(
+              (a: any, b: any) =>
+                new Date(b.called_at).getTime() -
+                new Date(a.called_at).getTime()
+            )
+          const lastLog = prospectLogs[0]
+          const assignment = apiAssignments.find(
+            (a: any) => a.prospect_id === p.id
+          )
+
+          return {
+            id: String(p.id),
+            numericId: p.id,
+            name: p.name,
+            mobile: p.mobile,
+            email: p.email,
+            location: p.location || "",
+            courseInterest: p.course_interest || "Unknown",
+            status: p.status, // Keep raw DB status
+            source: p.sourced_from || "Unknown",
+            createdAt: p.created_at,
+            assignmentId: assignment?.id || null,
+            // Enriched from call logs
+            lastCallAt: lastLog?.called_at || null,
+            lastOutcome: lastLog?.outcome || null,
+            callbackDateTime: lastLog?.callback_scheduled_at || null,
+            totalCalls: prospectLogs.length,
+          }
+        })
+
+      setProspects(enrichedProspects)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch data")
+      toast({
+        title: "Error fetching data",
+        description: err instanceof Error ? err.message : "Please check your connection.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [telecallerId, toast])
+
+  useEffect(() => {
+    fetchData()
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchData, 60000)
+    return () => clearInterval(interval)
+  }, [fetchData])
+
+  // ─── Stats ────────────────────────────────────────────────────
+  const todayLogs = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    return callLogs.filter((cl: any) => {
+      const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+      return logDate === today
+    })
+  }, [callLogs])
+
+  const telecallerStats = useMemo(
+    () => ({
+      todaysProspects: prospects.length,
+      called: todayLogs.length,
+      pending: prospects.filter(
+        (p) =>
+          p.status === "new" || (p.status === "contacted" && p.totalCalls === 0)
+      ).length,
+      callbacksDue: prospects.filter((p) => p.status === "warm").length,
+      qualified: prospects.filter(
+        (p) => p.status === "hot" || p.status === "visit_scheduled"
+      ).length,
+    }),
+    [prospects, todayLogs]
+  )
 
   const statCards = [
     {
@@ -107,7 +222,7 @@ export default function TelecallerDashboard() {
       bgColor: "bg-blue-100",
     },
     {
-      title: "Called",
+      title: "Calls Made",
       value: telecallerStats.called,
       icon: Phone,
       color: "text-green-600",
@@ -128,7 +243,7 @@ export default function TelecallerDashboard() {
       bgColor: "bg-orange-100",
     },
     {
-      title: "Qualified",
+      title: "Qualified / Hot",
       value: telecallerStats.qualified,
       icon: CheckCircle2,
       color: "text-emerald-600",
@@ -136,70 +251,158 @@ export default function TelecallerDashboard() {
     },
   ]
 
-  // Sort prospects: Callback due first, then pending, then completed
+  // ─── Sort & filter ────────────────────────────────────────────
   const sortedProspects = useMemo(() => {
-    return [...prospects].sort((a: any, b: any) => {
-      const statusOrder: Record<string, number> = {
-        Callback: 0,
-        Pending: 1,
-        InProgress: 2,
-        Qualified: 3,
-        NotInterested: 4,
-        DNC: 5,
-        Enrolled: 6,
-        Archived: 7,
+    return [...prospects].sort((a, b) => {
+      // Callbacks with scheduled time first, then new, then rest
+      const order: Record<string, number> = {
+        warm: 0,
+        new: 1,
+        contacted: 2,
+        hot: 3,
+        visit_scheduled: 4,
+        cold_not_interested: 5,
+        cold_no_response: 6,
+        lost: 7,
       }
-      return statusOrder[a.status] - statusOrder[b.status]
+      return (order[a.status] ?? 99) - (order[b.status] ?? 99)
     })
   }, [prospects])
 
-  // Filter prospects
   const filteredProspects = useMemo(() => {
     return sortedProspects.filter((prospect) => {
       const matchesSearch =
         prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         prospect.mobile.includes(searchQuery)
-      const matchesStatus = statusFilter === "all" || prospect.status === statusFilter
+      const matchesStatus =
+        statusFilter === "all" || prospect.status === statusFilter
       const matchesCourse =
         courseFilter === "all" || prospect.courseInterest === courseFilter
       return matchesSearch && matchesStatus && matchesCourse
     })
   }, [sortedProspects, searchQuery, statusFilter, courseFilter])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading prospects...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-destructive">Error: {error}</p>
-      </div>
-    )
-  }
-
+  // ─── Handle call outcome ──────────────────────────────────────
   const handleCall = (prospect: any) => {
     setSelectedProspect(prospect)
     setIsModalOpen(true)
   }
 
-  const handleOutcomeSubmit = (outcome: CallOutcome, data: Record<string, unknown>) => {
-    console.log("Call outcome submitted:", { prospect: selectedProspect?.id, outcome, data })
-    // In a real app, this would make an API call
+  const handleOutcomeSubmit = async (
+    outcome: CallOutcome,
+    data: Record<string, unknown>
+  ) => {
+    if (!selectedProspect || !user) return
+
+    setIsSaving(true)
+    try {
+      const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
+      const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
+
+      // Build callback timestamp if scheduled
+      let callbackScheduledAt: string | null = null
+      if (outcome === "CallBack" && data.callbackDate) {
+        const timeStr = (data.callbackTime as string) || "10:00"
+        callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
+      }
+
+      // Build notes — include extra info captured in the modal
+      let fullNotes = (data.notes as string) || ""
+      if (data.reason) fullNotes += `\n[Reason] ${data.reason}`
+      if (data.coursePreference)
+        fullNotes += `\n[Course Preference] ${data.coursePreference}`
+      if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
+      if (data.preferredLocation)
+        fullNotes += `\n[Preferred Location] ${data.preferredLocation}`
+      if (data.parentAware)
+        fullNotes += `\n[Parent Aware] ${data.parentAware}`
+      if (data.bestTimeToCall)
+        fullNotes += `\n[Best Time] ${data.bestTimeToCall}`
+      if (data.institutionName)
+        fullNotes += `\n[Enrolled At] ${data.institutionName}`
+      if (data.courseConfirmed)
+        fullNotes += `\n[Course Confirmed] ${data.courseConfirmed}`
+
+      // 1. Create call log
+      await callLogsApi.create({
+        prospect_id: Number(selectedProspect.numericId),
+        telecaller_id: telecallerId,
+        assignment_id: selectedProspect.assignmentId,
+        outcome: dbOutcome,
+        status_after_call: statusAfterCall,
+        reason: (data.reason as string) || null,
+        notes: fullNotes.trim() || null,
+        course_interest:
+          (data.coursePreference as string) ||
+          (data.courseConfirmed as string) ||
+          null,
+        callback_scheduled_at: callbackScheduledAt,
+      })
+
+      // 2. Update prospect status in DB
+      await prospectsApi.update(Number(selectedProspect.numericId), {
+        status: statusAfterCall,
+        course_interest:
+          (data.coursePreference as string) ||
+          (data.courseConfirmed as string) ||
+          undefined,
+      })
+
+      toast({
+        title: "Call logged ✓",
+        description: `${selectedProspect.name} — ${outcome} → Status: ${statusConfig[statusAfterCall]?.label || statusAfterCall}`,
+      })
+
+      // 3. Refresh data
+      await fetchData()
+    } catch (err) {
+      toast({
+        title: "Error saving call",
+        description:
+          err instanceof Error ? err.message : "Failed to save call outcome",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // ─── Render ───────────────────────────────────────────────────
+  if (isLoading) {
+    return <DashboardSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-destructive">Error: {error}</p>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! You have {telecallerStats.pending} prospects to call today.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            Welcome back, {user?.name}! You have{" "}
+            {telecallerStats.pending} prospects pending today.
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
+            <span className="text-[10px] opacity-70">Live</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -237,17 +440,19 @@ export default function TelecallerDashboard() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-44">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Callback">Callback</SelectItem>
-                  <SelectItem value="InProgress">In Progress</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="NotInterested">Not Interested</SelectItem>
-                  <SelectItem value="DNC">DNC</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="warm">Warm (Callback)</SelectItem>
+                  <SelectItem value="hot">Hot 🔥</SelectItem>
+                  <SelectItem value="visit_scheduled">Visit Scheduled</SelectItem>
+                  <SelectItem value="cold_not_interested">Not Interested</SelectItem>
+                  <SelectItem value="cold_no_response">No Response</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={courseFilter} onValueChange={setCourseFilter}>
@@ -257,8 +462,8 @@ export default function TelecallerDashboard() {
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
                   {mockCourses.map((course) => (
-                    <SelectItem key={course.id} value={`Course${course.code.charAt(0)}`}>
-                      {course.code}
+                    <SelectItem key={course.id} value={course.name}>
+                      {course.name}
                     </SelectItem>
                   ))}
                   <SelectItem value="Unknown">Unknown</SelectItem>
@@ -276,15 +481,17 @@ export default function TelecallerDashboard() {
                   <TableHead>Student Name</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Location</TableHead>
+                  <TableHead>Course</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Action</TableHead>
+                  <TableHead>Calls</TableHead>
+                  <TableHead>Last Call</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -292,73 +499,88 @@ export default function TelecallerDashboard() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProspects.map((prospect, index) => (
-                    <TableRow
-                      key={prospect.id}
-                      className={cn(
-                        prospect.status === "Callback" && "bg-orange-50/50"
-                      )}
-                    >
-                      <TableCell className="font-medium text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{prospect.name}</span>
-                          {prospect.status === "Callback" &&
-                            prospect.callbackDateTime && (
+                  filteredProspects.map((prospect, index) => {
+                    const sc = statusConfig[prospect.status] || {
+                      label: prospect.status,
+                      color: "bg-gray-100 text-gray-800",
+                    }
+                    const isTerminal = [
+                      "cold_not_interested",
+                      "cold_no_response",
+                      "lost",
+                      "admission_done",
+                    ].includes(prospect.status)
+
+                    return (
+                      <TableRow
+                        key={prospect.id}
+                        className={cn(
+                          prospect.status === "warm" && "bg-orange-50/50",
+                          prospect.status === "hot" && "bg-red-50/30"
+                        )}
+                      >
+                        <TableCell className="font-medium text-muted-foreground">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{prospect.name}</span>
+                            {prospect.callbackDateTime && (
                               <span className="text-xs text-orange-600 flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                Callback at{" "}
-                                {new Date(prospect.callbackDateTime).toLocaleTimeString(
-                                  "en-IN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
+                                Callback{" "}
+                                {new Date(
+                                  prospect.callbackDateTime
+                                ).toLocaleString("en-IN", {
+                                  dateStyle: "short",
+                                  timeStyle: "short",
+                                })}
                               </span>
                             )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {prospect.mobile}
-                      </TableCell>
-                      <TableCell>{prospect.location}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(statusColors[prospect.status])}
-                        >
-                          {prospect.status === "NotInterested"
-                            ? "Not Interested"
-                            : prospect.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {prospect.lastCallAt
-                          ? new Date(prospect.lastCallAt).toLocaleString("en-IN", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleCall(prospect)}
-                          disabled={
-                            prospect.status === "DNC" ||
-                            prospect.status === "Qualified" ||
-                            prospect.status === "Enrolled"
-                          }
-                        >
-                          <PhoneCall className="h-4 w-4 mr-1" />
-                          Call Now
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.mobile}
+                        </TableCell>
+                        <TableCell>{prospect.location}</TableCell>
+                        <TableCell>
+                          <span className="text-xs">{prospect.courseInterest}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={cn(sc.color)}>
+                            {sc.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm font-medium">
+                            {prospect.totalCalls}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {prospect.lastCallAt
+                            ? new Date(prospect.lastCallAt).toLocaleString(
+                                "en-IN",
+                                { dateStyle: "short", timeStyle: "short" }
+                              )
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            onClick={() => handleCall(prospect)}
+                            disabled={isTerminal || isSaving}
+                          >
+                            {isSaving ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <PhoneCall className="h-4 w-4 mr-1" />
+                            )}
+                            Call Now
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

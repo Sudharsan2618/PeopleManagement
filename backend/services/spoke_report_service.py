@@ -74,20 +74,16 @@ class SpokeReportService:
         """Update report details."""
         updates = []
         params = []
-        param_count = 1
         
         if area_location is not None:
-            updates.append(f"area_location = ${param_count}")
+            updates.append("area_location = %s")
             params.append(area_location)
-            param_count += 1
         if is_draft is not None:
-            updates.append(f"is_draft = ${param_count}")
+            updates.append("is_draft = %s")
             params.append(is_draft)
-            param_count += 1
         if submitted_at is not None:
-            updates.append(f"submitted_at = ${param_count}")
+            updates.append("submitted_at = %s")
             params.append(submitted_at)
-            param_count += 1
         
         if not updates:
             return 0
@@ -96,7 +92,7 @@ class SpokeReportService:
         query = f"""
             UPDATE spoke_reports
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

@@ -62,6 +62,8 @@ import {
   mockCourses,
 } from "@/lib/mock-data"
 import { prospectsApi, assignmentsApi, usersApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { PageSkeleton } from "@/components/ui/loading-skeletons"
 
 const statusColors: Record<ProspectStatus, string> = {
   Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -77,6 +79,7 @@ const statusColors: Record<ProspectStatus, string> = {
 const ITEMS_PER_PAGE = 15
 
 export default function AdminProspectsPage() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [assignedFilter, setAssignedFilter] = useState<string>("all")
@@ -112,6 +115,11 @@ export default function AdminProspectsPage() {
         setTelecallers(uiTelecallers)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch data")
+        toast({
+          title: "Error fetching prospects",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setIsLoading(false)
       }
@@ -220,11 +228,7 @@ export default function AdminProspectsPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading prospects...</p>
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   if (error) {

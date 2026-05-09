@@ -1,301 +1,287 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
+  Calendar,
   Clock,
   Phone,
+  PhoneCall,
   User,
   MapPin,
+  Loader2,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { type Prospect, type CallOutcome, mockProspects } from "@/lib/mock-data"
-
-// Generate calendar data for current month
-function generateCalendarDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-  const daysInMonth = lastDay.getDate()
-  const startingDay = firstDay.getDay()
-
-  const days: { date: Date; isCurrentMonth: boolean }[] = []
-
-  // Add days from previous month
-  const prevMonthLastDay = new Date(year, month, 0).getDate()
-  for (let i = startingDay - 1; i >= 0; i--) {
-    days.push({
-      date: new Date(year, month - 1, prevMonthLastDay - i),
-      isCurrentMonth: false,
-    })
-  }
-
-  // Add days of current month
-  for (let i = 1; i <= daysInMonth; i++) {
-    days.push({
-      date: new Date(year, month, i),
-      isCurrentMonth: true,
-    })
-  }
-
-  // Add days from next month to complete the grid
-  const remainingDays = 42 - days.length
-  for (let i = 1; i <= remainingDays; i++) {
-    days.push({
-      date: new Date(year, month + 1, i),
-      isCurrentMonth: false,
-    })
-  }
-
-  return days
-}
-
-// Get callbacks for a specific date
-function getCallbacksForDate(date: Date): Prospect[] {
-  const dateStr = date.toISOString().split("T")[0]
-  return mockProspects.filter(
-    (p) =>
-      p.status === "Callback" &&
-      p.callbackDateTime &&
-      p.callbackDateTime.startsWith(dateStr)
-  )
-}
+import { useAuth } from "@/lib/auth-context"
+import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
 
 export default function CallbacksPage() {
-  const today = new Date()
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth())
-  const [currentYear, setCurrentYear] = useState(today.getFullYear())
-  const [selectedDate, setSelectedDate] = useState<Date>(today)
-  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { user } = useAuth()
+  const [callLogs, setCallLogs] = useState<CallLog[]>([])
+  const [prospects, setProspects] = useState<Record<number, Prospect>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const calendarDays = useMemo(
-    () => generateCalendarDays(currentYear, currentMonth),
-    [currentYear, currentMonth]
-  )
+  const telecallerId = user ? Number(user.id) : 0
 
-  const selectedDateCallbacks = useMemo(
-    () => getCallbacksForDate(selectedDate),
-    [selectedDate]
-  )
+  const fetchData = async () => {
+    if (!telecallerId) return
+    try {
+      setIsLoading(true)
+      const [allLogs, allProspects] = await Promise.all([
+        callLogsApi.getByTelecaller(telecallerId),
+        prospectsApi.getAll(),
+      ])
 
-  const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11)
-      setCurrentYear(currentYear - 1)
-    } else {
-      setCurrentMonth(currentMonth - 1)
+      // Build prospect lookup
+      const prospectMap: Record<number, Prospect> = {}
+      allProspects.forEach((p: Prospect) => {
+        prospectMap[p.id] = p
+      })
+      setProspects(prospectMap)
+
+      // Filter to only callback outcomes with a scheduled time
+      const callbacks = allLogs.filter(
+        (log: CallLog) =>
+          log.outcome === "callback" && log.callback_scheduled_at
+      )
+      setCallLogs(callbacks)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch callbacks")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0)
-      setCurrentYear(currentYear + 1)
-    } else {
-      setCurrentMonth(currentMonth + 1)
+  useEffect(() => {
+    fetchData()
+  }, [telecallerId])
+
+  // Group callbacks by date
+  const groupedCallbacks = useMemo(() => {
+    const now = new Date()
+    const groups: { overdue: CallLog[]; today: CallLog[]; upcoming: CallLog[] } = {
+      overdue: [],
+      today: [],
+      upcoming: [],
     }
-  }
 
-  const handleCallNow = (prospect: Prospect) => {
-    setSelectedProspect(prospect)
-    setIsModalOpen(true)
-  }
+    callLogs.forEach((log) => {
+      if (!log.callback_scheduled_at) return
+      const cbDate = new Date(log.callback_scheduled_at)
+      const todayStr = now.toISOString().split("T")[0]
+      const cbStr = cbDate.toISOString().split("T")[0]
 
-  const handleOutcomeSubmit = (outcome: CallOutcome, data: Record<string, unknown>) => {
-    console.log("Callback outcome submitted:", { prospect: selectedProspect?.id, outcome, data })
-  }
+      if (cbStr < todayStr) {
+        groups.overdue.push(log)
+      } else if (cbStr === todayStr) {
+        groups.today.push(log)
+      } else {
+        groups.upcoming.push(log)
+      }
+    })
 
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ]
+    // Sort each group by scheduled time
+    const sortByTime = (a: CallLog, b: CallLog) =>
+      new Date(a.callback_scheduled_at!).getTime() -
+      new Date(b.callback_scheduled_at!).getTime()
 
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    groups.overdue.sort(sortByTime)
+    groups.today.sort(sortByTime)
+    groups.upcoming.sort(sortByTime)
 
-  const isToday = (date: Date) => {
+    return groups
+  }, [callLogs])
+
+  if (isLoading) {
     return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
-  const isSameDay = (date1: Date, date2: Date) => {
+  if (error) {
     return (
-      date1.getDate() === date2.getDate() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getFullYear() === date2.getFullYear()
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-destructive">{error}</p>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Retry
+        </Button>
+      </div>
     )
   }
 
-  const hasCallbacks = (date: Date) => {
-    return getCallbacksForDate(date).length > 0
+  const renderCallbackCard = (log: CallLog, isOverdue = false) => {
+    const prospect = prospects[log.prospect_id]
+    if (!prospect) return null
+
+    const scheduledTime = new Date(log.callback_scheduled_at!)
+    const calledTime = new Date(log.called_at)
+
+    return (
+      <Card
+        key={log.id}
+        className={cn(
+          "transition-colors",
+          isOverdue && "border-red-200 bg-red-50/30"
+        )}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-semibold">{prospect.name}</span>
+                {isOverdue && (
+                  <Badge variant="destructive" className="text-xs">
+                    Overdue
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  <span className="font-mono">{prospect.mobile}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {prospect.location || "—"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-blue-700 font-medium">
+                  Scheduled:{" "}
+                  {scheduledTime.toLocaleString("en-IN", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
+              </div>
+              {log.notes && (
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+                  {log.notes}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Originally called:{" "}
+                {calledTime.toLocaleString("en-IN", {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
+              </p>
+            </div>
+            <Button size="sm">
+              <PhoneCall className="h-4 w-4 mr-1" />
+              Call Now
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Callback Calendar</h1>
-        <p className="text-muted-foreground">
-          View and manage all your scheduled callbacks
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Callbacks</h1>
+          <p className="text-muted-foreground">
+            {callLogs.length} scheduled callbacks
+          </p>
+        </div>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Calendar */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                {monthNames[currentMonth]} {currentYear}
-              </CardTitle>
-              <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" onClick={handlePrevMonth}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Day headers */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {dayNames.map((day) => (
-                <div
-                  key={day}
-                  className="text-center text-sm font-medium text-muted-foreground py-2"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, index) => {
-                const callbacks = getCallbacksForDate(day.date)
-                const isSelected = isSameDay(day.date, selectedDate)
-                const todayDate = isToday(day.date)
-
-                return (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedDate(day.date)}
-                    className={cn(
-                      "relative aspect-square p-1 text-sm rounded-lg transition-colors",
-                      day.isCurrentMonth
-                        ? "text-foreground hover:bg-muted"
-                        : "text-muted-foreground/50",
-                      isSelected && "bg-primary text-primary-foreground hover:bg-primary",
-                      todayDate && !isSelected && "bg-muted font-bold"
-                    )}
-                  >
-                    <span>{day.date.getDate()}</span>
-                    {callbacks.length > 0 && (
-                      <span
-                        className={cn(
-                          "absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
-                          isSelected ? "bg-primary-foreground" : "bg-orange-500"
-                        )}
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Callbacks for selected date */}
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">
-              Callbacks for{" "}
-              {selectedDate.toLocaleDateString("en-IN", {
-                weekday: "long",
-                day: "numeric",
-                month: "short",
-              })}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px]">
-              {selectedDateCallbacks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
-                  <CalendarIcon className="h-10 w-10 mb-2 opacity-50" />
-                  <p className="text-sm">No callbacks scheduled</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {selectedDateCallbacks.map((prospect) => (
-                    <div
-                      key={prospect.id}
-                      className="p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Clock className="h-4 w-4 text-orange-500" />
-                            <span className="font-medium text-orange-600">
-                              {prospect.callbackDateTime &&
-                                new Date(prospect.callbackDateTime).toLocaleTimeString(
-                                  "en-IN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{prospect.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            <span>{prospect.location}</span>
-                          </div>
-                          <Badge variant="secondary" className="mt-2 text-xs">
-                            {prospect.courseInterest === "Unknown"
-                              ? "Course TBD"
-                              : prospect.courseInterest}
-                          </Badge>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleCallNow(prospect)}
-                        >
-                          <Phone className="h-4 w-4 mr-1" />
-                          Call
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-red-100">
+              <Clock className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{groupedCallbacks.overdue.length}</p>
+              <p className="text-xs text-muted-foreground">Overdue</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-blue-100">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{groupedCallbacks.today.length}</p>
+              <p className="text-xs text-muted-foreground">Today</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-green-100">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{groupedCallbacks.upcoming.length}</p>
+              <p className="text-xs text-muted-foreground">Upcoming</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Call Outcome Modal */}
-      <CallOutcomeModal
-        prospect={selectedProspect}
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        onSubmit={handleOutcomeSubmit}
-      />
+      {/* Overdue */}
+      {groupedCallbacks.overdue.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-red-700 flex items-center gap-2">
+            <Clock className="h-5 w-5" /> Overdue Callbacks
+          </h2>
+          <div className="space-y-3">
+            {groupedCallbacks.overdue.map((log) => renderCallbackCard(log, true))}
+          </div>
+        </div>
+      )}
+
+      {/* Today */}
+      {groupedCallbacks.today.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+            <Calendar className="h-5 w-5" /> Today&apos;s Callbacks
+          </h2>
+          <div className="space-y-3">
+            {groupedCallbacks.today.map((log) => renderCallbackCard(log))}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming */}
+      {groupedCallbacks.upcoming.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-green-700 flex items-center gap-2">
+            <Calendar className="h-5 w-5" /> Upcoming Callbacks
+          </h2>
+          <div className="space-y-3">
+            {groupedCallbacks.upcoming.map((log) => renderCallbackCard(log))}
+          </div>
+        </div>
+      )}
+
+      {callLogs.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center text-muted-foreground">
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p className="font-medium">No scheduled callbacks</p>
+            <p className="text-sm">Callbacks will appear here when you schedule them during calls.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

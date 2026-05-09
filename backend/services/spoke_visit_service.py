@@ -65,44 +65,34 @@ class SpokeVisitService:
         """Update visit entry details."""
         updates = []
         params = []
-        param_count = 1
         
         if visit_type is not None:
-            updates.append(f"visit_type = ${param_count}")
+            updates.append("visit_type = %s")
             params.append(visit_type)
-            param_count += 1
         if institution_name is not None:
-            updates.append(f"institution_name = ${param_count}")
+            updates.append("institution_name = %s")
             params.append(institution_name)
-            param_count += 1
         if contact_name is not None:
-            updates.append(f"contact_name = ${param_count}")
+            updates.append("contact_name = %s")
             params.append(contact_name)
-            param_count += 1
         if contact_email is not None:
-            updates.append(f"contact_email = ${param_count}")
+            updates.append("contact_email = %s")
             params.append(contact_email)
-            param_count += 1
         if contact_mobile is not None:
-            updates.append(f"contact_mobile = ${param_count}")
+            updates.append("contact_mobile = %s")
             params.append(contact_mobile)
-            param_count += 1
         if next_action is not None:
-            updates.append(f"next_action = ${param_count}")
+            updates.append("next_action = %s")
             params.append(next_action)
-            param_count += 1
         if follow_up_role is not None:
-            updates.append(f"follow_up_role = ${param_count}")
+            updates.append("follow_up_role = %s")
             params.append(follow_up_role)
-            param_count += 1
         if follow_up_user_id is not None:
-            updates.append(f"follow_up_user_id = ${param_count}")
+            updates.append("follow_up_user_id = %s")
             params.append(follow_up_user_id)
-            param_count += 1
         if follow_up_date is not None:
-            updates.append(f"follow_up_date = ${param_count}")
+            updates.append("follow_up_date = %s")
             params.append(follow_up_date)
-            param_count += 1
         
         if not updates:
             return 0
@@ -111,7 +101,7 @@ class SpokeVisitService:
         query = f"""
             UPDATE spoke_visit_entries
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

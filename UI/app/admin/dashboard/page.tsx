@@ -9,8 +9,8 @@ import {
   ClipboardList,
   Calendar,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,170 +26,220 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  Funnel,
-  FunnelChart,
-  LabelList,
 } from "recharts"
 import { cn } from "@/lib/utils"
-import { usersApi, prospectsApi, spokeReportsApi, adaptApiUserToUiUser } from "@/lib/api-client"
+import { useAuth } from "@/lib/auth-context"
+import { usersApi, spokeReportsApi, adaptApiUserToUiUser } from "@/lib/api-client"
+import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
+import { Button } from "@/components/ui/button"
 
-// Chart data
-const callOutcomeData = [
-  { name: "Qualified", value: 24, color: "#10b981" },
-  { name: "Interested", value: 45, color: "#3b82f6" },
-  { name: "Callback", value: 38, color: "#f59e0b" },
-  { name: "Not Interested", value: 67, color: "#6b7280" },
-  { name: "Not Answered", value: 89, color: "#ef4444" },
-  { name: "DNC", value: 24, color: "#dc2626" },
-]
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-const funnelData = [
-  { name: "Total Prospects", value: 2456, fill: "#e5e7eb" },
-  { name: "Assigned", value: 1850, fill: "#bfdbfe" },
-  { name: "Called", value: 1420, fill: "#93c5fd" },
-  { name: "Interested", value: 580, fill: "#60a5fa" },
-  { name: "Qualified", value: 245, fill: "#3b82f6" },
-  { name: "Enrolled", value: 156, fill: "#1d4ed8" },
-]
+// ─── Colors for charts ──────────────────────────────────────────
+const OUTCOME_COLORS: Record<string, string> = {
+  qualified: "#10b981",
+  interested: "#3b82f6",
+  callback: "#f59e0b",
+  not_interested: "#6b7280",
+  not_answered: "#ef4444",
+  dnc: "#dc2626",
+  busy: "#eab308",
+  wrong_number: "#f97316",
+  language_barrier: "#a855f7",
+  enrolled_elsewhere: "#8b5cf6",
+}
 
-const telecallerPerformanceData = [
-  { name: "Priya S.", calls: 87, qualified: 12, rate: 14 },
-  { name: "Amit P.", calls: 72, qualified: 8, rate: 11 },
-  { name: "Sunita R.", calls: 65, qualified: 6, rate: 9 },
-]
+const OUTCOME_LABELS: Record<string, string> = {
+  qualified: "Qualified",
+  interested: "Interested",
+  callback: "Callback",
+  not_interested: "Not Interested",
+  not_answered: "Not Answered",
+  dnc: "DNC",
+  busy: "Busy",
+  wrong_number: "Wrong Number",
+  language_barrier: "Language Barrier",
+  enrolled_elsewhere: "Enrolled Elsewhere",
+}
 
-const spokeActivityData = [
-  { area: "Chennai", schools: 12, coaching: 8, leads: 45 },
-  { area: "Coimbatore", schools: 8, coaching: 5, leads: 28 },
-  { area: "Madurai", schools: 6, coaching: 4, leads: 18 },
-  { area: "Trichy", schools: 5, coaching: 3, leads: 15 },
-]
+const STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  contacted: "Contacted",
+  warm: "Warm",
+  hot: "Hot",
+  visit_scheduled: "Visit Scheduled",
+  visit_done: "Visit Done",
+  admission_done: "Admitted",
+  cold_no_response: "No Response",
+  cold_not_interested: "Not Interested",
+  lost: "Lost",
+}
+
+const PIPELINE_COLORS: Record<string, string> = {
+  new: "#93c5fd",
+  contacted: "#60a5fa",
+  warm: "#f59e0b",
+  hot: "#ef4444",
+  visit_scheduled: "#a78bfa",
+  visit_done: "#8b5cf6",
+  admission_done: "#10b981",
+  cold_no_response: "#d1d5db",
+  cold_not_interested: "#9ca3af",
+  lost: "#6b7280",
+}
 
 export default function AdminDashboard() {
+  const { user } = useAuth()
+  const [stats, setStats] = useState<any>(null)
+  const [telecallerPerf, setTelecallerPerf] = useState<any[]>([])
+  const [pipeline, setPipeline] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
-  const [prospects, setProspects] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true)
-        const [apiUsers, apiProspects, apiReports] = await Promise.all([
+  const fetchData = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const [statsRes, perfRes, pipelineRes, usersRes, reportsRes] =
+        await Promise.all([
+          fetch(`${API_BASE_URL}/admin/stats`).then((r) => r.json()),
+          fetch(`${API_BASE_URL}/admin/telecaller-performance`).then((r) => r.json()),
+          fetch(`${API_BASE_URL}/admin/prospect-pipeline`).then((r) => r.json()),
           usersApi.getAll(),
-          prospectsApi.getAll(),
           spokeReportsApi.getAll(),
         ])
-        
-        const uiUsers = apiUsers.map(adaptApiUserToUiUser)
-        
-        setUsers(uiUsers)
-        setProspects(apiProspects)
-        setReports(apiReports)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch data")
-      } finally {
-        setIsLoading(false)
-      }
+
+      setStats(statsRes)
+      setTelecallerPerf(perfRes)
+      setPipeline(pipelineRes)
+      setUsers(usersRes.map(adaptApiUserToUiUser))
+      setReports(reportsRes)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch data")
+    } finally {
+      setIsLoading(false)
     }
-    fetchData()
-  }, [])
-
-  const telecallers = users.filter((u) => u.role === "telecaller")
-  const spokes = users.filter((u) => u.role === "spoke")
-
-  // Calculate stats from real data
-  const adminStats = {
-    totalProspects: prospects.length,
-    assignedToday: prospects.filter((p: any) => p.assignedTo).length,
-    callsMadeToday: 0, // Will need call logs API
-    qualifiedToday: prospects.filter((p: any) => p.status === "Qualified").length,
-    fieldReportsToday: reports.filter((r: any) => r.report_date === new Date().toISOString().split('T')[0]).length,
-    followupsPending: 0, // Will need follow-up tasks API
   }
 
-  const statCards = [
-    {
-      title: "Total Prospects",
-      value: adminStats.totalProspects.toLocaleString(),
-      icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
-      change: "+156",
-      changeType: "positive",
-    },
-    {
-      title: "Assigned Today",
-      value: adminStats.assignedToday,
-      icon: Calendar,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
-      change: `${adminStats.assignedToday}/${adminStats.totalProspects}`,
-      changeType: "neutral",
-    },
-    {
-      title: "Calls Made Today",
-      value: adminStats.callsMadeToday,
-      icon: Phone,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
-      change: "+52",
-      changeType: "positive",
-    },
-    {
-      title: "Qualified Today",
-      value: adminStats.qualifiedToday,
-      icon: CheckCircle2,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-100",
-      change: "+8",
-      changeType: "positive",
-    },
-    {
-      title: "Field Reports Today",
-      value: adminStats.fieldReportsToday,
-      icon: FileText,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
-      change: `${adminStats.fieldReportsToday}/${spokes.length}`,
-      changeType: "neutral",
-    },
-    {
-      title: "Pending Follow-ups",
-      value: adminStats.followupsPending,
-      icon: ClipboardList,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
-      change: "-12",
-      changeType: "positive",
-    },
-  ]
+  useEffect(() => {
+    fetchData()
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchData, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading dashboard...</p>
-      </div>
-    )
+  if (isLoading || !stats) {
+    return <DashboardSkeleton />
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-destructive">Error: {error}</p>
+        <button onClick={fetchData}>Retry</button>
       </div>
     )
   }
 
+  const telecallers = users.filter((u: any) => u.role === "telecaller")
+  const spokes = users.filter((u: any) => u.role === "spoke")
+
+  // ─── Stat cards ─────────────────────────────────────────────
+  const statCards = [
+    {
+      title: "Total Prospects",
+      value: stats.total_prospects,
+      icon: Users,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+    },
+    {
+      title: "Assignments Today",
+      value: stats.assignments_today,
+      icon: Calendar,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+    },
+    {
+      title: "Calls Today",
+      value: stats.calls_today,
+      icon: Phone,
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+    },
+    {
+      title: "Qualified (Hot+)",
+      value:
+        (stats.prospect_status_counts?.hot || 0) +
+        (stats.prospect_status_counts?.visit_scheduled || 0) +
+        (stats.prospect_status_counts?.visit_done || 0) +
+        (stats.prospect_status_counts?.admission_done || 0),
+      icon: CheckCircle2,
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Field Reports Today",
+      value: stats.reports_today,
+      icon: FileText,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100",
+    },
+    {
+      title: "Pending Follow-ups",
+      value: stats.pending_followups,
+      icon: ClipboardList,
+      color: "text-red-600",
+      bgColor: "bg-red-100",
+    },
+  ]
+
+  // ─── Chart data ─────────────────────────────────────────────
+  const callOutcomeChartData = (stats.call_outcome_breakdown || []).map(
+    (item: any) => ({
+      name: OUTCOME_LABELS[item.outcome] || item.outcome,
+      value: item.count,
+      color: OUTCOME_COLORS[item.outcome] || "#6b7280",
+    })
+  )
+
+  const pipelineChartData = pipeline.map((item: any) => ({
+    name: STATUS_LABELS[item.status] || item.status,
+    value: item.count,
+    fill: PIPELINE_COLORS[item.status] || "#d1d5db",
+  }))
+
+  const telecallerChartData = telecallerPerf.map((tc: any) => ({
+    name: tc.name.split(" ")[0],
+    calls: tc.total_calls,
+    qualified: tc.qualified,
+    interested: tc.interested,
+  }))
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
-          Overview of all operations and key metrics
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            Overview of all operations and key metrics
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" title="Auto-refreshing" />
+            <span className="text-[10px] opacity-70">
+              Live
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -201,27 +251,6 @@ export default function AdminDashboard() {
                 <div className={cn("rounded-lg p-2", stat.bgColor)}>
                   <stat.icon className={cn("h-4 w-4", stat.color)} />
                 </div>
-                {stat.changeType !== "neutral" && (
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs",
-                      stat.changeType === "positive"
-                        ? "border-green-200 bg-green-50 text-green-700"
-                        : "border-red-200 bg-red-50 text-red-700"
-                    )}
-                  >
-                    {stat.changeType === "positive" ? (
-                      <ArrowUpRight className="h-3 w-3 mr-0.5" />
-                    ) : (
-                      <ArrowDownRight className="h-3 w-3 mr-0.5" />
-                    )}
-                    {stat.change}
-                  </Badge>
-                )}
-                {stat.changeType === "neutral" && (
-                  <span className="text-xs text-muted-foreground">{stat.change}</span>
-                )}
               </div>
               <p className="text-2xl font-bold">{stat.value}</p>
               <p className="text-xs text-muted-foreground">{stat.title}</p>
@@ -237,81 +266,99 @@ export default function AdminDashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Phone className="h-4 w-4" />
-              Call Outcomes Today
+              Call Outcome Distribution
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={callOutcomeData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {callOutcomeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {callOutcomeChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={callOutcomeChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {callOutcomeChartData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  No call data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Qualification Funnel */}
+        {/* Prospect Pipeline Funnel */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Qualification Funnel
+              Conversion Funnel
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={funnelData}
-                  margin={{ top: 10, right: 30, left: 80, bottom: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={80} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                    {funnelData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="space-y-4 pt-4">
+              {pipelineChartData.length > 0 ? (
+                pipelineChartData.map((stage: any, idx: number) => {
+                  const maxVal = Math.max(...pipelineChartData.map((s: any) => s.value))
+                  const percentage = maxVal > 0 ? (stage.value / maxVal) * 100 : 0
+                  
+                  return (
+                    <div key={stage.name} className="relative">
+                      <div className="flex items-center justify-between mb-1 text-xs">
+                        <span className="font-medium">{stage.name}</span>
+                        <span className="text-muted-foreground">{stage.value}</span>
+                      </div>
+                      <div className="h-8 w-full bg-muted rounded-md overflow-hidden flex items-center">
+                        <div 
+                          className="h-full transition-all duration-1000 ease-out flex items-center justify-end pr-3 text-[10px] font-bold text-white"
+                          style={{ 
+                            width: `${percentage}%`,
+                            backgroundColor: stage.fill,
+                            opacity: 0.8 + (idx / pipelineChartData.length) * 0.2 // Slight variation
+                          }}
+                        >
+                          {stage.value > 0 && `${Math.round(percentage)}%`}
+                        </div>
+                      </div>
+                      {idx < pipelineChartData.length - 1 && (
+                        <div className="absolute left-1/2 -bottom-3 -translate-x-1/2 z-10">
+                          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-muted-foreground/20" />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                  No pipeline data yet
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
+      {/* Telecaller Performance */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Telecaller Performance */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -323,7 +370,7 @@ export default function AdminDashboard() {
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={telecallerPerformanceData}
+                  data={telecallerChartData}
                   margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -337,45 +384,84 @@ export default function AdminDashboard() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="calls" name="Calls Made" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="qualified" name="Qualified" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="calls"
+                    name="Total Calls"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="qualified"
+                    name="Qualified"
+                    fill="#10b981"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="interested"
+                    name="Interested"
+                    fill="#f59e0b"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Spoke Activity */}
+        {/* Telecaller Detail Table */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Spoke Activity by Area
-            </CardTitle>
+            <CardTitle className="text-base">Telecaller Breakdown</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={spokeActivityData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
+            <div className="space-y-3">
+              {telecallerPerf.map((tc: any) => (
+                <div
+                  key={tc.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/20"
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="area" />
-                  <YAxis />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="schools" name="Schools" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="coaching" name="Coaching" fill="#ec4899" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="leads" name="Leads" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                      <span className="text-sm font-medium text-primary">
+                        {tc.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{tc.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tc.unique_prospects_called} prospects contacted
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="text-center">
+                      <p className="font-bold text-lg">{tc.total_calls}</p>
+                      <p className="text-muted-foreground">Calls</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-lg text-green-600">
+                        {tc.qualified}
+                      </p>
+                      <p className="text-muted-foreground">Qualified</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-lg text-blue-600">
+                        {tc.interested}
+                      </p>
+                      <p className="text-muted-foreground">Interested</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-lg text-yellow-600">
+                        {tc.callbacks}
+                      </p>
+                      <p className="text-muted-foreground">Callbacks</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -390,30 +476,42 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {telecallers.map((tc: any) => (
-                <div key={tc.id} className="flex items-center justify-between px-6 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                      <span className="text-sm font-medium text-primary">
-                        {tc.name
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")}
-                      </span>
+              {telecallers.map((tc: any) => {
+                const perf = telecallerPerf.find(
+                  (p: any) => p.id === parseInt(tc.id)
+                )
+                return (
+                  <div
+                    key={tc.id}
+                    className="flex items-center justify-between px-6 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                        <span className="text-sm font-medium text-primary">
+                          {tc.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{tc.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {tc.email}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{tc.name}</p>
-                      <p className="text-xs text-muted-foreground">{tc.email}</p>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm">
+                        {perf?.total_calls || 0} calls
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {perf?.calls_today || 0} today
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-sm">
-                      {Math.floor(Math.random() * 30) + 60} calls
-                    </p>
-                    <p className="text-xs text-muted-foreground">Today</p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -426,9 +524,14 @@ export default function AdminDashboard() {
           <CardContent className="p-0">
             <div className="divide-y">
               {spokes.map((spoke: any) => {
-                const report = reports.find((r: any) => r.spoke_id === parseInt(spoke.id))
+                const report = reports.find(
+                  (r: any) => r.spoke_id === parseInt(spoke.id)
+                )
                 return (
-                  <div key={spoke.id} className="flex items-center justify-between px-6 py-3">
+                  <div
+                    key={spoke.id}
+                    className="flex items-center justify-between px-6 py-3"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100">
                         <span className="text-sm font-medium text-orange-600">
@@ -440,13 +543,18 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-sm">{spoke.name}</p>
-                        <p className="text-xs text-muted-foreground">{spoke.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {spoke.email}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">
                       {report ? (
                         <>
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-0">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-0"
+                          >
                             Report Submitted
                           </Badge>
                           <p className="text-xs text-muted-foreground mt-1">
@@ -454,7 +562,10 @@ export default function AdminDashboard() {
                           </p>
                         </>
                       ) : (
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-0">
+                        <Badge
+                          variant="outline"
+                          className="bg-yellow-50 text-yellow-700 border-0"
+                        >
                           Pending Report
                         </Badge>
                       )}

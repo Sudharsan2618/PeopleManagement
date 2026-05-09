@@ -65,28 +65,22 @@ class SpokeEscalationService:
         """Update escalation details."""
         updates = []
         params = []
-        param_count = 1
         
         if description is not None:
-            updates.append(f"description = ${param_count}")
+            updates.append("description = %s")
             params.append(description)
-            param_count += 1
         if observations is not None:
-            updates.append(f"observations = ${param_count}")
+            updates.append("observations = %s")
             params.append(observations)
-            param_count += 1
         if resolved_by is not None:
-            updates.append(f"resolved_by = ${param_count}")
+            updates.append("resolved_by = %s")
             params.append(resolved_by)
-            param_count += 1
         if resolution_note is not None:
-            updates.append(f"resolution_note = ${param_count}")
+            updates.append("resolution_note = %s")
             params.append(resolution_note)
-            param_count += 1
         if resolved_at is not None:
-            updates.append(f"resolved_at = ${param_count}")
+            updates.append("resolved_at = %s")
             params.append(resolved_at)
-            param_count += 1
         
         if not updates:
             return 0
@@ -95,7 +89,7 @@ class SpokeEscalationService:
         query = f"""
             UPDATE spoke_escalations
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

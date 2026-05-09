@@ -187,14 +187,10 @@ async function apiRequest<T>(
 // Auth API
 export const authApi = {
   async login(email: string, password: string): Promise<User> {
-    // Note: Backend doesn't have a login endpoint yet, so we'll get user by email
-    // In production, this should be a proper auth endpoint
-    const user = await apiRequest<User>(`/users/email/${encodeURIComponent(email)}`)
-    if (user && user.is_active) {
-      // Simple password check (in production, this should be done on backend)
-      return user
-    }
-    throw new Error("Invalid credentials")
+    return apiRequest<User>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
   },
 }
 

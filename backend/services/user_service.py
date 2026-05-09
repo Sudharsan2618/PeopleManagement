@@ -64,32 +64,25 @@ class UserService:
         """Update user details."""
         updates = []
         params = []
-        param_count = 1
         
         if name is not None:
-            updates.append(f"name = ${param_count}")
+            updates.append("name = %s")
             params.append(name)
-            param_count += 1
         if email is not None:
-            updates.append(f"email = ${param_count}")
+            updates.append("email = %s")
             params.append(email)
-            param_count += 1
         if mobile is not None:
-            updates.append(f"mobile = ${param_count}")
+            updates.append("mobile = %s")
             params.append(mobile)
-            param_count += 1
         if password is not None:
-            updates.append(f"password = ${param_count}")
+            updates.append("password = %s")
             params.append(password)
-            param_count += 1
         if role is not None:
-            updates.append(f"role = ${param_count}")
+            updates.append("role = %s")
             params.append(role)
-            param_count += 1
         if is_active is not None:
-            updates.append(f"is_active = ${param_count}")
+            updates.append("is_active = %s")
             params.append(is_active)
-            param_count += 1
         
         if not updates:
             return 0
@@ -98,7 +91,7 @@ class UserService:
         query = f"""
             UPDATE users
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

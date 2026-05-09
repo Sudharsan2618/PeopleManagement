@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Phone,
   PhoneOff,
@@ -11,12 +11,11 @@ import {
   ThumbsUp,
   CheckCircle2,
   GraduationCap,
-  ChevronDown,
-  ChevronUp,
   User,
   MapPin,
   School,
   BookOpen,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,15 +43,39 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import {
-  type Prospect,
   type CallOutcome,
-  type CallAttempt,
-  getCallHistory,
   mockCourses,
 } from "@/lib/mock-data"
+import { callLogsApi, type CallLog } from "@/lib/api-client"
+
+// ─── DB outcome → UI label mapping ─────────────────────────────
+const DB_OUTCOME_LABELS: Record<string, string> = {
+  not_answered: "Not Answered",
+  busy: "Busy / Network Issue",
+  wrong_number: "Wrong Number",
+  callback: "Call Back Later",
+  not_interested: "Not Interested",
+  dnc: "Do Not Call",
+  language_barrier: "Language Barrier",
+  interested: "Interested",
+  qualified: "Qualified",
+  enrolled_elsewhere: "Already Enrolled",
+}
+
+const DB_OUTCOME_COLORS: Record<string, string> = {
+  not_answered: "text-orange-500",
+  busy: "text-yellow-500",
+  wrong_number: "text-red-500",
+  callback: "text-blue-500",
+  not_interested: "text-gray-500",
+  dnc: "text-red-600",
+  language_barrier: "text-amber-500",
+  interested: "text-green-500",
+  qualified: "text-emerald-600",
+  enrolled_elsewhere: "text-purple-500",
+}
 
 const outcomeOptions: {
   value: CallOutcome
@@ -143,7 +166,7 @@ const notInterestedReasons = [
 ]
 
 interface CallOutcomeModalProps {
-  prospect: Prospect | null
+  prospect: any | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (outcome: CallOutcome, data: Record<string, unknown>) => void
@@ -167,7 +190,30 @@ export function CallOutcomeModal({
   const [bestTimeToCall, setBestTimeToCall] = useState("")
   const [institutionName, setInstitutionName] = useState("")
 
-  const callHistory = prospect ? getCallHistory(prospect.id) : []
+  // Real call history from API
+  const [callHistory, setCallHistory] = useState<CallLog[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  // Fetch real call history when prospect changes
+  useEffect(() => {
+    if (prospect && open) {
+      const prospectId = Number(prospect.numericId || prospect.id)
+      if (prospectId) {
+        setHistoryLoading(true)
+        callLogsApi
+          .getByProspect(prospectId)
+          .then((logs) => {
+            setCallHistory(logs)
+          })
+          .catch(() => {
+            setCallHistory([])
+          })
+          .finally(() => {
+            setHistoryLoading(false)
+          })
+      }
+    }
+  }, [prospect, open])
 
   const resetForm = () => {
     setSelectedOutcome(null)
@@ -210,11 +256,6 @@ export function CallOutcomeModal({
     onOpenChange(false)
   }
 
-  const getStatusColor = (outcome: CallOutcome) => {
-    const option = outcomeOptions.find((o) => o.value === outcome)
-    return option?.color || "text-muted-foreground"
-  }
-
   if (!prospect) return null
 
   return (
@@ -244,23 +285,20 @@ export function CallOutcomeModal({
                   <span className="text-sm">
                     <span className="text-muted-foreground">Name:</span>{" "}
                     <strong>{prospect.name}</strong>
-                    {prospect.age && (
-                      <span className="text-muted-foreground"> ({prospect.age} yrs)</span>
-                    )}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
                     <span className="text-muted-foreground">Location:</span>{" "}
-                    {prospect.location}
+                    {prospect.location || "—"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <School className="h-4 w-4 text-muted-foreground" />
+                  <Phone className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    <span className="text-muted-foreground">School:</span>{" "}
-                    {prospect.schoolLastAttended}
+                    <span className="text-muted-foreground">Mobile:</span>{" "}
+                    <span className="font-mono">{prospect.mobile}</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -268,18 +306,20 @@ export function CallOutcomeModal({
                   <span className="text-sm">
                     <span className="text-muted-foreground">Interest:</span>{" "}
                     <Badge variant="secondary" className="ml-1">
-                      {prospect.courseInterest === "Unknown"
-                        ? "Not captured"
-                        : mockCourses.find((c) => c.code === prospect.courseInterest.replace("Course", ""))?.name ||
-                          prospect.courseInterest}
+                      {prospect.courseInterest || "Not captured"}
                     </Badge>
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Call History */}
-            {callHistory.length > 0 && (
+            {/* Call History — from real API */}
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="text-sm text-muted-foreground">Loading call history...</span>
+              </div>
+            ) : callHistory.length > 0 ? (
               <Accordion type="single" collapsible>
                 <AccordionItem value="history" className="border rounded-lg">
                   <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -296,11 +336,16 @@ export function CallOutcomeModal({
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className={cn("font-medium", getStatusColor(call.outcome))}>
-                                {outcomeOptions.find((o) => o.value === call.outcome)?.label}
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
+                                )}
+                              >
+                                {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {new Date(call.calledAt).toLocaleString("en-IN", {
+                                {new Date(call.called_at).toLocaleString("en-IN", {
                                   dateStyle: "short",
                                   timeStyle: "short",
                                 })}
@@ -309,6 +354,20 @@ export function CallOutcomeModal({
                             {call.notes && (
                               <p className="text-muted-foreground mt-1">{call.notes}</p>
                             )}
+                            {call.reason && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Reason: {call.reason}
+                              </p>
+                            )}
+                            {call.callback_scheduled_at && (
+                              <p className="text-xs text-blue-600 mt-0.5">
+                                ↳ Callback scheduled:{" "}
+                                {new Date(call.callback_scheduled_at).toLocaleString(
+                                  "en-IN",
+                                  { dateStyle: "short", timeStyle: "short" }
+                                )}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -316,7 +375,7 @@ export function CallOutcomeModal({
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
-            )}
+            ) : null}
 
             {/* Outcome Selection */}
             <div>
@@ -449,22 +508,16 @@ export function CallOutcomeModal({
                     <RadioGroup value={parentAware} onValueChange={setParentAware}>
                       <div className="flex gap-4">
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Yes" id="yes" />
-                          <Label htmlFor="yes" className="font-normal">
-                            Yes
-                          </Label>
+                          <RadioGroupItem value="Yes" id="pa_yes" />
+                          <Label htmlFor="pa_yes" className="font-normal">Yes</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="No" id="no" />
-                          <Label htmlFor="no" className="font-normal">
-                            No
-                          </Label>
+                          <RadioGroupItem value="No" id="pa_no" />
+                          <Label htmlFor="pa_no" className="font-normal">No</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="NotYet" id="notyet" />
-                          <Label htmlFor="notyet" className="font-normal">
-                            Not Yet
-                          </Label>
+                          <RadioGroupItem value="NotYet" id="pa_notyet" />
+                          <Label htmlFor="pa_notyet" className="font-normal">Not Yet</Label>
                         </div>
                       </div>
                     </RadioGroup>

@@ -71,32 +71,25 @@ class ProspectService:
         """Update prospect details."""
         updates = []
         params = []
-        param_count = 1
         
         if name is not None:
-            updates.append(f"name = ${param_count}")
+            updates.append("name = %s")
             params.append(name)
-            param_count += 1
         if email is not None:
-            updates.append(f"email = ${param_count}")
+            updates.append("email = %s")
             params.append(email)
-            param_count += 1
         if location is not None:
-            updates.append(f"location = ${param_count}")
+            updates.append("location = %s")
             params.append(location)
-            param_count += 1
         if sourced_from is not None:
-            updates.append(f"sourced_from = ${param_count}")
+            updates.append("sourced_from = %s")
             params.append(sourced_from)
-            param_count += 1
         if status is not None:
-            updates.append(f"status = ${param_count}")
+            updates.append("status = %s")
             params.append(status)
-            param_count += 1
         if course_interest is not None:
-            updates.append(f"course_interest = ${param_count}")
+            updates.append("course_interest = %s")
             params.append(course_interest)
-            param_count += 1
         
         if not updates:
             return 0
@@ -106,7 +99,7 @@ class ProspectService:
         query = f"""
             UPDATE prospects
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

@@ -1,21 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   ClipboardList,
-  Search,
-  CheckCircle2,
   Clock,
+  CheckCircle2,
   AlertTriangle,
-  Building2,
+  Loader2,
   Calendar,
-  Check,
+  MapPin,
+  RefreshCw,
 } from "lucide-react"
+import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -31,260 +31,296 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { type FollowUpStatus, mockFollowUps } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
+import { followUpTasksApi, type FollowUpTask } from "@/lib/api-client"
 
-const statusConfig: Record<
-  FollowUpStatus,
-  { label: string; icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }
-> = {
-  Pending: {
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  pending: {
     label: "Pending",
+    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
     icon: Clock,
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-100",
   },
-  Completed: {
+  completed: {
     label: "Completed",
+    color: "bg-green-100 text-green-800 border-green-200",
     icon: CheckCircle2,
-    color: "text-green-600",
-    bgColor: "bg-green-100",
   },
-  Overdue: {
+  overdue: {
     label: "Overdue",
+    color: "bg-red-100 text-red-800 border-red-200",
     icon: AlertTriangle,
-    color: "text-red-600",
-    bgColor: "bg-red-100",
   },
 }
 
-// Get follow-ups assigned to telecallers
-const telecallerFollowUps = mockFollowUps.filter(
-  (fu) => fu.assignedToRole === "Telecaller"
-)
+export default function FollowUpsPage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [tasks, setTasks] = useState<FollowUpTask[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState("all")
 
-export default function TelecallerFollowupsPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [followUps, setFollowUps] = useState(telecallerFollowUps)
-  const [selectedFollowUp, setSelectedFollowUp] = useState<(typeof mockFollowUps)[0] | null>(null)
+  // Resolve dialog
+  const [resolveTask, setResolveTask] = useState<FollowUpTask | null>(null)
   const [resolutionNote, setResolutionNote] = useState("")
-  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Filter follow-ups
-  const filteredFollowUps = followUps.filter((fu) => {
-    const matchesSearch =
-      fu.institutionName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      fu.actionDescription.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || fu.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const userId = user ? Number(user.id) : 0
 
-  // Sort: Overdue first, then Pending, then Completed
-  const sortedFollowUps = [...filteredFollowUps].sort((a, b) => {
-    const statusOrder: Record<FollowUpStatus, number> = {
-      Overdue: 0,
-      Pending: 1,
-      Completed: 2,
+  const fetchData = async () => {
+    if (!userId) return
+    try {
+      setIsLoading(true)
+      const allTasks = await followUpTasksApi.getByUser(userId)
+      setTasks(allTasks)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch follow-ups")
+      toast({
+        title: "Error fetching follow-ups",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
-    return statusOrder[a.status] - statusOrder[b.status]
-  })
-
-  const handleMarkComplete = (followUp: (typeof mockFollowUps)[0]) => {
-    setSelectedFollowUp(followUp)
-    setResolutionNote("")
-    setIsCompleteDialogOpen(true)
   }
 
-  const handleSubmitComplete = () => {
-    if (!selectedFollowUp) return
+  useEffect(() => {
+    fetchData()
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchData, 60000)
+    return () => clearInterval(interval)
+  }, [userId])
 
-    setFollowUps((prev) =>
-      prev.map((fu) =>
-        fu.id === selectedFollowUp.id
-          ? { ...fu, status: "Completed" as FollowUpStatus, resolutionNote }
-          : fu
-      )
-    )
-    setIsCompleteDialogOpen(false)
-    setSelectedFollowUp(null)
-    setResolutionNote("")
-  }
+  // Enrich tasks with overdue status
+  const enrichedTasks = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    return tasks.map((task) => {
+      let displayStatus = task.status
+      if (
+        task.status === "pending" &&
+        task.follow_up_date &&
+        task.follow_up_date < today
+      ) {
+        displayStatus = "overdue"
+      }
+      return { ...task, displayStatus }
+    })
+  }, [tasks])
+
+  const filteredTasks = useMemo(() => {
+    if (statusFilter === "all") return enrichedTasks
+    return enrichedTasks.filter((t: any) => t.displayStatus === statusFilter)
+  }, [enrichedTasks, statusFilter])
 
   // Stats
-  const stats = {
-    total: followUps.length,
-    pending: followUps.filter((fu) => fu.status === "Pending").length,
-    overdue: followUps.filter((fu) => fu.status === "Overdue").length,
-    completed: followUps.filter((fu) => fu.status === "Completed").length,
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    return {
+      total: tasks.length,
+      pending: tasks.filter((t) => t.status === "pending").length,
+      overdue: tasks.filter(
+        (t) => t.status === "pending" && t.follow_up_date && t.follow_up_date < today
+      ).length,
+      completed: tasks.filter((t) => t.status === "completed").length,
+    }
+  }, [tasks])
+
+  const handleResolve = async () => {
+    if (!resolveTask) return
+    setIsSaving(true)
+    try {
+      await followUpTasksApi.update(resolveTask.id, {
+        status: "completed",
+        resolution_note: resolutionNote || "Completed",
+      })
+      toast({
+        title: "Task completed ✓",
+        description: `Follow-up for "${resolveTask.institution_name || resolveTask.action_description}" marked as completed.`,
+      })
+      setResolveTask(null)
+      setResolutionNote("")
+      await fetchData()
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to update task",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return <PageSkeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-destructive">{error}</p>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Retry
+        </Button>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Follow-up Tasks</h1>
-        <p className="text-muted-foreground">
-          Tasks assigned to you from field agent reports
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Follow-up Tasks</h1>
+          <p className="text-muted-foreground flex items-center gap-2">
+            {stats.pending} pending, {stats.overdue} overdue
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
+            <span className="text-[10px] opacity-70">Live</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All ({stats.total})</SelectItem>
+            <SelectItem value="pending">Pending ({stats.pending})</SelectItem>
+            <SelectItem value="overdue">Overdue ({stats.overdue})</SelectItem>
+            <SelectItem value="completed">Completed ({stats.completed})</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Tasks</p>
-              </div>
-              <div className="rounded-lg bg-blue-100 p-2">
-                <ClipboardList className="h-5 w-5 text-blue-600" />
-              </div>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-yellow-100">
+              <Clock className="h-5 w-5 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.pending}</p>
+              <p className="text-xs text-muted-foreground">Pending</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-              <div className="rounded-lg bg-yellow-100 p-2">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-red-100">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.overdue}</p>
+              <p className="text-xs text-muted-foreground">Overdue</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
-              </div>
-              <div className="rounded-lg bg-red-100 p-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-              </div>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="rounded-lg p-2 bg-green-100">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
-              </div>
-              <div className="rounded-lg bg-green-100 p-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.completed}</p>
+              <p className="text-xs text-muted-foreground">Completed</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by institution or action..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Overdue">Overdue</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Follow-ups List */}
-      <div className="space-y-4">
-        {sortedFollowUps.length === 0 ? (
+      {/* Task List */}
+      <div className="space-y-3">
+        {filteredTasks.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
-              <p>No follow-up tasks found</p>
+            <CardContent className="p-12 text-center text-muted-foreground">
+              <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="font-medium">No follow-up tasks</p>
+              <p className="text-sm">
+                {statusFilter !== "all"
+                  ? "No tasks match the selected filter."
+                  : "Follow-up tasks assigned to you will appear here."}
+              </p>
             </CardContent>
           </Card>
         ) : (
-          sortedFollowUps.map((followUp) => {
-            const config = statusConfig[followUp.status]
-            const Icon = config.icon
+          filteredTasks.map((task: any) => {
+            const sc = statusConfig[task.displayStatus] || statusConfig.pending
+            const StatusIcon = sc.icon
 
             return (
               <Card
-                key={followUp.id}
+                key={task.id}
                 className={cn(
-                  followUp.status === "Overdue" && "border-red-200 bg-red-50/30"
+                  "transition-colors",
+                  task.displayStatus === "overdue" && "border-red-200 bg-red-50/30",
+                  task.displayStatus === "completed" && "opacity-70"
                 )}
               >
                 <CardContent className="p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge
-                          variant="outline"
-                          className={cn(config.bgColor, config.color, "border-0")}
-                        >
-                          <Icon className="h-3 w-3 mr-1" />
-                          {config.label}
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <StatusIcon className={cn("h-4 w-4", sc.color.includes("yellow") ? "text-yellow-600" : sc.color.includes("red") ? "text-red-600" : "text-green-600")} />
+                        <span className="font-semibold">
+                          {task.action_description}
+                        </span>
+                        <Badge variant="outline" className={cn("text-xs", sc.color)}>
+                          {sc.label}
                         </Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Due:{" "}
-                          {new Date(followUp.followUpDate).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                      </div>
+
+                      {task.institution_name && (
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          {task.institution_name}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        {task.follow_up_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Due:{" "}
+                            {new Date(task.follow_up_date + "T00:00:00").toLocaleDateString(
+                              "en-IN",
+                              { dateStyle: "medium" }
+                            )}
+                          </span>
+                        )}
+                        <span className="text-xs">
+                          Role: {task.assigned_to_role}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 mb-1">
-                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <h3 className="font-semibold truncate">
-                          {followUp.institutionName}
-                        </h3>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground ml-6">
-                        {followUp.actionDescription}
-                      </p>
-
-                      {followUp.resolutionNote && (
-                        <div className="mt-2 ml-6 p-2 rounded bg-green-50 border border-green-100">
-                          <p className="text-xs text-green-700">
-                            <strong>Resolution:</strong> {followUp.resolutionNote}
-                          </p>
-                        </div>
+                      {task.resolution_note && (
+                        <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1 inline-block">
+                          ✓ {task.resolution_note}
+                        </p>
                       )}
                     </div>
 
-                    {followUp.status !== "Completed" && (
+                    {task.status === "pending" && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="shrink-0"
-                        onClick={() => handleMarkComplete(followUp)}
+                        onClick={() => {
+                          setResolveTask(task)
+                          setResolutionNote("")
+                        }}
                       >
-                        <Check className="h-4 w-4 mr-1" />
-                        Mark Complete
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        Complete
                       </Button>
                     )}
                   </div>
@@ -295,30 +331,25 @@ export default function TelecallerFollowupsPage() {
         )}
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        Showing {sortedFollowUps.length} of {followUps.length} tasks
-      </div>
-
-      {/* Complete Dialog */}
-      <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+      {/* Resolve Dialog */}
+      <Dialog open={!!resolveTask} onOpenChange={(open) => !open && setResolveTask(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Complete Follow-up Task</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {selectedFollowUp && (
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="font-medium">{selectedFollowUp.institutionName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedFollowUp.actionDescription}
-                </p>
+            <div className="text-sm">
+              <strong>Task:</strong> {resolveTask?.action_description}
+            </div>
+            {resolveTask?.institution_name && (
+              <div className="text-sm">
+                <strong>Institution:</strong> {resolveTask.institution_name}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="resolution">Resolution Note</Label>
+              <Label>Resolution Note</Label>
               <Textarea
-                id="resolution"
-                placeholder="Describe how this task was completed..."
+                placeholder="Describe how this was resolved..."
                 value={resolutionNote}
                 onChange={(e) => setResolutionNote(e.target.value)}
                 rows={3}
@@ -326,12 +357,16 @@ export default function TelecallerFollowupsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCompleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setResolveTask(null)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitComplete}>
-              <CheckCircle2 className="h-4 w-4 mr-1" />
-              Mark as Complete
+            <Button onClick={handleResolve} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Mark Complete
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -62,24 +62,18 @@ export default function TelecallerStatusPage() {
   )
 
   const getTelecallerStats = (id: string) => {
-    const assigned = prospects.filter((p: any) => p.assigned_to === parseInt(id))
-    const qualified = assigned.filter((p: any) => p.status === "Qualified").length
-    const interested = assigned.filter((p: any) => p.status === "InProgress" || p.status === "Callback").length
-    const conversionRate = assigned.length > 0 ? Math.round((qualified / assigned.length) * 100) : 0
+    const numId = parseInt(id)
+    const tcLogs = callLogs.filter((log: any) => log.telecaller_id === numId)
+    const qualified = tcLogs.filter((l: any) => l.outcome === "qualified").length
+    const interested = tcLogs.filter((l: any) => l.outcome === "interested").length
+    const totalCalls = tcLogs.length
+    const conversionRate = totalCalls > 0 ? Math.round((qualified / totalCalls) * 100) : 0
 
-    const stats = {
-      total: assigned.length,
-      qualified,
-      interested,
-      conversionRate
-    }
-
-    const tcLogs = callLogs.filter(log => log.telecaller_id === parseInt(id))
     const lastActivity = tcLogs.length > 0 
-      ? new Date(Math.max(...tcLogs.map(l => new Date(l.called_at).getTime())))
+      ? new Date(Math.max(...tcLogs.map((l: any) => new Date(l.called_at).getTime())))
       : null
 
-    return { ...stats, lastActivity }
+    return { total: totalCalls, qualified, interested, conversionRate, lastActivity }
   }
 
   if (isLoading) {
@@ -139,7 +133,7 @@ export default function TelecallerStatusPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {prospects.filter(p => p.status === "Qualified").length}
+              {callLogs.filter((l: any) => l.outcome === "qualified").length}
             </div>
             <p className="text-xs text-muted-foreground">From all assignments</p>
           </CardContent>

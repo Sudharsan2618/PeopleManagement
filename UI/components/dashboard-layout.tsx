@@ -38,6 +38,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { type UserRole, mockNotifications } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 
 interface NavItem {
   title: string
@@ -107,11 +108,13 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, role, userName }: DashboardLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { logout } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const navItems = getNavItems(role)
   const unreadNotifications = mockNotifications.filter((n) => !n.read).length
 
   const handleLogout = () => {
+    logout()
     router.push("/login")
   }
 

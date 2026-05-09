@@ -52,20 +52,16 @@ class SpokeActivityService:
         """Update activity details."""
         updates = []
         params = []
-        param_count = 1
         
         if activity_type is not None:
-            updates.append(f"activity_type = ${param_count}")
+            updates.append("activity_type = %s")
             params.append(activity_type)
-            param_count += 1
         if done is not None:
-            updates.append(f"done = ${param_count}")
+            updates.append("done = %s")
             params.append(done)
-            param_count += 1
         if notes is not None:
-            updates.append(f"notes = ${param_count}")
+            updates.append("notes = %s")
             params.append(notes)
-            param_count += 1
         
         if not updates:
             return 0
@@ -74,7 +70,7 @@ class SpokeActivityService:
         query = f"""
             UPDATE spoke_activities
             SET {', '.join(updates)}
-            WHERE id = ${param_count}
+            WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
     

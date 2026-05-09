@@ -57,6 +57,8 @@ import {
   mockCourses,
 } from "@/lib/mock-data"
 import { prospectsApi, assignmentsApi, usersApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
+import { useAuth } from "@/lib/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 const statusColors: Record<string, string> = {
   Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -72,6 +74,8 @@ const statusColors: Record<string, string> = {
 const ITEMS_PER_PAGE = 15
 
 export default function SpokeProspectsPage() {
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [assignedFilter, setAssignedFilter] = useState<string>("all")
@@ -87,6 +91,8 @@ export default function SpokeProspectsPage() {
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const spokeId = user ? Number(user.id) : 0
 
   useEffect(() => {
     async function fetchData() {
@@ -162,10 +168,7 @@ export default function SpokeProspectsPage() {
     try {
       setIsAssigning(true)
       const today = new Date().toISOString().split("T")[0]
-      
-      // In a real app, assigned_by would come from the current user's session
-      // For Spoke, using ID 3 (Ravi from dummy data)
-      const assignedBy = 3 
+      const assignedBy = spokeId
 
       await Promise.all(
         selectedProspectIds.map((prospectId) =>
@@ -191,8 +194,9 @@ export default function SpokeProspectsPage() {
       setSelectedProspectIds([])
       setIsAssignDialogOpen(false)
       setTargetTelecallerId("")
+      toast({ title: `${selectedProspectIds.length} prospects assigned successfully` })
     } catch (err) {
-      alert("Failed to assign prospects: " + (err instanceof Error ? err.message : "Unknown error"))
+      toast({ title: "Failed to assign prospects", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" })
     } finally {
       setIsAssigning(false)
     }

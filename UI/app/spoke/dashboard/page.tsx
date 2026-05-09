@@ -14,12 +14,17 @@ import {
   AlertTriangle,
   UserPlus,
   TrendingUp,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { spokeReportsApi, followUpTasksApi } from "@/lib/api-client"
+import { useAuth } from "@/lib/auth-context"
+import { spokeReportsApi, followUpTasksApi, spokeVisitsApi } from "@/lib/api-client"
 
 const statusConfig: Record<
   string,
@@ -31,55 +36,90 @@ const statusConfig: Record<
 }
 
 export default function SpokeDashboard() {
+  const { user } = useAuth()
+  const { toast } = useToast()
   const [reports, setReports] = useState<any[]>([])
   const [followUps, setFollowUps] = useState<any[]>([])
+  const [visitCounts, setVisitCounts] = useState<Record<number, number>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true)
-        // Fetch reports for spoke ID 3 (Ravi from dummy data)
-        const [apiReports, apiFollowUps] = await Promise.all([
-          spokeReportsApi.getBySpoke(3),
-          followUpTasksApi.getByUser(3),
-        ])
-        
-        setReports(apiReports)
-        setFollowUps(apiFollowUps)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch data")
-      } finally {
-        setIsLoading(false)
+  const spokeId = user ? Number(user.id) : 0
+
+  const fetchData = async () => {
+    if (!spokeId) return
+    try {
+      setIsLoading(true)
+      setError(null)
+      const [apiReports, apiFollowUps] = await Promise.all([
+        spokeReportsApi.getBySpoke(spokeId),
+        followUpTasksApi.getByUser(spokeId),
+      ])
+
+      setReports(apiReports)
+      setFollowUps(apiFollowUps)
+
+      // Fetch visit counts per report
+      const counts: Record<number, number> = {}
+      for (const report of apiReports.slice(0, 5)) {
+        try {
+          const entries = await spokeVisitsApi.getByReport(report.id)
+          counts[report.id] = entries.length
+        } catch {
+          counts[report.id] = 0
+        }
       }
+      setVisitCounts(counts)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch data")
+      toast({
+        title: "Error fetching dashboard data",
+        description: err instanceof Error ? err.message : "Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchData()
-  }, [])
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchData, 60000)
+    return () => clearInterval(interval)
+  }, [spokeId])
 
   const recentReports = reports.slice(0, 3)
-  const pendingFollowUps = followUps.filter((fu: any) => fu.status !== "completed")
+  const todayStr = new Date().toISOString().split("T")[0]
 
-  // Calculate stats from real data
+  const pendingFollowUps = followUps.filter(
+    (fu: any) => fu.status !== "completed"
+  )
+  const overdueFollowUps = followUps.filter(
+    (fu: any) => fu.status === "pending" && fu.follow_up_date && fu.follow_up_date < todayStr
+  )
+
   const spokeStats = {
     reportsSubmitted: reports.length,
     pendingFollowups: pendingFollowUps.length,
-    telecallerFollowupsRaised: followUps.filter((fu: any) => fu.assigned_to_role === 'telecaller').length,
-    institutionsVisited: reports.reduce((acc: number, r: any) => acc + (r.visit_count || 0), 0),
+    overdueFollowups: overdueFollowUps.length,
+    telecallerFollowupsRaised: followUps.filter(
+      (fu: any) => fu.assigned_to_role === "telecaller"
+    ).length,
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading dashboard...</p>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-destructive">Error: {error}</p>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Retry
+        </Button>
       </div>
     )
   }
@@ -97,14 +137,24 @@ export default function SpokeDashboard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">{today}</p>
+          <p className="text-muted-foreground flex items-center gap-2">
+            {today}
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
+            <span className="text-[10px] opacity-70">Live</span>
+          </p>
         </div>
-        <Button asChild size="lg">
-          <Link href="/spoke/report/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Submit Today&apos;s Report
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+          <Button asChild size="lg">
+            <Link href="/spoke/report/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Submit Today&apos;s Report
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -135,7 +185,7 @@ export default function SpokeDashboard() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{spokeStats.reportsSubmitted}</p>
-                <p className="text-xs text-muted-foreground">Reports This Month</p>
+                <p className="text-xs text-muted-foreground">Reports Submitted</p>
               </div>
             </div>
           </CardContent>
@@ -250,7 +300,6 @@ export default function SpokeDashboard() {
                 </div>
               </Link>
             </Button>
-
           </div>
         </CardContent>
       </Card>
@@ -272,15 +321,15 @@ export default function SpokeDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {recentReports.map((report) => (
+                {recentReports.map((report: any) => (
                   <div
                     key={report.id}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="font-medium text-sm">{report.areaLocation}</p>
+                      <p className="font-medium text-sm">{report.area_location}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(report.reportDate).toLocaleDateString("en-IN", {
+                        {new Date(report.report_date + "T00:00:00").toLocaleDateString("en-IN", {
                           day: "2-digit",
                           month: "short",
                           year: "numeric",
@@ -288,9 +337,17 @@ export default function SpokeDashboard() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{report.schoolsVisited} schools</span>
-                      <span>•</span>
-                      <span>{report.coachingCentresVisited} centres</span>
+                      <span>{visitCounts[report.id] || 0} visits</span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          report.is_draft
+                            ? "bg-yellow-50 text-yellow-700"
+                            : "bg-green-50 text-green-700"
+                        )}
+                      >
+                        {report.is_draft ? "Draft" : "Submitted"}
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -315,8 +372,13 @@ export default function SpokeDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {pendingFollowUps.slice(0, 4).map((followUp) => {
-                  const config = statusConfig[followUp.status]
+                {pendingFollowUps.slice(0, 4).map((followUp: any) => {
+                  const isOverdue =
+                    followUp.status === "pending" &&
+                    followUp.follow_up_date &&
+                    followUp.follow_up_date < todayStr
+                  const displayStatus = isOverdue ? "Overdue" : "Pending"
+                  const config = statusConfig[displayStatus]
                   const Icon = config.icon
 
                   return (
@@ -324,16 +386,16 @@ export default function SpokeDashboard() {
                       key={followUp.id}
                       className={cn(
                         "rounded-lg border p-3",
-                        followUp.status === "Overdue" && "border-red-200 bg-red-50/50"
+                        isOverdue && "border-red-200 bg-red-50/50"
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">
-                            {followUp.institutionName}
+                            {followUp.institution_name || "—"}
                           </p>
                           <p className="text-xs text-muted-foreground line-clamp-1">
-                            {followUp.actionDescription}
+                            {followUp.action_description}
                           </p>
                         </div>
                         <Badge
@@ -341,16 +403,19 @@ export default function SpokeDashboard() {
                           className={cn(config.bgColor, config.color, "border-0 text-xs")}
                         >
                           <Icon className="h-3 w-3 mr-1" />
-                          {followUp.status}
+                          {displayStatus}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Due:{" "}
-                        {new Date(followUp.followUpDate).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
-                      </p>
+                      {followUp.follow_up_date && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Due:{" "}
+                          {new Date(followUp.follow_up_date + "T00:00:00").toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      )}
                     </div>
                   )
                 })}

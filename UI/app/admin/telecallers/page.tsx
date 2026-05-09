@@ -1,7 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Filter, Phone, Mail, MapPin, TrendingUp, Calendar, MoreHorizontal } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import {
+  Search,
+  Phone,
+  Mail,
+  Loader2,
+  RefreshCw,
+  MoreHorizontal,
+} from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,47 +21,110 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { mockUsers, mockCallAttempts } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
+import { usersApi } from "@/lib/api-client"
 
-export default function TelecallersPage() {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
+export default function AdminTelecallersPage() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [telecallers, setTelecallers] = useState<any[]>([])
+  const [perfData, setPerfData] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const telecallers = mockUsers.filter((u) => u.role === "telecaller")
-
-  const filteredTelecallers = telecallers.filter((tc) => {
-    const matchesSearch =
-      tc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tc.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tc.phone.includes(searchQuery)
-
-    const matchesFilter =
-      filterStatus === "all" || (filterStatus === "active" && tc.isActive) || (filterStatus === "inactive" && !tc.isActive)
-
-    return matchesSearch && matchesFilter
-  })
-
-  const getTelecallerStats = (tcId: string) => {
-    const calls = mockCallAttempts.filter((c) => c.telecallerId === tcId)
-    const qualified = calls.filter((c) => c.outcome === "Qualified").length
-    const today = calls.filter((c) => new Date(c.callDateTime).toDateString() === new Date().toDateString())
-    
-    return {
-      totalCalls: calls.length,
-      todayCalls: today.length,
-      qualified,
-      conversionRate: calls.length > 0 ? ((qualified / calls.length) * 100).toFixed(1) : "0",
+  const fetchData = async () => {
+    try {
+      setIsLoading(true)
+      const [users, perf] = await Promise.all([
+        usersApi.getByRole("telecaller"),
+        fetch(`${API_BASE_URL}/admin/telecaller-performance`).then((r) =>
+          r.json()
+        ),
+      ])
+      setTelecallers(users)
+      setPerfData(perf)
+    } catch (err) {
+      toast({
+        title: "Error fetching telecallers",
+        description: err instanceof Error ? err.message : "Please check your connection.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
+  useEffect(() => {
+    fetchData()
+    
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(fetchData, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const filteredTelecallers = useMemo(() => {
+    return telecallers.filter((tc: any) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        tc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tc.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tc.mobile.includes(searchQuery)
+      const matchesFilter =
+        filterStatus === "all" ||
+        (filterStatus === "active" && tc.is_active) ||
+        (filterStatus === "inactive" && !tc.is_active)
+      return matchesSearch && matchesFilter
+    })
+  }, [telecallers, searchQuery, filterStatus])
+
+  const getPerfForTc = (tcId: number) => {
+    return (
+      perfData.find((p: any) => p.id === tcId) || {
+        total_calls: 0,
+        calls_today: 0,
+        qualified: 0,
+        interested: 0,
+        callbacks: 0,
+        unique_prospects_called: 0,
+      }
+    )
+  }
+
+  if (isLoading) {
+    return <PageSkeleton />
+  }
+
+  // Summary stats
+  const totalCalls = perfData.reduce(
+    (s: number, p: any) => s + (p.total_calls || 0),
+    0
+  )
+  const totalQualified = perfData.reduce(
+    (s: number, p: any) => s + (p.qualified || 0),
+    0
+  )
+  const avgConversion =
+    totalCalls > 0 ? ((totalQualified / totalCalls) * 100).toFixed(1) : "0"
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Telecallers Management</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage and monitor your telecalling team
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Telecallers Management</h1>
+          <p className="text-muted-foreground flex items-center gap-2 mt-1">
+            Manage and monitor your telecalling team
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
+            <span className="text-[10px] opacity-70">Live</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -60,36 +132,31 @@ export default function TelecallersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{telecallers.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total Telecallers</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{telecallers.filter((t) => t.isActive).length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Active Today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {Math.floor(
-                telecallers.reduce((sum, tc) => sum + getTelecallerStats(tc.id).todayCalls, 0) /
-                  Math.max(telecallers.filter((t) => t.isActive).length, 1)
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Avg Calls/Day</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total Telecallers
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {(
-                (telecallers.reduce((sum, tc) => sum + parseInt(getTelecallerStats(tc.id).conversionRate), 0) /
-                  telecallers.length) || 0
-              ).toFixed(1)}
-              %
+              {telecallers.filter((t: any) => t.is_active).length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Avg Conversion</p>
+            <p className="text-xs text-muted-foreground mt-1">Active</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{totalCalls}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total Calls</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold">{avgConversion}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Avg Conversion
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -122,17 +189,25 @@ export default function TelecallersPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {filteredTelecallers.map((tc) => {
-              const stats = getTelecallerStats(tc.id)
+            {filteredTelecallers.map((tc: any) => {
+              const stats = getPerfForTc(tc.id)
+              const convRate =
+                stats.total_calls > 0
+                  ? ((stats.qualified / stats.total_calls) * 100).toFixed(1)
+                  : "0"
+
               return (
-                <div key={tc.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div
+                  key={tc.id}
+                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                         <span className="text-sm font-medium text-primary">
                           {tc.name
                             .split(" ")
-                            .map((n) => n[0])
+                            .map((n: string) => n[0])
                             .join("")}
                         </span>
                       </div>
@@ -145,46 +220,55 @@ export default function TelecallersPage() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Phone className="h-3 w-3" />
-                            {tc.phone}
+                            {tc.mobile}
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={tc.isActive ? "default" : "secondary"}>
-                        {tc.isActive ? "Active" : "Inactive"}
+                      <Badge variant={tc.is_active ? "default" : "secondary"}>
+                        {tc.is_active ? "Active" : "Inactive"}
                       </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>View Profile</DropdownMenuItem>
-                          <DropdownMenuItem>View History</DropdownMenuItem>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">Deactivate</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-5 gap-4 text-sm">
                     <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Total Calls</div>
-                      <div className="font-semibold text-lg">{stats.totalCalls}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Total Calls
+                      </div>
+                      <div className="font-semibold text-lg">
+                        {stats.total_calls}
+                      </div>
                     </div>
                     <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Today&apos;s Calls</div>
-                      <div className="font-semibold text-lg">{stats.todayCalls}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Today
+                      </div>
+                      <div className="font-semibold text-lg">
+                        {stats.calls_today}
+                      </div>
                     </div>
                     <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Qualified</div>
-                      <div className="font-semibold text-lg">{stats.qualified}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Qualified
+                      </div>
+                      <div className="font-semibold text-lg text-green-600">
+                        {stats.qualified}
+                      </div>
                     </div>
                     <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Conversion %</div>
-                      <div className="font-semibold text-lg">{stats.conversionRate}%</div>
+                      <div className="text-xs text-muted-foreground">
+                        Interested
+                      </div>
+                      <div className="font-semibold text-lg text-blue-600">
+                        {stats.interested}
+                      </div>
+                    </div>
+                    <div className="p-2 bg-muted/50 rounded">
+                      <div className="text-xs text-muted-foreground">
+                        Conversion
+                      </div>
+                      <div className="font-semibold text-lg">{convRate}%</div>
                     </div>
                   </div>
                 </div>

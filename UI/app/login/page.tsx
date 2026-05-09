@@ -32,8 +32,8 @@ export default function LoginPage() {
 
     if (!password) {
       errors.password = "Password is required"
-    } else if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters"
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters"
     }
 
     setValidationErrors(errors)
@@ -45,9 +45,9 @@ export default function LoginPage() {
 
     if (!validateForm()) return
 
-    const success = await login(email, password)
-    if (success && user) {
-      router.push(getRoleRedirectPath(user.role))
+    const loggedInUser = await login(email, password)
+    if (loggedInUser) {
+      router.push(getRoleRedirectPath(loggedInUser.role))
     }
   }
 
@@ -157,12 +157,12 @@ export default function LoginPage() {
           {/* Demo credentials helper */}
           <div className="mt-6 rounded-lg border bg-muted/50 p-4">
             <p className="text-xs font-medium text-muted-foreground mb-2">
-              Demo Credentials (any password with 8+ chars):
+              Demo Credentials:
             </p>
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p><span className="font-medium">Admin:</span> admin@cems.edu</p>
-              <p><span className="font-medium">Telecaller:</span> priya@cems.edu</p>
-              <p><span className="font-medium">Spoke:</span> vikram@cems.edu</p>
+              <p><span className="font-medium">Admin:</span> admin@cems.in / admin123</p>
+              <p><span className="font-medium">Telecaller:</span> caller@cems.in / caller123</p>
+              <p><span className="font-medium">Spoke:</span> spoke@cems.in / spoke123</p>
             </div>
           </div>
         </CardContent>

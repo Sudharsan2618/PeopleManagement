@@ -1,93 +1,119 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Filter, User, Calendar, Phone, CheckCircle2, Clock, MoreHorizontal } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import {
+  Search,
+  User,
+  Calendar,
+  Phone,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  MapPin,
+  Check,
+  Loader2,
+  RefreshCw,
+} from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { mockCallAttempts, mockFieldReports, mockUsers } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
+import { followUpTasksApi, usersApi, type FollowUpTask } from "@/lib/api-client"
 
-type FollowUp = {
-  id: string
-  type: "call" | "visit"
-  prospect: string
-  agent: string
-  scheduledDate: string
-  reason: string
-  priority: "High" | "Medium" | "Low"
-  status: "Pending" | "Completed" | "Rescheduled"
-}
-
-// Combine pending call callbacks and field visit follow-ups
-const mockFollowUps: FollowUp[] = [
-  ...mockCallAttempts
-    .filter((c) => c.outcome === "Callback" && new Date(c.callbackDateTime || "") > new Date())
-    .slice(0, 5)
-    .map((c, idx) => ({
-      id: `callback-${c.id}`,
-      type: "call" as const,
-      prospect: "Prospect " + (idx + 1),
-      agent: mockUsers.find((u) => u.id === c.telecallerId)?.name || "Unknown",
-      scheduledDate: c.callbackDateTime || "",
-      reason: "Callback Scheduled",
-      priority: (["High", "Medium", "Low"][idx % 3] as "High" | "Medium" | "Low"),
-      status: "Pending" as const,
-    })),
-  ...mockFieldReports
-    .filter((r) => r.outcome === "Visited")
-    .slice(0, 5)
-    .map((r, idx) => ({
-      id: `visit-${r.id}`,
-      type: "visit" as const,
-      prospect: r.areaLocation,
-      agent: mockUsers.find((u) => u.id === r.spokeId)?.name || "Unknown",
-      scheduledDate: r.date,
-      reason: "Follow-up Visit Needed",
-      priority: (["High", "Medium", "Low"][idx % 3] as "High" | "Medium" | "Low"),
-      status: ("Pending" as const),
-    })),
-]
-
-export default function FollowupsPage() {
+export default function AdminFollowupsPage() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [filterPriority, setFilterPriority] = useState<string>("all")
-  const [filterType, setFilterType] = useState<string>("all")
+  const [filterRole, setFilterRole] = useState<string>("all")
+  const [tasks, setTasks] = useState<FollowUpTask[]>([])
+  const [users, setUsers] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const filteredFollowUps = mockFollowUps.filter((followUp) => {
-    const matchesSearch =
-      followUp.prospect.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      followUp.agent.toLowerCase().includes(searchQuery.toLowerCase())
+  const fetchData = async () => {
+    try {
+      setIsLoading(true)
+      const [allTasks, allUsers] = await Promise.all([
+        followUpTasksApi.getAll(),
+        usersApi.getAll(),
+      ])
+      setTasks(allTasks)
+      setUsers(allUsers)
+    } catch (err) {
+      toast({
+        title: "Error fetching data",
+        description: err instanceof Error ? err.message : "Failed to load follow-ups.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-    const matchesStatus = filterStatus === "all" || followUp.status === filterStatus
-    const matchesPriority = filterPriority === "all" || followUp.priority === filterPriority
-    const matchesType = filterType === "all" || followUp.type === filterType
+  useEffect(() => {
+    fetchData()
+  }, [])
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesType
-  })
+  // Enrich with overdue status
+  const enrichedTasks = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    return tasks.map((t) => {
+      let displayStatus = t.status
+      if (t.status === "pending" && t.follow_up_date && t.follow_up_date < today) {
+        displayStatus = "overdue"
+      }
+      const assignedUser = users.find((u: any) => u.id === t.assigned_to_user_id)
+      return { ...t, displayStatus, assignedUserName: assignedUser?.name || "Unassigned" }
+    })
+  }, [tasks, users])
 
-  const stats = {
-    total: mockFollowUps.length,
-    pending: mockFollowUps.filter((f) => f.status === "Pending").length,
-    high: mockFollowUps.filter((f) => f.priority === "High").length,
-    completed: mockFollowUps.filter((f) => f.status === "Completed").length,
+  const filteredTasks = useMemo(() => {
+    return enrichedTasks.filter((t: any) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        (t.institution_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.action_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.assignedUserName.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus =
+        filterStatus === "all" || t.displayStatus === filterStatus
+      const matchesRole =
+        filterRole === "all" || t.assigned_to_role === filterRole
+      return matchesSearch && matchesStatus && matchesRole
+    })
+  }, [enrichedTasks, searchQuery, filterStatus, filterRole])
+
+  const stats = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    return {
+      total: tasks.length,
+      pending: tasks.filter((t) => t.status === "pending").length,
+      overdue: tasks.filter(
+        (t) => t.status === "pending" && t.follow_up_date && t.follow_up_date < today
+      ).length,
+      completed: tasks.filter((t) => t.status === "completed").length,
+    }
+  }, [tasks])
+
+  if (isLoading) {
+    return <PageSkeleton />
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Follow-ups Management</h1>
-        <p className="text-muted-foreground mt-2">
-          Track and manage pending callbacks and field follow-ups
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Follow-ups Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Track all pending callbacks and field follow-ups across teams
+          </p>
+        </div>
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -100,19 +126,25 @@ export default function FollowupsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {stats.pending}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Pending</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">{stats.high}</div>
-            <p className="text-xs text-muted-foreground mt-1">High Priority</p>
+            <div className="text-2xl font-bold text-red-600">
+              {stats.overdue}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Overdue</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.completed}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Completed</p>
           </CardContent>
         </Card>
@@ -126,7 +158,7 @@ export default function FollowupsPage() {
               <div className="relative flex-1 lg:flex-none lg:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by prospect or agent..."
+                  placeholder="Search institution or agent..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
@@ -138,113 +170,137 @@ export default function FollowupsPage() {
                 className="px-3 py-2 border rounded-md bg-background text-sm"
               >
                 <option value="all">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Completed">Completed</option>
-                <option value="Rescheduled">Rescheduled</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+                <option value="completed">Completed</option>
               </select>
               <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
                 className="px-3 py-2 border rounded-md bg-background text-sm"
               >
-                <option value="all">All Priorities</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-              </select>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="px-3 py-2 border rounded-md bg-background text-sm"
-              >
-                <option value="all">All Types</option>
-                <option value="call">Call</option>
-                <option value="visit">Visit</option>
+                <option value="all">All Roles</option>
+                <option value="telecaller">Telecaller</option>
+                <option value="spoke">Spoke</option>
               </select>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {filteredFollowUps.map((followUp) => (
-              <div key={followUp.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full",
-                        followUp.type === "call" ? "bg-blue-100" : "bg-purple-100"
-                      )}
-                    >
-                      {followUp.type === "call" ? (
-                        <Phone className={cn("h-5 w-5", "text-blue-600")} />
-                      ) : (
-                        <User className={cn("h-5 w-5", "text-purple-600")} />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm">{followUp.prospect}</h3>
-                      <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {followUp.agent}
+            {filteredTasks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No follow-up tasks found
+              </div>
+            ) : (
+              filteredTasks.map((task: any) => {
+                const isOverdue = task.displayStatus === "overdue"
+                const isCompleted = task.displayStatus === "completed"
+
+                return (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      "p-4 border rounded-lg transition-colors",
+                      isOverdue && "border-red-200 bg-red-50/30",
+                      isCompleted && "opacity-70"
+                    )}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-full",
+                            task.assigned_to_role === "telecaller"
+                              ? "bg-blue-100"
+                              : "bg-purple-100"
+                          )}
+                        >
+                          {task.assigned_to_role === "telecaller" ? (
+                            <Phone className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <MapPin className="h-5 w-5 text-purple-600" />
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(followUp.scheduledDate).toLocaleDateString("en-IN")}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(followUp.scheduledDate).toLocaleTimeString("en-IN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-sm">
+                            {task.action_description}
+                          </h3>
+                          <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
+                            {task.institution_name && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {task.institution_name}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {task.assignedUserName} ({task.assigned_to_role})
+                            </div>
+                            {task.follow_up_date && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Due:{" "}
+                                {new Date(
+                                  task.follow_up_date + "T00:00:00"
+                                ).toLocaleDateString("en-IN", {
+                                  dateStyle: "medium",
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          {task.resolution_note && (
+                            <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1 mt-2 inline-block">
+                              ✓ {task.resolution_note}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">{followUp.reason}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs",
+                            task.assigned_to_role === "telecaller"
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-purple-50 text-purple-700"
+                          )}
+                        >
+                          {task.assigned_to_role}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs",
+                            isOverdue
+                              ? "bg-red-50 text-red-700"
+                              : isCompleted
+                                ? "bg-green-50 text-green-700"
+                                : "bg-yellow-50 text-yellow-700"
+                          )}
+                        >
+                          {isOverdue ? (
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                          ) : isCompleted ? (
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Clock className="h-3 w-3 mr-1" />
+                          )}
+                          {isOverdue
+                            ? "Overdue"
+                            : isCompleted
+                              ? "Completed"
+                              : "Pending"}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        followUp.priority === "High"
-                          ? "bg-red-50 text-red-700"
-                          : followUp.priority === "Medium"
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-green-50 text-green-700"
-                      )}
-                    >
-                      {followUp.priority}
-                    </Badge>
-                    <Badge
-                      variant={followUp.status === "Pending" ? "secondary" : "default"}
-                      className={cn(
-                        followUp.status === "Completed" && "bg-green-600"
-                      )}
-                    >
-                      {followUp.status}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Mark Complete
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Reschedule</DropdownMenuItem>
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </div>
-            ))}
+                )
+              })
+            )}
+          </div>
+          <div className="mt-4 text-sm text-muted-foreground">
+            Showing {filteredTasks.length} of {tasks.length} follow-ups
           </div>
         </CardContent>
       </Card>
