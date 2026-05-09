@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
+  UserPlus,
+  TrendingUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -218,6 +220,37 @@ export default function SpokeDashboard() {
                 </div>
               </Link>
             </Button>
+            <Button asChild variant="outline" className="h-auto py-4 justify-start">
+              <Link href="/spoke/prospects">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-purple-100 p-2">
+                    <UserPlus className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium">Assign Prospects</p>
+                    <p className="text-xs text-muted-foreground">
+                      Assign leads to telecallers
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto py-4 justify-start">
+              <Link href="/spoke/telecallers">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-emerald-100 p-2">
+                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium">Telecaller Stats</p>
+                    <p className="text-xs text-muted-foreground">
+                      Monitor team performance
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            </Button>
+
           </div>
         </CardContent>
       </Card>

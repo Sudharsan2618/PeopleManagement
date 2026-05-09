@@ -5,20 +5,15 @@ import Link from "next/link"
 import {
   Users,
   Search,
-  Filter,
   Plus,
   Upload,
   Download,
   Eye,
-  UserCog,
-  Archive,
+  UserPlus,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  Phone,
-  MapPin,
-  Calendar,
-  UserPlus,
+  ArrowLeft,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,10 +44,10 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -63,7 +58,7 @@ import {
 } from "@/lib/mock-data"
 import { prospectsApi, assignmentsApi, usersApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
 
-const statusColors: Record<ProspectStatus, string> = {
+const statusColors: Record<string, string> = {
   Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
   InProgress: "bg-blue-100 text-blue-800 border-blue-200",
   Callback: "bg-orange-100 text-orange-800 border-orange-200",
@@ -76,7 +71,7 @@ const statusColors: Record<ProspectStatus, string> = {
 
 const ITEMS_PER_PAGE = 15
 
-export default function AdminProspectsPage() {
+export default function SpokeProspectsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [assignedFilter, setAssignedFilter] = useState<string>("all")
@@ -89,7 +84,6 @@ export default function AdminProspectsPage() {
   const [targetTelecallerId, setTargetTelecallerId] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
   const [prospects, setProspects] = useState<any[]>([])
-  const [assignments, setAssignments] = useState<any[]>([])
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -108,7 +102,6 @@ export default function AdminProspectsPage() {
         const uiTelecallers = apiUsers.map(adaptApiUserToUiUser)
         
         setProspects(uiProspects)
-        setAssignments(apiAssignments)
         setTelecallers(uiTelecallers)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch data")
@@ -171,8 +164,8 @@ export default function AdminProspectsPage() {
       const today = new Date().toISOString().split("T")[0]
       
       // In a real app, assigned_by would come from the current user's session
-      // For now using ID 1 (Admin) or 3 (Spoke) depending on context
-      const assignedBy = 1 
+      // For Spoke, using ID 3 (Ravi from dummy data)
+      const assignedBy = 3 
 
       await Promise.all(
         selectedProspectIds.map((prospectId) =>
@@ -194,7 +187,6 @@ export default function AdminProspectsPage() {
         adaptApiProspectToUiProspect(p, apiAssignments)
       )
       setProspects(uiProspects)
-      setAssignments(apiAssignments)
       
       setSelectedProspectIds([])
       setIsAssignDialogOpen(false)
@@ -209,14 +201,6 @@ export default function AdminProspectsPage() {
   const getAssignedTelecaller = (id?: string) => {
     if (!id) return null
     return telecallers.find((tc) => tc.id === id)
-  }
-
-  // Stats
-  const stats = {
-    total: prospects.length,
-    assigned: prospects.filter((p) => p.assignedTo).length,
-    qualified: prospects.filter((p) => p.status === "Qualified").length,
-    pending: prospects.filter((p) => p.status === "Pending").length,
   }
 
   if (isLoading) {
@@ -239,82 +223,33 @@ export default function AdminProspectsPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Prospect Management</h1>
-          <p className="text-muted-foreground">
-            View and manage all prospects in the database
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/spoke/dashboard">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Assign Prospects</h1>
+            <p className="text-muted-foreground">
+              Select prospects and assign them to telecallers
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link href="/admin/prospects/import">
+            <Link href="/spoke/prospects/import">
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/admin/prospects/add">
+            <Link href="/spoke/prospects/add">
               <Plus className="h-4 w-4 mr-2" />
               Add Prospect
             </Link>
           </Button>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Total Prospects</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2">
-                <UserCog className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.assigned.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Assigned</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2">
-                <Users className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.qualified}</p>
-                <p className="text-xs text-muted-foreground">Qualified</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-yellow-100 p-2">
-                <Users className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters */}
@@ -374,26 +309,6 @@ export default function AdminProspectsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={courseFilter}
-                onValueChange={(v) => {
-                  setCourseFilter(v)
-                  setCurrentPage(1)
-                }}
-              >
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Course" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Courses</SelectItem>
-                  {mockCourses.map((course) => (
-                    <SelectItem key={course.id} value={`Course${course.code.charAt(0)}`}>
-                      {course.code}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="Unknown">Unknown</SelectItem>
-                </SelectContent>
-              </Select>
               <Button variant="outline" size="icon">
                 <Download className="h-4 w-4" />
               </Button>
@@ -436,7 +351,6 @@ export default function AdminProspectsPage() {
                   <TableHead>Course</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Call</TableHead>
                   <TableHead className="w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -473,13 +387,7 @@ export default function AdminProspectsPage() {
                         <TableCell>{prospect.location}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">
-                            {prospect.courseInterest === "Unknown"
-                              ? "Unknown"
-                              : mockCourses.find(
-                                  (c) =>
-                                    c.code ===
-                                    prospect.courseInterest.replace("Course", "")
-                                )?.code || prospect.courseInterest}
+                            {prospect.courseInterest}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -496,39 +404,13 @@ export default function AdminProspectsPage() {
                             variant="outline"
                             className={cn(statusColors[prospect.status])}
                           >
-                            {prospect.status === "NotInterested"
-                              ? "Not Interested"
-                              : prospect.status}
+                            {prospect.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {prospect.lastCallAt
-                            ? new Date(prospect.lastCallAt).toLocaleDateString("en-IN")
-                            : "-"}
-                        </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleViewDetails(prospect)}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <UserCog className="h-4 w-4 mr-2" />
-                                Reassign
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
-                                <Archive className="h-4 w-4 mr-2" />
-                                Archive
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(prospect)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     )
@@ -582,7 +464,6 @@ export default function AdminProspectsPage() {
           {selectedProspect && (
             <ScrollArea className="max-h-[calc(90vh-100px)]">
               <div className="space-y-6 pr-4">
-                {/* Basic Info */}
                 <div>
                   <h3 className="font-semibold mb-3">Basic Information</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -591,24 +472,12 @@ export default function AdminProspectsPage() {
                       <p className="font-medium">{selectedProspect.name}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Age:</span>
-                      <p className="font-medium">{selectedProspect.age || "N/A"} years</p>
-                    </div>
-                    <div>
                       <span className="text-muted-foreground">Mobile:</span>
                       <p className="font-medium font-mono">{selectedProspect.mobile}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Email:</span>
-                      <p className="font-medium">{selectedProspect.email || "N/A"}</p>
-                    </div>
-                    <div>
                       <span className="text-muted-foreground">Location:</span>
                       <p className="font-medium">{selectedProspect.location}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">School:</span>
-                      <p className="font-medium">{selectedProspect.schoolLastAttended}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Course Interest:</span>
@@ -616,16 +485,9 @@ export default function AdminProspectsPage() {
                         {selectedProspect.courseInterest}
                       </Badge>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Source:</span>
-                      <p className="font-medium">{selectedProspect.source}</p>
-                    </div>
                   </div>
                 </div>
-
                 <Separator />
-
-                {/* Assignment Info */}
                 <div>
                   <h3 className="font-semibold mb-3">Assignment</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -637,16 +499,6 @@ export default function AdminProspectsPage() {
                       </p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Assigned Date:</span>
-                      <p className="font-medium">
-                        {selectedProspect.assignedDate
-                          ? new Date(selectedProspect.assignedDate).toLocaleDateString(
-                              "en-IN"
-                            )
-                          : "N/A"}
-                      </p>
-                    </div>
-                    <div>
                       <span className="text-muted-foreground">Current Status:</span>
                       <Badge
                         variant="outline"
@@ -655,23 +507,7 @@ export default function AdminProspectsPage() {
                         {selectedProspect.status}
                       </Badge>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Created:</span>
-                      <p className="font-medium">
-                        {new Date(selectedProspect.createdAt).toLocaleDateString("en-IN")}
-                      </p>
-                    </div>
                   </div>
-                </div>
-
-                <Separator />
-
-                {/* Call History */}
-                <div>
-                  <h3 className="font-semibold mb-3">Call History</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Call history not yet implemented with backend
-                  </p>
                 </div>
               </div>
             </ScrollArea>
@@ -722,7 +558,6 @@ export default function AdminProspectsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }

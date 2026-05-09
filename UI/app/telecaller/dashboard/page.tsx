@@ -136,22 +136,6 @@ export default function TelecallerDashboard() {
     },
   ]
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading prospects...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-destructive">Error: {error}</p>
-      </div>
-    )
-  }
-
   // Sort prospects: Callback due first, then pending, then completed
   const sortedProspects = useMemo(() => {
     return [...prospects].sort((a: any, b: any) => {
@@ -181,6 +165,22 @@ export default function TelecallerDashboard() {
       return matchesSearch && matchesStatus && matchesCourse
     })
   }, [sortedProspects, searchQuery, statusFilter, courseFilter])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading prospects...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-destructive">Error: {error}</p>
+      </div>
+    )
+  }
 
   const handleCall = (prospect: any) => {
     setSelectedProspect(prospect)
