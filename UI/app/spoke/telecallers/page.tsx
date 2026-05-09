@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { usersApi, prospectsApi, adaptApiUserToUiUser, apiRequest } from "@/lib/api-client"
+import { usersApi, prospectsApi, adaptApiUserToUiUser, callLogsApi } from "@/lib/api-client"
 
 export default function TelecallerStatusPage() {
   const [telecallers, setTelecallers] = useState<any[]>([])
@@ -41,7 +41,7 @@ export default function TelecallerStatusPage() {
         const [apiUsers, apiProspects, apiCallLogs] = await Promise.all([
           usersApi.getByRole("telecaller"),
           prospectsApi.getAll(),
-          apiRequest<any[]>("/call-logs"), // Assuming this exists or using generic fetch
+          callLogsApi.getAll(),
         ])
         
         setTelecallers(apiUsers.map(adaptApiUserToUiUser))
