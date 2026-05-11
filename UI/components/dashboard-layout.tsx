@@ -56,6 +56,8 @@ const telecallerNav: NavItem[] = [
 
 const spokeNav: NavItem[] = [
   { title: "Dashboard", href: "/spoke/dashboard", icon: LayoutDashboard },
+  { title: "Assign Prospects", href: "/spoke/prospects", icon: Users },
+  { title: "Telecaller Stats", href: "/spoke/telecallers", icon: BarChart3 },
   { title: "New Report", href: "/spoke/report/new", icon: FileText },
   { title: "Past Reports", href: "/spoke/reports", icon: FolderOpen },
   { title: "My Follow-ups", href: "/spoke/followups", icon: ClipboardList, badge: 4 },

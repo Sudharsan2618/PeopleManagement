@@ -24,11 +24,12 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 import {
   Select,
   SelectContent,
@@ -251,6 +252,10 @@ export function CallOutcomeModal({
       data.institutionName = institutionName
     }
 
+    if (reason) {
+      data.reason = reason
+    }
+
     onSubmit(selectedOutcome, data)
     resetForm()
     onOpenChange(false)
@@ -259,341 +264,313 @@ export function CallOutcomeModal({
   if (!prospect) return null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-3">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-[900px] p-0 flex flex-col h-full border-l shadow-2xl">
+        <SheetHeader className="px-6 py-4 border-b bg-muted/10">
+          <SheetTitle className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
               <Phone className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <span className="text-lg">Log Call Outcome</span>
-              <p className="text-sm font-normal text-muted-foreground">
-                Record the result of your call with {prospect.name}
-              </p>
+              <span className="text-xl font-bold">Call Outcome</span>
+              <SheetDescription className="text-sm font-normal text-muted-foreground">
+                Recording call for <span className="font-semibold text-foreground">{prospect.name}</span>
+              </SheetDescription>
             </div>
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-180px)]">
-          <div className="px-6 py-4 space-y-6">
-            {/* Prospect Info */}
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    <span className="text-muted-foreground">Name:</span>{" "}
-                    <strong>{prospect.name}</strong>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    <span className="text-muted-foreground">Location:</span>{" "}
-                    {prospect.location || "—"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    <span className="text-muted-foreground">Mobile:</span>{" "}
-                    <span className="font-mono">{prospect.mobile}</span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    <span className="text-muted-foreground">Interest:</span>{" "}
-                    <Badge variant="secondary" className="ml-1">
-                      {prospect.courseInterest || "Not captured"}
-                    </Badge>
-                  </span>
-                </div>
-              </div>
-            </div>
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Left Panel: Info & History */}
+          <div className="w-1/3 border-r bg-muted/5 flex flex-col">
+            <ScrollArea className="h-full">
+              <div className="p-6 space-y-8">
+                {/* Prospect Details */}
+                <section>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Prospect Details</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary font-bold text-xs">
+                        {prospect.name.split(' ').map((n: string) => n[0]).join('')}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold">{prospect.name}</p>
+                        <p className="text-xs text-muted-foreground">{prospect.mobile}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3 pl-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span>{prospect.location || "Location not set"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline" className="bg-background">
+                          {prospect.courseInterest || "Interest not captured"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
-            {/* Call History — from real API */}
-            {historyLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <span className="text-sm text-muted-foreground">Loading call history...</span>
-              </div>
-            ) : callHistory.length > 0 ? (
-              <Accordion type="single" collapsible>
-                <AccordionItem value="history" className="border rounded-lg">
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                    <span className="text-sm font-medium">
-                      Call History ({callHistory.length} previous attempts)
-                    </span>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="space-y-3">
+                {/* Call History */}
+                <section>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                    History ({callHistory.length})
+                  </h3>
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : callHistory.length > 0 ? (
+                    <div className="space-y-4 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-border">
                       {callHistory.map((call) => (
-                        <div
-                          key={call.id}
-                          className="flex items-start gap-3 text-sm border-l-2 border-muted pl-3"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  "font-medium",
-                                  DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
-                                )}
-                              >
+                        <div key={call.id} className="relative pl-8">
+                          <div className={cn(
+                            "absolute left-0 top-1.5 h-5 w-5 rounded-full border-4 border-background shadow-sm",
+                            DB_OUTCOME_COLORS[call.outcome]?.replace('text-', 'bg-') || "bg-muted"
+                          )} />
+                          <div className="bg-background border rounded-lg p-3 shadow-sm">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={cn(
+                                "text-xs font-bold",
+                                DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
+                              )}>
                                 {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
                               </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(call.called_at).toLocaleString("en-IN", {
-                                  dateStyle: "short",
-                                  timeStyle: "short",
-                                })}
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(call.called_at).toLocaleDateString()}
                               </span>
                             </div>
-                            {call.notes && (
-                              <p className="text-muted-foreground mt-1">{call.notes}</p>
-                            )}
                             {call.reason && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                Reason: {call.reason}
-                              </p>
+                              <p className="text-xs font-medium text-foreground/80 mb-1">{call.reason}</p>
                             )}
-                            {call.callback_scheduled_at && (
-                              <p className="text-xs text-blue-600 mt-0.5">
-                                ↳ Callback scheduled:{" "}
-                                {new Date(call.callback_scheduled_at).toLocaleString(
-                                  "en-IN",
-                                  { dateStyle: "short", timeStyle: "short" }
-                                )}
-                              </p>
+                            {call.notes && (
+                              <p className="text-[11px] text-muted-foreground line-clamp-2 italic">&quot;{call.notes}&quot;</p>
                             )}
                           </div>
                         </div>
                       ))}
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            ) : null}
-
-            {/* Outcome Selection */}
-            <div>
-              <h3 className="text-sm font-medium mb-3">Select Call Outcome</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {outcomeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setSelectedOutcome(option.value)}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
-                      selectedOutcome === option.value
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <option.icon className={cn("h-5 w-5 mt-0.5 shrink-0", option.color)} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{option.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {option.description}
-                      </p>
+                  ) : (
+                    <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
+                      <PhoneOff className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                      <p className="text-xs text-muted-foreground">No previous calls recorded</p>
                     </div>
-                  </button>
-                ))}
+                  )}
+                </section>
               </div>
-            </div>
-
-            {/* Conditional Fields */}
-            {selectedOutcome === "CallBack" && (
-              <div className="space-y-4 rounded-lg border bg-blue-50/50 p-4">
-                <h4 className="text-sm font-medium">Schedule Callback</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date</Label>
-                    <Input
-                      type="date"
-                      value={callbackDate}
-                      onChange={(e) => setCallbackDate(e.target.value)}
-                      min={new Date().toISOString().split("T")[0]}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Time</Label>
-                    <Input
-                      type="time"
-                      value={callbackTime}
-                      onChange={(e) => setCallbackTime(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {(selectedOutcome === "NotInterested" || selectedOutcome === "DNC") && (
-              <div className="space-y-4 rounded-lg border bg-red-50/50 p-4">
-                <h4 className="text-sm font-medium">
-                  Reason {selectedOutcome === "DNC" && "(Required)"}
-                </h4>
-                <Select value={reason} onValueChange={setReason}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a reason" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {notInterestedReasons.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {selectedOutcome === "Interested" && (
-              <div className="space-y-4 rounded-lg border bg-green-50/50 p-4">
-                <h4 className="text-sm font-medium">Gather Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Course Preference *</Label>
-                    <Select value={coursePreference} onValueChange={setCoursePreference}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockCourses.map((course) => (
-                          <SelectItem key={course.id} value={course.code}>
-                            {course.name} ({course.code})
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="undecided">Undecided</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Preferred Study Mode *</Label>
-                    <RadioGroup value={studyMode} onValueChange={setStudyMode}>
-                      <div className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Online" id="online" />
-                          <Label htmlFor="online" className="font-normal">
-                            Online
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Offline" id="offline" />
-                          <Label htmlFor="offline" className="font-normal">
-                            Offline
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Hybrid" id="hybrid" />
-                          <Label htmlFor="hybrid" className="font-normal">
-                            Hybrid
-                          </Label>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Preferred Location</Label>
-                    <Input
-                      placeholder="e.g., Chennai, Coimbatore"
-                      value={preferredLocation}
-                      onChange={(e) => setPreferredLocation(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Parent/Guardian Aware? *</Label>
-                    <RadioGroup value={parentAware} onValueChange={setParentAware}>
-                      <div className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Yes" id="pa_yes" />
-                          <Label htmlFor="pa_yes" className="font-normal">Yes</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="No" id="pa_no" />
-                          <Label htmlFor="pa_no" className="font-normal">No</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="NotYet" id="pa_notyet" />
-                          <Label htmlFor="pa_notyet" className="font-normal">Not Yet</Label>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Best Time to Call</Label>
-                    <Input
-                      type="time"
-                      value={bestTimeToCall}
-                      onChange={(e) => setBestTimeToCall(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedOutcome === "Qualified" && (
-              <div className="space-y-4 rounded-lg border bg-emerald-50/50 p-4">
-                <h4 className="text-sm font-medium">Confirm Course</h4>
-                <Select value={coursePreference} onValueChange={setCoursePreference}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select confirmed course" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockCourses.map((course) => (
-                      <SelectItem key={course.id} value={course.code}>
-                        {course.name} ({course.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {selectedOutcome === "EnrolledElsewhere" && (
-              <div className="space-y-4 rounded-lg border bg-purple-50/50 p-4">
-                <h4 className="text-sm font-medium">Institution Name (Optional)</h4>
-                <Input
-                  placeholder="Where did they enroll?"
-                  value={institutionName}
-                  onChange={(e) => setInstitutionName(e.target.value)}
-                />
-              </div>
-            )}
-
-            {/* Notes */}
-            {selectedOutcome && (
-              <div className="space-y-2">
-                <Label>Additional Notes</Label>
-                <Textarea
-                  placeholder="Add any relevant notes about this call..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-            )}
+            </ScrollArea>
           </div>
-        </ScrollArea>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-muted/30">
-          <Button
-            variant="outline"
-            onClick={() => {
-              resetForm()
-              onOpenChange(false)
-            }}
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!selectedOutcome}>
-            Save Outcome
-          </Button>
+          {/* Right Panel: Call Logging Form */}
+          <div className="flex-1 flex flex-col bg-background">
+            <ScrollArea className="h-full">
+              <div className="p-8 space-y-8">
+                {/* Outcome Grid */}
+                <section>
+                  <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                    <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">1</span>
+                    Select Outcome
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {outcomeOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => setSelectedOutcome(option.value)}
+                        className={cn(
+                          "flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all hover:border-primary/50",
+                          selectedOutcome === option.value
+                            ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
+                            : "border-muted bg-muted/10"
+                        )}
+                      >
+                        <option.icon className={cn("h-6 w-6 shrink-0", option.color)} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold">{option.label}</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                            {option.description}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                {selectedOutcome && (
+                  <>
+                    <div className="h-px bg-border" />
+                    
+                    {/* Dynamic Fields */}
+                    <section className="animate-in fade-in slide-in-from-top-4 duration-300">
+                      <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">2</span>
+                        Outcome Details
+                      </h3>
+                      
+                      <div className="bg-muted/30 rounded-xl p-6 border space-y-6">
+                        {/* Outcome Specific Fields */}
+                        {(selectedOutcome === "NotAnswered" || selectedOutcome === "Busy" || selectedOutcome === "WrongNumber" || selectedOutcome === "LanguageBarrier") && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">What happened?</Label>
+                            <Select value={reason} onValueChange={setReason}>
+                              <SelectTrigger className="h-11 bg-background border-2 focus:ring-primary">
+                                <SelectValue placeholder="Select specific reason" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {selectedOutcome === "NotAnswered" && (
+                                  <>
+                                    <SelectItem value="Call not picked">Call not picked</SelectItem>
+                                    <SelectItem value="Phone switched off">Phone switched off</SelectItem>
+                                    <SelectItem value="Out of coverage">Out of coverage</SelectItem>
+                                  </>
+                                )}
+                                {selectedOutcome === "Busy" && (
+                                  <>
+                                    <SelectItem value="Line busy">Line busy</SelectItem>
+                                    <SelectItem value="Call waiting">Call waiting</SelectItem>
+                                    <SelectItem value="Network issue">Network issue</SelectItem>
+                                  </>
+                                )}
+                                {selectedOutcome === "WrongNumber" && (
+                                  <>
+                                    <SelectItem value="Wrong person">Wrong person</SelectItem>
+                                    <SelectItem value="Number doesn't exist">Number doesn't exist</SelectItem>
+                                  </>
+                                )}
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {reason === "Other" && (
+                              <Input
+                                placeholder="Please specify..."
+                                className="mt-2 h-11 border-2"
+                                onChange={(e) => setReason(e.target.value)}
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {selectedOutcome === "CallBack" && (
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Date</Label>
+                                <Input
+                                  type="date"
+                                  className="h-11 border-2"
+                                  value={callbackDate}
+                                  onChange={(e) => setCallbackDate(e.target.value)}
+                                  min={new Date().toISOString().split("T")[0]}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Time</Label>
+                                <Input
+                                  type="time"
+                                  className="h-11 border-2"
+                                  value={callbackTime}
+                                  onChange={(e) => setCallbackTime(e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Context for Call</Label>
+                              <Select value={reason} onValueChange={setReason}>
+                                <SelectTrigger className="h-11 bg-background border-2">
+                                  <SelectValue placeholder="Why schedule a callback?" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Asked for callback">Asked for callback</SelectItem>
+                                  <SelectItem value="Busy now">Busy now</SelectItem>
+                                  <SelectItem value="Call later today">Call later today</SelectItem>
+                                  <SelectItem value="Meeting in progress">Meeting in progress</SelectItem>
+                                  <SelectItem value="Traveling">Traveling</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedOutcome === "Interested" && (
+                          <div className="space-y-6">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Course Interest</Label>
+                              <Select value={coursePreference} onValueChange={setCoursePreference}>
+                                <SelectTrigger className="h-11 bg-background border-2">
+                                  <SelectValue placeholder="Select course" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {mockCourses.map((course) => (
+                                    <SelectItem key={course.id} value={course.code}>
+                                      {course.name} ({course.code})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase text-muted-foreground">Study Mode</Label>
+                              <RadioGroup value={studyMode} onValueChange={setStudyMode} className="flex gap-6">
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="Online" id="online" />
+                                  <Label htmlFor="online" className="cursor-pointer">Online</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="Offline" id="offline" />
+                                  <Label htmlFor="offline" className="cursor-pointer">Offline</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="Hybrid" id="hybrid" />
+                                  <Label htmlFor="hybrid" className="cursor-pointer">Hybrid</Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Common Notes field */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold uppercase text-muted-foreground">Additional Notes</Label>
+                          <Textarea
+                            placeholder="Write anything important about this conversation..."
+                            className="min-h-[120px] border-2 focus-visible:ring-primary"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </section>
+                  </>
+                )}
+              </div>
+            </ScrollArea>
+
+            {/* Sticky Footer */}
+            <div className="p-6 border-t bg-muted/10 flex items-center justify-between gap-4">
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => {
+                  resetForm()
+                  onOpenChange(false)
+                }}
+              >
+                Close Without Saving
+              </Button>
+              <Button 
+                size="lg" 
+                className="px-12 h-12 text-md font-bold shadow-lg shadow-primary/20"
+                onClick={handleSubmit} 
+                disabled={!selectedOutcome}
+              >
+                Save Call Outcome
+              </Button>
+            </div>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

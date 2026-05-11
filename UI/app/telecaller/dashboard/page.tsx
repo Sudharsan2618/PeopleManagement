@@ -162,6 +162,7 @@ export default function TelecallerDashboard() {
             // Enriched from call logs
             lastCallAt: lastLog?.called_at || null,
             lastOutcome: lastLog?.outcome || null,
+            lastReason: lastLog?.reason || null,
             callbackDateTime: lastLog?.callback_scheduled_at || null,
             totalCalls: prospectLogs.length,
           }
@@ -485,6 +486,7 @@ export default function TelecallerDashboard() {
                   <TableHead>Status</TableHead>
                   <TableHead>Calls</TableHead>
                   <TableHead>Last Call</TableHead>
+                  <TableHead>Reason / Outcome</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -563,6 +565,22 @@ export default function TelecallerDashboard() {
                                 { dateStyle: "short", timeStyle: "short" }
                               )
                             : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {prospect.lastOutcome ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted w-fit">
+                                {prospect.lastOutcome.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                              </span>
+                              {prospect.lastReason && (
+                                <span className="text-[11px] text-muted-foreground line-clamp-1 italic">
+                                  &quot;{prospect.lastReason}&quot;
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
