@@ -181,7 +181,7 @@ export default function AdminFollowupsPage() {
               >
                 <option value="all">All Roles</option>
                 <option value="telecaller">Telecaller</option>
-                <option value="spoke">Spoke</option>
+                <option value="spoc">spoc</option>
               </select>
             </div>
           </div>

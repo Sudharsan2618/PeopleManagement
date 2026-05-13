@@ -3,16 +3,16 @@ from datetime import date
 from database.connection import execute_query, execute_insert, execute_update_delete
 
 
-class SpokeVisitService:
-    """Service layer for Spoke Visit Entries table with direct SQL queries."""
+class spocVisitService:
+    """Service layer for spoc Visit Entries table with direct SQL queries."""
     
     @staticmethod
     def get_all_visits() -> List[dict]:
-        """Get all spoke visit entries."""
+        """Get all spoc visit entries."""
         query = """
             SELECT id, report_id, visit_type, institution_name, contact_name, contact_email,
                    contact_mobile, next_action, follow_up_role, follow_up_user_id, follow_up_date, created_at
-            FROM spoke_visit_entries
+            FROM spoc_visit_entries
             ORDER BY created_at DESC
         """
         return execute_query(query, fetch="all")
@@ -23,7 +23,7 @@ class SpokeVisitService:
         query = """
             SELECT id, report_id, visit_type, institution_name, contact_name, contact_email,
                    contact_mobile, next_action, follow_up_role, follow_up_user_id, follow_up_date, created_at
-            FROM spoke_visit_entries
+            FROM spoc_visit_entries
             WHERE id = %s
         """
         return execute_query(query, (visit_id,), fetch="one")
@@ -34,7 +34,7 @@ class SpokeVisitService:
         query = """
             SELECT id, report_id, visit_type, institution_name, contact_name, contact_email,
                    contact_mobile, next_action, follow_up_role, follow_up_user_id, follow_up_date, created_at
-            FROM spoke_visit_entries
+            FROM spoc_visit_entries
             WHERE report_id = %s
             ORDER BY created_at DESC
         """
@@ -44,9 +44,9 @@ class SpokeVisitService:
     def create_visit(report_id: int, visit_type: str, institution_name: str, contact_name: Optional[str],
                      contact_email: Optional[str], contact_mobile: Optional[str], next_action: Optional[str],
                      follow_up_role: Optional[str], follow_up_user_id: Optional[int], follow_up_date: Optional[date]) -> int:
-        """Create a new spoke visit entry."""
+        """Create a new spoc visit entry."""
         query = """
-            INSERT INTO spoke_visit_entries (report_id, visit_type, institution_name, contact_name, 
+            INSERT INTO spoc_visit_entries (report_id, visit_type, institution_name, contact_name, 
                                              contact_email, contact_mobile, next_action, 
                                              follow_up_role, follow_up_user_id, follow_up_date)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -99,7 +99,7 @@ class SpokeVisitService:
         
         params.append(visit_id)
         query = f"""
-            UPDATE spoke_visit_entries
+            UPDATE spoc_visit_entries
             SET {', '.join(updates)}
             WHERE id = %s
         """
@@ -108,5 +108,5 @@ class SpokeVisitService:
     @staticmethod
     def delete_visit(visit_id: int) -> int:
         """Delete a visit entry."""
-        query = "DELETE FROM spoke_visit_entries WHERE id = %s"
+        query = "DELETE FROM spoc_visit_entries WHERE id = %s"
         return execute_update_delete(query, (visit_id,))

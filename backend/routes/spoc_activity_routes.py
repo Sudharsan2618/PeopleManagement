@@ -1,70 +1,70 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from models.schemas import SpokeActivity, SpokeActivityCreate, SpokeActivityUpdate
-from services.spoke_activity_service import SpokeActivityService
+from models.schemas import spocActivity, spocActivityCreate, spocActivityUpdate
+from services.spoc_activity_service import spocActivityService
 
-router = APIRouter(prefix="/spoke-activities", tags=["spoke-activities"])
+router = APIRouter(prefix="/spoc-activities", tags=["spoc-activities"])
 
 
-@router.get("", response_model=List[SpokeActivity])
+@router.get("", response_model=List[spocActivity])
 def get_all_activities():
-    """Get all spoke activities."""
+    """Get all spoc activities."""
     try:
-        activities = SpokeActivityService.get_all_activities()
+        activities = spocActivityService.get_all_activities()
         return activities
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{activity_id}", response_model=SpokeActivity)
+@router.get("/{activity_id}", response_model=spocActivity)
 def get_activity(activity_id: int):
     """Get activity by ID."""
-    activity = SpokeActivityService.get_activity_by_id(activity_id)
+    activity = spocActivityService.get_activity_by_id(activity_id)
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     return activity
 
 
-@router.get("/report/{report_id}", response_model=List[SpokeActivity])
+@router.get("/report/{report_id}", response_model=List[spocActivity])
 def get_activities_by_report(report_id: int):
     """Get all activities for a specific report."""
     try:
-        activities = SpokeActivityService.get_activities_by_report(report_id)
+        activities = spocActivityService.get_activities_by_report(report_id)
         return activities
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("", response_model=SpokeActivity, status_code=201)
-def create_activity(activity: SpokeActivityCreate):
-    """Create a new spoke activity."""
+@router.post("", response_model=spocActivity, status_code=201)
+def create_activity(activity: spocActivityCreate):
+    """Create a new spoc activity."""
     try:
-        activity_id = SpokeActivityService.create_activity(
+        activity_id = spocActivityService.create_activity(
             report_id=activity.report_id,
             activity_type=activity.activity_type,
             done=activity.done,
             notes=activity.notes
         )
-        return SpokeActivityService.get_activity_by_id(activity_id)
+        return spocActivityService.get_activity_by_id(activity_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/{activity_id}", response_model=SpokeActivity)
-def update_activity(activity_id: int, activity: SpokeActivityUpdate):
+@router.put("/{activity_id}", response_model=spocActivity)
+def update_activity(activity_id: int, activity: spocActivityUpdate):
     """Update activity details."""
-    existing_activity = SpokeActivityService.get_activity_by_id(activity_id)
+    existing_activity = spocActivityService.get_activity_by_id(activity_id)
     if not existing_activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
     try:
-        SpokeActivityService.update_activity(
+        spocActivityService.update_activity(
             activity_id=activity_id,
             activity_type=activity.activity_type,
             done=activity.done,
             notes=activity.notes
         )
-        return SpokeActivityService.get_activity_by_id(activity_id)
+        return spocActivityService.get_activity_by_id(activity_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -72,12 +72,12 @@ def update_activity(activity_id: int, activity: SpokeActivityUpdate):
 @router.delete("/{activity_id}")
 def delete_activity(activity_id: int):
     """Delete an activity."""
-    existing_activity = SpokeActivityService.get_activity_by_id(activity_id)
+    existing_activity = spocActivityService.get_activity_by_id(activity_id)
     if not existing_activity:
         raise HTTPException(status_code=404, detail="Activity not found")
     
     try:
-        SpokeActivityService.delete_activity(activity_id)
+        spocActivityService.delete_activity(activity_id)
         return {"message": "Activity deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

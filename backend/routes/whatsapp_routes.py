@@ -37,14 +37,25 @@ def create_campaign(
     template_name: str = Body(..., embed=True),
     recipient_ids: List[int] = Body(..., embed=True),
     language_code: str = Body("en_US", embed=True),
-    created_by: int = Body(1, embed=True) # Default to 1 (Admin) for now
+    parameters: Optional[dict] = Body(None, embed=True),
+    created_by: int = Body(1, embed=True)
 ):
-    """Create a new WhatsApp campaign."""
+    """Create a new WhatsApp campaign (Draft)."""
     try:
-        campaign_id = WhatsAppCampaignService.create_campaign(name, template_name, recipient_ids, created_by, language_code)
-        # For now, run it synchronously (in a real app, this would be a background task)
-        WhatsAppCampaignService.run_campaign(campaign_id)
-        return {"id": campaign_id, "message": "Campaign created and started"}
+        campaign_id = WhatsAppCampaignService.create_campaign(
+            name, template_name, recipient_ids, created_by, language_code, parameters
+        )
+        return {"id": campaign_id, "message": "Campaign created successfully (Draft)"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/campaigns/{campaign_id}/start")
+async def start_campaign(campaign_id: int):
+    """Start a campaign by enqueuing it in the background."""
+    try:
+        from tasks import enqueue_whatsapp_campaign
+        await enqueue_whatsapp_campaign(campaign_id)
+        return {"message": "Campaign started in background"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

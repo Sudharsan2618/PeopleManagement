@@ -55,6 +55,13 @@ async def enqueue_send_prospectus(
     log.info("📤 Enqueued job %s for phone=%s", job.job_id, message.get("from"))
 
 
+async def enqueue_whatsapp_campaign(campaign_id: int):
+    """Push the campaign processing job onto the Redis queue."""
+    pool = await get_redis_pool()
+    job  = await pool.enqueue_job("task_run_whatsapp_campaign", campaign_id=campaign_id)
+    log.info("📤 Enqueued campaign job %s for campaign_id=%s", job.job_id, campaign_id)
+
+
 # ── Actual task (runs inside ARQ worker) ──────────────────────────────────────
 
 async def task_complete_lead_and_send_prospectus(
@@ -182,6 +189,19 @@ def _get_contact_name(contacts: list, wa_phone: str) -> str:
     return contacts[0].get("profile", {}).get("name", "") if contacts else ""
 
 
+async def task_run_whatsapp_campaign(ctx: dict, campaign_id: int):
+    """Background task to process a WhatsApp campaign."""
+    from services.whatsapp_campaign_service import WhatsAppCampaignService
+    log.info("🚀 Starting background processing for campaign_id=%s", campaign_id)
+    try:
+        # We'll use a new async method in the service
+        await WhatsAppCampaignService.run_campaign_async(campaign_id)
+        log.info("✅ Finished background processing for campaign_id=%s", campaign_id)
+    except Exception as exc:
+        log.error("❌ Campaign %s failed: %s", campaign_id, exc)
+        raise  # arq will retry based on max_tries
+
+
 # ── ARQ WorkerSettings (used by the worker process) ──────────────────────────
 
 class WorkerSettings:
@@ -189,7 +209,7 @@ class WorkerSettings:
     ARQ reads this class to configure the worker.
     Run with:  arq tasks.WorkerSettings
     """
-    functions = [task_complete_lead_and_send_prospectus]
+    functions = [task_complete_lead_and_send_prospectus, task_run_whatsapp_campaign]
     redis_settings = None          # set dynamically in worker.py
     max_jobs       = 20            # concurrent coroutines per worker
     job_timeout    = 60            # seconds before a job is killed

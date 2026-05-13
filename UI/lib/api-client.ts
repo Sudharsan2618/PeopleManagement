@@ -2,7 +2,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 // Types matching backend Pydantic models
-export type UserRole = "admin" | "telecaller" | "spoke"
+export type UserRole = "admin" | "telecaller" | "spoc"
 
 export interface User {
   id: number
@@ -46,9 +46,9 @@ export interface CallLog {
   called_at: string
 }
 
-export interface SpokeReport {
+export interface SpocReport {
   id: number
-  spoke_id: number
+  spoc_id: number
   report_date: string
   area_location: string
   is_draft: boolean
@@ -56,7 +56,7 @@ export interface SpokeReport {
   created_at: string
 }
 
-export interface SpokeVisitEntry {
+export interface SpocVisitEntry {
   id: number
   report_id: number
   visit_type: string
@@ -71,7 +71,7 @@ export interface SpokeVisitEntry {
   created_at: string
 }
 
-export interface SpokeActivity {
+export interface SpocActivity {
   id: number
   report_id: number
   activity_type: string
@@ -80,7 +80,7 @@ export interface SpokeActivity {
   created_at: string
 }
 
-export interface SpokeEscalation {
+export interface SpocEscalation {
   id: number
   report_id: number
   description: string
@@ -306,76 +306,76 @@ export const callLogsApi = {
   }),
 }
 
-// Spoke Reports API
-export const spokeReportsApi = {
-  getAll: () => apiRequest<SpokeReport[]>("/spoke-reports"),
-  getById: (id: number) => apiRequest<SpokeReport>(`/spoke-reports/${id}`),
-  getBySpoke: (spokeId: number) => apiRequest<SpokeReport[]>(`/spoke-reports/spoke/${spokeId}`),
-  getDrafts: () => apiRequest<SpokeReport[]>("/spoke-reports/draft"),
-  create: (data: any) => apiRequest<SpokeReport>("/spoke-reports", {
+// spoc Reports API
+export const SpocReportsApi = {
+  getAll: () => apiRequest<SpocReport[]>("/spoc-reports"),
+  getById: (id: number) => apiRequest<SpocReport>(`/spoc-reports/${id}`),
+  getBySpoc: (spocId: number) => apiRequest<SpocReport[]>(`/spoc-reports/spoc/${spocId}`),
+  getDrafts: () => apiRequest<SpocReport[]>("/spoc-reports/draft"),
+  create: (data: any) => apiRequest<SpocReport>("/spoc-reports", {
     method: "POST",
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiRequest<SpokeReport>(`/spoke-reports/${id}`, {
+  update: (id: number, data: any) => apiRequest<SpocReport>(`/spoc-reports/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiRequest<{ message: string }>(`/spoke-reports/${id}`, {
+  delete: (id: number) => apiRequest<{ message: string }>(`/spoc-reports/${id}`, {
     method: "DELETE",
   }),
 }
 
-// Spoke Visits API
-export const spokeVisitsApi = {
-  getAll: () => apiRequest<SpokeVisitEntry[]>("/spoke-visits"),
-  getById: (id: number) => apiRequest<SpokeVisitEntry>(`/spoke-visits/${id}`),
-  getByReport: (reportId: number) => apiRequest<SpokeVisitEntry[]>(`/spoke-visits/report/${reportId}`),
-  create: (data: any) => apiRequest<SpokeVisitEntry>("/spoke-visits", {
+// spoc Visits API
+export const SpocVisitsApi = {
+  getAll: () => apiRequest<SpocVisitEntry[]>("/spoc-visits"),
+  getById: (id: number) => apiRequest<SpocVisitEntry>(`/spoc-visits/${id}`),
+  getByReport: (reportId: number) => apiRequest<SpocVisitEntry[]>(`/spoc-visits/report/${reportId}`),
+  create: (data: any) => apiRequest<SpocVisitEntry>("/spoc-visits", {
     method: "POST",
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiRequest<SpokeVisitEntry>(`/spoke-visits/${id}`, {
+  update: (id: number, data: any) => apiRequest<SpocVisitEntry>(`/spoc-visits/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiRequest<{ message: string }>(`/spoke-visits/${id}`, {
+  delete: (id: number) => apiRequest<{ message: string }>(`/spoc-visits/${id}`, {
     method: "DELETE",
   }),
 }
 
-// Spoke Activities API
-export const spokeActivitiesApi = {
-  getAll: () => apiRequest<SpokeActivity[]>("/spoke-activities"),
-  getById: (id: number) => apiRequest<SpokeActivity>(`/spoke-activities/${id}`),
-  getByReport: (reportId: number) => apiRequest<SpokeActivity[]>(`/spoke-activities/report/${reportId}`),
-  create: (data: any) => apiRequest<SpokeActivity>("/spoke-activities", {
+// spoc Activities API
+export const spocActivitiesApi = {
+  getAll: () => apiRequest<SpocActivity[]>("/spoc-activities"),
+  getById: (id: number) => apiRequest<SpocActivity>(`/spoc-activities/${id}`),
+  getByReport: (reportId: number) => apiRequest<SpocActivity[]>(`/spoc-activities/report/${reportId}`),
+  create: (data: any) => apiRequest<SpocActivity>("/spoc-activities", {
     method: "POST",
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiRequest<SpokeActivity>(`/spoke-activities/${id}`, {
+  update: (id: number, data: any) => apiRequest<SpocActivity>(`/spoc-activities/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiRequest<{ message: string }>(`/spoke-activities/${id}`, {
+  delete: (id: number) => apiRequest<{ message: string }>(`/spoc-activities/${id}`, {
     method: "DELETE",
   }),
 }
 
-// Spoke Escalations API
-export const spokeEscalationsApi = {
-  getAll: () => apiRequest<SpokeEscalation[]>("/spoke-escalations"),
-  getById: (id: number) => apiRequest<SpokeEscalation>(`/spoke-escalations/${id}`),
-  getByReport: (reportId: number) => apiRequest<SpokeEscalation[]>(`/spoke-escalations/report/${reportId}`),
-  getUnresolved: () => apiRequest<SpokeEscalation[]>("/spoke-escalations/unresolved"),
-  create: (data: any) => apiRequest<SpokeEscalation>("/spoke-escalations", {
+// spoc Escalations API
+export const SpocEscalationsApi = {
+  getAll: () => apiRequest<SpocEscalation[]>("/spoc-escalations"),
+  getById: (id: number) => apiRequest<SpocEscalation>(`/spoc-escalations/${id}`),
+  getByReport: (reportId: number) => apiRequest<SpocEscalation[]>(`/spoc-escalations/report/${reportId}`),
+  getUnresolved: () => apiRequest<SpocEscalation[]>("/spoc-escalations/unresolved"),
+  create: (data: any) => apiRequest<SpocEscalation>("/spoc-escalations", {
     method: "POST",
     body: JSON.stringify(data),
   }),
-  update: (id: number, data: any) => apiRequest<SpokeEscalation>(`/spoke-escalations/${id}`, {
+  update: (id: number, data: any) => apiRequest<SpocEscalation>(`/spoc-escalations/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   }),
-  delete: (id: number) => apiRequest<{ message: string }>(`/spoke-escalations/${id}`, {
+  delete: (id: number) => apiRequest<{ message: string }>(`/spoc-escalations/${id}`, {
     method: "DELETE",
   }),
 }
@@ -432,9 +432,12 @@ export const whatsappApi = {
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
   getConversations: () => apiRequest<any[]>("/whatsapp/conversations"),
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
-  createCampaign: (data: { name: string, template_name: string, recipient_ids: number[], language_code: string }) => apiRequest<any>("/whatsapp/campaigns", {
+  createCampaign: (data: any) => apiRequest<any>("/whatsapp/campaigns", {
     method: "POST",
     body: JSON.stringify(data),
+  }),
+  startCampaign: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/start`, {
+    method: "POST",
   }),
   sendTextMessage: (data: { to: string, text: string }) => apiRequest<any>("/whatsapp/send-text", {
     method: "POST",
@@ -449,4 +452,12 @@ export const whatsappApi = {
 // Dashboard API
 export const dashboardApi = {
   getStats: (userId: number) => apiRequest<{ callbacks: number, followups: number }>(`/dashboard/stats/${userId}`),
+}
+
+// Admin API
+export const adminApi = {
+  getStats: () => apiRequest<any>("/admin/stats"),
+  getTelecallerPerformance: () => apiRequest<any[]>("/admin/telecaller-performance"),
+  getProspectPipeline: () => apiRequest<any[]>("/admin/prospect-pipeline"),
+  getReports: () => apiRequest<any>("/admin/reports"),
 }

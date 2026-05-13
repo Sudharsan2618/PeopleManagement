@@ -73,7 +73,7 @@ const statusColors: Record<string, string> = {
 
 const ITEMS_PER_PAGE = 15
 
-export default function SpokeProspectsPage() {
+export default function spocProspectsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
@@ -92,7 +92,7 @@ export default function SpokeProspectsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const spokeId = user ? Number(user.id) : 0
+  const spocId = user ? Number(user.id) : 0
 
   useEffect(() => {
     async function fetchData() {
@@ -168,7 +168,7 @@ export default function SpokeProspectsPage() {
     try {
       setIsAssigning(true)
       const today = new Date().toISOString().split("T")[0]
-      const assignedBy = spokeId
+      const assignedBy = spocId
 
       await Promise.all(
         selectedProspectIds.map((prospectId) =>
@@ -229,7 +229,7 @@ export default function SpokeProspectsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/spoke/dashboard">
+            <Link href="/spoc/dashboard">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
@@ -242,13 +242,13 @@ export default function SpokeProspectsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link href="/spoke/prospects/import">
+            <Link href="/spoc/prospects/import">
               <Upload className="h-4 w-4 mr-2" />
               Import CSV
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/spoke/prospects/add">
+            <Link href="/spoc/prospects/add">
               <Plus className="h-4 w-4 mr-2" />
               Add Prospect
             </Link>

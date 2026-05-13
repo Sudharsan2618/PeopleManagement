@@ -60,13 +60,13 @@ import { usersApi, adaptApiUserToUiUser } from "@/lib/api-client"
 const roleColors: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800",
   telecaller: "bg-blue-100 text-blue-800",
-  spoke: "bg-green-100 text-green-800",
+  spoc: "bg-green-100 text-green-800",
 }
 
 const roleIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   admin: Shield,
   telecaller: Phone,
-  spoke: MapPin,
+  spoc: MapPin,
 }
 
 export default function UsersPage() {
@@ -116,7 +116,7 @@ export default function UsersPage() {
     active: users.filter(u => u.isActive).length,
     admins: users.filter(u => u.role === 'admin').length,
     telecallers: users.filter(u => u.role === 'telecaller').length,
-    spokes: users.filter(u => u.role === 'spoke').length,
+    spocs: users.filter(u => u.role === 'spoc').length,
   }
 
   const formatDate = (date: Date | string) => {
@@ -189,7 +189,7 @@ export default function UsersPage() {
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="telecaller">Telecaller</SelectItem>
-                    <SelectItem value="spoke">Spoke (Field Agent)</SelectItem>
+                    <SelectItem value="spoc">spoc (Field Agent)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -239,7 +239,7 @@ export default function UsersPage() {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-600">{userStats.spokes}</div>
+            <div className="text-2xl font-bold text-green-600">{userStats.spocs}</div>
             <p className="text-xs text-muted-foreground">Field Agents</p>
           </CardContent>
         </Card>
@@ -253,7 +253,7 @@ export default function UsersPage() {
               <TabsList>
                 <TabsTrigger value="all">All Users</TabsTrigger>
                 <TabsTrigger value="telecaller">Telecallers</TabsTrigger>
-                <TabsTrigger value="spoke">Field Agents</TabsTrigger>
+                <TabsTrigger value="spoc">Field Agents</TabsTrigger>
                 <TabsTrigger value="admin">Admins</TabsTrigger>
               </TabsList>
             </Tabs>

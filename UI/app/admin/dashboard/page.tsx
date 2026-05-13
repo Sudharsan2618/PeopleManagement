@@ -29,7 +29,7 @@ import {
 } from "recharts"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
-import { usersApi, spokeReportsApi, adaptApiUserToUiUser } from "@/lib/api-client"
+import { usersApi, SpocReportsApi, adaptApiUserToUiUser } from "@/lib/api-client"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
           fetch(`${API_BASE_URL}/admin/telecaller-performance`).then((r) => r.json()),
           fetch(`${API_BASE_URL}/admin/prospect-pipeline`).then((r) => r.json()),
           usersApi.getAll(),
-          spokeReportsApi.getAll(),
+          SpocReportsApi.getAll(),
         ])
 
       setStats(statsRes)
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
   }
 
   const telecallers = users.filter((u: any) => u.role === "telecaller")
-  const spokes = users.filter((u: any) => u.role === "spoke")
+  const spocs = users.filter((u: any) => u.role === "spoc")
 
   // ─── Stat cards ─────────────────────────────────────────────
   const statCards = [
@@ -516,35 +516,35 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Spokes Summary */}
+        {/* spocs Summary */}
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-base">Active Field Agents</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">
-              {spokes.map((spoke: any) => {
+              {spocs.map((spoc: any) => {
                 const report = reports.find(
-                  (r: any) => r.spoke_id === parseInt(spoke.id)
+                  (r: any) => r.spoc_id === parseInt(spoc.id)
                 )
                 return (
                   <div
-                    key={spoke.id}
+                    key={spoc.id}
                     className="flex items-center justify-between px-6 py-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100">
                         <span className="text-sm font-medium text-orange-600">
-                          {spoke.name
+                          {spoc.name
                             .split(" ")
                             .map((n: string) => n[0])
                             .join("")}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{spoke.name}</p>
+                        <p className="font-medium text-sm">{spoc.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {spoke.email}
+                          {spoc.email}
                         </p>
                       </div>
                     </div>

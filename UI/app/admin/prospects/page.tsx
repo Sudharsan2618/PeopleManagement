@@ -198,7 +198,7 @@ export default function AdminProspectsPage() {
       const today = new Date().toISOString().split("T")[0]
       
       // In a real app, assigned_by would come from the current user's session
-      // For now using ID 1 (Admin) or 3 (Spoke) depending on context
+      // For now using ID 1 (Admin) or 3 (spoc) depending on context
       const assignedBy = 1 
 
       await Promise.all(

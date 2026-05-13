@@ -3,15 +3,15 @@ from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
 
 
-class SpokeEscalationService:
-    """Service layer for Spoke Escalations table with direct SQL queries."""
+class spocEscalationService:
+    """Service layer for spoc Escalations table with direct SQL queries."""
     
     @staticmethod
     def get_all_escalations() -> List[dict]:
-        """Get all spoke escalations."""
+        """Get all spoc escalations."""
         query = """
             SELECT id, report_id, description, observations, resolved_by, resolution_note, resolved_at, created_at
-            FROM spoke_escalations
+            FROM spoc_escalations
             ORDER BY created_at DESC
         """
         return execute_query(query, fetch="all")
@@ -21,7 +21,7 @@ class SpokeEscalationService:
         """Get escalation by ID."""
         query = """
             SELECT id, report_id, description, observations, resolved_by, resolution_note, resolved_at, created_at
-            FROM spoke_escalations
+            FROM spoc_escalations
             WHERE id = %s
         """
         return execute_query(query, (escalation_id,), fetch="one")
@@ -31,7 +31,7 @@ class SpokeEscalationService:
         """Get all escalations for a specific report."""
         query = """
             SELECT id, report_id, description, observations, resolved_by, resolution_note, resolved_at, created_at
-            FROM spoke_escalations
+            FROM spoc_escalations
             WHERE report_id = %s
             ORDER BY created_at DESC
         """
@@ -42,7 +42,7 @@ class SpokeEscalationService:
         """Get all unresolved escalations."""
         query = """
             SELECT id, report_id, description, observations, resolved_by, resolution_note, resolved_at, created_at
-            FROM spoke_escalations
+            FROM spoc_escalations
             WHERE resolved_at IS NULL
             ORDER BY created_at ASC
         """
@@ -50,9 +50,9 @@ class SpokeEscalationService:
     
     @staticmethod
     def create_escalation(report_id: int, description: str, observations: Optional[str] = None) -> int:
-        """Create a new spoke escalation."""
+        """Create a new spoc escalation."""
         query = """
-            INSERT INTO spoke_escalations (report_id, description, observations)
+            INSERT INTO spoc_escalations (report_id, description, observations)
             VALUES (%s, %s, %s)
             RETURNING id
         """
@@ -87,7 +87,7 @@ class SpokeEscalationService:
         
         params.append(escalation_id)
         query = f"""
-            UPDATE spoke_escalations
+            UPDATE spoc_escalations
             SET {', '.join(updates)}
             WHERE id = %s
         """
@@ -96,5 +96,5 @@ class SpokeEscalationService:
     @staticmethod
     def delete_escalation(escalation_id: int) -> int:
         """Delete an escalation."""
-        query = "DELETE FROM spoke_escalations WHERE id = %s"
+        query = "DELETE FROM spoc_escalations WHERE id = %s"
         return execute_update_delete(query, (escalation_id,))

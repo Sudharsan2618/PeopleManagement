@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { usersApi, spokeReportsApi, type User as ApiUser } from "@/lib/api-client"
+import { usersApi, SpocReportsApi, type User as ApiUser } from "@/lib/api-client"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,10 +38,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 
-export default function SpokesPage() {
+export default function spocsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("all")
-  const [spokes, setSpokes] = useState<ApiUser[]>([])
+  const [spocs, setspocs] = useState<ApiUser[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
@@ -59,10 +59,10 @@ export default function SpokesPage() {
     try {
       setIsLoading(true)
       const [users, allReports] = await Promise.all([
-        usersApi.getByRole("spoke"),
-        spokeReportsApi.getAll(),
+        usersApi.getByRole("spoc"),
+        SpocReportsApi.getAll(),
       ])
-      setSpokes(users)
+      setspocs(users)
       setReports(allReports)
     } catch {
     } finally {
@@ -74,8 +74,8 @@ export default function SpokesPage() {
     fetchData()
   }, [])
 
-  const filteredSpokes = useMemo(() => {
-    return spokes.filter((s: any) => {
+  const filteredspocs = useMemo(() => {
+    return spocs.filter((s: any) => {
       const matchesSearch =
         searchQuery === "" ||
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,17 +87,17 @@ export default function SpokesPage() {
         (filterStatus === "inactive" && !s.is_active)
       return matchesSearch && matchesFilter
     })
-  }, [spokes, searchQuery, filterStatus])
+  }, [spocs, searchQuery, filterStatus])
 
-  const getSpokeStats = (spokeId: number) => {
-    const spokeReports = reports.filter((r: any) => r.spoke_id === spokeId)
+  const getspocStats = (spocId: number) => {
+    const SpocReports = reports.filter((r: any) => r.spoc_id === spocId)
     const todayStr = new Date().toISOString().split("T")[0]
-    const todayReport = spokeReports.find((r: any) => r.report_date === todayStr)
+    const todayReport = SpocReports.find((r: any) => r.report_date === todayStr)
 
     return {
-      totalReports: spokeReports.length,
+      totalReports: SpocReports.length,
       hasReportToday: !!todayReport,
-      latestReport: spokeReports.length > 0 ? spokeReports[spokeReports.length - 1] : null,
+      latestReport: SpocReports.length > 0 ? SpocReports[SpocReports.length - 1] : null,
     }
   }
 
@@ -114,7 +114,7 @@ export default function SpokesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Field Agents (Spokes)
+            Field Agents (spocs)
           </h1>
           <p className="text-muted-foreground mt-1">
             Manage and monitor your field team
@@ -129,7 +129,7 @@ export default function SpokesPage() {
             setFormData({ name: "", email: "", mobile: "", password: "", is_active: true })
             setIsDialogOpen(true)
           }} size="sm">
-            <Plus className="h-4 w-4 mr-2" /> Add Spoke
+            <Plus className="h-4 w-4 mr-2" /> Add spoc
           </Button>
         </div>
       </div>
@@ -138,14 +138,14 @@ export default function SpokesPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{spokes.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total Spokes</p>
+            <div className="text-2xl font-bold">{spocs.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total spocs</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {spokes.filter((s: any) => s.is_active).length}
+              {spocs.filter((s: any) => s.is_active).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Active</p>
           </CardContent>
@@ -159,7 +159,7 @@ export default function SpokesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {spokes.filter((s: any) => getSpokeStats(s.id).hasReportToday).length}
+              {spocs.filter((s: any) => getspocStats(s.id).hasReportToday).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Reported Today
@@ -196,41 +196,41 @@ export default function SpokesPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {filteredSpokes.map((spoke: any) => {
-              const stats = getSpokeStats(spoke.id)
+            {filteredspocs.map((spoc: any) => {
+              const stats = getspocStats(spoc.id)
 
               return (
                 <div
-                  key={spoke.id}
+                  key={spoc.id}
                   className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
                         <span className="text-sm font-medium text-orange-600">
-                          {spoke.name
+                          {spoc.name
                             .split(" ")
                             .map((n: string) => n[0])
                             .join("")}
                         </span>
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-sm">{spoke.name}</h3>
+                        <h3 className="font-semibold text-sm">{spoc.name}</h3>
                         <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Mail className="h-3 w-3" />
-                            {spoke.email}
+                            {spoc.email}
                           </div>
                           <div className="flex items-center gap-1">
                             <Phone className="h-3 w-3" />
-                            {spoke.mobile}
+                            {spoc.mobile}
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={spoke.is_active ? "default" : "secondary"}>
-                        {spoke.is_active ? "Active" : "Inactive"}
+                      <Badge variant={spoc.is_active ? "default" : "secondary"}>
+                        {spoc.is_active ? "Active" : "Inactive"}
                       </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -240,13 +240,13 @@ export default function SpokesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
-                            setEditingUser(spoke)
+                            setEditingUser(spoc)
                             setFormData({
-                              name: spoke.name,
-                              email: spoke.email,
-                              mobile: spoke.mobile,
+                              name: spoc.name,
+                              email: spoc.email,
+                              mobile: spoc.mobile,
                               password: "",
-                              is_active: spoke.is_active,
+                              is_active: spoc.is_active,
                             })
                             setIsDialogOpen(true)
                           }}>
@@ -256,9 +256,9 @@ export default function SpokesPage() {
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={async () => {
-                              if (confirm(`Are you sure you want to delete ${spoke.name}?`)) {
+                              if (confirm(`Are you sure you want to delete ${spoc.name}?`)) {
                                 try {
-                                  await usersApi.delete(spoke.id)
+                                  await usersApi.delete(spoc.id)
                                   toast({ title: "User deleted" })
                                   fetchData()
                                 } catch (err) {
@@ -314,7 +314,7 @@ export default function SpokesPage() {
           <DialogHeader>
             <DialogTitle>{editingUser ? "Edit Field Agent" : "Add New Field Agent"}</DialogTitle>
             <DialogDescription>
-              {editingUser ? "Update spoke agent details." : "Create a new field agent account."}
+              {editingUser ? "Update spoc agent details." : "Create a new field agent account."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -376,15 +376,15 @@ export default function SpokesPage() {
                   const updateData: any = { ...formData }
                   if (!updateData.password) delete updateData.password
                   await usersApi.update(editingUser.id, updateData)
-                  toast({ title: "Spoke updated successfully" })
+                  toast({ title: "spoc updated successfully" })
                 } else {
-                  await usersApi.create({ ...formData, role: "spoke" })
-                  toast({ title: "Spoke created successfully" })
+                  await usersApi.create({ ...formData, role: "spoc" })
+                  toast({ title: "spoc created successfully" })
                 }
                 setIsDialogOpen(false)
                 fetchData()
               } catch (err) {
-                toast({ title: "Error saving spoke", description: String(err), variant: "destructive" })
+                toast({ title: "Error saving spoc", description: String(err), variant: "destructive" })
               }
             }}>Save Changes</Button>
           </DialogFooter>

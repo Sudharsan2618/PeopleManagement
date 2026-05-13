@@ -3,15 +3,15 @@ from datetime import date, datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
 
 
-class SpokeReportService:
-    """Service layer for Spoke Reports table with direct SQL queries."""
+class spocReportService:
+    """Service layer for spoc Reports table with direct SQL queries."""
     
     @staticmethod
     def get_all_reports() -> List[dict]:
-        """Get all spoke reports."""
+        """Get all spoc reports."""
         query = """
-            SELECT id, spoke_id, report_date, area_location, is_draft, submitted_at, created_at
-            FROM spoke_reports
+            SELECT id, spoc_id, report_date, area_location, is_draft, submitted_at, created_at
+            FROM spoc_reports
             ORDER BY report_date DESC, created_at DESC
         """
         return execute_query(query, fetch="all")
@@ -20,53 +20,53 @@ class SpokeReportService:
     def get_report_by_id(report_id: int) -> Optional[dict]:
         """Get report by ID."""
         query = """
-            SELECT id, spoke_id, report_date, area_location, is_draft, submitted_at, created_at
-            FROM spoke_reports
+            SELECT id, spoc_id, report_date, area_location, is_draft, submitted_at, created_at
+            FROM spoc_reports
             WHERE id = %s
         """
         return execute_query(query, (report_id,), fetch="one")
     
     @staticmethod
-    def get_reports_by_spoke(spoke_id: int) -> List[dict]:
-        """Get all reports for a specific spoke agent."""
+    def get_reports_by_spoc(spoc_id: int) -> List[dict]:
+        """Get all reports for a specific spoc agent."""
         query = """
-            SELECT id, spoke_id, report_date, area_location, is_draft, submitted_at, created_at
-            FROM spoke_reports
-            WHERE spoke_id = %s
+            SELECT id, spoc_id, report_date, area_location, is_draft, submitted_at, created_at
+            FROM spoc_reports
+            WHERE spoc_id = %s
             ORDER BY report_date DESC, created_at DESC
         """
-        return execute_query(query, (spoke_id,), fetch="all")
+        return execute_query(query, (spoc_id,), fetch="all")
     
     @staticmethod
-    def get_report_by_spoke_and_date(spoke_id: int, report_date: date) -> Optional[dict]:
-        """Get report for a spoke agent on a specific date."""
+    def get_report_by_spoc_and_date(spoc_id: int, report_date: date) -> Optional[dict]:
+        """Get report for a spoc agent on a specific date."""
         query = """
-            SELECT id, spoke_id, report_date, area_location, is_draft, submitted_at, created_at
-            FROM spoke_reports
-            WHERE spoke_id = %s AND report_date = %s
+            SELECT id, spoc_id, report_date, area_location, is_draft, submitted_at, created_at
+            FROM spoc_reports
+            WHERE spoc_id = %s AND report_date = %s
         """
-        return execute_query(query, (spoke_id, report_date), fetch="one")
+        return execute_query(query, (spoc_id, report_date), fetch="one")
     
     @staticmethod
     def get_draft_reports() -> List[dict]:
         """Get all draft reports."""
         query = """
-            SELECT id, spoke_id, report_date, area_location, is_draft, submitted_at, created_at
-            FROM spoke_reports
+            SELECT id, spoc_id, report_date, area_location, is_draft, submitted_at, created_at
+            FROM spoc_reports
             WHERE is_draft = TRUE
             ORDER BY report_date DESC, created_at DESC
         """
         return execute_query(query, fetch="all")
     
     @staticmethod
-    def create_report(spoke_id: int, report_date: date, area_location: str, is_draft: bool = True) -> int:
-        """Create a new spoke report."""
+    def create_report(spoc_id: int, report_date: date, area_location: str, is_draft: bool = True) -> int:
+        """Create a new spoc report."""
         query = """
-            INSERT INTO spoke_reports (spoke_id, report_date, area_location, is_draft)
+            INSERT INTO spoc_reports (spoc_id, report_date, area_location, is_draft)
             VALUES (%s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (spoke_id, report_date, area_location, is_draft))
+        return execute_insert(query, (spoc_id, report_date, area_location, is_draft))
     
     @staticmethod
     def update_report(report_id: int, area_location: Optional[str] = None, is_draft: Optional[bool] = None,
@@ -90,7 +90,7 @@ class SpokeReportService:
         
         params.append(report_id)
         query = f"""
-            UPDATE spoke_reports
+            UPDATE spoc_reports
             SET {', '.join(updates)}
             WHERE id = %s
         """
@@ -99,5 +99,5 @@ class SpokeReportService:
     @staticmethod
     def delete_report(report_id: int) -> int:
         """Delete a report."""
-        query = "DELETE FROM spoke_reports WHERE id = %s"
+        query = "DELETE FROM spoc_reports WHERE id = %s"
         return execute_update_delete(query, (report_id,))

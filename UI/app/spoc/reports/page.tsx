@@ -33,9 +33,9 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
-import { spokeReportsApi, spokeVisitsApi, spokeActivitiesApi, spokeEscalationsApi } from "@/lib/api-client"
+import { SpocReportsApi, SpocVisitsApi, spocActivitiesApi, SpocEscalationsApi } from "@/lib/api-client"
 
-export default function SpokeReportsPage() {
+export default function SpocReportsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
@@ -51,13 +51,13 @@ export default function SpokeReportsPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
 
-  const spokeId = user ? Number(user.id) : 0
+  const spocId = user ? Number(user.id) : 0
 
   const fetchData = async () => {
-    if (!spokeId) return
+    if (!spocId) return
     try {
       setIsLoading(true)
-      const data = await spokeReportsApi.getBySpoke(spokeId)
+      const data = await SpocReportsApi.getBySpoc(spocId)
       setReports(data)
     } catch (err) {
       toast({
@@ -72,7 +72,7 @@ export default function SpokeReportsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [spokeId])
+  }, [spocId])
 
   // Filter & sort
   const filteredReports = useMemo(() => {
@@ -100,9 +100,9 @@ export default function SpokeReportsPage() {
     setIsDetailLoading(true)
     try {
       const [visits, activities, escalations] = await Promise.all([
-        spokeVisitsApi.getByReport(report.id),
-        spokeActivitiesApi.getByReport(report.id),
-        spokeEscalationsApi.getByReport(report.id),
+        SpocVisitsApi.getByReport(report.id),
+        spocActivitiesApi.getByReport(report.id),
+        SpocEscalationsApi.getByReport(report.id),
       ])
       setReportDetails({ visits, activities, escalations })
     } catch {

@@ -63,7 +63,7 @@ export default function HubsPage() {
     return {
       totalUsers: users.length,
       telecallers: users.filter(u => u.role === 'telecaller').length,
-      spokes: users.filter(u => u.role === 'spoke').length,
+      spocs: users.filter(u => u.role === 'spoc').length,
       prospects: prospects.length,
       enrolled: prospects.filter(p => p.status === 'enrolled').length,
     }
@@ -181,7 +181,7 @@ export default function HubsPage() {
               </div>
               <div>
                 <div className="text-2xl font-bold">
-                  {mockUsers.filter(u => u.role === 'spoke').length}
+                  {mockUsers.filter(u => u.role === 'spoc').length}
                 </div>
                 <p className="text-xs text-muted-foreground">Field Agents</p>
               </div>
@@ -257,7 +257,7 @@ export default function HubsPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline" className="bg-green-50 text-green-700">
-                            {stats.spokes}
+                            {stats.spocs}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">{stats.prospects}</TableCell>

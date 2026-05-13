@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
-import { spokeReportsApi, followUpTasksApi, spokeVisitsApi } from "@/lib/api-client"
+import { SpocReportsApi, followUpTasksApi, SpocVisitsApi } from "@/lib/api-client"
 
 const statusConfig: Record<
   string,
@@ -35,7 +35,7 @@ const statusConfig: Record<
   Overdue: { icon: AlertTriangle, color: "text-red-600", bgColor: "bg-red-100" },
 }
 
-export default function SpokeDashboard() {
+export default function spocDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [reports, setReports] = useState<any[]>([])
@@ -44,16 +44,16 @@ export default function SpokeDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const spokeId = user ? Number(user.id) : 0
+  const spocId = user ? Number(user.id) : 0
 
   const fetchData = async () => {
-    if (!spokeId) return
+    if (!spocId) return
     try {
       setIsLoading(true)
       setError(null)
       const [apiReports, apiFollowUps] = await Promise.all([
-        spokeReportsApi.getBySpoke(spokeId),
-        followUpTasksApi.getByUser(spokeId),
+        SpocReportsApi.getBySpoc(spocId),
+        followUpTasksApi.getByUser(spocId),
       ])
 
       setReports(apiReports)
@@ -63,7 +63,7 @@ export default function SpokeDashboard() {
       const counts: Record<number, number> = {}
       for (const report of apiReports.slice(0, 5)) {
         try {
-          const entries = await spokeVisitsApi.getByReport(report.id)
+          const entries = await SpocVisitsApi.getByReport(report.id)
           counts[report.id] = entries.length
         } catch {
           counts[report.id] = 0
@@ -88,7 +88,7 @@ export default function SpokeDashboard() {
     // Auto-refresh every 60 seconds
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
-  }, [spokeId])
+  }, [spocId])
 
   const recentReports = reports.slice(0, 3)
   const todayStr = new Date().toISOString().split("T")[0]
@@ -100,7 +100,7 @@ export default function SpokeDashboard() {
     (fu: any) => fu.status === "pending" && fu.follow_up_date && fu.follow_up_date < todayStr
   )
 
-  const spokeStats = {
+  const spocStats = {
     reportsSubmitted: reports.length,
     pendingFollowups: pendingFollowUps.length,
     overdueFollowups: overdueFollowUps.length,
@@ -149,7 +149,7 @@ export default function SpokeDashboard() {
             Refresh
           </Button>
           <Button asChild size="lg">
-            <Link href="/spoke/report/new">
+            <Link href="/spoc/report/new">
               <Plus className="h-4 w-4 mr-2" />
               Submit Today&apos;s Report
             </Link>
@@ -184,7 +184,7 @@ export default function SpokeDashboard() {
                 <FileText className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spokeStats.reportsSubmitted}</p>
+                <p className="text-2xl font-bold">{spocStats.reportsSubmitted}</p>
                 <p className="text-xs text-muted-foreground">Reports Submitted</p>
               </div>
             </div>
@@ -197,7 +197,7 @@ export default function SpokeDashboard() {
                 <ClipboardList className="h-5 w-5 text-orange-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spokeStats.pendingFollowups}</p>
+                <p className="text-2xl font-bold">{spocStats.pendingFollowups}</p>
                 <p className="text-xs text-muted-foreground">Pending Follow-ups</p>
               </div>
             </div>
@@ -210,7 +210,7 @@ export default function SpokeDashboard() {
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spokeStats.telecallerFollowupsRaised}</p>
+                <p className="text-2xl font-bold">{spocStats.telecallerFollowupsRaised}</p>
                 <p className="text-xs text-muted-foreground">TC Follow-ups Raised</p>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function SpokeDashboard() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-3">
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
-              <Link href="/spoke/report/new">
+              <Link href="/spoc/report/new">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-primary/10 p-2">
                     <Plus className="h-5 w-5 text-primary" />
@@ -241,7 +241,7 @@ export default function SpokeDashboard() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
-              <Link href="/spoke/reports">
+              <Link href="/spoc/reports">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-blue-100 p-2">
                     <FolderOpen className="h-5 w-5 text-blue-600" />
@@ -256,7 +256,7 @@ export default function SpokeDashboard() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
-              <Link href="/spoke/followups">
+              <Link href="/spoc/followups">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-orange-100 p-2">
                     <ClipboardList className="h-5 w-5 text-orange-600" />
@@ -271,7 +271,7 @@ export default function SpokeDashboard() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
-              <Link href="/spoke/prospects">
+              <Link href="/spoc/prospects">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-purple-100 p-2">
                     <UserPlus className="h-5 w-5 text-purple-600" />
@@ -286,7 +286,7 @@ export default function SpokeDashboard() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
-              <Link href="/spoke/telecallers">
+              <Link href="/spoc/telecallers">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-emerald-100 p-2">
                     <TrendingUp className="h-5 w-5 text-emerald-600" />
@@ -310,7 +310,7 @@ export default function SpokeDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base">Recent Reports</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/spoke/reports">View all</Link>
+              <Link href="/spoc/reports">View all</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -361,7 +361,7 @@ export default function SpokeDashboard() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base">Pending Follow-ups</CardTitle>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/spoke/followups">View all</Link>
+              <Link href="/spoc/followups">View all</Link>
             </Button>
           </CardHeader>
           <CardContent>

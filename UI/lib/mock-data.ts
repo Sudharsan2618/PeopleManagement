@@ -1,5 +1,5 @@
 // Types
-export type UserRole = "admin" | "telecaller" | "spoke"
+export type UserRole = "admin" | "telecaller" | "spoc"
 
 export type ProspectStatus =
   | "Pending"
@@ -73,8 +73,8 @@ export interface CallAttempt {
 
 export interface FieldReport {
   id: string
-  spokeId: string
-  spokeName: string
+  spocId: string
+  spocName: string
   reportDate: string
   areaLocation: string
   schoolsVisited: number
@@ -91,7 +91,7 @@ export interface FieldReport {
 export interface FollowUpTask {
   id: string
   sourceReportId: string
-  assignedToRole: "Telecaller" | "Spoke"
+  assignedToRole: "Telecaller" | "spoc"
   assignedToUser?: string
   institutionName: string
   actionDescription: string
@@ -219,10 +219,10 @@ export const mockUsers: User[] = [
     lastLoginAt: new Date("2026-04-21T17:00:00"),
   },
   {
-    id: "spoke-1",
+    id: "spoc-1",
     name: "Vikram Singh",
     email: "vikram@cems.edu",
-    role: "spoke",
+    role: "spoc",
     mobile: "9876543214",
     phone: "9876543214",
     status: "Active",
@@ -232,10 +232,10 @@ export const mockUsers: User[] = [
     lastLoginAt: new Date("2026-04-22T07:00:00"),
   },
   {
-    id: "spoke-2",
+    id: "spoc-2",
     name: "Meera Nair",
     email: "meera@cems.edu",
-    role: "spoke",
+    role: "spoc",
     mobile: "9876543215",
     phone: "9876543215",
     status: "Active",
@@ -477,8 +477,8 @@ export const mockCallAttempts: CallAttempt[] = [
 export const mockFieldReports: FieldReport[] = [
   {
     id: "fr-1",
-    spokeId: "spoke-1",
-    spokeName: "Vikram Singh",
+    spocId: "spoc-1",
+    spocName: "Vikram Singh",
     reportDate: "2026-04-22",
     areaLocation: "Poonamallee",
     schoolsVisited: 3,
@@ -493,8 +493,8 @@ export const mockFieldReports: FieldReport[] = [
   },
   {
     id: "fr-2",
-    spokeId: "spoke-1",
-    spokeName: "Vikram Singh",
+    spocId: "spoc-1",
+    spocName: "Vikram Singh",
     reportDate: "2026-04-21",
     areaLocation: "Tambaram",
     schoolsVisited: 4,
@@ -509,8 +509,8 @@ export const mockFieldReports: FieldReport[] = [
   },
   {
     id: "fr-3",
-    spokeId: "spoke-2",
-    spokeName: "Meera Nair",
+    spocId: "spoc-2",
+    spocName: "Meera Nair",
     reportDate: "2026-04-22",
     areaLocation: "Anna Nagar",
     schoolsVisited: 2,
@@ -541,8 +541,8 @@ export const mockFollowUps: FollowUpTask[] = [
   {
     id: "fu-2",
     sourceReportId: "fr-1",
-    assignedToRole: "Spoke",
-    assignedToUser: "spoke-1",
+    assignedToRole: "spoc",
+    assignedToUser: "spoc-1",
     institutionName: "Brilliant Coaching Centre",
     actionDescription: "Deliver updated brochures",
     followUpDate: "2026-04-24",
@@ -563,8 +563,8 @@ export const mockFollowUps: FollowUpTask[] = [
   {
     id: "fu-4",
     sourceReportId: "fr-2",
-    assignedToRole: "Spoke",
-    assignedToUser: "spoke-1",
+    assignedToRole: "spoc",
+    assignedToUser: "spoc-1",
     institutionName: "Excellence Academy",
     actionDescription: "Collect student database from coordinator",
     followUpDate: "2026-04-21",
@@ -622,7 +622,7 @@ export const telecallerStats = {
   qualified: 3,
 }
 
-export const spokeStats = {
+export const spocStats = {
   todayDate: "2026-04-22",
   reportsSubmitted: 18,
   pendingFollowups: 4,
@@ -658,9 +658,9 @@ export function getFollowUpsForUser(userId: string): FollowUpTask[] {
   return mockFollowUps.filter((fu) => fu.assignedToUser === userId)
 }
 
-// Helper to get field reports for a spoke
-export function getFieldReportsForSpoke(spokeId: string): FieldReport[] {
-  return mockFieldReports.filter((fr) => fr.spokeId === spokeId)
+// Helper to get field reports for a spoc
+export function getFieldReportsForspoc(spocId: string): FieldReport[] {
+  return mockFieldReports.filter((fr) => fr.spocId === spocId)
 }
 
 // Alias for mockCallAttempts (for backwards compatibility)

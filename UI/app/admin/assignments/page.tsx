@@ -61,13 +61,13 @@ export default function AssignmentsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [hubFilter, setHubFilter] = useState<string>("all")
-  const [assignmentType, setAssignmentType] = useState<"telecaller" | "spoke">("telecaller")
+  const [assignmentType, setAssignmentType] = useState<"telecaller" | "spoc">("telecaller")
   const [selectedProspects, setSelectedProspects] = useState<string[]>([])
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string>("")
 
   const telecallers = mockUsers.filter(u => u.role === 'telecaller' && u.isActive)
-  const spokes = mockUsers.filter(u => u.role === 'spoke' && u.isActive)
+  const spocs = mockUsers.filter(u => u.role === 'spoc' && u.isActive)
 
   const unassignedProspects = mockProspects.filter(p => !p.assignedToId)
   const assignedProspects = mockProspects.filter(p => p.assignedToId)
@@ -184,7 +184,7 @@ export default function AssignmentsPage() {
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{telecallers.length + spokes.length}</div>
+                <div className="text-2xl font-bold">{telecallers.length + spocs.length}</div>
                 <p className="text-xs text-muted-foreground">Active Agents</p>
               </div>
             </div>
@@ -323,7 +323,7 @@ export default function AssignmentsPage() {
                     <Phone className="h-4 w-4 mr-2" />
                     Telecallers
                   </TabsTrigger>
-                  <TabsTrigger value="spokes" className="flex-1">
+                  <TabsTrigger value="spocs" className="flex-1">
                     <MapPin className="h-4 w-4 mr-2" />
                     Field Agents
                   </TabsTrigger>
@@ -365,10 +365,10 @@ export default function AssignmentsPage() {
                     </div>
                   </ScrollArea>
                 </TabsContent>
-                <TabsContent value="spokes" className="mt-4">
+                <TabsContent value="spocs" className="mt-4">
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-3">
-                      {spokes.map(user => {
+                      {spocs.map(user => {
                         const workload = getUserWorkload(user.id)
                         const maxWorkload = 30
                         const workloadPercent = (workload / maxWorkload) * 100
@@ -420,13 +420,13 @@ export default function AssignmentsPage() {
           <div className="py-4 space-y-4">
             <div className="space-y-2">
               <Label>Assignment Type</Label>
-              <Tabs value={assignmentType} onValueChange={(v) => setAssignmentType(v as "telecaller" | "spoke")}>
+              <Tabs value={assignmentType} onValueChange={(v) => setAssignmentType(v as "telecaller" | "spoc")}>
                 <TabsList className="w-full">
                   <TabsTrigger value="telecaller" className="flex-1">
                     <Phone className="h-4 w-4 mr-2" />
                     Telecaller
                   </TabsTrigger>
-                  <TabsTrigger value="spoke" className="flex-1">
+                  <TabsTrigger value="spoc" className="flex-1">
                     <MapPin className="h-4 w-4 mr-2" />
                     Field Agent
                   </TabsTrigger>
@@ -440,7 +440,7 @@ export default function AssignmentsPage() {
                   <SelectValue placeholder="Choose an agent" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(assignmentType === "telecaller" ? telecallers : spokes).map(user => (
+                  {(assignmentType === "telecaller" ? telecallers : spocs).map(user => (
                     <SelectItem key={user.id} value={user.id}>
                       <div className="flex items-center gap-2">
                         <span>{user.name}</span>

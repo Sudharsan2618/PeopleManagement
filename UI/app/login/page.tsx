@@ -162,7 +162,7 @@ export default function LoginPage() {
             <div className="space-y-1 text-xs text-muted-foreground">
               <p><span className="font-medium">Admin:</span> admin@cems.in / admin123</p>
               <p><span className="font-medium">Telecaller:</span> caller@cems.in / caller123</p>
-              <p><span className="font-medium">Spoke:</span> spoke@cems.in / spoke123</p>
+              <p><span className="font-medium">spoc:</span> spoc@cems.in / spoc123</p>
             </div>
           </div>
         </CardContent>

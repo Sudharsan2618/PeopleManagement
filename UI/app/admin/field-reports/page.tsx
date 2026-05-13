@@ -21,8 +21,8 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import {
   usersApi,
-  spokeReportsApi,
-  spokeVisitsApi,
+  SpocReportsApi,
+  SpocVisitsApi,
   type User as ApiUser,
 } from "@/lib/api-client"
 
@@ -39,8 +39,8 @@ export default function AdminFieldReportsPage() {
     try {
       setIsLoading(true)
       const [allReports, allUsers] = await Promise.all([
-        spokeReportsApi.getAll(),
-        usersApi.getByRole("spoke"),
+        SpocReportsApi.getAll(),
+        usersApi.getByRole("spoc"),
       ])
       setReports(allReports)
       setUsers(allUsers)
@@ -49,7 +49,7 @@ export default function AdminFieldReportsPage() {
       const counts: Record<number, number> = {}
       for (const report of allReports) {
         try {
-          const entries = await spokeVisitsApi.getByReport(report.id)
+          const entries = await SpocVisitsApi.getByReport(report.id)
           counts[report.id] = entries.length
         } catch {
           counts[report.id] = 0
@@ -82,11 +82,11 @@ export default function AdminFieldReportsPage() {
   const filteredReports = useMemo(() => {
     return reports
       .filter((r: any) => {
-        const spoke = userMap[r.spoke_id]
+        const spoc = userMap[r.spoc_id]
         const matchesSearch =
           searchQuery === "" ||
           (r.area_location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (spoke?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
+          (spoc?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
         const matchesDraft =
           filterDraft === "all" ||
           (filterDraft === "submitted" && !r.is_draft) ||
@@ -114,7 +114,7 @@ export default function AdminFieldReportsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Field Reports</h1>
           <p className="text-muted-foreground mt-1">
-            View and manage field activity reports from spoke team
+            View and manage field activity reports from spoc team
           </p>
         </div>
         <Button onClick={fetchData} variant="outline" size="sm">
@@ -191,7 +191,7 @@ export default function AdminFieldReportsPage() {
               </div>
             ) : (
               filteredReports.map((report: any) => {
-                const spoke = userMap[report.spoke_id]
+                const spoc = userMap[report.spoc_id]
                 const visits = visitCounts[report.id] || 0
 
                 return (
@@ -211,7 +211,7 @@ export default function AdminFieldReportsPage() {
                           <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
                             <div className="flex items-center gap-1">
                               <User className="h-3 w-3" />
-                              {spoke?.name || "Unknown Agent"}
+                              {spoc?.name || "Unknown Agent"}
                             </div>
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />

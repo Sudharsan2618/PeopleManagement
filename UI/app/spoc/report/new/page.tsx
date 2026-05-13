@@ -53,10 +53,10 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import {
-  spokeReportsApi,
-  spokeVisitsApi,
-  spokeActivitiesApi,
-  spokeEscalationsApi,
+  SpocReportsApi,
+  SpocVisitsApi,
+  spocActivitiesApi,
+  SpocEscalationsApi,
   followUpTasksApi,
 } from "@/lib/api-client"
 
@@ -122,7 +122,7 @@ export default function NewFieldReportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
-  const spokeId = user ? Number(user.id) : 0
+  const spocId = user ? Number(user.id) : 0
 
   // Section states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -245,7 +245,7 @@ export default function NewFieldReportPage() {
       toast({ title: "Area/Location is required", variant: "destructive" })
       return
     }
-    if (!spokeId) {
+    if (!spocId) {
       toast({ title: "Not logged in", variant: "destructive" })
       return
     }
@@ -253,8 +253,8 @@ export default function NewFieldReportPage() {
     setIsSubmitting(true)
     try {
       // 1. Create the report
-      const report = await spokeReportsApi.create({
-        spoke_id: spokeId,
+      const report = await SpocReportsApi.create({
+        spoc_id: spocId,
         report_date: reportDate,
         area_location: areaLocation.trim(),
         is_draft: isDraft,
@@ -264,7 +264,7 @@ export default function NewFieldReportPage() {
 
       // 2. If submitting (not draft), mark submitted_at
       if (!isDraft) {
-        await spokeReportsApi.update(reportId, {
+        await SpocReportsApi.update(reportId, {
           is_draft: false,
           submitted_at: new Date().toISOString(),
         })
@@ -280,7 +280,7 @@ export default function NewFieldReportPage() {
       for (const entry of allEntries) {
         if (!entry.contactDetails.trim()) continue
 
-        const visitEntry = await spokeVisitsApi.create({
+        const visitEntry = await SpocVisitsApi.create({
           report_id: reportId,
           visit_type: entry.type,
           institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
@@ -296,8 +296,8 @@ export default function NewFieldReportPage() {
         if (entry.followUpDate && !isDraft) {
           await followUpTasksApi.create({
             source_entry_id: visitEntry.id,
-            assigned_to_role: entry.assignedTo === "Telecaller" ? "telecaller" : "spoke",
-            assigned_to_user_id: entry.assignedTo === "Telecaller" ? null : spokeId,
+            assigned_to_role: entry.assignedTo === "Telecaller" ? "telecaller" : "spoc",
+            assigned_to_user_id: entry.assignedTo === "Telecaller" ? null : spocId,
             institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
             action_description: entry.nextStep || "Follow up on visit",
             follow_up_date: entry.followUpDate,
@@ -315,7 +315,7 @@ export default function NewFieldReportPage() {
 
       for (const act of activities) {
         if (act.done) {
-          await spokeActivitiesApi.create({
+          await spocActivitiesApi.create({
             report_id: reportId,
             activity_type: act.type,
             done: true,
@@ -326,7 +326,7 @@ export default function NewFieldReportPage() {
 
       // 6. Create escalation if challenges noted
       if (challenges.trim()) {
-        await spokeEscalationsApi.create({
+        await SpocEscalationsApi.create({
           report_id: reportId,
           description: challenges.trim(),
           observations: observations.trim() || null,
@@ -339,7 +339,7 @@ export default function NewFieldReportPage() {
           ? "You can resume editing later."
           : "Follow-up tasks have been created.",
       })
-      router.push("/spoke/dashboard")
+      router.push("/spoc/dashboard")
     } catch (err) {
       toast({
         title: "Failed to save report",
@@ -786,7 +786,7 @@ export default function NewFieldReportPage() {
 
       {/* Bottom Actions */}
       <div className="flex items-center justify-end gap-2 pb-6">
-        <Button variant="outline" onClick={() => router.push("/spoke/dashboard")}>
+        <Button variant="outline" onClick={() => router.push("/spoc/dashboard")}>
           Cancel
         </Button>
         <Button variant="outline" onClick={handleSaveDraft}>

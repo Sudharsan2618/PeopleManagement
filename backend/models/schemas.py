@@ -8,7 +8,7 @@ class UserBase(BaseModel):
     name: str = Field(..., max_length=150)
     email: str = Field(..., max_length=255)
     mobile: str = Field(..., max_length=20)
-    role: str = Field(..., description="'admin' | 'telecaller' | 'spoke'")
+    role: str = Field(..., description="'admin' | 'telecaller' | 'spoc'")
     is_active: bool = True
 
 
@@ -21,7 +21,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = Field(None, max_length=255)
     mobile: Optional[str] = Field(None, max_length=20)
     password: Optional[str] = Field(None, max_length=255)
-    role: Optional[str] = Field(None, description="'admin' | 'telecaller' | 'spoke'")
+    role: Optional[str] = Field(None, description="'admin' | 'telecaller' | 'spoc'")
     is_active: Optional[bool] = None
 
 
@@ -163,25 +163,25 @@ class CallLog(CallLogBase):
         from_attributes = True
 
 
-# ==================== SPOKE REPORTS ====================
-class SpokeReportBase(BaseModel):
-    spoke_id: int
+# ==================== spoc REPORTS ====================
+class spocReportBase(BaseModel):
+    spoc_id: int
     report_date: date
     area_location: str = Field(..., max_length=200)
     is_draft: bool = True
 
 
-class SpokeReportCreate(SpokeReportBase):
+class spocReportCreate(spocReportBase):
     pass
 
 
-class SpokeReportUpdate(BaseModel):
+class spocReportUpdate(BaseModel):
     area_location: Optional[str] = Field(None, max_length=200)
     is_draft: Optional[bool] = None
     submitted_at: Optional[datetime] = None
 
 
-class SpokeReport(SpokeReportBase):
+class spocReport(spocReportBase):
     id: int
     submitted_at: Optional[datetime]
     created_at: datetime
@@ -190,8 +190,8 @@ class SpokeReport(SpokeReportBase):
         from_attributes = True
 
 
-# ==================== SPOKE VISIT ENTRIES ====================
-class SpokeVisitEntryBase(BaseModel):
+# ==================== spoc VISIT ENTRIES ====================
+class spocVisitEntryBase(BaseModel):
     report_id: int
     visit_type: str = Field(..., max_length=50, description="'school' | 'coaching_centre' | 'admission_partner'")
     institution_name: str = Field(..., max_length=200)
@@ -204,11 +204,11 @@ class SpokeVisitEntryBase(BaseModel):
     follow_up_date: Optional[date] = None
 
 
-class SpokeVisitEntryCreate(SpokeVisitEntryBase):
+class spocVisitEntryCreate(spocVisitEntryBase):
     pass
 
 
-class SpokeVisitEntryUpdate(BaseModel):
+class spocVisitEntryUpdate(BaseModel):
     visit_type: Optional[str] = Field(None, max_length=50)
     institution_name: Optional[str] = Field(None, max_length=200)
     contact_name: Optional[str] = Field(None, max_length=150)
@@ -220,7 +220,7 @@ class SpokeVisitEntryUpdate(BaseModel):
     follow_up_date: Optional[date] = None
 
 
-class SpokeVisitEntry(SpokeVisitEntryBase):
+class spocVisitEntry(spocVisitEntryBase):
     id: int
     created_at: datetime
 
@@ -228,25 +228,25 @@ class SpokeVisitEntry(SpokeVisitEntryBase):
         from_attributes = True
 
 
-# ==================== SPOKE ACTIVITIES ====================
-class SpokeActivityBase(BaseModel):
+# ==================== spoc ACTIVITIES ====================
+class spocActivityBase(BaseModel):
     report_id: int
     activity_type: str = Field(..., max_length=50, description="'branding' | 'alumni' | 'corporate' | 'referral'")
     done: bool = False
     notes: Optional[str] = None
 
 
-class SpokeActivityCreate(SpokeActivityBase):
+class spocActivityCreate(spocActivityBase):
     pass
 
 
-class SpokeActivityUpdate(BaseModel):
+class spocActivityUpdate(BaseModel):
     activity_type: Optional[str] = Field(None, max_length=50)
     done: Optional[bool] = None
     notes: Optional[str] = None
 
 
-class SpokeActivity(SpokeActivityBase):
+class spocActivity(spocActivityBase):
     id: int
     created_at: datetime
 
@@ -254,18 +254,18 @@ class SpokeActivity(SpokeActivityBase):
         from_attributes = True
 
 
-# ==================== SPOKE ESCALATIONS ====================
-class SpokeEscalationBase(BaseModel):
+# ==================== spoc ESCALATIONS ====================
+class spocEscalationBase(BaseModel):
     report_id: int
     description: str
     observations: Optional[str] = None
 
 
-class SpokeEscalationCreate(SpokeEscalationBase):
+class spocEscalationCreate(spocEscalationBase):
     pass
 
 
-class SpokeEscalationUpdate(BaseModel):
+class spocEscalationUpdate(BaseModel):
     description: Optional[str] = None
     observations: Optional[str] = None
     resolved_by: Optional[int] = None
@@ -273,7 +273,7 @@ class SpokeEscalationUpdate(BaseModel):
     resolved_at: Optional[datetime] = None
 
 
-class SpokeEscalation(SpokeEscalationBase):
+class spocEscalation(spocEscalationBase):
     id: int
     resolved_by: Optional[int]
     resolution_note: Optional[str]
@@ -287,7 +287,7 @@ class SpokeEscalation(SpokeEscalationBase):
 # ==================== FOLLOW-UP TASKS ====================
 class FollowUpTaskBase(BaseModel):
     source_entry_id: Optional[int] = None
-    assigned_to_role: str = Field(..., max_length=20, description="'telecaller' | 'spoke'")
+    assigned_to_role: str = Field(..., max_length=20, description="'telecaller' | 'spoc'")
     assigned_to_user_id: Optional[int] = None
     institution_name: Optional[str] = Field(None, max_length=200)
     action_description: str

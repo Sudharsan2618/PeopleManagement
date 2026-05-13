@@ -57,13 +57,13 @@ const telecallerNav: NavItem[] = [
   { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList },
 ]
 
-const spokeNav: NavItem[] = [
-  { title: "Dashboard", href: "/spoke/dashboard", icon: LayoutDashboard },
-  { title: "Assign Prospects", href: "/spoke/prospects", icon: Users },
-  { title: "Telecaller Stats", href: "/spoke/telecallers", icon: BarChart3 },
-  { title: "New Report", href: "/spoke/report/new", icon: FileText },
-  { title: "Past Reports", href: "/spoke/reports", icon: FolderOpen },
-  { title: "My Follow-ups", href: "/spoke/followups", icon: ClipboardList },
+const spocNav: NavItem[] = [
+  { title: "Dashboard", href: "/spoc/dashboard", icon: LayoutDashboard },
+  { title: "Assign Prospects", href: "/spoc/prospects", icon: Users },
+  { title: "Telecaller Stats", href: "/spoc/telecallers", icon: BarChart3 },
+  { title: "New Report", href: "/spoc/report/new", icon: FileText },
+  { title: "Past Reports", href: "/spoc/reports", icon: FolderOpen },
+  { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
 ]
 
 const adminNav: NavItem[] = [
@@ -71,7 +71,7 @@ const adminNav: NavItem[] = [
   { title: "Prospects", href: "/admin/prospects", icon: Users },
   { title: "Assign Prospects", href: "/admin/assign", icon: ClipboardList },
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
-  { title: "Spokes", href: "/admin/spokes", icon: MapPin },
+  { title: "spocs", href: "/admin/spocs", icon: MapPin },
   { title: "Field Reports", href: "/admin/field-reports", icon: FileText },
   { title: "Follow-ups", href: "/admin/followups", icon: History },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
@@ -83,8 +83,8 @@ function getNavItems(role: UserRole): NavItem[] {
   switch (role) {
     case "telecaller":
       return telecallerNav
-    case "spoke":
-      return spokeNav
+    case "spoc":
+      return spocNav
     case "admin":
       return adminNav
     default:
@@ -96,7 +96,7 @@ function getRoleLabel(role: UserRole): string {
   switch (role) {
     case "telecaller":
       return "Telecaller"
-    case "spoke":
+    case "spoc":
       return "Field Agent"
     case "admin":
       return "Administrator"

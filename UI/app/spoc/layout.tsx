@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useAuth } from "@/lib/auth-context"
 
-export default function SpokeLayout({
+export default function spocLayout({
   children,
 }: {
   children: React.ReactNode
@@ -14,13 +14,13 @@ export default function SpokeLayout({
   const router = useRouter()
 
   useEffect(() => {
-    if (isInitialized && (!user || user.role !== "spoke")) {
+    if (isInitialized && (!user || user.role !== "spoc")) {
       router.push("/login")
     }
   }, [user, isInitialized, router])
 
   // Wait for auth to initialize (localStorage restore)
-  if (!isInitialized || (!user || user.role !== "spoke")) {
+  if (!isInitialized || (!user || user.role !== "spoc")) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Loading...</p>
@@ -29,7 +29,7 @@ export default function SpokeLayout({
   }
 
   return (
-    <DashboardLayout role="spoke" userName={user.name}>
+    <DashboardLayout role="spoc" userName={user.name}>
       {children}
     </DashboardLayout>
   )

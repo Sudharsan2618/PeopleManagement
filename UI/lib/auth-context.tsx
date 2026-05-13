@@ -115,8 +115,8 @@ export function getRoleRedirectPath(role: UserRole): string {
       return "/admin/dashboard"
     case "telecaller":
       return "/telecaller/dashboard"
-    case "spoke":
-      return "/spoke/dashboard"
+    case "spoc":
+      return "/spoc/dashboard"
     default:
       return "/login"
   }

@@ -62,7 +62,7 @@ const statusConfig: Record<
   },
 }
 
-export default function SpokeFollowupsPage() {
+export default function spocFollowupsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
@@ -74,13 +74,13 @@ export default function SpokeFollowupsPage() {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const spokeId = user ? Number(user.id) : 0
+  const spocId = user ? Number(user.id) : 0
 
   const fetchData = async () => {
-    if (!spokeId) return
+    if (!spocId) return
     try {
       setIsLoading(true)
-      const data = await followUpTasksApi.getByUser(spokeId)
+      const data = await followUpTasksApi.getByUser(spocId)
       setTasks(data)
     } catch {
     } finally {
@@ -90,7 +90,7 @@ export default function SpokeFollowupsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [spokeId])
+  }, [spocId])
 
   const todayStr = new Date().toISOString().split("T")[0]
 

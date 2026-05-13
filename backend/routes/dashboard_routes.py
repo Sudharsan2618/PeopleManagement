@@ -24,7 +24,7 @@ def get_dashboard_stats(user_id: int):
         """
         callback_count = execute_query(callback_query, (user_id,), fetch="one")["count"]
 
-        # 2. Pending Follow-up Tasks (Telecaller/Spoke)
+        # 2. Pending Follow-up Tasks (Telecaller/spoc)
         followup_query = """
             SELECT COUNT(*) as count
             FROM follow_up_tasks

@@ -90,7 +90,7 @@ export default function TelecallerStatusPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/spoke/dashboard">
+            <Link href="/spoc/dashboard">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>

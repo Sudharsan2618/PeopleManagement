@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,15 +22,12 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  Download, 
-  FileText, 
   Phone, 
   MapPin,
-  Calendar,
   TrendingUp,
-  Users,
   Clock,
-  Target
+  Target,
+  Loader2
 } from "lucide-react"
 import { 
   BarChart, 
@@ -46,61 +43,60 @@ import {
   Pie,
   Cell
 } from "recharts"
-import { mockUsers, mockCallLogs, mockFieldReports, mockProspects } from "@/lib/mock-data"
+import { adminApi } from "@/lib/api-client"
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
-
-// Generate mock analytics data
-const callAnalytics = [
-  { date: 'Mon', calls: 45, connected: 32, converted: 8 },
-  { date: 'Tue', calls: 52, connected: 38, converted: 12 },
-  { date: 'Wed', calls: 48, connected: 35, converted: 10 },
-  { date: 'Thu', calls: 61, connected: 45, converted: 15 },
-  { date: 'Fri', calls: 55, connected: 40, converted: 11 },
-  { date: 'Sat', calls: 38, connected: 28, converted: 7 },
-  { date: 'Sun', calls: 22, connected: 15, converted: 4 },
-]
-
-const visitAnalytics = [
-  { date: 'Mon', visits: 12, successful: 8 },
-  { date: 'Tue', visits: 15, successful: 11 },
-  { date: 'Wed', visits: 10, successful: 7 },
-  { date: 'Thu', visits: 18, successful: 14 },
-  { date: 'Fri', visits: 14, successful: 10 },
-  { date: 'Sat', visits: 8, successful: 5 },
-  { date: 'Sun', visits: 4, successful: 2 },
-]
-
-const outcomeDistribution = [
-  { name: 'Interested', value: 35 },
-  { name: 'Callback', value: 25 },
-  { name: 'Not Interested', value: 20 },
-  { name: 'No Answer', value: 15 },
-  { name: 'Other', value: 5 },
-]
-
-const telecallerPerformance = mockUsers
-  .filter(u => u.role === 'telecaller')
-  .map(user => ({
-    ...user,
-    totalCalls: mockCallLogs.filter(c => c.telecallerId === user.id).length,
-    successfulCalls: mockCallLogs.filter(c => c.telecallerId === user.id && c.outcome === 'interested').length,
-    avgDuration: Math.round(mockCallLogs.filter(c => c.telecallerId === user.id).reduce((acc, c) => acc + c.duration, 0) / 
-      (mockCallLogs.filter(c => c.telecallerId === user.id).length || 1)),
-  }))
-
-const spokePerformance = mockUsers
-  .filter(u => u.role === 'spoke')
-  .map(user => ({
-    ...user,
-    totalVisits: mockFieldReports.filter(r => r.spokeId === user.id).length,
-    successfulVisits: mockFieldReports.filter(r => r.spokeId === user.id && r.visitOutcome === 'enrolled').length,
-    pendingFollowups: mockFieldReports.filter(r => r.spokeId === user.id && r.followUpDate && r.followUpDate > new Date()).length,
-  }))
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState("7days")
   const [reportType, setReportType] = useState("overview")
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const reports = await adminApi.getReports()
+        setData(reports)
+      } catch (error) {
+        console.error("Failed to fetch reports:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Gathering real-time analytics...</p>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <p className="text-muted-foreground">Failed to load analytics data.</p>
+      </div>
+    )
+  }
+
+  const {
+    callAnalytics,
+    visitAnalytics,
+    outcomeDistribution,
+    telecallerPerformance,
+    spocPerformance,
+    conversionFunnel,
+    summary
+  } = data
+
+  const totalProspects = summary.totalProspects || 1
+  const conversionRate = Math.round((summary.totalEnrollments / totalProspects) * 100)
 
   return (
     <div className="space-y-6">
@@ -117,15 +113,11 @@ export default function ReportsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="90days">Last 90 days</SelectItem>
-              <SelectItem value="year">This year</SelectItem>
+              <SelectItem value="30days" disabled>Last 30 days</SelectItem>
+              <SelectItem value="90days" disabled>Last 90 days</SelectItem>
+              <SelectItem value="year" disabled>This year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
         </div>
       </div>
 
@@ -148,7 +140,7 @@ export default function ReportsPage() {
                     <Phone className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{mockCallLogs.length}</div>
+                    <div className="text-2xl font-bold">{summary.totalCalls}</div>
                     <p className="text-xs text-muted-foreground">Total Calls</p>
                   </div>
                 </div>
@@ -161,7 +153,7 @@ export default function ReportsPage() {
                     <MapPin className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{mockFieldReports.length}</div>
+                    <div className="text-2xl font-bold">{summary.totalVisits}</div>
                     <p className="text-xs text-muted-foreground">Field Visits</p>
                   </div>
                 </div>
@@ -174,9 +166,7 @@ export default function ReportsPage() {
                     <Target className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">
-                      {mockProspects.filter(p => p.status === 'enrolled').length}
-                    </div>
+                    <div className="text-2xl font-bold">{summary.totalEnrollments}</div>
                     <p className="text-xs text-muted-foreground">Enrollments</p>
                   </div>
                 </div>
@@ -189,7 +179,7 @@ export default function ReportsPage() {
                     <TrendingUp className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">24%</div>
+                    <div className="text-2xl font-bold">{conversionRate}%</div>
                     <p className="text-xs text-muted-foreground">Conversion Rate</p>
                   </div>
                 </div>
@@ -246,7 +236,7 @@ export default function ReportsPage() {
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {outcomeDistribution.map((_, index) => (
+                        {outcomeDistribution.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -278,7 +268,7 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {telecallerPerformance.map(user => {
+                  {telecallerPerformance.map((user: any) => {
                     const successRate = user.totalCalls > 0 
                       ? Math.round((user.successfulCalls / user.totalCalls) * 100) 
                       : 0
@@ -288,7 +278,7 @@ export default function ReportsPage() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                                {user.name.split(' ').map(n => n[0]).join('')}
+                                {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{user.name}</span>
@@ -363,7 +353,7 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {spokePerformance.map(user => {
+                  {spocPerformance.map((user: any) => {
                     const successRate = user.totalVisits > 0 
                       ? Math.round((user.successfulVisits / user.totalVisits) * 100) 
                       : 0
@@ -373,7 +363,7 @@ export default function ReportsPage() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
                               <AvatarFallback className="text-xs bg-green-100 text-green-700">
-                                {user.name.split(' ').map(n => n[0]).join('')}
+                                {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{user.name}</span>
@@ -431,7 +421,7 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-primary">{mockProspects.length}</div>
+                  <div className="text-4xl font-bold text-primary">{summary.totalProspects}</div>
                   <p className="text-sm text-muted-foreground mt-1">Total Prospects</p>
                 </div>
               </CardContent>
@@ -440,7 +430,7 @@ export default function ReportsPage() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <div className="text-4xl font-bold text-green-600">
-                    {mockProspects.filter(p => p.status === 'interested' || p.status === 'enrolled').length}
+                    {conversionFunnel.find((f: any) => f.stage === 'hot')?.count || 0 + conversionFunnel.find((f: any) => f.stage === 'admission_done')?.count || 0}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">Qualified Leads</p>
                 </div>
@@ -450,7 +440,7 @@ export default function ReportsPage() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <div className="text-4xl font-bold text-purple-600">
-                    {mockProspects.filter(p => p.status === 'enrolled').length}
+                    {summary.totalEnrollments}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">Enrollments</p>
                 </div>
@@ -465,27 +455,24 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  { stage: 'New Prospects', count: mockProspects.filter(p => p.status === 'new').length, color: 'bg-blue-500' },
-                  { stage: 'Contacted', count: mockProspects.filter(p => p.status === 'contacted').length, color: 'bg-yellow-500' },
-                  { stage: 'Interested', count: mockProspects.filter(p => p.status === 'interested').length, color: 'bg-green-500' },
-                  { stage: 'Field Visit Required', count: mockProspects.filter(p => p.status === 'field_visit_required').length, color: 'bg-cyan-500' },
-                  { stage: 'Enrolled', count: mockProspects.filter(p => p.status === 'enrolled').length, color: 'bg-purple-500' },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-4">
-                    <div className="w-40 text-sm font-medium">{item.stage}</div>
-                    <div className="flex-1">
-                      <div className="h-8 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${item.color} rounded-full flex items-center justify-end pr-3`}
-                          style={{ width: `${Math.max((item.count / mockProspects.length) * 100, 10)}%` }}
-                        >
-                          <span className="text-white text-sm font-medium">{item.count}</span>
+                {conversionFunnel.map((item: any, index: number) => {
+                  const colors = ['bg-blue-500', 'bg-yellow-500', 'bg-orange-500', 'bg-red-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-purple-500', 'bg-gray-500', 'bg-slate-500', 'bg-black']
+                  return (
+                    <div key={index} className="flex items-center gap-4">
+                      <div className="w-40 text-sm font-medium capitalize">{item.stage.replace(/_/g, ' ')}</div>
+                      <div className="flex-1">
+                        <div className="h-8 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${colors[index % colors.length]} rounded-full flex items-center justify-end pr-3`}
+                            style={{ width: `${Math.max((item.count / totalProspects) * 100, 5)}%` }}
+                          >
+                            <span className="text-white text-sm font-medium">{item.count}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </CardContent>
           </Card>

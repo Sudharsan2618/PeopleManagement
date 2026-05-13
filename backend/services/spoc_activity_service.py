@@ -2,15 +2,15 @@ from typing import List, Optional
 from database.connection import execute_query, execute_insert, execute_update_delete
 
 
-class SpokeActivityService:
-    """Service layer for Spoke Activities table with direct SQL queries."""
+class spocActivityService:
+    """Service layer for spoc Activities table with direct SQL queries."""
     
     @staticmethod
     def get_all_activities() -> List[dict]:
-        """Get all spoke activities."""
+        """Get all spoc activities."""
         query = """
             SELECT id, report_id, activity_type, done, notes, created_at
-            FROM spoke_activities
+            FROM spoc_activities
             ORDER BY created_at DESC
         """
         return execute_query(query, fetch="all")
@@ -20,7 +20,7 @@ class SpokeActivityService:
         """Get activity by ID."""
         query = """
             SELECT id, report_id, activity_type, done, notes, created_at
-            FROM spoke_activities
+            FROM spoc_activities
             WHERE id = %s
         """
         return execute_query(query, (activity_id,), fetch="one")
@@ -30,7 +30,7 @@ class SpokeActivityService:
         """Get all activities for a specific report."""
         query = """
             SELECT id, report_id, activity_type, done, notes, created_at
-            FROM spoke_activities
+            FROM spoc_activities
             WHERE report_id = %s
             ORDER BY created_at DESC
         """
@@ -38,9 +38,9 @@ class SpokeActivityService:
     
     @staticmethod
     def create_activity(report_id: int, activity_type: str, done: bool = False, notes: Optional[str] = None) -> int:
-        """Create a new spoke activity."""
+        """Create a new spoc activity."""
         query = """
-            INSERT INTO spoke_activities (report_id, activity_type, done, notes)
+            INSERT INTO spoc_activities (report_id, activity_type, done, notes)
             VALUES (%s, %s, %s, %s)
             RETURNING id
         """
@@ -68,7 +68,7 @@ class SpokeActivityService:
         
         params.append(activity_id)
         query = f"""
-            UPDATE spoke_activities
+            UPDATE spoc_activities
             SET {', '.join(updates)}
             WHERE id = %s
         """
@@ -77,5 +77,5 @@ class SpokeActivityService:
     @staticmethod
     def delete_activity(activity_id: int) -> int:
         """Delete an activity."""
-        query = "DELETE FROM spoke_activities WHERE id = %s"
+        query = "DELETE FROM spoc_activities WHERE id = %s"
         return execute_update_delete(query, (activity_id,))
