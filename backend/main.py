@@ -19,8 +19,7 @@ from routes import (
 app = FastAPI(
     title="Course Enrollment Management System API",
     description="Backend API for Course Enrollment Management System (CEMS)",
-    version="1.0.0",
-    redirect_slashes=False
+    version="1.0.0"
 )
 
 # CORS middleware configuration
@@ -67,4 +66,6 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

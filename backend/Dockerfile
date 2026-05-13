@@ -28,5 +28,5 @@ COPY . .
 EXPOSE 8080
 
 # Command to run the application
-# Cloud Run injects $PORT, so we use it here
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Cloud Run injects $PORT, so uvicorn will listen on the correct port
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT
