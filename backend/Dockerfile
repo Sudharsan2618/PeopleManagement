@@ -1,32 +1,24 @@
-# Use the official Python slim image
-FROM python:3.11-slim
+# ── Dockerfile (Web — FastAPI) ────────────────────────────────────────────────
+# Builds the FastAPI webhook/flow server.
+# A separate Dockerfile.worker (below) builds the ARQ worker.
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
+FROM python:3.12-slim
 
-# Set the working directory
+# Don't write .pyc files; send logs straight to stdout
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Install system dependencies
+# System deps (none needed beyond Python here, but keep layer cached)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
+        gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only the requirements file first to leverage Docker cache
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
 COPY . .
 
-# Expose the port (Cloud Run will set the PORT env var)
-EXPOSE 8080
-
-# Command to run the application
-# Cloud Run injects $PORT, so uvicorn will listen on the correct port
-CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+# Cloud Run injects PORT env var; uvicorn binds to it
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 4"]
