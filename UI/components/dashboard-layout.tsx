@@ -23,6 +23,7 @@ import {
   BarChart3,
   BookOpen,
   FolderOpen,
+  MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -72,6 +73,7 @@ const adminNav: NavItem[] = [
   { title: "Field Reports", href: "/admin/field-reports", icon: FileText },
   { title: "Follow-ups", href: "/admin/followups", icon: History },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
+  { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
 

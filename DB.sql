@@ -196,3 +196,52 @@ CREATE INDEX idx_visit_entries_report    ON spoke_visit_entries(report_id);
 -- Follow-up tasks: telecaller task queue lookup
 CREATE INDEX idx_followup_user_status    ON follow_up_tasks(assigned_to_user_id, status);
 CREATE INDEX idx_followup_date           ON follow_up_tasks(follow_up_date);
+
+-- 10. COURSES
+CREATE TABLE courses (
+    id               SERIAL PRIMARY KEY,
+    name             VARCHAR(150)        NOT NULL,
+    code             VARCHAR(50)         NOT NULL UNIQUE,
+    description      TEXT,
+    duration         VARCHAR(50),
+    fees             NUMERIC(12, 2),
+    is_active        BOOLEAN             NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMP           NOT NULL DEFAULT NOW()
+);
+
+-- 11. WHATSAPP CAMPAIGNS
+CREATE TABLE whatsapp_campaigns (
+    id               SERIAL PRIMARY KEY,
+    name             VARCHAR(150)        NOT NULL,
+    template_name    VARCHAR(150)        NOT NULL,
+    language_code    VARCHAR(10)         DEFAULT 'en_US',
+    status           VARCHAR(50)         NOT NULL DEFAULT 'draft',
+    total_recipients INT                 NOT NULL DEFAULT 0,
+    sent_count       INT                 NOT NULL DEFAULT 0,
+    delivered_count  INT                 NOT NULL DEFAULT 0,
+    read_count       INT                 NOT NULL DEFAULT 0,
+    created_by       INT                 REFERENCES users(id) ON DELETE SET NULL,
+    created_at       TIMESTAMP           NOT NULL DEFAULT NOW()
+);
+
+-- 12. WHATSAPP MESSAGES
+CREATE TABLE whatsapp_messages (
+    id               SERIAL PRIMARY KEY,
+    prospect_id      INT                 NOT NULL REFERENCES prospects(id) ON DELETE CASCADE,
+    campaign_id      INT                 REFERENCES whatsapp_campaigns(id) ON DELETE SET NULL,
+    meta_message_id  VARCHAR(255)        UNIQUE,
+    direction        VARCHAR(10)         NOT NULL,
+    message_type     VARCHAR(20)         NOT NULL,
+    status           VARCHAR(20)         NOT NULL DEFAULT 'queued',
+    body             TEXT,
+    payload          JSONB,
+    sent_at          TIMESTAMP,
+    delivered_at     TIMESTAMP,
+    read_at          TIMESTAMP,
+    created_at       TIMESTAMP           NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_wa_messages_prospect    ON whatsapp_messages(prospect_id);
+CREATE INDEX idx_wa_messages_campaign    ON whatsapp_messages(campaign_id);
+CREATE INDEX idx_wa_messages_status      ON whatsapp_messages(status);
+CREATE INDEX idx_wa_messages_meta_id     ON whatsapp_messages(meta_message_id);

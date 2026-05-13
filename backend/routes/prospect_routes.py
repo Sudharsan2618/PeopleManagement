@@ -98,3 +98,14 @@ def delete_prospect(prospect_id: int):
         return {"message": "Prospect deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-import", status_code=201)
+def bulk_import_prospects(data: List[ProspectCreate]):
+    """Bulk import prospects."""
+    try:
+        prospects_dicts = [p.model_dump() for p in data]
+        count = ProspectService.create_bulk_prospects(prospects_dicts)
+        return {"message": f"Successfully imported {count} prospects", "count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

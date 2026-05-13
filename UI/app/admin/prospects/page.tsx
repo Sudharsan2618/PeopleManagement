@@ -12,6 +12,8 @@ import {
   Eye,
   UserCog,
   Archive,
+  Edit,
+  Trash2,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -56,12 +58,13 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import {
   type ProspectStatus,
   mockCourses,
 } from "@/lib/mock-data"
-import { prospectsApi, assignmentsApi, usersApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
+import { prospectsApi, assignmentsApi, usersApi, coursesApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 
@@ -91,9 +94,21 @@ export default function AdminProspectsPage() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [targetTelecallerId, setTargetTelecallerId] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
+  const [isProspectDialogOpen, setIsProspectDialogOpen] = useState(false)
+  const [editingProspect, setEditingProspect] = useState<any | null>(null)
+  const [prospectFormData, setProspectFormData] = useState({
+    name: "",
+    mobile: "",
+    email: "",
+    location: "",
+    sourced_from: "",
+    status: "new",
+    course_interest: "",
+  })
   const [prospects, setProspects] = useState<any[]>([])
   const [assignments, setAssignments] = useState<any[]>([])
   const [telecallers, setTelecallers] = useState<any[]>([])
+  const [courses, setCourses] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -101,10 +116,11 @@ export default function AdminProspectsPage() {
     async function fetchData() {
       try {
         setIsLoading(true)
-        const [apiProspects, apiAssignments, apiUsers] = await Promise.all([
+        const [apiProspects, apiAssignments, apiUsers, apiCourses] = await Promise.all([
           prospectsApi.getAll(),
           assignmentsApi.getAll(),
           usersApi.getByRole("telecaller"),
+          coursesApi.getAll(),
         ])
         
         const uiProspects = apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments))
@@ -113,6 +129,7 @@ export default function AdminProspectsPage() {
         setProspects(uiProspects)
         setAssignments(apiAssignments)
         setTelecallers(uiTelecallers)
+        setCourses(apiCourses)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch data")
         toast({
@@ -256,11 +273,21 @@ export default function AdminProspectsPage() {
               Import CSV
             </Link>
           </Button>
-          <Button asChild>
-            <Link href="/admin/prospects/add">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Prospect
-            </Link>
+          <Button onClick={() => {
+            setEditingProspect(null)
+            setProspectFormData({
+              name: "",
+              mobile: "",
+              email: "",
+              location: "",
+              sourced_from: "",
+              status: "new",
+              course_interest: "",
+            })
+            setIsProspectDialogOpen(true)
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Prospect
           </Button>
         </div>
       </div>
@@ -390,8 +417,8 @@ export default function AdminProspectsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {mockCourses.map((course) => (
-                    <SelectItem key={course.id} value={`Course${course.code.charAt(0)}`}>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.code}>
                       {course.code}
                     </SelectItem>
                   ))}
@@ -477,13 +504,11 @@ export default function AdminProspectsPage() {
                         <TableCell>{prospect.location}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">
-                            {prospect.courseInterest === "Unknown"
-                              ? "Unknown"
-                              : mockCourses.find(
-                                  (c) =>
-                                    c.code ===
-                                    prospect.courseInterest.replace("Course", "")
-                                )?.code || prospect.courseInterest}
+                              {prospect.courseInterest === "Unknown"
+                               ? "Unknown"
+                               : courses.find(
+                                   (c) => c.code === prospect.courseInterest
+                                 )?.code || prospect.courseInterest}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -522,14 +547,42 @@ export default function AdminProspectsPage() {
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <UserCog className="h-4 w-4 mr-2" />
-                                Reassign
+                              <DropdownMenuItem onClick={() => {
+                                setEditingProspect(prospect)
+                                setProspectFormData({
+                                  name: prospect.name,
+                                  mobile: prospect.mobile,
+                                  email: prospect.email || "",
+                                  location: prospect.location || "",
+                                  sourced_from: prospect.source || "",
+                                  status: prospect.status.toLowerCase(), // This might need mapping
+                                  course_interest: prospect.courseInterest || "",
+                                })
+                                setIsProspectDialogOpen(true)
+                              }}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">
-                                <Archive className="h-4 w-4 mr-2" />
-                                Archive
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to delete ${prospect.name}?`)) {
+                                    try {
+                                      await prospectsApi.delete(Number(prospect.id))
+                                      toast({ title: "Prospect deleted" })
+                                      // Refresh data
+                                      const apiProspects = await prospectsApi.getAll()
+                                      const apiAssignments = await assignmentsApi.getAll()
+                                      setProspects(apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments)))
+                                    } catch (err) {
+                                      toast({ title: "Error deleting prospect", variant: "destructive" })
+                                    }
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -723,6 +776,100 @@ export default function AdminProspectsPage() {
             >
               {isAssigning ? "Assigning..." : "Confirm Assignment"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Prospect Dialog */}
+      <Dialog open={isProspectDialogOpen} onOpenChange={setIsProspectDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingProspect ? "Edit Prospect" : "Add New Prospect"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_name" className="text-right">Name</Label>
+              <Input
+                id="p_name"
+                value={prospectFormData.name}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_mobile" className="text-right">Mobile</Label>
+              <Input
+                id="p_mobile"
+                value={prospectFormData.mobile}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, mobile: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_email" className="text-right">Email</Label>
+              <Input
+                id="p_email"
+                value={prospectFormData.email}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, email: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_location" className="text-right">Location</Label>
+              <Input
+                id="p_location"
+                value={prospectFormData.location}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, location: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_course" className="text-right">Course</Label>
+              <Select 
+                value={prospectFormData.course_interest} 
+                onValueChange={(v) => setProspectFormData({ ...prospectFormData, course_interest: v })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select Course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map(c => (
+                    <SelectItem key={c.id} value={c.code}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_source" className="text-right">Source</Label>
+              <Input
+                id="p_source"
+                value={prospectFormData.sourced_from}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, sourced_from: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProspectDialogOpen(false)}>Cancel</Button>
+            <Button onClick={async () => {
+              try {
+                if (editingProspect) {
+                  await prospectsApi.update(Number(editingProspect.id), prospectFormData)
+                  toast({ title: "Prospect updated" })
+                } else {
+                  // In a real app, created_by would be from session
+                  await prospectsApi.create({ ...prospectFormData, created_by: 1 })
+                  toast({ title: "Prospect created" })
+                }
+                setIsProspectDialogOpen(false)
+                // Refresh data
+                const apiProspects = await prospectsApi.getAll()
+                const apiAssignments = await assignmentsApi.getAll()
+                setProspects(apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments)))
+              } catch (err) {
+                toast({ title: "Error saving prospect", variant: "destructive" })
+              }
+            }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

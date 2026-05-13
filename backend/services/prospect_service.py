@@ -108,3 +108,30 @@ class ProspectService:
         """Delete a prospect."""
         query = "DELETE FROM prospects WHERE id = %s"
         return execute_update_delete(query, (prospect_id,))
+
+    @staticmethod
+    def create_bulk_prospects(prospects: List[dict]) -> int:
+        """Create multiple prospects at once."""
+        if not prospects:
+            return 0
+        
+        # Prepare the query
+        columns = ["name", "mobile", "email", "location", "sourced_from", "status", "course_interest", "created_by"]
+        values_placeholders = []
+        params = []
+        
+        for p in prospects:
+            placeholders = ["%s"] * len(columns)
+            values_placeholders.append(f"({', '.join(placeholders)})")
+            for col in columns:
+                # Use dict.get() and convert Pydantic model to dict if needed
+                # But here we expect a list of dicts from the route
+                params.append(p.get(col))
+        
+        query = f"""
+            INSERT INTO prospects ({', '.join(columns)})
+            VALUES {', '.join(values_placeholders)}
+            ON CONFLICT (mobile) DO NOTHING
+        """
+        
+        return execute_update_delete(query, tuple(params))

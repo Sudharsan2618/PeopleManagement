@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 
 
 # ==================== USERS ====================
@@ -26,6 +26,34 @@ class UserUpdate(BaseModel):
 
 
 class User(UserBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==================== COURSES ====================
+class CourseBase(BaseModel):
+    name: str = Field(..., max_length=150)
+    code: str = Field(..., max_length=50)
+    description: Optional[str] = None
+    duration: Optional[str] = Field(None, max_length=50)
+    fees: Optional[float] = None
+    is_active: bool = True
+
+class CourseCreate(CourseBase):
+    pass
+
+class CourseUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=150)
+    code: Optional[str] = Field(None, max_length=50)
+    description: Optional[str] = None
+    duration: Optional[str] = Field(None, max_length=50)
+    fees: Optional[float] = None
+    is_active: Optional[bool] = None
+
+class Course(CourseBase):
     id: int
     created_at: datetime
 
@@ -65,6 +93,10 @@ class Prospect(ProspectBase):
 
     class Config:
         from_attributes = True
+
+
+class ProspectImport(BaseModel):
+    prospects: List[ProspectCreate]
 
 
 # ==================== PROSPECT ASSIGNMENTS ====================

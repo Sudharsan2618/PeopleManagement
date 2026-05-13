@@ -8,6 +8,10 @@ import {
   Loader2,
   RefreshCw,
   MoreHorizontal,
+  Plus,
+  Edit,
+  Trash2,
+  UserPlus,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
@@ -20,7 +24,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { usersApi } from "@/lib/api-client"
 
@@ -33,6 +47,16 @@ export default function AdminTelecallersPage() {
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [perfData, setPerfData] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [editingUser, setEditingUser] = useState<any | null>(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    password: "",
+    is_active: true,
+  })
 
   const fetchData = async () => {
     try {
@@ -123,6 +147,14 @@ export default function AdminTelecallersPage() {
           <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh
+          </Button>
+          <Button onClick={() => {
+            setEditingUser(null)
+            setFormData({ name: "", email: "", mobile: "", password: "", is_active: true })
+            setIsDialogOpen(true)
+          }} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Telecaller
           </Button>
         </div>
       </div>
@@ -229,6 +261,47 @@ export default function AdminTelecallersPage() {
                       <Badge variant={tc.is_active ? "default" : "secondary"}>
                         {tc.is_active ? "Active" : "Inactive"}
                       </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setEditingUser(tc)
+                            setFormData({
+                              name: tc.name,
+                              email: tc.email,
+                              mobile: tc.mobile,
+                              password: "",
+                              is_active: tc.is_active,
+                            })
+                            setIsDialogOpen(true)
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={async () => {
+                              if (confirm(`Are you sure you want to delete ${tc.name}?`)) {
+                                try {
+                                  await usersApi.delete(tc.id)
+                                  toast({ title: "User deleted" })
+                                  fetchData()
+                                } catch (err) {
+                                  toast({ title: "Error deleting user", variant: "destructive" })
+                                }
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   <div className="grid grid-cols-5 gap-4 text-sm">
@@ -277,6 +350,87 @@ export default function AdminTelecallersPage() {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? "Edit Telecaller" : "Add New Telecaller"}</DialogTitle>
+            <DialogDescription>
+              {editingUser ? "Update telecaller details." : "Create a new telecaller account."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="mobile" className="text-right">Mobile</Label>
+              <Input
+                id="mobile"
+                value={formData.mobile}
+                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password">{editingUser ? "New Pwd" : "Password"}</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="col-span-3"
+                placeholder={editingUser ? "Leave blank to keep current" : ""}
+              />
+            </div>
+            <div className="flex items-center gap-2 px-1">
+              <input
+                type="checkbox"
+                id="is_active"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="is_active">Active Account</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={async () => {
+              try {
+                if (editingUser) {
+                  const updateData: any = { ...formData }
+                  if (!updateData.password) delete updateData.password
+                  await usersApi.update(editingUser.id, updateData)
+                  toast({ title: "Telecaller updated successfully" })
+                } else {
+                  await usersApi.create({ ...formData, role: "telecaller" })
+                  toast({ title: "Telecaller created successfully" })
+                }
+                setIsDialogOpen(false)
+                fetchData()
+              } catch (err) {
+                toast({ title: "Error saving telecaller", description: String(err), variant: "destructive" })
+              }
+            }}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

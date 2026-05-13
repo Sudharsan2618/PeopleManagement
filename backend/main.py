@@ -11,7 +11,9 @@ from routes import (
     spoke_visit_routes,
     spoke_activity_routes,
     spoke_escalation_routes,
-    followup_task_routes
+    followup_task_routes,
+    course_routes,
+    whatsapp_routes
 )
 
 app = FastAPI(
@@ -42,6 +44,8 @@ app.include_router(spoke_visit_routes.router)
 app.include_router(spoke_activity_routes.router)
 app.include_router(spoke_escalation_routes.router)
 app.include_router(followup_task_routes.router)
+app.include_router(course_routes.router)
+app.include_router(whatsapp_routes.router)
 
 
 @app.get("/")

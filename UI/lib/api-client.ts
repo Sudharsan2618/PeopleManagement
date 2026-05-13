@@ -109,6 +109,17 @@ export interface ProspectAssignment {
   created_at: string
 }
 
+export interface Course {
+    id: number
+    name: string
+    code: string
+    description?: string
+    duration?: string
+    fees?: number
+    is_active: boolean
+    created_at: string
+}
+
 // Adapter functions to convert backend data to UI format
 export function adaptApiUserToUiUser(apiUser: User): any {
   return {
@@ -141,6 +152,20 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     source: apiProspect.sourced_from || "Unknown",
     createdAt: apiProspect.created_at,
     updated_at: apiProspect.updated_at,
+  }
+}
+
+export function adaptApiCourseToUiCourse(apiCourse: Course): any {
+  return {
+    id: String(apiCourse.id),
+    name: apiCourse.name,
+    code: apiCourse.code,
+    description: apiCourse.description || "",
+    duration: apiCourse.duration || "",
+    fees: apiCourse.fees || 0,
+    status: apiCourse.is_active ? "Active" : "Inactive",
+    isActive: apiCourse.is_active,
+    createdAt: apiCourse.created_at,
   }
 }
 
@@ -228,6 +253,10 @@ export const prospectsApi = {
   }),
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
+  }),
+  bulkImport: (data: any[]) => apiRequest<{ message: string, count: number }>("/prospects/bulk-import", {
+    method: "POST",
+    body: JSON.stringify(data),
   }),
 }
 
@@ -366,5 +395,45 @@ export const followUpTasksApi = {
   }),
   delete: (id: number) => apiRequest<{ message: string }>(`/followup-tasks/${id}`, {
     method: "DELETE",
+  }),
+}
+
+// Courses API
+export const coursesApi = {
+  getAll: () => apiRequest<Course[]>("/courses"),
+  getById: (id: number) => apiRequest<Course>(`/courses/${id}`),
+  create: (data: any) => apiRequest<Course>("/courses", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+  update: (id: number, data: any) => apiRequest<Course>(`/courses/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  }),
+  delete: (id: number) => apiRequest<{ message: string }>(`/courses/${id}`, {
+    method: "DELETE",
+  }),
+}
+
+// WhatsApp API
+export const whatsappApi = {
+  getTemplates: () => apiRequest<any[]>("/whatsapp/templates"),
+  getFlows: () => apiRequest<any[]>("/whatsapp/flows"),
+  getCampaigns: () => apiRequest<any[]>("/whatsapp/campaigns"),
+  getCampaignDetails: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`),
+  getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
+  getConversations: () => apiRequest<any[]>("/whatsapp/conversations"),
+  getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
+  createCampaign: (data: { name: string, template_name: string, recipient_ids: number[], language_code: string }) => apiRequest<any>("/whatsapp/campaigns", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+  sendTextMessage: (data: { to: string, text: string }) => apiRequest<any>("/whatsapp/send-text", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+  sendTemplateMessage: (data: { to: string, template_name: string, language_code?: string, components?: any[] }) => apiRequest<any>("/whatsapp/send-template", {
+    method: "POST",
+    body: JSON.stringify(data),
   }),
 }
