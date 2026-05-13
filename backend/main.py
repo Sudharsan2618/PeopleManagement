@@ -10,7 +10,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
 
+import asyncio
 import httpx
+from arq import Worker
+from arq.connections import RedisSettings
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import Settings
 from crypto import decrypt_flow_request, encrypt_flow_response
 from database import db_lifespan, leads_col
-from tasks import enqueue_send_prospectus
+from tasks import enqueue_send_prospectus, WorkerSettings
 
 from routes import (
     auth_routes,
@@ -50,10 +53,37 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: connect DB + Redis. Shutdown: close them."""
+    """Startup: connect DB + Redis + ARQ Worker. Shutdown: close them."""
     async with db_lifespan():
-        log.info("✅ App startup complete (MongoDB + Postgres available)")
+        settings = get_settings()
+        
+        # 1. Setup ARQ Worker inside the web process
+        redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
+        worker = Worker(
+            functions=WorkerSettings.functions,
+            redis_settings=redis_settings,
+            max_jobs=WorkerSettings.max_jobs,
+            job_timeout=WorkerSettings.job_timeout,
+            keep_result=WorkerSettings.keep_result,
+            retry_jobs=WorkerSettings.retry_jobs,
+            max_tries=WorkerSettings.max_tries,
+        )
+        
+        log.info("🚀 Starting background ARQ worker inside Web process...")
+        worker_task = asyncio.create_task(worker.async_run())
+        
+        log.info("✅ App startup complete (MongoDB + Postgres + Worker ready)")
         yield
+        
+        # 2. Shutdown
+        log.info("🛑 Shutting down background worker...")
+        await worker.close()
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+        
     log.info("🛑 App shutdown complete")
 
 
