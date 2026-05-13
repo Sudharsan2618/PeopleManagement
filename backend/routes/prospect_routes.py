@@ -45,6 +45,16 @@ def get_prospects_by_creator(created_by: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/assignee/{assigned_to}", response_model=List[Prospect])
+def get_prospects_by_assignee(assigned_to: int):
+    """Get prospects assigned to a specific telecaller."""
+    try:
+        prospects = ProspectService.get_prospects_by_assignee(assigned_to)
+        return prospects
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("", response_model=Prospect, status_code=201)
 def create_prospect(prospect: ProspectCreate):
     """Create a new prospect."""
@@ -57,7 +67,11 @@ def create_prospect(prospect: ProspectCreate):
             sourced_from=prospect.sourced_from,
             status=prospect.status,
             course_interest=prospect.course_interest,
-            created_by=prospect.created_by
+            created_by=prospect.created_by,
+            parent_name=prospect.parent_name,
+            department=prospect.department,
+            assigned_to=prospect.assigned_to,
+            closing_reason=prospect.closing_reason
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -79,7 +93,11 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             location=prospect.location,
             sourced_from=prospect.sourced_from,
             status=prospect.status,
-            course_interest=prospect.course_interest
+            course_interest=prospect.course_interest,
+            parent_name=prospect.parent_name,
+            department=prospect.department,
+            assigned_to=prospect.assigned_to,
+            closing_reason=prospect.closing_reason
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:

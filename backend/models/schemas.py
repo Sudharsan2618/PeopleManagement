@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 
 
 # ==================== USERS ====================
@@ -70,6 +70,11 @@ class ProspectBase(BaseModel):
     sourced_from: Optional[str] = Field(None, max_length=100)
     status: str = Field(default="new", max_length=50, description="'new' | 'contacted' | 'warm' | 'hot' | 'visit_scheduled' | 'visit_done' | 'admission_done' | 'cold_no_response' | 'cold_not_interested' | 'lost'")
     course_interest: Optional[str] = Field(None, max_length=100)
+    parent_name: Optional[str] = Field(None, max_length=150)
+    department: Optional[str] = Field(None, max_length=150)
+    assigned_to: Optional[int] = None
+    closing_reason: Optional[str] = Field(None, max_length=255)
+    tags: Optional[Any] = None
 
 
 class ProspectCreate(ProspectBase):
@@ -83,6 +88,11 @@ class ProspectUpdate(BaseModel):
     sourced_from: Optional[str] = Field(None, max_length=100)
     status: Optional[str] = Field(None, max_length=50)
     course_interest: Optional[str] = Field(None, max_length=100)
+    parent_name: Optional[str] = Field(None, max_length=150)
+    department: Optional[str] = Field(None, max_length=150)
+    assigned_to: Optional[int] = None
+    closing_reason: Optional[str] = Field(None, max_length=255)
+    tags: Optional[Any] = None
 
 
 class Prospect(ProspectBase):

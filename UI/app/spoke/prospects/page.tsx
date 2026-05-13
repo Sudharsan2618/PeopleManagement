@@ -352,6 +352,8 @@ export default function SpokeProspectsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Location</TableHead>
+                  <TableHead>Parent Name</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Course</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
@@ -389,6 +391,8 @@ export default function SpokeProspectsPage() {
                           {prospect.mobile}
                         </TableCell>
                         <TableCell>{prospect.location}</TableCell>
+                        <TableCell>{prospect.parentName}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{prospect.department}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">
                             {prospect.courseInterest}
@@ -482,6 +486,14 @@ export default function SpokeProspectsPage() {
                     <div>
                       <span className="text-muted-foreground">Location:</span>
                       <p className="font-medium">{selectedProspect.location}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Parent Name:</span>
+                      <p className="font-medium">{selectedProspect.parentName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Department:</span>
+                      <p className="font-medium">{selectedProspect.department || "N/A"}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Course Interest:</span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -40,6 +40,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { type UserRole, mockNotifications } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
+import { dashboardApi } from "@/lib/api-client"
+import { useEffect } from "react"
 
 interface NavItem {
   title: string
@@ -50,9 +52,9 @@ interface NavItem {
 
 const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
-  { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar, badge: 5 },
+  { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar },
   { title: "Call History", href: "/telecaller/history", icon: History },
-  { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList, badge: 2 },
+  { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList },
 ]
 
 const spokeNav: NavItem[] = [
@@ -61,7 +63,7 @@ const spokeNav: NavItem[] = [
   { title: "Telecaller Stats", href: "/spoke/telecallers", icon: BarChart3 },
   { title: "New Report", href: "/spoke/report/new", icon: FileText },
   { title: "Past Reports", href: "/spoke/reports", icon: FolderOpen },
-  { title: "My Follow-ups", href: "/spoke/followups", icon: ClipboardList, badge: 4 },
+  { title: "My Follow-ups", href: "/spoke/followups", icon: ClipboardList },
 ]
 
 const adminNav: NavItem[] = [
@@ -112,9 +114,41 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, role, userName }: DashboardLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const navItems = getNavItems(role)
+  const [counts, setCounts] = useState({ callbacks: 0, followups: 0 })
+  
+  useEffect(() => {
+    if (!user) return
+
+    const fetchCounts = async () => {
+      try {
+        const stats = await dashboardApi.getStats(Number(user.id))
+        setCounts(stats)
+      } catch (err) {
+        console.error("Failed to fetch badge counts:", err)
+      }
+    }
+
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 30000) // Update every 30s
+    return () => clearInterval(interval)
+  }, [user])
+
+  // Enhance nav items with dynamic counts
+  const navItems = useMemo(() => {
+    const baseItems = getNavItems(role)
+    return baseItems.map(item => {
+      if (item.title === "Callbacks") {
+        return { ...item, badge: counts.callbacks > 0 ? counts.callbacks : undefined }
+      }
+      if (item.title === "Follow-up Tasks" || item.title === "My Follow-ups") {
+        return { ...item, badge: counts.followups > 0 ? counts.followups : undefined }
+      }
+      return item
+    })
+  }, [role, counts])
+
   const unreadNotifications = mockNotifications.filter((n) => !n.read).length
 
   const handleLogout = () => {
@@ -238,13 +272,8 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon">
                 <Bell className="h-5 w-5" />
-                {unreadNotifications > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                    {unreadNotifications}
-                  </span>
-                )}
                 <span className="sr-only">Notifications</span>
               </Button>
             </DropdownMenuTrigger>
@@ -255,32 +284,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                   Mark all read
                 </Button>
               </div>
-              <ScrollArea className="h-64">
-                {mockNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={cn(
-                      "flex gap-3 px-4 py-3 border-b last:border-0 cursor-pointer hover:bg-muted/50",
-                      !notification.read && "bg-primary/5"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "mt-1 h-2 w-2 rounded-full shrink-0",
-                        notification.read ? "bg-transparent" : "bg-primary"
-                      )}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{notification.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(notification.createdAt).toLocaleTimeString("en-IN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <ScrollArea className="h-48 flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                  <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
+                  <p className="text-xs text-muted-foreground">No new notifications</p>
+                </div>
               </ScrollArea>
             </DropdownMenuContent>
           </DropdownMenu>

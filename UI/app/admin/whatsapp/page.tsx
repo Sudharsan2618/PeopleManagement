@@ -20,6 +20,7 @@ import {
   Clock,
   ArrowLeft,
   MoreVertical,
+  MapPin,
   Phone,
   Video,
   Smile,
@@ -62,6 +63,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet"
 import { whatsappApi, prospectsApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -106,6 +116,7 @@ export default function WhatsAppAutomationPage() {
   })
   const [searchProspects, setSearchProspects] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   const fetchData = async () => {
     try {
@@ -200,9 +211,21 @@ export default function WhatsAppAutomationPage() {
     return prospects.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchProspects.toLowerCase()) || p.mobile.includes(searchProspects)
       const matchesStatus = statusFilter === "all" || p.status === statusFilter
-      return matchesSearch && matchesStatus
+      const matchesTags = selectedTags.length === 0 || 
+                         (Array.isArray(p.tags) && selectedTags.some(tag => p.tags.includes(tag)))
+      return matchesSearch && matchesStatus && matchesTags
     })
-  }, [prospects, searchProspects, statusFilter])
+  }, [prospects, searchProspects, statusFilter, selectedTags])
+
+  const allTags = useMemo(() => {
+    const tags = new Set<string>()
+    prospects.forEach(p => {
+      if (Array.isArray(p.tags)) {
+        p.tags.forEach(t => tags.add(t))
+      }
+    })
+    return Array.from(tags).sort()
+  }, [prospects])
 
   const handleSendTest = async () => {
     if (!selectedTemplate || !testNumber) return
@@ -308,179 +331,265 @@ export default function WhatsAppAutomationPage() {
             <RefreshCw className={cn("h-3 w-3 mr-1.5", isLoading && "animate-spin")} />
             Sync
           </Button>
-          <Dialog open={isCreateCampaignOpen} onOpenChange={setIsCreateCampaignOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-8 bg-[#1A1F2B] hover:bg-black text-[10px] font-bold uppercase tracking-widest px-4">
-                <Plus className="h-3 w-3 mr-1.5" />
-                New Campaign
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-               <DialogHeader className="p-4 bg-[#1A1F2B] text-white">
-                <DialogTitle className="text-lg">Create Campaign</DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="flex-1 p-6">
-                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Campaign Name</Label>
-                      <Input placeholder="Enter name..." value={newCampaign.name} onChange={e => setNewCampaign({...newCampaign, name: e.target.value})} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Template</Label>
-                      <Select onValueChange={val => {
-                        const [name, lang] = val.split("|");
-                        setNewCampaign({...newCampaign, template_name: name, language_code: lang});
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select template..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {templates.filter(t => t.status === "APPROVED").map(t => (
-                            <SelectItem key={t.id} value={`${t.name}|${t.language}`}>{t.name} ({t.language})</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+          <Button 
+            onClick={() => setIsCreateCampaignOpen(true)}
+            size="sm" 
+            className="h-8 bg-[#1A1F2B] hover:bg-black text-[10px] font-bold uppercase tracking-widest px-4"
+          >
+            <Plus className="h-3 w-3 mr-1.5" />
+            New Campaign
+          </Button>
+      {/* Create Campaign Sheet */}
+      <Sheet open={isCreateCampaignOpen} onOpenChange={setIsCreateCampaignOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col h-[100dvh] max-h-[100dvh] border-l shadow-2xl overflow-hidden bg-white">
+          <SheetHeader className="p-4 bg-[#1A1F2B] text-white shrink-0">
+            <SheetTitle className="text-lg font-black uppercase tracking-tighter text-white">Create Campaign</SheetTitle>
+            <SheetDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+              Launch a new automated WhatsApp outreach
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-4">
+              {/* Basic Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-6 w-1 bg-emerald-600 rounded-full" />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Campaign Configuration</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Campaign Title</Label>
+                    <Input 
+                      placeholder="e.g. June Intake Promotion" 
+                      value={newCampaign.name} 
+                      onChange={e => setNewCampaign({...newCampaign, name: e.target.value})}
+                      className="border-2 focus:border-emerald-600 h-10 font-bold text-slate-800"
+                    />
                   </div>
                   
-                  {/* Prospects Selection */}
-                  <div className="grid gap-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                        Select Prospects ({newCampaign.recipient_ids.length} selected)
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          placeholder="Search prospects..." 
-                          value={searchProspects} 
-                          onChange={e => setSearchProspects(e.target.value)}
-                          className="w-48 h-8 text-xs"
-                        />
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                          <SelectTrigger className="w-32 h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="contacted">Contacted</SelectItem>
-                            <SelectItem value="warm">Warm</SelectItem>
-                            <SelectItem value="hot">Hot</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => {
-                            if (newCampaign.recipient_ids.length === filteredProspects.length) {
-                              setNewCampaign({...newCampaign, recipient_ids: []})
-                            } else {
-                              setNewCampaign({...newCampaign, recipient_ids: filteredProspects.map(p => p.id)})
-                            }
-                          }}
-                          className="h-8 text-xs"
-                        >
-                          {newCampaign.recipient_ids.length === filteredProspects.length ? 'Deselect All' : 'Select All'}
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="border rounded-lg max-h-64 overflow-hidden">
-                      <ScrollArea className="h-64">
-                        <div className="p-2 space-y-1">
-                          {filteredProspects.map((prospect) => (
-                            <div 
-                              key={prospect.id} 
-                              className="flex items-center gap-3 p-2 rounded hover:bg-slate-50 transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                id={`prospect-${prospect.id}`}
-                                checked={newCampaign.recipient_ids.includes(prospect.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setNewCampaign({
-                                      ...newCampaign, 
-                                      recipient_ids: [...newCampaign.recipient_ids, prospect.id]
-                                    })
-                                  } else {
-                                    setNewCampaign({
-                                      ...newCampaign, 
-                                      recipient_ids: newCampaign.recipient_ids.filter(id => id !== prospect.id)
-                                    })
-                                  }
-                                }}
-                                className="h-4 w-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <label 
-                                    htmlFor={`prospect-${prospect.id}`}
-                                    className="font-medium text-sm text-slate-900 cursor-pointer truncate"
-                                  >
-                                    {prospect.name}
-                                  </label>
-                                  <Badge className={cn("text-[8px] px-1 h-3.5 border-none font-black uppercase tracking-tighter", getStatusColor(prospect.status))}>
-                                    {prospect.status}
-                                  </Badge>
-                                </div>
-                                <div className="text-xs text-slate-500">
-                                  +{prospect.mobile} • {prospect.location || 'No location'} • {prospect.course_interest || 'No course interest'}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                    
-                    {filteredProspects.length === 0 && (
-                      <div className="text-center py-8 text-slate-500">
-                        <User className="h-12 w-12 mx-auto mb-2 text-slate-300" />
-                        <p className="text-sm">No prospects found</p>
-                        <p className="text-xs mt-1">Try adjusting your search or filter</p>
-                      </div>
-                    )}
-                  </div>
-                 </div>
-              </ScrollArea>
-              <DialogFooter className="p-4 border-t bg-slate-50">
-                <div className="flex items-center justify-between w-full">
-                  <div className="text-xs text-slate-500">
-                    {newCampaign.recipient_ids.length > 0 && (
-                      <span className="font-medium text-emerald-600">
-                        {newCampaign.recipient_ids.length} prospect{newCampaign.recipient_ids.length !== 1 ? 's' : ''} selected
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsCreateCampaignOpen(false)}>Cancel</Button>
-                    <Button 
-                      size="sm" 
-                      onClick={handleCreateCampaign} 
-                      disabled={isSending || newCampaign.recipient_ids.length === 0}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      {isSending ? (
-                        <>
-                          <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                          Launching...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-3 w-3 mr-1" />
-                          Launch Campaign
-                        </>
-                      )}
-                    </Button>
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Message Template</Label>
+                    <Select onValueChange={val => {
+                      const [name, lang] = val.split("|");
+                      setNewCampaign({...newCampaign, template_name: name, language_code: lang});
+                    }}>
+                      <SelectTrigger className="border-2 h-10 font-bold text-slate-800">
+                        <SelectValue placeholder="Select template..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates.filter(t => t.status === "APPROVED").map(t => (
+                          <SelectItem key={t.id} value={`${t.name}|${t.language}`}>{t.name} ({t.language})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              </div>
+
+              <Separator />
+
+              {/* Recipient Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-1 bg-blue-600 rounded-full" />
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Audience Selection</h3>
+                  </div>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-black px-3">
+                    {newCampaign.recipient_ids.length} Selected
+                  </Badge>
+                </div>
+
+                {/* Tag Grouping Filters */}
+                <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1 block">Group by Tags</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {allTags.length > 0 ? (
+                      allTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => {
+                            setSelectedTags(prev => 
+                              prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                            )
+                          }}
+                          className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter transition-all border",
+                            selectedTags.includes(tag) 
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-105" 
+                              : "bg-white text-slate-500 border-slate-200 hover:border-emerald-600"
+                          )}
+                        >
+                          {tag}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 italic">No tags available in prospect data</p>
+                    )}
+                  </div>
+                  {selectedTags.length > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setSelectedTags([])}
+                      className="h-6 px-2 text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-red-700"
+                    >
+                      Clear Tag Filters
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input 
+                      placeholder="Search name or number..." 
+                      value={searchProspects} 
+                      onChange={e => setSearchProspects(e.target.value)}
+                      className="pl-9 h-10 text-xs border-2"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-32 h-10 text-xs border-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="warm">Warm</SelectItem>
+                      <SelectItem value="hot">Hot</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    Showing {filteredProspects.length} prospects
+                  </p>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    onClick={() => {
+                      if (newCampaign.recipient_ids.length === filteredProspects.length) {
+                        setNewCampaign({...newCampaign, recipient_ids: []})
+                      } else {
+                        setNewCampaign({...newCampaign, recipient_ids: filteredProspects.map(p => p.id)})
+                      }
+                    }}
+                    className="h-auto p-0 text-[10px] font-black uppercase tracking-widest text-emerald-600"
+                  >
+                    {newCampaign.recipient_ids.length === filteredProspects.length ? 'Deselect All' : 'Select All Filtered'}
+                  </Button>
+                </div>
+
+                <div className="border rounded-xl overflow-hidden shadow-inner bg-slate-50/30 min-h-[300px]">
+                  <div className="divide-y divide-slate-100">
+                      {filteredProspects.map((prospect) => (
+                        <div 
+                          key={prospect.id} 
+                          className={cn(
+                            "flex items-center gap-4 p-4 hover:bg-white transition-all group",
+                            newCampaign.recipient_ids.includes(prospect.id) && "bg-emerald-50/50"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            id={`prospect-${prospect.id}`}
+                            checked={newCampaign.recipient_ids.includes(prospect.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewCampaign({
+                                  ...newCampaign, 
+                                  recipient_ids: [...newCampaign.recipient_ids, prospect.id]
+                                })
+                              } else {
+                                setNewCampaign({
+                                  ...newCampaign, 
+                                  recipient_ids: newCampaign.recipient_ids.filter(id => id !== prospect.id)
+                                })
+                              }
+                            }}
+                            className="h-5 w-5 text-emerald-600 border-slate-300 rounded-lg focus:ring-emerald-500 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <label 
+                                htmlFor={`prospect-${prospect.id}`}
+                                className="font-black text-sm text-slate-900 cursor-pointer truncate uppercase tracking-tighter"
+                              >
+                                {prospect.name}
+                              </label>
+                              <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(prospect.status))}>
+                                {prospect.status}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-[10px] text-slate-500 font-medium">
+                              <span className="flex items-center gap-1"><Phone className="h-2.5 w-2.5" /> +{prospect.mobile}</span>
+                              {prospect.location && <span className="flex items-center gap-1"><MapPin className="h-2.5 w-2.5" /> {prospect.location}</span>}
+                              {prospect.tags && Array.isArray(prospect.tags) && prospect.tags.length > 0 && (
+                                <div className="flex gap-1 ml-1">
+                                  {prospect.tags.map((t: string) => (
+                                    <span key={t} className="px-1.5 bg-slate-200 text-slate-600 rounded text-[9px] uppercase font-black">{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {filteredProspects.length === 0 && (
+                        <div className="p-12 text-center">
+                          <Users className="h-12 w-12 mx-auto mb-3 text-slate-200" />
+                          <p className="text-sm font-black text-slate-400 uppercase tracking-tighter">No Audience Found</p>
+                          <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">Adjust filters or search terms</p>
+                        </div>
+                      )}
+                    </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <SheetFooter className="p-4 border-t bg-slate-50 shrink-0">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Selection</span>
+                <span className="text-base font-black text-slate-900">
+                  {newCampaign.recipient_ids.length} <span className="text-[10px] text-slate-500 font-bold uppercase">Prospects</span>
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsCreateCampaignOpen(false)} className="px-4 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl">
+                  Discard
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleCreateCampaign} 
+                  disabled={isSending || newCampaign.recipient_ids.length === 0}
+                  className="bg-[#128C7E] hover:bg-[#075E54] shadow-lg shadow-emerald-200 px-6 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  {isSending ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Launching...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Start Campaign
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </div>
+  </div>
 
       {/* Main Container */}
       <div className="flex-1 overflow-hidden p-3 flex gap-3">

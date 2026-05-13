@@ -23,6 +23,10 @@ export interface Prospect {
   sourced_from?: string
   status: string
   course_interest?: string
+  parent_name?: string
+  department?: string
+  assigned_to?: number
+  closing_reason?: string
   created_by?: number
   created_at: string
   updated_at: string
@@ -146,10 +150,14 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     location: apiProspect.location || "",
     schoolLastAttended: "", // Backend doesn't have this field
     courseInterest: apiProspect.course_interest || "Unknown",
+    parentName: apiProspect.parent_name || "",
+    department: apiProspect.department || "",
     status: mapBackendStatusToUiStatus(apiProspect.status),
-    assignedTo: assignment ? String(assignment.telecaller_id) : undefined,
+    assignedTo: assignment ? String(assignment.telecaller_id) : (apiProspect.assigned_to ? String(apiProspect.assigned_to) : undefined),
     assignedDate: assignment?.assigned_date,
     source: apiProspect.sourced_from || "Unknown",
+    closingReason: apiProspect.closing_reason || "",
+    tags: apiProspect.tags || [],
     createdAt: apiProspect.created_at,
     updated_at: apiProspect.updated_at,
   }
@@ -436,4 +444,9 @@ export const whatsappApi = {
     method: "POST",
     body: JSON.stringify(data),
   }),
+}
+
+// Dashboard API
+export const dashboardApi = {
+  getStats: (userId: number) => apiRequest<{ callbacks: number, followups: number }>(`/dashboard/stats/${userId}`),
 }

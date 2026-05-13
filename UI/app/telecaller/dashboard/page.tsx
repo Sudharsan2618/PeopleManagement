@@ -155,6 +155,8 @@ export default function TelecallerDashboard() {
             email: p.email,
             location: p.location || "",
             courseInterest: p.course_interest || "Unknown",
+            parentName: p.parent_name || "",
+            department: p.department || "",
             status: p.status, // Keep raw DB status
             source: p.sourced_from || "Unknown",
             createdAt: p.created_at,
@@ -480,8 +482,10 @@ export default function TelecallerDashboard() {
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Student Name</TableHead>
+                  <TableHead>Parent Name</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Location</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>Course</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Calls</TableHead>
@@ -527,6 +531,11 @@ export default function TelecallerDashboard() {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">{prospect.name}</span>
+                            {prospect.parentName && (
+                              <span className="text-[10px] text-muted-foreground uppercase">
+                                P: {prospect.parentName}
+                              </span>
+                            )}
                             {prospect.callbackDateTime && (
                               <span className="text-xs text-orange-600 flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
@@ -545,6 +554,7 @@ export default function TelecallerDashboard() {
                           {prospect.mobile}
                         </TableCell>
                         <TableCell>{prospect.location}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{prospect.department}</TableCell>
                         <TableCell>
                           <span className="text-xs">{prospect.courseInterest}</span>
                         </TableCell>

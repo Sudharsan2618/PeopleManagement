@@ -11,7 +11,8 @@ class ProspectService:
         """Get all prospects."""
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
-                   course_interest, created_by, created_at, updated_at
+                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
+                   created_by, created_at, updated_at
             FROM prospects
             ORDER BY created_at DESC
         """
@@ -22,7 +23,8 @@ class ProspectService:
         """Get prospect by ID."""
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
-                   course_interest, created_by, created_at, updated_at
+                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
+                   created_by, created_at, updated_at
             FROM prospects
             WHERE id = %s
         """
@@ -33,7 +35,8 @@ class ProspectService:
         """Get prospects by status."""
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
-                   course_interest, created_by, created_at, updated_at
+                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
+                   created_by, created_at, updated_at
             FROM prospects
             WHERE status = %s
             ORDER BY created_at DESC
@@ -45,29 +48,53 @@ class ProspectService:
         """Get prospects created by a specific user."""
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
-                   course_interest, created_by, created_at, updated_at
+                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
+                   created_by, created_at, updated_at
             FROM prospects
             WHERE created_by = %s
             ORDER BY created_at DESC
         """
         return execute_query(query, (created_by,), fetch="all")
+
+    @staticmethod
+    def get_prospects_by_assignee(assigned_to: int) -> List[dict]:
+        """Get prospects assigned to a specific telecaller."""
+        query = """
+            SELECT id, name, mobile, email, location, sourced_from, status, 
+                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
+                   created_by, created_at, updated_at
+            FROM prospects
+            WHERE assigned_to = %s
+            ORDER BY created_at DESC
+        """
+        return execute_query(query, (assigned_to,), fetch="all")
     
     @staticmethod
     def create_prospect(name: str, mobile: str, email: Optional[str], location: Optional[str],
                         sourced_from: Optional[str], status: str, course_interest: Optional[str],
-                        created_by: int) -> int:
+                        created_by: int, parent_name: Optional[str] = None, 
+                        department: Optional[str] = None, assigned_to: Optional[int] = None,
+                        closing_reason: Optional[str] = None, tags: Optional[any] = None) -> int:
         """Create a new prospect."""
         query = """
-            INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
+                                 created_by, parent_name, department, assigned_to, closing_reason, tags)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (name, mobile, email, location, sourced_from, status, course_interest, created_by))
+        import json
+        return execute_insert(query, (
+            name, mobile, email, location, sourced_from, status, course_interest, 
+            created_by, parent_name, department, assigned_to, closing_reason,
+            json.dumps(tags) if tags else None
+        ))
     
     @staticmethod
     def update_prospect(prospect_id: int, name: Optional[str] = None, email: Optional[str] = None,
                         location: Optional[str] = None, sourced_from: Optional[str] = None,
-                        status: Optional[str] = None, course_interest: Optional[str] = None) -> int:
+                        status: Optional[str] = None, course_interest: Optional[str] = None,
+                        parent_name: Optional[str] = None, department: Optional[str] = None,
+                        assigned_to: Optional[int] = None, closing_reason: Optional[str] = None) -> int:
         """Update prospect details."""
         updates = []
         params = []
@@ -90,6 +117,22 @@ class ProspectService:
         if course_interest is not None:
             updates.append("course_interest = %s")
             params.append(course_interest)
+        if parent_name is not None:
+            updates.append("parent_name = %s")
+            params.append(parent_name)
+        if department is not None:
+            updates.append("department = %s")
+            params.append(department)
+        if assigned_to is not None:
+            updates.append("assigned_to = %s")
+            params.append(assigned_to)
+        if closing_reason is not None:
+            updates.append("closing_reason = %s")
+            params.append(closing_reason)
+        if tags is not None:
+            updates.append("tags = %s")
+            import json
+            params.append(json.dumps(tags))
         
         if not updates:
             return 0
@@ -116,7 +159,11 @@ class ProspectService:
             return 0
         
         # Prepare the query
-        columns = ["name", "mobile", "email", "location", "sourced_from", "status", "course_interest", "created_by"]
+        columns = [
+            "name", "mobile", "email", "location", "sourced_from", "status", 
+            "course_interest", "created_by", "parent_name", "department", 
+            "assigned_to", "closing_reason", "tags"
+        ]
         values_placeholders = []
         params = []
         
@@ -124,14 +171,22 @@ class ProspectService:
             placeholders = ["%s"] * len(columns)
             values_placeholders.append(f"({', '.join(placeholders)})")
             for col in columns:
-                # Use dict.get() and convert Pydantic model to dict if needed
-                # But here we expect a list of dicts from the route
-                params.append(p.get(col))
+                val = p.get(col)
+                if col == "tags" and val is not None:
+                    import json
+                    val = json.dumps(val)
+                params.append(val)
         
         query = f"""
             INSERT INTO prospects ({', '.join(columns)})
             VALUES {', '.join(values_placeholders)}
-            ON CONFLICT (mobile) DO NOTHING
+            ON CONFLICT (mobile) DO UPDATE SET
+                tags = EXCLUDED.tags,
+                course_interest = COALESCE(EXCLUDED.course_interest, prospects.course_interest),
+                location = COALESCE(EXCLUDED.location, prospects.location),
+                parent_name = COALESCE(EXCLUDED.parent_name, prospects.parent_name),
+                department = COALESCE(EXCLUDED.department, prospects.department),
+                updated_at = NOW()
         """
         
         return execute_update_delete(query, tuple(params))

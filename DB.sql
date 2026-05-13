@@ -36,10 +36,18 @@ CREATE TABLE prospects (
                                          -- 'visit_scheduled' | 'visit_done' | 'admission_done'
                                          -- 'cold_no_response' | 'cold_not_interested' | 'lost'
     course_interest  VARCHAR(100),
+    parent_name      VARCHAR(150),
+    department       VARCHAR(150),
+    assigned_to      INT                 REFERENCES users(id) ON DELETE SET NULL,
+    closing_reason   VARCHAR(255),
+    tags             JSONB,              -- e.g. ["2024_batch", "scholarship_eligible"]
     created_by       INT                 REFERENCES users(id) ON DELETE SET NULL,
     created_at       TIMESTAMP           NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMP           NOT NULL DEFAULT NOW()
 );
+
+-- Add index for assigned telecaller
+CREATE INDEX idx_prospects_assigned_to ON prospects(assigned_to);
 
 
 -- ------------------------------------------------------------

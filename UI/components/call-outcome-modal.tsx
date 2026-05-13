@@ -282,9 +282,8 @@ export function CallOutcomeModal({
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left Panel: Info & History */}
-          <div className="w-1/3 border-r bg-muted/5 flex flex-col">
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-8">
+          <div className="w-1/3 border-r bg-muted/5 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
                 {/* Prospect Details */}
                 <section>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Prospect Details</h3>
@@ -360,13 +359,11 @@ export function CallOutcomeModal({
                   )}
                 </section>
               </div>
-            </ScrollArea>
-          </div>
+            </div>
 
           {/* Right Panel: Call Logging Form */}
-          <div className="flex-1 flex flex-col bg-background">
-            <ScrollArea className="h-full">
-              <div className="p-8 space-y-8">
+          <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 {/* Outcome Grid */}
                 <section>
                   <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
@@ -545,7 +542,6 @@ export function CallOutcomeModal({
                   </>
                 )}
               </div>
-            </ScrollArea>
 
             {/* Sticky Footer */}
             <div className="p-6 border-t bg-muted/10 flex items-center justify-between gap-4">

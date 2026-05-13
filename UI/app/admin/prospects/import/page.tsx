@@ -12,15 +12,18 @@ import {
   Download
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { prospectsApi } from "@/lib/api-client"
 import Link from "next/link"
+import * as XLSX from "xlsx"
 
 export default function ProspectImportPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [file, setFile] = useState<File | null>(null)
+  const [defaultTags, setDefaultTags] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [importResults, setImportResults] = useState<{
     success: number
@@ -34,53 +37,65 @@ export default function ProspectImportPage() {
     }
   }
 
-  const parseCSV = (text: string) => {
-    const lines = text.split("\n")
-    const headers = lines[0].split(",").map(h => h.trim().toLowerCase())
-    const results = []
-
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue
-      const values = lines[i].split(",").map(v => v.trim())
-      const prospect: any = {}
-      headers.forEach((header, index) => {
-        prospect[header] = values[index]
-      })
-      
-      // Basic validation/mapping
-      if (prospect.name && prospect.mobile) {
-        results.push({
-          name: prospect.name,
-          mobile: prospect.mobile,
-          email: prospect.email || null,
-          location: prospect.location || null,
-          sourced_from: prospect.source || prospect.sourced_from || "CSV Import",
-          status: "new",
-          course_interest: prospect.course || prospect.course_interest || null,
-          created_by: 1 // Default Admin ID
-        })
-      }
-    }
-    return results
-  }
-
   const handleUpload = async () => {
     if (!file) return
 
     try {
       setIsUploading(true)
-      const text = await file.text()
-      const prospects = parseCSV(text)
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-      if (prospects.length === 0) {
-        throw new Error("No valid prospects found in CSV. Ensure 'name' and 'mobile' columns exist.")
+      if (jsonData.length === 0) {
+        throw new Error("No data found in the file.")
       }
 
-      const result = await prospectsApi.bulkImport(prospects)
+      const mappedProspects = jsonData.map((row: any) => {
+        // Normalize keys to lowercase for flexible matching
+        const normalizedRow: any = {}
+        Object.keys(row).forEach(key => {
+          normalizedRow[key.toLowerCase().trim()] = row[key]
+        })
+
+        // Find best matches for required and optional fields
+        const name = normalizedRow.name || normalizedRow["student name"] || normalizedRow.student || ""
+        const mobile = normalizedRow.mobile || normalizedRow.number || normalizedRow.phone || normalizedRow["mobile number"] || ""
+        const parentName = normalizedRow.parent_name || normalizedRow.father_name || normalizedRow.father || normalizedRow.parent || ""
+        const department = normalizedRow.department || normalizedRow.group || ""
+        const location = normalizedRow.location || ""
+        const source = normalizedRow.source || normalizedRow.sourced_from || "File Import"
+        const course = normalizedRow.course || normalizedRow.course_interest || ""
+
+        if (!mobile) return null
+
+        return {
+          name: String(name).trim() || "Unknown",
+          mobile: String(mobile).trim(),
+          email: normalizedRow.email || null,
+          location: String(location).trim() || null,
+          parent_name: String(parentName).trim() || null,
+          department: String(department).trim() || null,
+          sourced_from: String(source).trim(),
+          status: "new",
+          course_interest: String(course).trim() || null,
+          tags: [
+            ... (normalizedRow.tags ? String(normalizedRow.tags).split(",").map(t => t.trim()) : []),
+            ... (defaultTags ? defaultTags.split(",").map(t => t.trim()) : [])
+          ].filter(t => t.length > 0),
+          created_by: 1 // Default Admin ID
+        }
+      }).filter(p => p !== null)
+
+      if (mappedProspects.length === 0) {
+        throw new Error("No valid prospects found. Ensure the file contains a 'number' or 'mobile' column.")
+      }
+
+      const result = await prospectsApi.bulkImport(mappedProspects)
       
       setImportResults({
         success: result.count,
-        failed: prospects.length - result.count,
+        failed: mappedProspects.length - result.count,
         errors: []
       })
 
@@ -100,7 +115,7 @@ export default function ProspectImportPage() {
   }
 
   const downloadTemplate = () => {
-    const csvContent = "name,mobile,email,location,source,course\nJohn Doe,9876543210,john@example.com,Mumbai,Website,ADSE\nJane Smith,9876543211,jane@example.com,Delhi,Referral,CPISM"
+    const csvContent = "name,mobile,email,location,parent_name,department,source,course\nJohn Doe,9876543210,john@example.com,Mumbai,Suresh B,Science,Website,ADSE\nJane Smith,9876543211,jane@example.com,Delhi,Saravanan V,Commerce,Referral,CPISM"
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -125,23 +140,36 @@ export default function ProspectImportPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Upload CSV File</CardTitle>
+          <CardTitle>Upload File</CardTitle>
           <CardDescription>
-            The CSV should have columns for: name, mobile, email, location, source, course.
+            Support for Excel (.xlsx, .xls) and CSV. Required columns: name, mobile.
+            Optional: parent_name, department, location, source, course.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Tags Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Batch Tags (Optional)</label>
+            <Input 
+              placeholder="e.g. 2024_batch, scholarship, referral (comma separated)"
+              value={defaultTags}
+              onChange={(e) => setDefaultTags(e.target.value)}
+              className="border-2 focus:border-primary/50"
+            />
+            <p className="text-[10px] text-muted-foreground">These tags will be added to all prospects in this import.</p>
+          </div>
+
           <div className="border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center gap-4 bg-muted/30">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
               <Upload className="h-6 w-6 text-primary" />
             </div>
             <div className="text-center">
-              <p className="font-medium">{file ? file.name : "Select a CSV file"}</p>
+              <p className="font-medium">{file ? file.name : "Select a CSV or Excel file"}</p>
               <p className="text-xs text-muted-foreground mt-1">Maximum file size: 5MB</p>
             </div>
             <Input
               type="file"
-              accept=".csv"
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
               onChange={handleFileChange}
               className="hidden"
               id="csv-upload"

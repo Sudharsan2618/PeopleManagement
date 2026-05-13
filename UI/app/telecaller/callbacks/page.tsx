@@ -18,13 +18,48 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
+import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import { type CallOutcome } from "@/lib/mock-data"
+import { useToast } from "@/hooks/use-toast"
+
+// ─── Outcome → DB mapping ────────────────────────────────────
+const OUTCOME_TO_DB: Record<string, string> = {
+  NotAnswered: "not_answered",
+  Busy: "busy",
+  WrongNumber: "wrong_number",
+  CallBack: "callback",
+  NotInterested: "not_interested",
+  DNC: "dnc",
+  LanguageBarrier: "language_barrier",
+  Interested: "interested",
+  Qualified: "qualified",
+  EnrolledElsewhere: "enrolled_elsewhere",
+}
+
+// ─── Outcome → Prospect status_after_call ─────────────────────
+const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
+  NotAnswered: "contacted",
+  Busy: "contacted",
+  WrongNumber: "cold_no_response",
+  CallBack: "warm",
+  NotInterested: "cold_not_interested",
+  DNC: "cold_not_interested",
+  LanguageBarrier: "contacted",
+  Interested: "hot",
+  Qualified: "visit_scheduled",
+  EnrolledElsewhere: "lost",
+}
 
 export default function CallbacksPage() {
   const { user } = useAuth()
   const [callLogs, setCallLogs] = useState<CallLog[]>([])
   const [prospects, setProspects] = useState<Record<number, Prospect>>({})
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const { toast } = useToast()
 
   const telecallerId = user ? Number(user.id) : 0
 
@@ -54,6 +89,72 @@ export default function CallbacksPage() {
       setError(err instanceof Error ? err.message : "Failed to fetch callbacks")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleCall = (prospect: Prospect) => {
+    setSelectedProspect({
+      ...prospect,
+      numericId: prospect.id, // For the modal
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleOutcomeSubmit = async (
+    outcome: CallOutcome,
+    data: Record<string, unknown>
+  ) => {
+    if (!selectedProspect || !user) return
+
+    setIsSaving(true)
+    try {
+      const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
+      const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
+
+      // Build callback timestamp if scheduled
+      let callbackScheduledAt: string | null = null
+      if (outcome === "CallBack" && data.callbackDate) {
+        const timeStr = (data.callbackTime as string) || "10:00"
+        callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
+      }
+
+      // Build notes
+      let fullNotes = (data.notes as string) || ""
+      if (data.reason) fullNotes += `\n[Reason] ${data.reason}`
+      if (data.coursePreference) fullNotes += `\n[Course Preference] ${data.coursePreference}`
+      if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
+      
+      // 1. Create call log
+      await callLogsApi.create({
+        prospect_id: Number(selectedProspect.numericId),
+        telecaller_id: telecallerId,
+        outcome: dbOutcome,
+        status_after_call: statusAfterCall,
+        reason: (data.reason as string) || null,
+        notes: fullNotes.trim() || null,
+        callback_scheduled_at: callbackScheduledAt,
+      })
+
+      // 2. Update prospect status
+      await prospectsApi.update(Number(selectedProspect.numericId), {
+        status: statusAfterCall,
+        course_interest: (data.coursePreference as string) || (data.courseConfirmed as string) || undefined,
+      })
+
+      toast({
+        title: "Call logged ✓",
+        description: `Status updated to ${statusAfterCall}`,
+      })
+
+      await fetchData()
+    } catch (err) {
+      toast({
+        title: "Error saving call",
+        description: err instanceof Error ? err.message : "Failed to save outcome",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -176,8 +277,16 @@ export default function CallbacksPage() {
                 })}
               </p>
             </div>
-            <Button size="sm">
-              <PhoneCall className="h-4 w-4 mr-1" />
+            <Button 
+              size="sm" 
+              onClick={() => handleCall(prospect)}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <PhoneCall className="h-4 w-4 mr-1" />
+              )}
               Call Now
             </Button>
           </div>
@@ -282,6 +391,13 @@ export default function CallbacksPage() {
           </CardContent>
         </Card>
       )}
+      
+      <CallOutcomeModal
+        prospect={selectedProspect}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onSubmit={handleOutcomeSubmit}
+      />
     </div>
   )
 }

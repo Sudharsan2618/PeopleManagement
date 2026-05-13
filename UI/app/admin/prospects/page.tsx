@@ -104,6 +104,8 @@ export default function AdminProspectsPage() {
     sourced_from: "",
     status: "new",
     course_interest: "",
+    parent_name: "",
+    department: "",
   })
   const [prospects, setProspects] = useState<any[]>([])
   const [assignments, setAssignments] = useState<any[]>([])
@@ -159,7 +161,7 @@ export default function AdminProspectsPage() {
       const matchesCourse =
         courseFilter === "all" || prospect.courseInterest === courseFilter
       return matchesSearch && matchesStatus && matchesAssigned && matchesCourse
-    })
+    }).sort((a, b) => Number(b.id) - Number(a.id))
   }, [searchQuery, statusFilter, assignedFilter, courseFilter, prospects])
 
   // Pagination
@@ -464,7 +466,9 @@ export default function AdminProspectsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Course</TableHead>
+                  <TableHead>Parent Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Tags</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Call</TableHead>
@@ -502,14 +506,20 @@ export default function AdminProspectsPage() {
                           {prospect.mobile}
                         </TableCell>
                         <TableCell>{prospect.location}</TableCell>
+                        <TableCell>{prospect.parentName}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{prospect.department}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="text-xs">
-                              {prospect.courseInterest === "Unknown"
-                               ? "Unknown"
-                               : courses.find(
-                                   (c) => c.code === prospect.courseInterest
-                                 )?.code || prospect.courseInterest}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {Array.isArray(prospect.tags) && prospect.tags.length > 0 ? (
+                              prospect.tags.map((tag: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="text-[10px] py-0 px-1.5 bg-primary/10 text-primary border-primary/20">
+                                  {tag}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">No tags</span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {assignedTc ? (
@@ -557,6 +567,8 @@ export default function AdminProspectsPage() {
                                   sourced_from: prospect.source || "",
                                   status: prospect.status.toLowerCase(), // This might need mapping
                                   course_interest: prospect.courseInterest || "",
+                                  parent_name: prospect.parentName || "",
+                                  department: prospect.department || "",
                                 })
                                 setIsProspectDialogOpen(true)
                               }}>
@@ -666,6 +678,14 @@ export default function AdminProspectsPage() {
                     <div>
                       <span className="text-muted-foreground">School:</span>
                       <p className="font-medium">{selectedProspect.schoolLastAttended}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Parent Name:</span>
+                      <p className="font-medium">{selectedProspect.parentName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Department:</span>
+                      <p className="font-medium">{selectedProspect.department || "N/A"}</p>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Course Interest:</span>
@@ -793,6 +813,24 @@ export default function AdminProspectsPage() {
                 id="p_name"
                 value={prospectFormData.name}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_parent" className="text-right">Parent Name</Label>
+              <Input
+                id="p_parent"
+                value={prospectFormData.parent_name}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, parent_name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_department" className="text-right">Department</Label>
+              <Input
+                id="p_department"
+                value={prospectFormData.department}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, department: e.target.value })}
                 className="col-span-3"
               />
             </div>
