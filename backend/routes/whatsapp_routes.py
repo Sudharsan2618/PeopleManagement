@@ -4,6 +4,7 @@ from services.whatsapp_service import WhatsAppService
 from typing import List, Optional
 
 from services.whatsapp_campaign_service import WhatsAppCampaignService
+from models.schemas import CampaignCreate
 
 router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 
@@ -32,19 +33,17 @@ def get_campaigns():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/campaigns")
-def create_campaign(
-    name: str = Body(..., embed=True),
-    template_name: str = Body(..., embed=True),
-    recipient_ids: List[int] = Body(..., embed=True),
-    language_code: str = Body("en_US", embed=True),
-    parameters: Optional[dict] = Body(None, embed=True),
-    response_config: Optional[dict] = Body(None, embed=True),
-    created_by: int = Body(1, embed=True)
-):
+def create_campaign(campaign: CampaignCreate):
     """Create a new WhatsApp campaign (Draft)."""
     try:
         campaign_id = WhatsAppCampaignService.create_campaign(
-            name, template_name, recipient_ids, created_by, language_code, parameters, response_config
+            campaign.name, 
+            campaign.template_name, 
+            campaign.recipient_ids, 
+            campaign.created_by, 
+            campaign.language_code, 
+            campaign.parameters, 
+            campaign.response_config
         )
         return {"id": campaign_id, "message": "Campaign created successfully (Draft)"}
     except Exception as e:
@@ -121,9 +120,10 @@ def get_conversations():
                    MAX(m.created_at) as last_message_at,
                    (SELECT body FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
             FROM prospects p
-            JOIN whatsapp_messages m ON p.id = m.prospect_id
+            LEFT JOIN whatsapp_messages m ON p.id = m.prospect_id
+            WHERE m.id IS NOT NULL
             GROUP BY p.id, p.name, p.mobile
-            ORDER BY last_message_at DESC
+            ORDER BY last_message_at DESC NULLS LAST
         """)
         columns = [desc[0] for desc in cur.description]
         results = [dict(zip(columns, row)) for row in cur.fetchall()]

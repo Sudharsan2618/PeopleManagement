@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date, datetime
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 
 
 # ==================== USERS ====================
@@ -316,3 +316,13 @@ class FollowUpTask(FollowUpTaskBase):
 
     class Config:
         from_attributes = True
+
+# ==================== WHATSAPP CAMPAIGNS ====================
+class CampaignCreate(BaseModel):
+    name: str
+    template_name: str
+    recipient_ids: List[int]
+    language_code: str = "en_US"
+    parameters: Optional[Dict[str, Any]] = None
+    response_config: Optional[Dict[str, Any]] = None
+    created_by: int = 1

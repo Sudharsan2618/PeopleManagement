@@ -7,6 +7,7 @@ load_dotenv()
 import uuid
 
 from utils.phone_utils import format_for_meta
+from database.connection import execute_query, execute_insert
 
 WABA_ID = os.getenv("WHATSAPP_WABA_ID")
 ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")

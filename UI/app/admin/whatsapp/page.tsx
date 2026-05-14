@@ -160,7 +160,15 @@ export default function WhatsAppAdmin() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+    // Poll for new messages every 10 seconds
+    const interval = setInterval(() => {
+      fetchConversations()
+      if (selectedChat) {
+        fetchMessages(selectedChat.id)
+      }
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [selectedChat])
 
   const fetchConversations = async () => {
     try {
@@ -466,43 +474,72 @@ export default function WhatsAppAdmin() {
       <div className="flex-1 overflow-hidden p-3 flex gap-3">
         <div className="h-full w-full relative">
           {activeTab === "inbox" && (
-            <div className="h-full flex gap-3">
-              {/* Sidebar */}
-              <Card className="w-[300px] flex flex-col overflow-hidden border-slate-200 shadow-sm rounded-xl bg-white shrink-0">
-                <div className="p-3 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input placeholder="Search..." className="pl-8 h-8 bg-slate-50 border-none rounded-lg text-xs" />
+            <div className="h-full flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {/* --- PREMIUM SIDEBAR --- */}
+              <Card className="w-[320px] flex flex-col overflow-hidden border-none shadow-2xl rounded-[32px] bg-white/80 backdrop-blur-xl shrink-0 border border-white/20">
+                <div className="p-6 pb-4">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-black tracking-tighter text-slate-900">MESSAGES</h2>
+                    <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[10px] px-2 py-0.5 rounded-full">
+                      {conversations.length} ACTIVE
+                    </Badge>
+                  </div>
+                  <div className="relative group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                    <Input 
+                      placeholder="Search prospects..." 
+                      className="pl-10 h-11 bg-slate-100/50 border-none rounded-2xl text-xs font-bold placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-500/20 transition-all" 
+                    />
                   </div>
                 </div>
-                <ScrollArea className="flex-1">
-                  <div className="divide-y divide-slate-50">
+                
+                <ScrollArea className="flex-1 px-3">
+                  <div className="space-y-1 pb-6">
                     {conversations.map((conv, i) => (
                       <div
                         key={conv.id}
                         onClick={() => handleSelectChat(conv)}
                         className={cn(
-                          "p-3 cursor-pointer transition-all relative group",
-                          selectedChat?.id === conv.id ? "bg-emerald-50/50" : "hover:bg-slate-50 bg-white"
+                          "p-4 cursor-pointer transition-all duration-300 relative rounded-[24px] group",
+                          selectedChat?.id === conv.id 
+                            ? "bg-[#1A1F2B] text-white shadow-xl shadow-slate-200" 
+                            : "hover:bg-slate-50 text-slate-600"
                         )}
                       >
-                        {selectedChat?.id === conv.id && (
-                          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-600 rounded-r-full" />
-                        )}
-                        <div className="flex gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarFallback className={cn("text-white text-[10px] font-bold", getAvatarColor(i))}>
-                              {conv.name[0]}
-                            </AvatarFallback>
-                          </Avatar>
+                        <div className="flex gap-4">
+                          <div className="relative">
+                            <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                              <AvatarFallback className={cn(
+                                "text-white text-xs font-black", 
+                                selectedChat?.id === conv.id ? "bg-emerald-500" : getAvatarColor(i)
+                              )}>
+                                {conv.name[0]?.toUpperCase() || "P"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
+                          </div>
+                          
                           <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold text-xs text-slate-800 truncate pr-1">{conv.name}</span>
-                              <span className="text-[9px] text-slate-400 font-bold uppercase">
-                                {new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className="flex justify-between items-start mb-1">
+                              <span className={cn(
+                                "font-black text-sm truncate tracking-tight",
+                                selectedChat?.id === conv.id ? "text-white" : "text-slate-900"
+                              )}>
+                                {conv.name}
+                              </span>
+                              <span className={cn(
+                                "text-[9px] font-black tracking-widest",
+                                selectedChat?.id === conv.id ? "text-slate-400" : "text-slate-400"
+                              )}>
+                                {conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-400 truncate mt-0.5 line-clamp-1 leading-tight">{conv.last_message}</p>
+                            <p className={cn(
+                              "text-[11px] truncate font-medium leading-none opacity-70",
+                              selectedChat?.id === conv.id ? "text-slate-300" : "text-slate-500"
+                            )}>
+                              {conv.last_message || "No messages yet"}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -511,109 +548,144 @@ export default function WhatsAppAdmin() {
                 </ScrollArea>
               </Card>
               
-              {/* Chat View */}
-              <Card className="flex-1 flex flex-col overflow-hidden border-slate-200 shadow-sm rounded-xl bg-white relative">
+              {/* --- PREMIUM CHAT VIEW --- */}
+              <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-2xl rounded-[32px] bg-white/40 backdrop-blur-md relative border border-white/20">
                 {selectedChat ? (
                   <>
-                    <div className="p-3 border-b flex items-center justify-between bg-white/80 backdrop-blur-md">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarFallback className={cn("text-white text-[10px] font-bold", getAvatarColor(conversations.findIndex(c => c.id === selectedChat.id)))}>
-                            {selectedChat.name[0]}
-                          </AvatarFallback>
-                        </Avatar>
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/60">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                           <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                            <AvatarFallback className={cn("text-white text-xs font-black", getAvatarColor(conversations.findIndex(c => c.id === selectedChat.id)))}>
+                              {selectedChat.name[0]?.toUpperCase() || "P"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 border-2 border-white rounded-full" />
+                        </div>
                         <div>
-                          <h3 className="font-bold text-sm text-slate-900 leading-none">{selectedChat.name}</h3>
-                          <p className="text-[10px] text-slate-400 font-bold mt-1 tracking-tight">+{selectedChat.mobile}</p>
+                          <h3 className="font-black text-base text-slate-900 tracking-tight leading-none">{selectedChat.name}</h3>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[8px] font-black px-2 py-0">ONLINE</Badge>
+                            <span className="text-[10px] text-slate-400 font-bold tracking-tight">+{selectedChat.mobile}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-600 rounded-lg">
-                          <Phone className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all">
+                          <Phone className="h-5 w-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-600 rounded-lg">
-                          <Video className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all">
+                          <Video className="h-5 w-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 rounded-lg">
-                          <MoreVertical className="h-4 w-4" />
+                        <Separator orientation="vertical" className="h-6 mx-2" />
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl">
+                          <MoreVertical className="h-5 w-5" />
                         </Button>
                       </div>
                     </div>
                     
                     <div className="flex-1 overflow-hidden relative">
-                      <ScrollArea className="h-full bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat" ref={scrollRef}>
-                        <div className="bg-slate-50/90 absolute inset-0 -z-10" />
-                        <div className="p-4 space-y-6">
+                      <ScrollArea className="h-full bg-[#F8FAFC]" ref={scrollRef}>
+                        {/* WhatsApp-style pattern overlay */}
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat" />
+                        
+                        <div className="p-8 space-y-8 relative">
                           <div className="flex justify-center">
-                            <span className="bg-white/90 text-emerald-700 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border border-emerald-50">Today</span>
+                            <span className="bg-white/80 backdrop-blur-sm text-slate-500 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-sm border border-slate-100">
+                              Conversation History
+                            </span>
                           </div>
                           
-                          <div className="space-y-3 pb-2">
-                            {messages.map((msg) => (
-                              <div
-                                key={msg.id}
-                                className={cn(
-                                  "flex flex-col max-w-[80%] rounded-xl px-3.5 py-2.5 text-[12px] shadow-sm relative",
-                                  msg.direction === "outbound" 
-                                    ? "ml-auto bg-[#DCF8C6] text-slate-800 rounded-tr-none border border-[#C5E1B1]" 
-                                    : "bg-white text-slate-800 rounded-tl-none border border-slate-100"
-                                )}
-                              >
-                                <p className="whitespace-pre-wrap leading-relaxed font-medium">{msg.body}</p>
-                                <div className={cn(
-                                  "text-[9px] mt-1 flex items-center justify-end gap-1 font-bold opacity-60",
-                                  msg.direction === "outbound" ? "text-slate-600" : "text-slate-400"
-                                )}>
-                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  {msg.direction === "outbound" && (
-                                    <span className="text-[12px] leading-none tracking-tight text-blue-500">
-                                      âœ“âœ“
-                                    </span>
+                          <div className="space-y-6 pb-4">
+                            {messages.map((msg) => {
+                              const isTemplate = msg.body?.toLowerCase().includes("template:");
+                              return (
+                                <div
+                                  key={msg.id}
+                                  className={cn(
+                                    "flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300",
+                                    msg.direction === "outbound" ? "items-end" : "items-start"
                                   )}
+                                >
+                                  <div
+                                    className={cn(
+                                      "max-w-[85%] rounded-[24px] px-5 py-3.5 text-[13px] shadow-sm relative group",
+                                      msg.direction === "outbound" 
+                                        ? "bg-emerald-600 text-white rounded-tr-none shadow-emerald-200/50" 
+                                        : "bg-white text-slate-700 rounded-tl-none border border-slate-100 shadow-slate-200/50"
+                                    )}
+                                  >
+                                    {isTemplate ? (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-white/20 mb-2">
+                                          <Zap className="h-3.5 w-3.5 text-emerald-300" />
+                                          <span className="text-[10px] font-black uppercase tracking-widest">Automated Template</span>
+                                        </div>
+                                        <p className="font-bold leading-relaxed">{msg.body.replace(/Template:/i, "").trim()}</p>
+                                        <div className="bg-white/10 p-2 rounded-xl text-[11px] font-medium italic border border-white/10 mt-2">
+                                          Waiting for student interaction...
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="whitespace-pre-wrap leading-relaxed font-bold tracking-tight">{msg.body}</p>
+                                    )}
+                                    
+                                    <div className={cn(
+                                      "text-[9px] mt-2 flex items-center justify-end gap-1.5 font-black uppercase tracking-tighter opacity-60",
+                                      msg.direction === "outbound" ? "text-emerald-100" : "text-slate-400"
+                                    )}>
+                                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      {msg.direction === "outbound" && (
+                                        <div className="flex -space-x-1">
+                                          <CheckCircle2 className="h-3 w-3" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       </ScrollArea>
                     </div>
                     
-                    <div className="p-3 bg-white border-t">
-                      <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1 pr-2 shadow-inner">
-                        <div className="flex gap-0">
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-600 rounded-lg">
+                    <div className="p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100">
+                      <div className="flex items-center gap-3 bg-slate-100/80 rounded-3xl p-2 pr-3 shadow-inner border border-slate-200/50 group focus-within:bg-white focus-within:shadow-xl focus-within:shadow-slate-200/50 transition-all duration-300">
+                        <div className="flex gap-1">
+                           <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-2xl transition-all">
                             <Smile className="h-5 w-5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-600 rounded-lg">
+                          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-2xl transition-all">
                             <Paperclip className="h-5 w-5" />
                           </Button>
                         </div>
                         <Input 
-                          placeholder="Type message..." 
-                          className="border-none bg-transparent focus-visible:ring-0 shadow-none text-xs h-9 px-0 font-medium"
+                          placeholder="Compose message..." 
+                          className="border-none bg-transparent focus-visible:ring-0 shadow-none text-sm h-10 px-0 font-bold placeholder:text-slate-400"
                           value={replyText}
                           onChange={e => setReplyText(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && handleSendReply()}
                         />
                         <Button 
+                          onClick={handleSendReply}
+                          disabled={!replyText.trim() || isSending}
                           size="icon" 
-                          className="rounded-lg bg-[#128C7E] hover:bg-[#075E54] shadow-md h-8 w-9 shrink-0 transition-all" 
-                          onClick={handleSendReply} 
-                          disabled={isSending || !replyText.trim()}
+                          className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 h-10 w-12 shrink-0 transition-all active:scale-95" 
                         >
-                          {isSending ? <RefreshCw className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
+                          {isSending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 text-white" />}
                         </Button>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50/10">
-                    <div className="h-16 w-16 bg-white shadow-xl rounded-3xl flex items-center justify-center mb-4 ring-4 ring-slate-100">
-                      <MessageSquare className="h-6 w-6 text-emerald-600" />
+                  <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/30">
+                    <div className="h-32 w-32 bg-white rounded-[48px] shadow-2xl flex items-center justify-center mb-8 animate-pulse">
+                      <MessageSquare className="h-16 w-16 text-emerald-500/20" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 uppercase tracking-tight">Select Workspace</h3>
-                    <p className="text-[10px] text-slate-400 max-w-[200px] mt-2 font-bold uppercase tracking-widest leading-loose">
-                      Pick a contact to begin your outreach.
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter mb-2">PICK A CONVERSATION</h3>
+                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-[280px] leading-relaxed">
+                      Select a prospect from the left to start high-conversion outreach.
                     </p>
                   </div>
                 )}
@@ -672,173 +744,195 @@ export default function WhatsAppAdmin() {
           )}
 
           {activeTab === "campaigns" && (
-            <div className="h-full">
+            <div className="h-full animate-in fade-in slide-in-from-right-4 duration-500">
               {selectedCampaign ? (
-                <Card className="h-full flex flex-col border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden">
-                  <div className="p-4 border-b bg-slate-50/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="sm" onClick={handleBackToCampaigns} className="h-8 px-2 font-bold uppercase tracking-widest text-[10px]">
-                          <ArrowLeft className="h-4 w-4 mr-1.5" />
-                          Back
+                <div className="h-full flex flex-col gap-4">
+                  {/* --- CAMPAIGN HEADER & STATS --- */}
+                  <Card className="border-none shadow-2xl rounded-[32px] bg-[#1A1F2B] text-white p-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                      <Zap className="h-32 w-32" />
+                    </div>
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-4 mb-6">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={handleBackToCampaigns} 
+                          className="h-10 px-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-white/10"
+                        >
+                          <ArrowLeft className="h-4 w-4 mr-2" />
+                          BACK TO LIST
                         </Button>
-                        <div>
-                          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">{selectedCampaign.name}</h2>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                            Template: <span className="text-slate-900">{selectedCampaign.template_name}</span> â€¢ {new Date(selectedCampaign.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={cn("font-bold uppercase tracking-widest px-3 h-6 border-none shadow-sm", getStatusColor(selectedCampaign.status))}>
+                        <Badge className={cn("px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest border-none", getStatusColor(selectedCampaign.status))}>
                           {selectedCampaign.status}
                         </Badge>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 grid grid-cols-4 gap-4 bg-slate-50/30 border-b">
-                    <Card className="p-3 bg-white border-slate-100 shadow-sm rounded-xl">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total</p>
-                      <p className="text-xl font-bold text-slate-900 tracking-tight">{selectedCampaign.total_recipients}</p>
-                    </Card>
-                    <Card className="p-3 bg-white border-slate-100 shadow-sm rounded-xl">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sent</p>
-                      <p className="text-xl font-bold text-emerald-600 tracking-tight">{selectedCampaign.sent_count}</p>
-                    </Card>
-                    <Card className="p-3 bg-white border-slate-100 shadow-sm rounded-xl">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Delivered</p>
-                      <p className="text-xl font-bold text-blue-600 tracking-tight">{selectedCampaign.delivered_count}</p>
-                    </Card>
-                    <Card className="p-3 bg-white border-slate-100 shadow-sm rounded-xl">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Read</p>
-                      <p className="text-xl font-bold text-emerald-700 tracking-tight">{selectedCampaign.read_count}</p>
-                    </Card>
-                  </div>
-
-                  <div className="flex-1 overflow-hidden flex flex-col">
-                    <div className="p-4 flex items-center justify-between border-b bg-white">
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className={cn("h-7 text-[10px] font-bold uppercase tracking-widest rounded-lg", messageStatusFilter === "all" ? "bg-slate-900 text-white" : "text-slate-500")}
-                          onClick={() => setMessageStatusFilter("all")}
-                        >All Messages</Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className={cn("h-7 text-[10px] font-bold uppercase tracking-widest rounded-lg", messageStatusFilter === "failed" ? "bg-red-600 text-white border-red-600" : "text-slate-500")}
-                          onClick={() => setMessageStatusFilter("failed")}
-                        >Failed</Button>
+                      
+                      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div>
+                          <h2 className="text-4xl font-black tracking-tighter mb-2">{selectedCampaign.name}</h2>
+                          <div className="flex items-center gap-4 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                            <span className="flex items-center gap-2"><Layers className="h-3 w-3" /> {selectedCampaign.template_name}</span>
+                            <span className="flex items-center gap-2"><Clock className="h-3 w-3" /> {new Date(selectedCampaign.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-4">
+                          <div className="bg-white/5 border border-white/10 rounded-[24px] px-6 py-4 backdrop-blur-md">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">TOTAL REACH</p>
+                            <p className="text-2xl font-black">{selectedCampaign.total_recipients}</p>
+                          </div>
+                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[24px] px-6 py-4 backdrop-blur-md">
+                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">SENT</p>
+                            <p className="text-2xl font-black text-emerald-400">{selectedCampaign.sent_count}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                  </Card>
+                  
+                  {/* --- MESSAGE RECIPIENT TABLE --- */}
+                  <Card className="flex-1 border-none shadow-2xl rounded-[32px] bg-white overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-1 bg-emerald-500 rounded-full" />
+                        <h3 className="font-black text-sm text-slate-900 tracking-tight uppercase">Recipient Tracking</h3>
+                      </div>
+                      <div className="flex gap-2">
+                        {["all", "sent", "delivered", "read", "failed"].map((status) => (
+                          <Button 
+                            key={status}
+                            variant="outline" 
+                            size="sm" 
+                            className={cn(
+                              "h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                              messageStatusFilter === status 
+                                ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200" 
+                                : "text-slate-400 border-slate-100 hover:bg-slate-50"
+                            )}
+                            onClick={() => setMessageStatusFilter(status)}
+                          >
+                            {status}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    
                     <ScrollArea className="flex-1">
                       <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead className="text-[9px] font-bold uppercase tracking-widest">Recipient</TableHead>
-                            <TableHead className="text-[9px] font-bold uppercase tracking-widest">Phone</TableHead>
-                            <TableHead className="text-[9px] font-bold uppercase tracking-widest">Status</TableHead>
-                            <TableHead className="text-[9px] font-bold uppercase tracking-widest">Time</TableHead>
+                        <TableHeader className="bg-slate-50/50">
+                          <TableRow className="hover:bg-transparent border-none">
+                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Prospect</TableHead>
+                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Connection</TableHead>
+                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Activity Status</TableHead>
+                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 text-right">Timestamp</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredCampaignMessages.map((msg) => (
-                            <TableRow key={msg.id} className="hover:bg-slate-50/50">
-                              <TableCell className="font-bold text-xs uppercase tracking-tight">{msg.prospect_name}</TableCell>
-                              <TableCell className="text-[10px] font-medium text-slate-500">+{msg.prospect_mobile}</TableCell>
-                              <TableCell>
-                                <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-bold uppercase tracking-tight shadow-sm", getStatusColor(msg.status))}>
+                            <TableRow key={msg.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
+                              <TableCell className="px-8 py-4">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback className="bg-slate-100 text-slate-600 text-[10px] font-black">
+                                      {msg.prospect_name[0]?.toUpperCase() || "P"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-black text-xs text-slate-900 truncate tracking-tight">{msg.prospect_name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-8 py-4 text-[11px] font-bold text-slate-500">
+                                <span className="flex items-center gap-2"><Phone className="h-3 w-3" /> +{msg.prospect_mobile}</span>
+                              </TableCell>
+                              <TableCell className="px-8 py-4">
+                                <Badge className={cn("text-[9px] px-3 h-5 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(msg.status))}>
                                   {msg.status}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="text-[10px] font-bold text-slate-400">
-                                {msg.sent_at ? new Date(msg.sent_at).toLocaleTimeString() : '-'}
+                              <TableCell className="px-8 py-4 text-[10px] font-black text-slate-400 text-right uppercase">
+                                {msg.sent_at ? new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
                               </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
+                      {filteredCampaignMessages.length === 0 && (
+                        <div className="p-20 text-center">
+                          <p className="text-slate-300 font-black text-xs uppercase tracking-widest">No data matching filter</p>
+                        </div>
+                      )}
                     </ScrollArea>
-                  </div>
-                </Card>
+                  </Card>
+                </div>
               ) : (
-                <Card className="h-full border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
-                  <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Automation Campaigns</h2>
-                    <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest">{campaigns.length} Total</Badge>
+                <div className="space-y-6">
+                  {/* --- CAMPAIGN LIST GRID --- */}
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-3xl font-black tracking-tighter text-slate-900">CAMPAIGNS</h2>
+                      <Badge className="bg-slate-100 text-slate-500 border-none font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
+                        {campaigns.length} TOTAL
+                      </Badge>
+                    </div>
                   </div>
-                  <ScrollArea className="flex-1">
-                    <Table>
-                    <TableHeader className="bg-slate-50/30">
-                      <TableRow>
-                        <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Campaign</TableHead>
-                        <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Created Date</TableHead>
-                        <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Status</TableHead>
-                        <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Metrics</TableHead>
-                        <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                      <TableBody>
-                        {campaigns.map((camp) => (
-                        <TableRow key={camp.id} className="hover:bg-slate-50/50 cursor-pointer" onClick={() => handleSelectCampaign(camp)}>
-                          <TableCell className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                                <MessageCircle className="h-4 w-4 text-emerald-600" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-xs uppercase tracking-tight text-slate-900 leading-none mb-1">{camp.name}</p>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{camp.template_name}</p>
-                              </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
+                    {campaigns.map((camp) => (
+                      <Card 
+                        key={camp.id} 
+                        className="group border-none shadow-xl hover:shadow-2xl transition-all duration-500 rounded-[32px] bg-white overflow-hidden cursor-pointer active:scale-[0.98]"
+                        onClick={() => handleSelectCampaign(camp)}
+                      >
+                        <div className="p-8 pb-4">
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="h-14 w-14 rounded-[22px] bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-inner">
+                              <Zap className="h-6 w-6" />
                             </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-4 text-[10px] font-bold text-slate-500">
-                            {new Date(camp.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="px-6 py-4">
-                            <Badge className={cn("text-[8px] px-2 h-4 border-none font-bold uppercase tracking-widest shadow-sm", getStatusColor(camp.status))}>
+                            <Badge className={cn("text-[9px] px-3 h-5 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(camp.status))}>
                               {camp.status}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="px-6 py-4">
-                            <div className="flex flex-col gap-1 w-24">
-                              <div className="flex justify-between text-[9px] font-bold uppercase">
-                                <span>{camp.sent_count}/{camp.total_recipients}</span>
-                              </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-50 shadow-inner">
-                                <div 
-                                  className="h-full bg-emerald-500 transition-all duration-500" 
-                                  style={{ width: `${(camp.sent_count / camp.total_recipients) * 100}%` }}
-                                />
-                              </div>
+                          </div>
+                          
+                          <h3 className="text-xl font-black text-slate-900 tracking-tighter line-clamp-1 mb-1">{camp.name}</h3>
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mb-6">{camp.template_name}</p>
+                          
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                              <span className="text-slate-400">ENGAGEMENT</span>
+                              <span className="text-slate-900">{Math.round((camp.sent_count / (camp.total_recipients || 1)) * 100)}%</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-end gap-1">
-                              {camp.status === 'draft' && (
+                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-inner">
+                              <div 
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.4)]" 
+                                style={{ width: `${(camp.sent_count / (camp.total_recipients || 1)) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="px-8 py-6 bg-slate-50/80 flex items-center justify-between border-t border-slate-100">
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">LAST SYNC</span>
+                            <span className="text-[11px] font-black text-slate-900 tracking-tight">{new Date(camp.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <div onClick={e => e.stopPropagation()}>
+                             {camp.status === 'draft' && (
                                 <Button 
                                   size="sm" 
-                                  className="h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all hover:scale-105 active:scale-95"
+                                  className="h-10 px-6 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-slate-200 transition-all hover:-translate-y-1"
                                   onClick={() => handleStartCampaign(camp.id)}
                                   disabled={isSending}
                                 >
-                                  <Zap className="h-3 w-3 mr-1.5" />
-                                  Launch
+                                  LAUNCH
                                 </Button>
                               )}
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-900 rounded-lg">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </Card>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}

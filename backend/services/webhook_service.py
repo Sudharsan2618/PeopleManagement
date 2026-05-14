@@ -108,7 +108,6 @@ class WebhookService:
             
             if not prospect:
                 # Auto-create if it's a new contact
-                from utils.timezone_utils import get_ist_now
                 now = get_ist_now()
                 cur.execute(
                     "INSERT INTO prospects (name, mobile, status, created_at, updated_at) VALUES (%s, %s, 'new', %s, %s) RETURNING id",

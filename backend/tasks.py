@@ -144,6 +144,12 @@ async def task_complete_lead_and_send_prospectus(
             log.info("✅ PostgreSQL flow data write complete for name=%s phone=%s", flow_data.get("full_name"), wa_phone)
         else:
             log.info("ℹ️ Regular message received (no flow data) from phone=%s", wa_phone)
+            # Check for interest keywords in regular messages
+            body = message.get("text", {}).get("body", "").lower()
+            interest_keywords = ["interested", "yes", "info", "more", "details", "join", "admission"]
+            if any(kw in body for kw in interest_keywords):
+                log.info("🎯 Interest detected in text message from %s", wa_phone)
+                execute_query("UPDATE prospects SET status = 'hot', updated_at = %s WHERE id = %s", (now, prospect_id), fetch="none")
 
     except Exception as exc:
         log.error("❌ PostgreSQL write failed: %s", exc)

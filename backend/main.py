@@ -22,6 +22,7 @@ from config import Settings
 from crypto import decrypt_flow_request, encrypt_flow_response
 from database import db_lifespan
 from tasks import enqueue_send_prospectus, WorkerSettings
+from services.webhook_service import WebhookService
 
 from routes import (
     auth_routes,
@@ -194,7 +195,6 @@ async def flow_endpoint(request: Request):
             "🔄 COURSE_DETAILS — name=%s email=%s degree=%s",
             data.get("full_name"), data.get("email"), data.get("degree"),
         )
-        await upsert_lead_from_flow(flow_token, data)
         return make_response({
             "version": version,
             "screen" : "CONFIRMATION",
