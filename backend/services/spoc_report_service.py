@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import date, datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class spocReportService:
@@ -62,11 +63,11 @@ class spocReportService:
     def create_report(spoc_id: int, report_date: date, area_location: str, is_draft: bool = True) -> int:
         """Create a new spoc report."""
         query = """
-            INSERT INTO spoc_reports (spoc_id, report_date, area_location, is_draft)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO spoc_reports (spoc_id, report_date, area_location, is_draft, created_at)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (spoc_id, report_date, area_location, is_draft))
+        return execute_insert(query, (spoc_id, report_date, area_location, is_draft, get_ist_now()))
     
     @staticmethod
     def update_report(report_id: int, area_location: Optional[str] = None, is_draft: Optional[bool] = None,
@@ -81,7 +82,10 @@ class spocReportService:
         if is_draft is not None:
             updates.append("is_draft = %s")
             params.append(is_draft)
-        if submitted_at is not None:
+        if is_draft is False and submitted_at is None:
+            updates.append("submitted_at = %s")
+            params.append(get_ist_now())
+        elif submitted_at is not None:
             updates.append("submitted_at = %s")
             params.append(submitted_at)
         

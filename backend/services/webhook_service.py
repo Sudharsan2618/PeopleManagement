@@ -1,6 +1,8 @@
 import json
 from database.connection import get_connection
 from datetime import datetime
+from zoneinfo import ZoneInfo
+from utils.timezone_utils import get_ist_now
 
 class WebhookService:
     @staticmethod
@@ -31,7 +33,8 @@ class WebhookService:
         """Update message status in database."""
         meta_id = update.get("id")
         status = update.get("status") # 'delivered', 'read', 'sent', 'failed'
-        timestamp = datetime.fromtimestamp(int(update.get("timestamp")))
+        # Convert Meta UTC timestamp to IST
+        timestamp = datetime.fromtimestamp(int(update.get("timestamp")), tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Asia/Kolkata"))
         
         conn = get_connection()
         cur = conn.cursor()
@@ -107,10 +110,10 @@ class WebhookService:
                 # 2. Save Message
                 cur.execute(
                     """
-                    INSERT INTO whatsapp_messages (prospect_id, meta_message_id, direction, message_type, status, body, payload)
-                    VALUES (%s, %s, 'inbound', %s, 'delivered', %s, %s)
+                    INSERT INTO whatsapp_messages (prospect_id, meta_message_id, direction, message_type, status, body, payload, created_at)
+                    VALUES (%s, %s, 'inbound', %s, 'delivered', %s, %s, %s)
                     """,
-                    (prospect_id, meta_id, msg_type, body, json.dumps(message))
+                    (prospect_id, meta_id, msg_type, body, json.dumps(message), get_ist_now())
                 )
                 conn.commit()
             else:

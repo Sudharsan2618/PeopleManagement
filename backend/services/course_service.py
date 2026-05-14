@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class CourseService:
@@ -32,11 +33,11 @@ class CourseService:
                       is_active: bool = True) -> int:
         """Create a new course."""
         query = """
-            INSERT INTO courses (name, code, description, duration, fees, is_active)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO courses (name, code, description, duration, fees, is_active, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (name, code, description, duration, fees, is_active))
+        return execute_insert(query, (name, code, description, duration, fees, is_active, get_ist_now()))
     
     @staticmethod
     def update_course(course_id: int, name: Optional[str] = None, code: Optional[str] = None,

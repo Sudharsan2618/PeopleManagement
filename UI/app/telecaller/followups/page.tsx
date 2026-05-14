@@ -89,10 +89,6 @@ export default function FollowUpsPage() {
 
   useEffect(() => {
     fetchData()
-    
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchData, 60000)
-    return () => clearInterval(interval)
   }, [userId])
 
   // Enrich tasks with overdue status

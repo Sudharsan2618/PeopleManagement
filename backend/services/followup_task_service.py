@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import date
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class FollowUpTaskService:
@@ -79,10 +80,10 @@ class FollowUpTaskService:
             SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
                    action_description, follow_up_date, status, resolution_note, created_at
             FROM follow_up_tasks
-            WHERE status = 'pending' AND follow_up_date < CURRENT_DATE
+            WHERE status = 'pending' AND follow_up_date < %s
             ORDER BY follow_up_date ASC
         """
-        return execute_query(query, fetch="all")
+        return execute_query(query, (get_ist_now().date(),), fetch="all")
     
     @staticmethod
     def create_task(source_entry_id: Optional[int], assigned_to_role: str, assigned_to_user_id: Optional[int],
@@ -91,12 +92,12 @@ class FollowUpTaskService:
         """Create a new follow-up task."""
         query = """
             INSERT INTO follow_up_tasks (source_entry_id, assigned_to_role, assigned_to_user_id, 
-                                         institution_name, action_description, follow_up_date, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                         institution_name, action_description, follow_up_date, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         return execute_insert(query, (source_entry_id, assigned_to_role, assigned_to_user_id,
-                                      institution_name, action_description, follow_up_date, status))
+                                      institution_name, action_description, follow_up_date, status, get_ist_now()))
     
     @staticmethod
     def update_task(task_id: int, assigned_to_role: Optional[str] = None, assigned_to_user_id: Optional[int] = None,

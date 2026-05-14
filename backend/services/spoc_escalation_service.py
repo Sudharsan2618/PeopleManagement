@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class spocEscalationService:
@@ -52,11 +53,11 @@ class spocEscalationService:
     def create_escalation(report_id: int, description: str, observations: Optional[str] = None) -> int:
         """Create a new spoc escalation."""
         query = """
-            INSERT INTO spoc_escalations (report_id, description, observations)
-            VALUES (%s, %s, %s)
+            INSERT INTO spoc_escalations (report_id, description, observations, created_at)
+            VALUES (%s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (report_id, description, observations))
+        return execute_insert(query, (report_id, description, observations, get_ist_now()))
     
     @staticmethod
     def update_escalation(escalation_id: int, description: Optional[str] = None, observations: Optional[str] = None,
@@ -78,7 +79,10 @@ class spocEscalationService:
         if resolution_note is not None:
             updates.append("resolution_note = %s")
             params.append(resolution_note)
-        if resolved_at is not None:
+        if resolved_by is not None and resolved_at is None:
+            updates.append("resolved_at = %s")
+            params.append(get_ist_now())
+        elif resolved_at is not None:
             updates.append("resolved_at = %s")
             params.append(resolved_at)
         

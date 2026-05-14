@@ -136,19 +136,7 @@ export default function WhatsAppAdmin() {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(() => {
-      if (activeTab === "inbox") {
-        fetchConversations()
-        if (selectedChat) {
-          fetchMessages(selectedChat.id)
-        }
-      }
-      if (activeTab === "campaigns" && selectedCampaign) {
-        handleSelectCampaign(selectedCampaign)
-      }
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [activeTab, selectedChat, selectedCampaign])
+  }, [])
 
   const fetchConversations = async () => {
     try {

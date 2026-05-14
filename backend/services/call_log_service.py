@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class CallLogService:
@@ -59,10 +60,10 @@ class CallLogService:
             SELECT id, prospect_id, telecaller_id, assignment_id, outcome, status_after_call,
                    reason, notes, course_interest, callback_scheduled_at, called_at
             FROM call_logs
-            WHERE callback_scheduled_at IS NOT NULL AND callback_scheduled_at <= NOW()
+            WHERE callback_scheduled_at IS NOT NULL AND callback_scheduled_at <= %s
             ORDER BY callback_scheduled_at ASC
         """
-        return execute_query(query, fetch="all")
+        return execute_query(query, (get_ist_now(),), fetch="all")
     
     @staticmethod
     def create_call_log(prospect_id: int, telecaller_id: int, assignment_id: Optional[int],
@@ -72,12 +73,13 @@ class CallLogService:
         """Create a new call log."""
         query = """
             INSERT INTO call_logs (prospect_id, telecaller_id, assignment_id, outcome, 
-                                   status_after_call, reason, notes, course_interest, callback_scheduled_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                   status_after_call, reason, notes, course_interest, callback_scheduled_at, called_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         return execute_insert(query, (prospect_id, telecaller_id, assignment_id, outcome, 
-                                       status_after_call, reason, notes, course_interest, callback_scheduled_at))
+                                       status_after_call, reason, notes, course_interest, 
+                                       callback_scheduled_at, get_ist_now()))
     
     @staticmethod
     def update_call_log(log_id: int, outcome: Optional[str] = None, status_after_call: Optional[str] = None,

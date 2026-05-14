@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class UserService:
@@ -51,11 +52,11 @@ class UserService:
     def create_user(name: str, email: str, mobile: str, password: str, role: str, is_active: bool = True) -> int:
         """Create a new user."""
         query = """
-            INSERT INTO users (name, email, mobile, password, role, is_active)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO users (name, email, mobile, password, role, is_active, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (name, email, mobile, password, role, is_active))
+        return execute_insert(query, (name, email, mobile, password, role, is_active, get_ist_now()))
     
     @staticmethod
     def update_user(user_id: int, name: Optional[str] = None, email: Optional[str] = None, 

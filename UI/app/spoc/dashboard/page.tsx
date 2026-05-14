@@ -16,12 +16,14 @@ import {
   TrendingUp,
   Loader2,
   RefreshCw,
+  AlertCircle,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { SpocReportsApi, followUpTasksApi, SpocVisitsApi } from "@/lib/api-client"
@@ -84,10 +86,6 @@ export default function spocDashboard() {
 
   useEffect(() => {
     fetchData()
-    
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchData, 60000)
-    return () => clearInterval(interval)
   }, [spocId])
 
   const recentReports = reports.slice(0, 3)
@@ -113,16 +111,7 @@ export default function spocDashboard() {
     return <DashboardSkeleton />
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-destructive">Error: {error}</p>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Retry
-        </Button>
-      </div>
-    )
-  }
+  // Error is now handled via banner in the main return
 
   const today = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -133,6 +122,23 @@ export default function spocDashboard() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="bg-destructive text-destructive-foreground border-none shadow-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchData}
+              className="h-7 bg-white/10 hover:bg-white/20 border-white/20 text-white"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

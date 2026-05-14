@@ -11,6 +11,7 @@ import {
   Loader2,
   RefreshCw,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,6 +22,8 @@ import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/ap
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
 import { type CallOutcome } from "@/lib/mock-data"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
 
 // ─── Outcome → DB mapping ────────────────────────────────────
 const OUTCOME_TO_DB: Record<string, string> = {
@@ -206,16 +209,7 @@ export default function CallbacksPage() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-destructive">{error}</p>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Retry
-        </Button>
-      </div>
-    )
-  }
+  // Removed full-screen error return to allow banner display at top of page content
 
   const renderCallbackCard = (log: CallLog, isOverdue = false) => {
     const prospect = prospects[log.prospect_id]
@@ -297,6 +291,23 @@ export default function CallbacksPage() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="bg-destructive text-destructive-foreground border-none shadow-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>System Error</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchData}
+              className="h-7 bg-white/10 hover:bg-white/20 border-white/20 text-white"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Callbacks</h1>

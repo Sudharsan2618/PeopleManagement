@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import date
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class spocVisitService:
@@ -48,13 +49,13 @@ class spocVisitService:
         query = """
             INSERT INTO spoc_visit_entries (report_id, visit_type, institution_name, contact_name, 
                                              contact_email, contact_mobile, next_action, 
-                                             follow_up_role, follow_up_user_id, follow_up_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                             follow_up_role, follow_up_user_id, follow_up_date, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         return execute_insert(query, (report_id, visit_type, institution_name, contact_name,
                                       contact_email, contact_mobile, next_action,
-                                      follow_up_role, follow_up_user_id, follow_up_date))
+                                      follow_up_role, follow_up_user_id, follow_up_date, get_ist_now()))
     
     @staticmethod
     def update_visit(visit_id: int, visit_type: Optional[str] = None, institution_name: Optional[str] = None,

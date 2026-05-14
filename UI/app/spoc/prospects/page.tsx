@@ -14,11 +14,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
+  Edit,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -56,7 +59,7 @@ import {
   type ProspectStatus,
   mockCourses,
 } from "@/lib/mock-data"
-import { prospectsApi, assignmentsApi, usersApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
+import { prospectsApi, assignmentsApi, usersApi, coursesApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
@@ -87,8 +90,22 @@ export default function spocProspectsPage() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [targetTelecallerId, setTargetTelecallerId] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
+  const [isProspectDialogOpen, setIsProspectDialogOpen] = useState(false)
+  const [editingProspect, setEditingProspect] = useState<any | null>(null)
+  const [prospectFormData, setProspectFormData] = useState({
+    name: "",
+    mobile: "",
+    email: "",
+    location: "",
+    sourced_from: "",
+    status: "new",
+    course_interest: "",
+    parent_name: "",
+    department: "",
+  })
   const [prospects, setProspects] = useState<any[]>([])
   const [telecallers, setTelecallers] = useState<any[]>([])
+  const [courses, setCourses] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -98,10 +115,11 @@ export default function spocProspectsPage() {
     async function fetchData() {
       try {
         setIsLoading(true)
-        const [apiProspects, apiAssignments, apiUsers] = await Promise.all([
+        const [apiProspects, apiAssignments, apiUsers, apiCourses] = await Promise.all([
           prospectsApi.getAll(),
           assignmentsApi.getAll(),
           usersApi.getByRole("telecaller"),
+          coursesApi.getAll(),
         ])
         
         const uiProspects = apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments))
@@ -109,6 +127,7 @@ export default function spocProspectsPage() {
         
         setProspects(uiProspects)
         setTelecallers(uiTelecallers)
+        setCourses(apiCourses)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch data")
       } finally {
@@ -247,11 +266,23 @@ export default function spocProspectsPage() {
               Import CSV
             </Link>
           </Button>
-          <Button asChild>
-            <Link href="/spoc/prospects/add">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Prospect
-            </Link>
+          <Button onClick={() => {
+            setEditingProspect(null)
+            setProspectFormData({
+              name: "",
+              mobile: "",
+              email: "",
+              location: "",
+              sourced_from: "",
+              status: "new",
+              course_interest: "",
+              parent_name: "",
+              department: "",
+            })
+            setIsProspectDialogOpen(true)
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Prospect
           </Button>
         </div>
       </div>
@@ -311,6 +342,26 @@ export default function spocProspectsPage() {
                       {tc.name}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={courseFilter}
+                onValueChange={(v) => {
+                  setCourseFilter(v)
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Course" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.code}>
+                      {course.code}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="Unknown">Unknown</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="icon">
@@ -416,9 +467,57 @@ export default function spocProspectsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(prospect)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetails(prospect)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setEditingProspect(prospect)
+                                setProspectFormData({
+                                  name: prospect.name,
+                                  mobile: prospect.mobile,
+                                  email: prospect.email || "",
+                                  location: prospect.location || "",
+                                  sourced_from: prospect.source || "",
+                                  status: "new", // Mapping handled on save
+                                  course_interest: prospect.courseInterest || "",
+                                  parent_name: prospect.parentName || "",
+                                  department: prospect.department || "",
+                                })
+                                setIsProspectDialogOpen(true)
+                              }}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to delete ${prospect.name}?`)) {
+                                    try {
+                                      await prospectsApi.delete(Number(prospect.id))
+                                      toast({ title: "Prospect deleted" })
+                                      const apiProspects = await prospectsApi.getAll()
+                                      const apiAssignments = await assignmentsApi.getAll()
+                                      setProspects(apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments)))
+                                    } catch (err) {
+                                      toast({ title: "Error deleting prospect", variant: "destructive" })
+                                    }
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     )
@@ -571,6 +670,115 @@ export default function spocProspectsPage() {
             >
               {isAssigning ? "Assigning..." : "Confirm Assignment"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Add/Edit Prospect Dialog */}
+      <Dialog open={isProspectDialogOpen} onOpenChange={setIsProspectDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingProspect ? "Edit Prospect" : "Add New Prospect"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_name" className="text-right">Name</Label>
+              <Input
+                id="p_name"
+                value={prospectFormData.name}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_parent" className="text-right">Parent Name</Label>
+              <Input
+                id="p_parent"
+                value={prospectFormData.parent_name}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, parent_name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_department" className="text-right">Department</Label>
+              <Input
+                id="p_department"
+                value={prospectFormData.department}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, department: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_mobile" className="text-right">Mobile</Label>
+              <Input
+                id="p_mobile"
+                value={prospectFormData.mobile}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, mobile: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_email" className="text-right">Email</Label>
+              <Input
+                id="p_email"
+                value={prospectFormData.email}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, email: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_location" className="text-right">Location</Label>
+              <Input
+                id="p_location"
+                value={prospectFormData.location}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, location: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_course" className="text-right">Course</Label>
+              <Select 
+                value={prospectFormData.course_interest} 
+                onValueChange={(v) => setProspectFormData({ ...prospectFormData, course_interest: v })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select Course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map(c => (
+                    <SelectItem key={c.id} value={c.code}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_source" className="text-right">Source</Label>
+              <Input
+                id="p_source"
+                value={prospectFormData.sourced_from}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, sourced_from: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProspectDialogOpen(false)}>Cancel</Button>
+            <Button onClick={async () => {
+              try {
+                if (editingProspect) {
+                  await prospectsApi.update(Number(editingProspect.id), prospectFormData)
+                  toast({ title: "Prospect updated" })
+                } else {
+                  await prospectsApi.create({ ...prospectFormData, created_by: spocId })
+                  toast({ title: "Prospect created" })
+                }
+                setIsProspectDialogOpen(false)
+                const apiProspects = await prospectsApi.getAll()
+                const apiAssignments = await assignmentsApi.getAll()
+                setProspects(apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments)))
+              } catch (err) {
+                toast({ title: "Error saving prospect", variant: "destructive" })
+              }
+            }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

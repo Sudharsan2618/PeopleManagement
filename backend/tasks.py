@@ -82,7 +82,8 @@ async def task_complete_lead_and_send_prospectus(
     wa_phone   = message.get("from", "")
     wa_msg_id  = message.get("id", "")
     flow_token = flow_data.get("flow_token", "")
-    now        = datetime.now(timezone.utc)
+    from utils.timezone_utils import get_ist_now
+    now        = get_ist_now()
 
     col = leads_col()
 

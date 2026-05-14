@@ -1,5 +1,6 @@
 from typing import List, Optional
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class spocActivityService:
@@ -40,11 +41,11 @@ class spocActivityService:
     def create_activity(report_id: int, activity_type: str, done: bool = False, notes: Optional[str] = None) -> int:
         """Create a new spoc activity."""
         query = """
-            INSERT INTO spoc_activities (report_id, activity_type, done, notes)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO spoc_activities (report_id, activity_type, done, notes, created_at)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (report_id, activity_type, done, notes))
+        return execute_insert(query, (report_id, activity_type, done, notes, get_ist_now()))
     
     @staticmethod
     def update_activity(activity_id: int, activity_type: Optional[str] = None, done: Optional[bool] = None,

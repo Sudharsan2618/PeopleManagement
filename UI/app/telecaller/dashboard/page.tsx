@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -105,7 +106,7 @@ export default function TelecallerDashboard() {
   const [callLogs, setCallLogs] = useState<CallLog[]>([])
   const [assignments, setAssignments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [savingId, setSavingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const telecallerId = user ? Number(user.id) : 0
@@ -185,10 +186,6 @@ export default function TelecallerDashboard() {
 
   useEffect(() => {
     fetchData()
-    
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchData, 60000)
-    return () => clearInterval(interval)
   }, [fetchData])
 
   // ─── Stats ────────────────────────────────────────────────────
@@ -297,7 +294,7 @@ export default function TelecallerDashboard() {
   ) => {
     if (!selectedProspect || !user) return
 
-    setIsSaving(true)
+    setSavingId(Number(selectedProspect.numericId))
     try {
       const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
@@ -366,7 +363,7 @@ export default function TelecallerDashboard() {
         variant: "destructive",
       })
     } finally {
-      setIsSaving(false)
+      setSavingId(null)
     }
   }
 
@@ -375,20 +372,27 @@ export default function TelecallerDashboard() {
     return <DashboardSkeleton />
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-destructive">Error: {error}</p>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Retry
-        </Button>
-      </div>
-    )
-  }
+  // Error is now handled via banner in the main return
 
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="bg-destructive text-destructive-foreground border-none shadow-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchData}
+              className="h-7 bg-white/10 hover:bg-white/20 border-white/20 text-white"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -497,7 +501,7 @@ export default function TelecallerDashboard() {
               <TableBody>
                 {filteredProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={12} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -531,15 +535,10 @@ export default function TelecallerDashboard() {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">{prospect.name}</span>
-                            {prospect.parentName && (
-                              <span className="text-[10px] text-muted-foreground uppercase">
-                                P: {prospect.parentName}
-                              </span>
-                            )}
                             {prospect.callbackDateTime && (
-                              <span className="text-xs text-orange-600 flex items-center gap-1">
+                              <span className="text-[10px] text-orange-600 flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                Callback{" "}
+                                CB:{" "}
                                 {new Date(
                                   prospect.callbackDateTime
                                 ).toLocaleString("en-IN", {
@@ -550,10 +549,13 @@ export default function TelecallerDashboard() {
                             )}
                           </div>
                         </TableCell>
+                        <TableCell className="text-sm">
+                          {prospect.parentName || "—"}
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {prospect.mobile}
                         </TableCell>
-                        <TableCell>{prospect.location}</TableCell>
+                        <TableCell>{prospect.location || "—"}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{prospect.department}</TableCell>
                         <TableCell>
                           <span className="text-xs">{prospect.courseInterest}</span>
@@ -563,7 +565,7 @@ export default function TelecallerDashboard() {
                             {sc.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           <span className="text-sm font-medium">
                             {prospect.totalCalls}
                           </span>
@@ -596,9 +598,9 @@ export default function TelecallerDashboard() {
                           <Button
                             size="sm"
                             onClick={() => handleCall(prospect)}
-                            disabled={isTerminal || isSaving}
+                            disabled={prospect.status === "lost" || prospect.status === "admission_done" || savingId !== null}
                           >
-                            {isSaving ? (
+                            {savingId === prospect.id ? (
                               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                             ) : (
                               <PhoneCall className="h-4 w-4 mr-1" />

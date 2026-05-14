@@ -131,8 +131,6 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     }
 
     fetchCounts()
-    const interval = setInterval(fetchCounts, 30000) // Update every 30s
-    return () => clearInterval(interval)
   }, [user])
 
   // Enhance nav items with dynamic counts

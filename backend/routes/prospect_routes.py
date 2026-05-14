@@ -71,7 +71,8 @@ def create_prospect(prospect: ProspectCreate):
             parent_name=prospect.parent_name,
             department=prospect.department,
             assigned_to=prospect.assigned_to,
-            closing_reason=prospect.closing_reason
+            closing_reason=prospect.closing_reason,
+            tags=prospect.tags
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -97,7 +98,8 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             parent_name=prospect.parent_name,
             department=prospect.department,
             assigned_to=prospect.assigned_to,
-            closing_reason=prospect.closing_reason
+            closing_reason=prospect.closing_reason,
+            tags=prospect.tags
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:

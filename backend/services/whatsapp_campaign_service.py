@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from database.connection import get_connection
 from services.whatsapp_service import WhatsAppService
+from utils.timezone_utils import get_ist_now
 
 class WhatsAppCampaignService:
     @staticmethod
@@ -191,8 +192,8 @@ class WhatsAppCampaignService:
                         if resp.status_code in [200, 201] and "messages" in result:
                             meta_id = result["messages"][0]["id"]
                             cur.execute(
-                                "UPDATE whatsapp_messages SET status = 'sent', meta_message_id = %s, sent_at = NOW() WHERE id = %s",
-                                (meta_id, msg_id)
+                                "UPDATE whatsapp_messages SET status = 'sent', meta_message_id = %s, sent_at = %s WHERE id = %s",
+                                (meta_id, get_ist_now(), msg_id)
                             )
                             sent_count += 1
                         else:

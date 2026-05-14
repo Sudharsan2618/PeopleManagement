@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import datetime, date
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class ProspectService:
@@ -78,15 +79,18 @@ class ProspectService:
         """Create a new prospect."""
         query = """
             INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
-                                 created_by, parent_name, department, assigned_to, closing_reason, tags)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 created_by, parent_name, department, assigned_to, closing_reason, tags,
+                                 created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
+        ist_now = get_ist_now()
         return execute_insert(query, (
             name, mobile, email, location, sourced_from, status, course_interest, 
             created_by, parent_name, department, assigned_to, closing_reason,
-            json.dumps(tags) if tags else None
+            json.dumps(tags) if tags else None,
+            ist_now, ist_now
         ))
     
     @staticmethod
@@ -94,7 +98,8 @@ class ProspectService:
                         location: Optional[str] = None, sourced_from: Optional[str] = None,
                         status: Optional[str] = None, course_interest: Optional[str] = None,
                         parent_name: Optional[str] = None, department: Optional[str] = None,
-                        assigned_to: Optional[int] = None, closing_reason: Optional[str] = None) -> int:
+                        assigned_to: Optional[int] = None, closing_reason: Optional[str] = None,
+                        tags: Optional[any] = None) -> int:
         """Update prospect details."""
         updates = []
         params = []
@@ -137,7 +142,8 @@ class ProspectService:
         if not updates:
             return 0
         
-        updates.append("updated_at = NOW()")
+        updates.append("updated_at = %s")
+        params.append(get_ist_now())
         params.append(prospect_id)
         query = f"""
             UPDATE prospects
@@ -186,7 +192,7 @@ class ProspectService:
                 location = COALESCE(EXCLUDED.location, prospects.location),
                 parent_name = COALESCE(EXCLUDED.parent_name, prospects.parent_name),
                 department = COALESCE(EXCLUDED.department, prospects.department),
-                updated_at = NOW()
+                updated_at = %s
         """
         
-        return execute_update_delete(query, tuple(params))
+        return execute_update_delete(query, tuple(params + [get_ist_now()]))

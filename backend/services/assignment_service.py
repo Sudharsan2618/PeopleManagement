@@ -1,6 +1,7 @@
 from typing import List, Optional
 from datetime import date
 from database.connection import execute_query, execute_insert, execute_update_delete
+from utils.timezone_utils import get_ist_now
 
 
 class AssignmentService:
@@ -71,11 +72,11 @@ class AssignmentService:
     def create_assignment(prospect_id: int, telecaller_id: int, assigned_by: int, assigned_date: date) -> int:
         """Create a new prospect assignment."""
         query = """
-            INSERT INTO prospect_assignments (prospect_id, telecaller_id, assigned_by, assigned_date)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO prospect_assignments (prospect_id, telecaller_id, assigned_by, assigned_date, created_at)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (prospect_id, telecaller_id, assigned_by, assigned_date))
+        return execute_insert(query, (prospect_id, telecaller_id, assigned_by, assigned_date, get_ist_now()))
     
     @staticmethod
     def delete_assignment(assignment_id: int) -> int:
