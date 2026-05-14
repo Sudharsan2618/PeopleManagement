@@ -24,7 +24,10 @@ import {
   ArrowLeft,
   MessageCircle,
   MapPin,
-  Layers
+  Layers,
+  Upload,
+  FileText,
+  Image
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +54,14 @@ import {
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { whatsappApi, prospectsApi } from "@/lib/api-client"
 import { cn } from "@/lib/utils"
 import {
@@ -102,27 +113,40 @@ export default function WhatsAppAdmin() {
       header: {},
       body_variables: [] as any[],
       buttons: [] as any[]
+    },
+    response_config: {
+      interested: { type: "document", media_id: "", caption: "" },
+      default: { type: "document", media_id: "", caption: "" }
     }
   })
   const [searchProspects, setSearchProspects] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  
+  // Media Library State
+  const [mediaAssets, setMediaAssets] = useState<any[]>([])
+  const [isMediaLibraryOpen, setIsMediaLibraryOpen] = useState(false)
+  const [mediaNickname, setMediaNickname] = useState("")
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false)
 
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const [tpls, flws, camps, prospers, convs] = await Promise.all([
+      const [tpls, flws, camps, prospers, convs, assets] = await Promise.all([
         whatsappApi.getTemplates(),
         whatsappApi.getFlows(),
         whatsappApi.getCampaigns(),
         prospectsApi.getAll(),
-        whatsappApi.getConversations()
+        whatsappApi.getConversations(),
+        whatsappApi.getMediaAssets()
       ])
       setTemplates(tpls)
       setFlows(flws)
       setCampaigns(camps)
       setProspects(prospers)
       setConversations(convs)
+      setMediaAssets(assets)
     } catch (err) {
       toast({
         title: "Error fetching data",
@@ -220,13 +244,41 @@ export default function WhatsAppAdmin() {
         template_name: "",
         language_code: "",
         recipient_ids: [],
-        parameters: { header: {}, body_variables: [], buttons: [] }
+        parameters: { header: {}, body_variables: [], buttons: [] },
+        response_config: {
+          interested: { type: "document", media_id: "", caption: "" },
+          default: { type: "document", media_id: "", caption: "" }
+        }
       })
       fetchData() 
-    } catch (err) {
-      toast({ title: "Failed to create campaign", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleMediaUpload = async () => {
+    if (!mediaFile || !mediaNickname.trim()) {
+      toast({ title: "Missing fields", description: "Select a file and provide a nickname", variant: "destructive" })
+      return
+    }
+
+    try {
+      setIsUploadingMedia(true)
+      const formData = new FormData()
+      formData.append("file", mediaFile)
+      formData.append("nickname", mediaNickname)
+
+      await whatsappApi.uploadMedia(formData)
+      
+      toast({ title: "Media Uploaded!", description: `"${mediaNickname}" is now available in your library.` })
+      setMediaFile(null)
+      setMediaNickname("")
+      setIsMediaLibraryOpen(false)
+      fetchData() // Refresh media list
+    } catch (err) {
+      toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    } finally {
+      setIsUploadingMedia(false)
     }
   }
 
@@ -389,6 +441,15 @@ export default function WhatsAppAdmin() {
           <Button onClick={fetchData} variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest" disabled={isLoading}>
             <RefreshCw className={cn("h-3 w-3 mr-1.5", isLoading && "animate-spin")} />
             Sync
+          </Button>
+          <Button 
+            onClick={() => setIsMediaLibraryOpen(true)}
+            variant="outline" 
+            size="sm" 
+            className="h-8 border-slate-200 text-[10px] font-bold uppercase tracking-widest px-3 hover:bg-slate-50"
+          >
+            <Upload className="h-3 w-3 mr-1.5" />
+            Media Library
           </Button>
           <Button 
             onClick={() => setIsCreateCampaignOpen(true)}
@@ -1034,7 +1095,132 @@ export default function WhatsAppAdmin() {
                 </div>
               )}
 
-              <Separator />
+              {/* Step 3: Auto Response Configuration (ENHANCED) */}
+              <div className="space-y-4 p-5 bg-emerald-50/40 rounded-3xl border border-emerald-100 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-1.5 bg-emerald-600 rounded-full" />
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Auto Response Automation</h3>
+                  </div>
+                  <Badge className="bg-emerald-600 text-white border-none text-[8px] font-bold uppercase tracking-widest px-2">Library Linked</Badge>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Interested Response */}
+                  <div className="grid gap-3 p-4 bg-white rounded-2xl border border-emerald-100/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="h-3.5 w-3.5 text-emerald-600" />
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">Response for "Interested" (Flow Success)</Label>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                      <div className="grid gap-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Select from Media Library</Label>
+                        <Select 
+                          value={newCampaign.response_config.interested.media_id}
+                          onValueChange={val => setNewCampaign({
+                            ...newCampaign,
+                            response_config: {
+                              ...newCampaign.response_config,
+                              interested: { ...newCampaign.response_config.interested, media_id: val }
+                            }
+                          })}
+                        >
+                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-bold">
+                            <SelectValue placeholder="Choose a file from library..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mediaAssets.map(asset => (
+                              <SelectItem key={asset.id} value={asset.media_id} className="text-xs">
+                                <div className="flex items-center gap-2">
+                                  {asset.file_type.includes('pdf') ? <FileText className="h-3 w-3" /> : <Image className="h-3 w-3" />}
+                                  {asset.nickname}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Response Caption</Label>
+                        <Textarea 
+                          placeholder="Write a compelling caption for this document..." 
+                          value={newCampaign.response_config.interested.caption}
+                          onChange={e => setNewCampaign({
+                            ...newCampaign,
+                            response_config: {
+                              ...newCampaign.response_config,
+                              interested: { ...newCampaign.response_config.interested, caption: e.target.value }
+                            }
+                          })}
+                          className="text-xs min-h-[80px] bg-slate-50/50 border-slate-200 rounded-xl font-medium leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Default Response */}
+                  <div className="grid gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <MessageCircle className="h-3.5 w-3.5 text-slate-400" />
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">Default Response (Any Reply)</Label>
+                    </div>
+                    
+                    <div className="grid gap-4">
+                      <div className="grid gap-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Select from Media Library</Label>
+                        <Select 
+                          value={newCampaign.response_config.default.media_id}
+                          onValueChange={val => setNewCampaign({
+                            ...newCampaign,
+                            response_config: {
+                              ...newCampaign.response_config,
+                              default: { ...newCampaign.response_config.default, media_id: val }
+                            }
+                          })}
+                        >
+                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-bold">
+                            <SelectValue placeholder="Choose a file from library..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mediaAssets.map(asset => (
+                              <SelectItem key={asset.id} value={asset.media_id} className="text-xs">
+                                <div className="flex items-center gap-2">
+                                  {asset.file_type.includes('pdf') ? <FileText className="h-3 w-3" /> : <Image className="h-3 w-3" />}
+                                  {asset.nickname}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Response Caption</Label>
+                        <Textarea 
+                          placeholder="Write a message to accompany the file..." 
+                          value={newCampaign.response_config.default.caption}
+                          onChange={e => setNewCampaign({
+                            ...newCampaign,
+                            response_config: {
+                              ...newCampaign.response_config,
+                              default: { ...newCampaign.response_config.default, caption: e.target.value }
+                            }
+                          })}
+                          className="text-xs min-h-[80px] bg-slate-50/50 border-slate-200 rounded-xl font-medium leading-relaxed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-2 text-center px-4">
+                  Users responding to this campaign will receive these specific assets instead of the generic prospectus.
+                </p>
+              </div>
+
+              <Separator className="my-6" />
 
               {/* Recipient Selection */}
               <div className="space-y-4">
@@ -1210,6 +1396,97 @@ export default function WhatsAppAdmin() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+      {/* Media Library Upload Dialog */}
+      <Dialog open={isMediaLibraryOpen} onOpenChange={setIsMediaLibraryOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-[#1A1F2B] text-white">
+            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2">
+              <Upload className="h-5 w-5 text-emerald-400" />
+              Upload to Media Library
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-6 space-y-6 bg-white">
+            <div className="grid gap-2">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">File Nickname</Label>
+              <Input 
+                placeholder="e.g. June Brochure 2024" 
+                value={mediaNickname}
+                onChange={e => setMediaNickname(e.target.value)}
+                className="h-11 border-2 focus:border-emerald-600 rounded-xl font-bold"
+              />
+              <p className="text-[9px] text-slate-400 font-medium ml-1">This name will appear in your campaign dropdowns.</p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Select File (PDF, Image)</Label>
+              <div className="relative group">
+                <input 
+                  type="file" 
+                  id="media-upload"
+                  className="hidden"
+                  onChange={e => setMediaFile(e.target.files?.[0] || null)}
+                  accept=".pdf,image/*"
+                />
+                <label 
+                  htmlFor="media-upload"
+                  className={cn(
+                    "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer transition-all",
+                    mediaFile 
+                      ? "border-emerald-500 bg-emerald-50/30" 
+                      : "border-slate-200 hover:border-emerald-400 bg-slate-50/50 hover:bg-white"
+                  )}
+                >
+                  {mediaFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700">{mediaFile.name}</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Upload className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-500">Click to browse or drag and drop</span>
+                      <span className="text-[9px] text-slate-400 font-bold uppercase">PDF or JPG/PNG up to 5MB</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button 
+                variant="outline" 
+                className="flex-1 h-11 rounded-xl font-bold uppercase tracking-widest text-[10px]"
+                onClick={() => setIsMediaLibraryOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-[2] h-11 bg-[#1A1F2B] hover:bg-black rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-slate-200"
+                onClick={handleMediaUpload}
+                disabled={isUploadingMedia || !mediaFile || !mediaNickname}
+              >
+                {isUploadingMedia ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2 text-emerald-400" />
+                    Upload & Save
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

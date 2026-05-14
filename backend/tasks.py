@@ -15,15 +15,12 @@ from arq import create_pool
 from arq.connections import RedisSettings
 
 from config import Settings
-from database import leads_col
 
 log = logging.getLogger(__name__)
-
 
 # ── Redis pool (lazy singleton) ───────────────────────────────────────────────
 
 _redis_pool = None
-
 
 async def get_redis_pool():
     global _redis_pool
@@ -31,7 +28,6 @@ async def get_redis_pool():
         settings    = Settings()
         _redis_pool = await create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
     return _redis_pool
-
 
 # ── Enqueue helper (called from webhook handler) ──────────────────────────────
 
@@ -54,15 +50,11 @@ async def enqueue_send_prospectus(
     )
     log.info("📤 Enqueued job %s for phone=%s", job.job_id, message.get("from"))
 
-
 async def enqueue_whatsapp_campaign(campaign_id: int):
     """Push the campaign processing job onto the Redis queue."""
     pool = await get_redis_pool()
     job  = await pool.enqueue_job("task_run_whatsapp_campaign", campaign_id=campaign_id)
     log.info("📤 Enqueued campaign job %s for campaign_id=%s", job.job_id, campaign_id)
-
-
-# ── Actual task (runs inside ARQ worker) ──────────────────────────────────────
 
 async def task_complete_lead_and_send_prospectus(
     ctx: dict,          # ARQ injects this
@@ -73,11 +65,13 @@ async def task_complete_lead_and_send_prospectus(
     raw_webhook: dict,
 ):
     """
-    1. Idempotency check — skip if already processed.
-    2. Write/update MongoDB document.
-    3. Send prospectus PDF via WhatsApp API.
-    All three steps are async and non-blocking.
+    1. Idempotency check — skip if already processed in PostgreSQL.
+    2. Find or Create Prospect.
+    3. Save Submission to PostgreSQL.
+    4. Update Prospect status/details.
+    5. Send Response (Dynamic or Generic).
     """
+    from database.connection import execute_query, execute_insert, get_connection
     settings   = Settings()
     wa_phone   = message.get("from", "")
     wa_msg_id  = message.get("id", "")
@@ -85,65 +79,134 @@ async def task_complete_lead_and_send_prospectus(
     from utils.timezone_utils import get_ist_now
     now        = get_ist_now()
 
-    col = leads_col()
-
     # ── 1. Idempotency ────────────────────────────────────────────────────────
-    existing = await col.find_one({"wa_message_id": wa_msg_id})
-    if existing and existing.get("status") == "completed":
+    existing = execute_query("SELECT id FROM whatsapp_flow_submissions WHERE wa_message_id = %s", (wa_msg_id,), fetch="one")
+    if existing:
         log.info("⏭️  Already processed wa_message_id=%s — skipping", wa_msg_id)
         return
 
-    # ── 2. Save to MongoDB ────────────────────────────────────────────────────
-    update_fields = {
-        "wa_message_id"    : wa_msg_id,
-        "wa_phone"         : wa_phone,
-        "wa_display_name"  : _get_contact_name(contacts, wa_phone),
-        "phone_number_id"  : metadata.get("phone_number_id"),
-        "message_timestamp": message.get("timestamp"),
-        "confirmed"        : flow_data.get("confirmed"),
-        "flow_token"       : flow_token,
-        "full_name"        : flow_data.get("full_name"),
-        "email"            : flow_data.get("email"),
-        "city"             : flow_data.get("city"),
-        "qualification"    : flow_data.get("qualification"),
-        "current_status"   : flow_data.get("current_status"),
-        "degree"           : flow_data.get("degree"),
-        "status"           : "completed",
-        "received_at"      : now,
-        "last_updated_at"  : now,
-        "raw_flow_payload" : flow_data,
-        "raw_webhook"      : raw_webhook,
-    }
+    # ── 2. Find Prospect ──────────────────────────────────────────────────────
+    # Match by last 10 digits to be safe with country codes
+    prospect = execute_query(
+        "SELECT id FROM prospects WHERE mobile LIKE %s", 
+        (f"%{wa_phone[-10:]}",), 
+        fetch="one"
+    )
+    prospect_id = prospect["id"] if prospect else None
 
-    match_key = {"flow_token": flow_token} if flow_token else {"wa_message_id": wa_msg_id}
-
+    # ── 3. Save Submission & Update Prospect ──────────────────────────────────
     try:
-        result = await col.update_one(
-            match_key,
-            {
-                "$set"        : update_fields,
-                "$setOnInsert": {"created_at": now},
-            },
-            upsert=True,
-        )
-        action = "inserted" if result.upserted_id else "updated"
-        log.info(
-            "✅ Phase 2 (%s) → name=%s phone=%s",
-            action, flow_data.get("full_name"), wa_phone,
-        )
+        # Save to the new PostgreSQL table
+        execute_insert("""
+            INSERT INTO whatsapp_flow_submissions (
+                prospect_id, wa_message_id, wa_phone, flow_token, full_name, 
+                email, city, qualification, current_status, degree, raw_payload, received_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            prospect_id, wa_msg_id, wa_phone, flow_token, 
+            flow_data.get("full_name"), flow_data.get("email"), 
+            flow_data.get("city"), flow_data.get("qualification"), 
+            flow_data.get("current_status"), flow_data.get("degree"),
+            json.dumps(flow_data), now
+        ))
+
+        # Update Prospect details if they exist
+        if prospect_id:
+            execute_query("""
+                UPDATE prospects SET 
+                    email = COALESCE(%s, email),
+                    location = COALESCE(%s, location),
+                    city = COALESCE(%s, city),
+                    qualification = COALESCE(%s, qualification),
+                    current_status = COALESCE(%s, current_status),
+                    degree = COALESCE(%s, degree),
+                    status = 'hot',
+                    updated_at = %s
+                WHERE id = %s
+            """, (
+                flow_data.get("email"), flow_data.get("city"), flow_data.get("city"),
+                flow_data.get("qualification"), flow_data.get("current_status"),
+                flow_data.get("degree"), now, prospect_id
+            ), fetch="none")
+        
+        log.info("✅ PostgreSQL write complete for name=%s phone=%s", flow_data.get("full_name"), wa_phone)
     except Exception as exc:
-        log.error("❌ MongoDB write failed: %s — aborting prospectus send", exc)
-        return   # don't send PDF if save failed
+        log.error("❌ PostgreSQL write failed: %s", exc)
+        return
 
-    # ── 3. Send prospectus ────────────────────────────────────────────────────
+    # ── 4. Determine Campaign Context ─────────────────────────────────────────
+    campaign_id = None
+    response_config = {}
+
+    # 4a. Check Flow Token (e.g. camp_123_uuid)
+    if flow_token and flow_token.startswith("camp_"):
+        try:
+            campaign_id = int(flow_token.split("_")[1])
+        except (IndexError, ValueError):
+            pass
+    
+    # 4b. Fallback: Lookup latest outbound message for this prospect
+    if not campaign_id and prospect_id:
+        last_outbound = execute_query("""
+            SELECT campaign_id FROM whatsapp_messages 
+            WHERE prospect_id = %s AND direction = 'outbound' AND campaign_id IS NOT NULL
+            ORDER BY created_at DESC LIMIT 1
+        """, (prospect_id,), fetch="one")
+        if last_outbound:
+            campaign_id = last_outbound["campaign_id"]
+
+    # 4c. Load Campaign Response Config
+    if campaign_id:
+        campaign = execute_query("SELECT response_config FROM whatsapp_campaigns WHERE id = %s", (campaign_id,), fetch="one")
+        if campaign and campaign["response_config"]:
+            response_config = campaign["response_config"]
+            if isinstance(response_config, str):
+                response_config = json.loads(response_config)
+
+    # ── 5. Send Response (Dynamic) ───────────────────────────────────────────
     if not wa_phone:
-        log.warning("⚠️  No wa_phone — cannot send prospectus")
-        return
-    if not settings.WHATSAPP_PROSPECTUS_MEDIA_ID:
-        log.warning("⚠️  No WHATSAPP_PROSPECTUS_MEDIA_ID — set it in env")
         return
 
-    await _send_prospectus(wa_phone, settings)
+    # Decide what to send based on user response
+    # For now, we look for a 'default' or 'interested' key in the config
+    # Flow responses usually imply interest
+    resp_key = "interested" if flow_data.get("confirmed") else "default"
+    custom_resp = response_config.get(resp_key) or response_config.get("default")
+
+    if custom_resp and custom_resp.get("type") == "document":
+        log.info("🎯 Sending custom campaign response for campaign_id=%s", campaign_id)
+        # We'll temporarily reuse _send_prospectus but pass the custom media_id
+        media_id = custom_resp.get("media_id")
+        caption = custom_resp.get("caption", settings.PROSPECTUS_MESSAGE)
+        await _send_custom_document(wa_phone, media_id, caption, settings)
+    else:
+        # Fallback to the generic one
+        log.info("📜 No custom response found for campaign_id=%s — sending generic prospectus", campaign_id)
+        await _send_prospectus(wa_phone, settings)
+
+
+async def _send_custom_document(wa_phone: str, media_id: str, caption: str, settings: Settings):
+    """Internal helper to send a specific document by media ID."""
+    if not media_id: return
+    url     = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type"   : "individual",
+        "to"               : wa_phone,
+        "type"             : "document",
+        "document"         : {
+            "id"      : media_id,
+            "caption" : caption,
+            "filename": "Prospectus.pdf",
+        },
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type" : "application/json",
+    }
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        await client.post(url, headers=headers, json=payload)
 
 
 async def _send_prospectus(wa_phone: str, settings: Settings):

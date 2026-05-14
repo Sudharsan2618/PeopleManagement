@@ -447,6 +447,16 @@ export const whatsappApi = {
     method: "POST",
     body: JSON.stringify(data),
   }),
+  getMediaAssets: () => apiRequest<any[]>("/whatsapp/media"),
+  uploadMedia: (formData: FormData) => {
+    return fetch(`${API_BASE_URL}/whatsapp/media/upload`, {
+      method: 'POST',
+      body: formData,
+    }).then(res => {
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    });
+  },
 }
 
 // Dashboard API

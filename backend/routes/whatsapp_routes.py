@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, HTTPException, Body, Request, Query
+from fastapi import APIRouter, HTTPException, Body, Request, Query, File, UploadFile
 from services.whatsapp_service import WhatsAppService
 from typing import List, Optional
 
@@ -38,12 +38,13 @@ def create_campaign(
     recipient_ids: List[int] = Body(..., embed=True),
     language_code: str = Body("en_US", embed=True),
     parameters: Optional[dict] = Body(None, embed=True),
+    response_config: Optional[dict] = Body(None, embed=True),
     created_by: int = Body(1, embed=True)
 ):
     """Create a new WhatsApp campaign (Draft)."""
     try:
         campaign_id = WhatsAppCampaignService.create_campaign(
-            name, template_name, recipient_ids, created_by, language_code, parameters
+            name, template_name, recipient_ids, created_by, language_code, parameters, response_config
         )
         return {"id": campaign_id, "message": "Campaign created successfully (Draft)"}
     except Exception as e:
@@ -198,5 +199,29 @@ def get_campaign_messages(campaign_id: int):
         cur.close()
         conn.close()
         return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/media")
+def get_media_assets():
+    """Get all media assets from the library."""
+    try:
+        return WhatsAppService.get_media_assets()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/media/upload")
+async def upload_media(
+    file: UploadFile = File(...),
+    nickname: str = Body(..., embed=True)
+):
+    """Upload a file to Meta and save it with a nickname."""
+    try:
+        contents = await file.read()
+        return WhatsAppService.upload_media(
+            file_content=contents,
+            file_type=file.content_type,
+            file_name=file.filename,
+            nickname=nickname
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -120,3 +120,41 @@ class WhatsAppService:
         else:
             error_data = response.json() if response.content else {"error": response.text}
             raise Exception(f"Meta API Error: {response.status_code} - {error_data}")
+    @staticmethod
+    def upload_media(file_content: bytes, file_type: str, file_name: str, nickname: str):
+        """Upload a file to Meta and save to local Media Library."""
+        from database.connection import execute_insert
+        
+        url = f"{BASE_URL}/{PHONE_NUMBER_ID}/media"
+        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+        
+        files = {
+            "file": (file_name, file_content, file_type)
+        }
+        data = {
+            "messaging_product": "whatsapp"
+        }
+        
+        response = requests.post(url, headers=headers, data=data, files=files)
+        meta_data = response.json()
+        
+        if "id" in meta_data:
+            media_id = meta_data["id"]
+            # Save to database
+            asset_id = execute_insert(
+                """
+                INSERT INTO whatsapp_media_assets (nickname, media_id, file_type, file_name)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+                """,
+                (nickname, media_id, file_type, file_name)
+            )
+            return {"id": asset_id, "nickname": nickname, "media_id": media_id}
+        else:
+            raise Exception(f"Meta Media Upload Failed: {meta_data}")
+
+    @staticmethod
+    def get_media_assets():
+        """Retrieve all assets from the local Media Library."""
+        from database.connection import execute_query
+        return execute_query("SELECT * FROM whatsapp_media_assets ORDER BY created_at DESC")

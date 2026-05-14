@@ -10,7 +10,7 @@ from utils.timezone_utils import get_ist_now
 
 class WhatsAppCampaignService:
     @staticmethod
-    def create_campaign(name: str, template_name: str, recipient_ids: List[int], created_by: int, language_code: str = "en_US", parameters: Dict = None):
+    def create_campaign(name: str, template_name: str, recipient_ids: List[int], created_by: int, language_code: str = "en_US", parameters: Dict = None, response_config: Dict = None):
         """Create a new WhatsApp campaign in draft mode."""
         conn = get_connection()
         cur = conn.cursor()
@@ -19,11 +19,11 @@ class WhatsAppCampaignService:
             # 1. Create Campaign Record
             cur.execute(
                 """
-                INSERT INTO whatsapp_campaigns (name, template_name, language_code, total_recipients, created_by, status, parameters)
-                VALUES (%s, %s, %s, %s, %s, 'draft', %s)
+                INSERT INTO whatsapp_campaigns (name, template_name, language_code, total_recipients, created_by, status, parameters, response_config)
+                VALUES (%s, %s, %s, %s, %s, 'draft', %s, %s)
                 RETURNING id
                 """,
-                (name, template_name, language_code, len(recipient_ids), created_by, json.dumps(parameters or {}))
+                (name, template_name, language_code, len(recipient_ids), created_by, json.dumps(parameters or {}), json.dumps(response_config or {}))
             )
             campaign_id = cur.fetchone()[0]
             
@@ -158,7 +158,7 @@ class WhatsAppCampaignService:
                                         {
                                             "type": "action",
                                             "action": {
-                                                "flow_token": str(uuid.uuid4()),
+                                                "flow_token": f"camp_{campaign_id}_{uuid.uuid4()}",
                                                 "flow_action_data": btn.get("flow_action_data", {})
                                             }
                                         }

@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import Settings
 from crypto import decrypt_flow_request, encrypt_flow_response
-from database import db_lifespan, leads_col
+from database import db_lifespan
 from tasks import enqueue_send_prospectus, WorkerSettings
 
 from routes import (
@@ -290,33 +290,6 @@ async def webhook_listener(request: Request):
     return {"status": "ok"}
 
 
-# ── DB Helpers (async) ────────────────────────────────────────────────────────
-
-async def upsert_lead_from_flow(flow_token: str, data: dict):
-    now = datetime.now(timezone.utc)
-    try:
-        result = await leads_col().update_one(
-            {"flow_token": flow_token},
-            {
-                "$set": {
-                    "flow_token"    : flow_token,
-                    "full_name"     : data.get("full_name"),
-                    "email"         : data.get("email"),
-                    "city"          : data.get("city"),
-                    "qualification" : data.get("qualification"),
-                    "current_status": data.get("current_status"),
-                    "degree"        : data.get("degree"),
-                    "status"        : "in_progress",
-                    "last_updated_at": now,
-                },
-                "$setOnInsert": {"created_at": now},
-            },
-            upsert=True,
-        )
-        action = "inserted" if result.upserted_id else "updated"
-        log.info("✅ Phase 1 (%s) → token=%s name=%s", action, flow_token, data.get("full_name"))
-    except Exception as exc:
-        log.error("❌ upsert_lead_from_flow: %s", exc)
 
 
 if __name__ == "__main__":
