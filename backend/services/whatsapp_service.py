@@ -6,6 +6,8 @@ load_dotenv()
 
 import uuid
 
+from utils.phone_utils import format_for_meta
+
 WABA_ID = os.getenv("WHATSAPP_WABA_ID")
 ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
@@ -47,6 +49,7 @@ class WhatsAppService:
             "Authorization": f"Bearer {ACCESS_TOKEN}",
             "Content-Type": "application/json"
         }
+        to = format_for_meta(to)
         
         # Injected components (like Flows)
         injected_components = []
@@ -103,6 +106,7 @@ class WhatsAppService:
     @staticmethod
     def send_text_message(to: str, text: str):
         """Send a simple text message (within 24h window)."""
+        to = format_for_meta(to)
         url = f"{BASE_URL}/{PHONE_NUMBER_ID}/messages"
         headers = {
             "Authorization": f"Bearer {ACCESS_TOKEN}",

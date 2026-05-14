@@ -3,6 +3,7 @@ from database.connection import get_connection
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from utils.timezone_utils import get_ist_now
+from utils.phone_utils import clean_phone_number
 
 class WebhookService:
     @staticmethod
@@ -77,7 +78,7 @@ class WebhookService:
     @staticmethod
     def _handle_incoming_message(message: dict, contacts: list):
         """Save inbound message and link to prospect."""
-        from_mobile = message.get("from") # Format: 919876543210
+        from_mobile = clean_phone_number(message.get("from")) # Format: 10 digits
         meta_id = message.get("id")
         msg_type = message.get("type")
         body = ""
@@ -105,19 +106,35 @@ class WebhookService:
             )
             prospect = cur.fetchone()
             
-            if prospect:
-                prospect_id = prospect[0]
-                # 2. Save Message
+            if not prospect:
+                # Auto-create if it's a new contact
+                from utils.timezone_utils import get_ist_now
+                now = get_ist_now()
                 cur.execute(
-                    """
-                    INSERT INTO whatsapp_messages (prospect_id, meta_message_id, direction, message_type, status, body, payload, created_at)
-                    VALUES (%s, %s, 'inbound', %s, 'delivered', %s, %s, %s)
-                    """,
-                    (prospect_id, meta_id, msg_type, body, json.dumps(message), get_ist_now())
+                    "INSERT INTO prospects (name, mobile, status, created_at, updated_at) VALUES (%s, %s, 'new', %s, %s) RETURNING id",
+                    ("WhatsApp Contact", from_mobile, 'new', now, now)
                 )
-                conn.commit()
+                prospect_id = cur.fetchone()[0]
             else:
-                print(f"No prospect found for mobile {from_mobile}")
+                prospect_id = prospect[0]
+            
+            # 2. Find last campaign_id to keep context (optional but good for tracking)
+            cur.execute(
+                "SELECT campaign_id FROM whatsapp_messages WHERE prospect_id = %s AND campaign_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+                (prospect_id,)
+            )
+            last_campaign = cur.fetchone()
+            campaign_id = last_campaign[0] if last_campaign else None
+
+            # 3. Save Message
+            cur.execute(
+                """
+                INSERT INTO whatsapp_messages (prospect_id, campaign_id, meta_message_id, direction, message_type, status, body, payload, created_at)
+                VALUES (%s, %s, %s, %s, %s, 'delivered', %s, %s, %s)
+                """,
+                (prospect_id, campaign_id, meta_id, 'inbound', msg_type, body, json.dumps(message), get_ist_now())
+            )
+            conn.commit()
         except Exception as e:
             print(f"Error handling incoming message: {str(e)}")
             conn.rollback()

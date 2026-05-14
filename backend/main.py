@@ -258,23 +258,23 @@ async def webhook_listener(request: Request):
 
                 for message in messages:
                     msg_type = message.get("type")
-                    if msg_type != "interactive":
-                        continue
+                    flow_data = {}
 
-                    interactive      = message.get("interactive", {})
-                    if interactive.get("type") != "nfm_reply":
-                        continue
+                    # Extract Flow Data if it exists
+                    if msg_type == "interactive":
+                        interactive = message.get("interactive", {})
+                        if interactive.get("type") == "nfm_reply":
+                            nfm_reply = interactive.get("nfm_reply", {})
+                            response_json_str = nfm_reply.get("response_json", "{}")
+                            try:
+                                flow_data = json.loads(response_json_str)
+                            except json.JSONDecodeError as exc:
+                                log.error("❌ JSON parse error: %s", exc)
+                    
+                    # Store message in DB first via WebhookService
+                    WebhookService._handle_incoming_message(message, contacts)
 
-                    nfm_reply         = interactive.get("nfm_reply", {})
-                    response_json_str = nfm_reply.get("response_json", "{}")
-
-                    try:
-                        flow_data = json.loads(response_json_str)
-                    except json.JSONDecodeError as exc:
-                        log.error("❌ JSON parse error: %s", exc)
-                        continue
-
-                    # ── Enqueue background task — return 200 immediately ──────
+                    # ── Enqueue background task for auto-reply ──────
                     await enqueue_send_prospectus(
                         message  = message,
                         contacts = contacts,

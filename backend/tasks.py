@@ -15,6 +15,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 
 from config import Settings
+from utils.phone_utils import clean_phone_number, format_for_meta
 
 log = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ async def task_complete_lead_and_send_prospectus(
     """
     from database.connection import execute_query, execute_insert, get_connection
     settings   = Settings()
-    wa_phone   = message.get("from", "")
+    wa_phone   = clean_phone_number(message.get("from", ""))
     wa_msg_id  = message.get("id", "")
     flow_token = flow_data.get("flow_token", "")
     from utils.timezone_utils import get_ist_now
@@ -85,55 +86,68 @@ async def task_complete_lead_and_send_prospectus(
         log.info("⏭️  Already processed wa_message_id=%s — skipping", wa_msg_id)
         return
 
-    # ── 2. Find Prospect ──────────────────────────────────────────────────────
+    # ── 2. Find or Create Prospect ────────────────────────────────────────────
     # Match by last 10 digits to be safe with country codes
     prospect = execute_query(
         "SELECT id FROM prospects WHERE mobile LIKE %s", 
         (f"%{wa_phone[-10:]}",), 
         fetch="one"
     )
-    prospect_id = prospect["id"] if prospect else None
+    
+    if prospect:
+        prospect_id = prospect["id"]
+    else:
+        # Auto-create if it's a new contact
+        log.info("🆕 Creating new prospect for incoming message from %s", wa_phone)
+        prospect_id = execute_insert(
+            "INSERT INTO prospects (name, mobile, status, created_at, updated_at) VALUES (%s, %s, 'new', %s, %s) RETURNING id",
+            ("WhatsApp Contact", clean_phone_number(wa_phone), now, now)
+        )
 
-    # ── 3. Save Submission & Update Prospect ──────────────────────────────────
+    # ── 3. Save Submission & Update Prospect (Only if Flow Data exists) ────────
     try:
-        # Save to the new PostgreSQL table
-        execute_insert("""
-            INSERT INTO whatsapp_flow_submissions (
-                prospect_id, wa_message_id, wa_phone, flow_token, full_name, 
-                email, city, qualification, current_status, degree, raw_payload, received_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (
-            prospect_id, wa_msg_id, wa_phone, flow_token, 
-            flow_data.get("full_name"), flow_data.get("email"), 
-            flow_data.get("city"), flow_data.get("qualification"), 
-            flow_data.get("current_status"), flow_data.get("degree"),
-            json.dumps(flow_data), now
-        ))
-
-        # Update Prospect details if they exist
-        if prospect_id:
-            execute_query("""
-                UPDATE prospects SET 
-                    email = COALESCE(%s, email),
-                    location = COALESCE(%s, location),
-                    city = COALESCE(%s, city),
-                    qualification = COALESCE(%s, qualification),
-                    current_status = COALESCE(%s, current_status),
-                    degree = COALESCE(%s, degree),
-                    status = 'hot',
-                    updated_at = %s
-                WHERE id = %s
+        if flow_data and any(flow_data.values()):
+            # Save to the new PostgreSQL table
+            execute_insert("""
+                INSERT INTO whatsapp_flow_submissions (
+                    prospect_id, wa_message_id, wa_phone, flow_token, full_name, 
+                    email, city, qualification, current_status, degree, raw_payload, received_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             """, (
-                flow_data.get("email"), flow_data.get("city"), flow_data.get("city"),
-                flow_data.get("qualification"), flow_data.get("current_status"),
-                flow_data.get("degree"), now, prospect_id
-            ), fetch="none")
-        
-        log.info("✅ PostgreSQL write complete for name=%s phone=%s", flow_data.get("full_name"), wa_phone)
+                prospect_id, wa_msg_id, wa_phone, flow_token, 
+                flow_data.get("full_name"), flow_data.get("email"), 
+                flow_data.get("city"), flow_data.get("qualification"), 
+                flow_data.get("current_status"), flow_data.get("degree"),
+                json.dumps(flow_data), now
+            ))
+
+            # Update Prospect details if they exist
+            if prospect_id:
+                execute_query("""
+                    UPDATE prospects SET 
+                        email = COALESCE(%s, email),
+                        location = COALESCE(%s, location),
+                        city = COALESCE(%s, city),
+                        qualification = COALESCE(%s, qualification),
+                        current_status = COALESCE(%s, current_status),
+                        degree = COALESCE(%s, degree),
+                        status = 'hot',
+                        updated_at = %s
+                    WHERE id = %s
+                """, (
+                    flow_data.get("email"), flow_data.get("city"), flow_data.get("city"),
+                    flow_data.get("qualification"), flow_data.get("current_status"),
+                    flow_data.get("degree"), now, prospect_id
+                ), fetch="none")
+            
+            log.info("✅ PostgreSQL flow data write complete for name=%s phone=%s", flow_data.get("full_name"), wa_phone)
+        else:
+            log.info("ℹ️ Regular message received (no flow data) from phone=%s", wa_phone)
+
     except Exception as exc:
         log.error("❌ PostgreSQL write failed: %s", exc)
-        return
+        # We continue even if write fails to try and send the response
 
     # ── 4. Determine Campaign Context ─────────────────────────────────────────
     campaign_id = None
@@ -193,7 +207,7 @@ async def _send_custom_document(wa_phone: str, media_id: str, caption: str, sett
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type"   : "individual",
-        "to"               : wa_phone,
+        "to"               : format_for_meta(wa_phone),
         "type"             : "document",
         "document"         : {
             "id"      : media_id,
@@ -215,7 +229,7 @@ async def _send_prospectus(wa_phone: str, settings: Settings):
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type"   : "individual",
-        "to"               : wa_phone,
+        "to"               : format_for_meta(wa_phone),
         "type"             : "document",
         "document"         : {
             "id"      : settings.WHATSAPP_PROSPECTUS_MEDIA_ID,

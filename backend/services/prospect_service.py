@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import datetime, date
-from database.connection import execute_query, execute_insert, execute_update_delete
 from utils.timezone_utils import get_ist_now
+from utils.phone_utils import clean_phone_number
 
 
 class ProspectService:
@@ -87,7 +87,7 @@ class ProspectService:
         import json
         ist_now = get_ist_now()
         return execute_insert(query, (
-            name, mobile, email, location, sourced_from, status, course_interest, 
+            name, clean_phone_number(mobile), email, location, sourced_from, status, course_interest, 
             created_by, parent_name, department, assigned_to, closing_reason,
             json.dumps(tags) if tags else None,
             ist_now, ist_now
@@ -182,6 +182,8 @@ class ProspectService:
                     params.append(ist_now)
                     continue
                 val = p.get(col)
+                if col == "mobile":
+                    val = clean_phone_number(val)
                 if col == "tags" and val is not None:
                     import json
                     val = json.dumps(val)
