@@ -168,15 +168,19 @@ class ProspectService:
         columns = [
             "name", "mobile", "email", "location", "sourced_from", "status", 
             "course_interest", "created_by", "parent_name", "department", 
-            "assigned_to", "closing_reason", "tags"
+            "assigned_to", "closing_reason", "tags", "created_at", "updated_at"
         ]
         values_placeholders = []
         params = []
         
+        ist_now = get_ist_now()
         for p in prospects:
             placeholders = ["%s"] * len(columns)
             values_placeholders.append(f"({', '.join(placeholders)})")
             for col in columns:
+                if col == "created_at" or col == "updated_at":
+                    params.append(ist_now)
+                    continue
                 val = p.get(col)
                 if col == "tags" and val is not None:
                     import json
@@ -192,7 +196,7 @@ class ProspectService:
                 location = COALESCE(EXCLUDED.location, prospects.location),
                 parent_name = COALESCE(EXCLUDED.parent_name, prospects.parent_name),
                 department = COALESCE(EXCLUDED.department, prospects.department),
-                updated_at = %s
+                updated_at = EXCLUDED.updated_at
         """
         
-        return execute_update_delete(query, tuple(params + [get_ist_now()]))
+        return execute_update_delete(query, tuple(params))

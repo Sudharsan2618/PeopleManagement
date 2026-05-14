@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 export const metadata: Metadata = {
   title: 'CEMS - Course Enrollment Management System',
   description: 'Manage course enrollments, telecalling, and field outreach activities',
+  icons: {
+    icon: '/tatti-logo.png',
+  },
 }
 
 export default function RootLayout({
