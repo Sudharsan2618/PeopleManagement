@@ -143,8 +143,8 @@ const outcomeOptions: {
   },
   {
     value: "Qualified",
-    label: "Qualified - Next Stage",
-    description: "Ready for admission process",
+    label: "Qualified - Admission Done",
+    description: "Ready for admission — move to admitted",
     icon: CheckCircle2,
     color: "text-emerald-600",
   },
@@ -479,11 +479,8 @@ export function CallOutcomeModal({
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="Asked for callback">Asked for callback</SelectItem>
-                                  <SelectItem value="Busy now">Busy now</SelectItem>
-                                  <SelectItem value="Call later today">Call later today</SelectItem>
-                                  <SelectItem value="Meeting in progress">Meeting in progress</SelectItem>
-                                  <SelectItem value="Traveling">Traveling</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
+                                  <SelectItem value="Personal Reason">Personal Reason</SelectItem>
+                                  <SelectItem value="Others">Others</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>

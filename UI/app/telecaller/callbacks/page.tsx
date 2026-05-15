@@ -41,17 +41,41 @@ const OUTCOME_TO_DB: Record<string, string> = {
 
 // ─── Outcome → Prospect status_after_call ─────────────────────
 const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
-  NotAnswered: "contacted",
-  Busy: "contacted",
-  WrongNumber: "cold_no_response",
-  CallBack: "warm",
-  NotInterested: "cold_not_interested",
-  DNC: "cold_not_interested",
-  LanguageBarrier: "contacted",
-  Interested: "hot",
-  Qualified: "visit_scheduled",
-  EnrolledElsewhere: "lost",
+  NotAnswered: "cold_no_response",       // No Response
+  Busy: "cold_no_response",              // No Response
+  WrongNumber: "cold_not_interested",    // Not Interested
+  CallBack: "warm",                      // Warm
+  NotInterested: "cold_not_interested",  // Not Interested
+  DNC: "cold_not_interested",            // Not Interested
+  LanguageBarrier: "cold_not_interested",// Not Interested
+  Interested: "hot",                     // Hot
+  Qualified: "admission_done",           // Admission Done
+  EnrolledElsewhere: "admission_done",   // Already Enrolled → Admission Done
 }
+
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus,
+  MoreVertical,
+  Maximize2
+} from "lucide-react"
+
+// Helper for date calculations
+const getWeekDates = (baseDate: Date) => {
+  const day = baseDate.getDay()
+  const diff = baseDate.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+  const monday = new Date(baseDate.setDate(diff))
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    days.push(d)
+  }
+  return days
+}
+
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 8) // 8 AM to 9 PM
 
 export default function CallbacksPage() {
   const { user } = useAuth()
@@ -62,9 +86,11 @@ export default function CallbacksPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentDate, setCurrentDate] = useState(new Date())
   const { toast } = useToast()
 
   const telecallerId = user ? Number(user.id) : 0
+  const weekDates = useMemo(() => getWeekDates(new Date(currentDate)), [currentDate])
 
   const fetchData = async () => {
     if (!telecallerId) return
@@ -75,14 +101,12 @@ export default function CallbacksPage() {
         prospectsApi.getAll(),
       ])
 
-      // Build prospect lookup
       const prospectMap: Record<number, Prospect> = {}
       allProspects.forEach((p: Prospect) => {
         prospectMap[p.id] = p
       })
       setProspects(prospectMap)
 
-      // Filter to only callback outcomes with a scheduled time
       const callbacks = allLogs.filter(
         (log: CallLog) =>
           log.outcome === "callback" && log.callback_scheduled_at
@@ -98,7 +122,7 @@ export default function CallbacksPage() {
   const handleCall = (prospect: Prospect) => {
     setSelectedProspect({
       ...prospect,
-      numericId: prospect.id, // For the modal
+      numericId: prospect.id,
     })
     setIsModalOpen(true)
   }
@@ -108,26 +132,20 @@ export default function CallbacksPage() {
     data: Record<string, unknown>
   ) => {
     if (!selectedProspect || !user) return
-
     setIsSaving(true)
     try {
       const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
-
-      // Build callback timestamp if scheduled
       let callbackScheduledAt: string | null = null
       if (outcome === "CallBack" && data.callbackDate) {
         const timeStr = (data.callbackTime as string) || "10:00"
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
       }
-
-      // Build notes
       let fullNotes = (data.notes as string) || ""
       if (data.reason) fullNotes += `\n[Reason] ${data.reason}`
       if (data.coursePreference) fullNotes += `\n[Course Preference] ${data.coursePreference}`
       if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
       
-      // 1. Create call log
       await callLogsApi.create({
         prospect_id: Number(selectedProspect.numericId),
         telecaller_id: telecallerId,
@@ -137,25 +155,14 @@ export default function CallbacksPage() {
         notes: fullNotes.trim() || null,
         callback_scheduled_at: callbackScheduledAt,
       })
-
-      // 2. Update prospect status
       await prospectsApi.update(Number(selectedProspect.numericId), {
         status: statusAfterCall,
         course_interest: (data.coursePreference as string) || (data.courseConfirmed as string) || undefined,
       })
-
-      toast({
-        title: "Call logged ✓",
-        description: `Status updated to ${statusAfterCall}`,
-      })
-
+      toast({ title: "Call logged ✓", description: `Status updated to ${statusAfterCall}` })
       await fetchData()
     } catch (err) {
-      toast({
-        title: "Error saving call",
-        description: err instanceof Error ? err.message : "Failed to save outcome",
-        variant: "destructive",
-      })
+      toast({ title: "Error saving call", description: err instanceof Error ? err.message : "Failed", variant: "destructive" })
     } finally {
       setIsSaving(false)
     }
@@ -165,244 +172,201 @@ export default function CallbacksPage() {
     fetchData()
   }, [telecallerId])
 
-  // Group callbacks by date
-  const groupedCallbacks = useMemo(() => {
-    const now = new Date()
-    const groups: { overdue: CallLog[]; today: CallLog[]; upcoming: CallLog[] } = {
-      overdue: [],
-      today: [],
-      upcoming: [],
-    }
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate)
+    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7))
+    setCurrentDate(newDate)
+  }
 
-    callLogs.forEach((log) => {
-      if (!log.callback_scheduled_at) return
+  const goToToday = () => setCurrentDate(new Date())
+
+  // Get events for a specific day and hour
+  const getEventsForSlot = (date: Date, hour: number) => {
+    return callLogs.filter(log => {
+      if (!log.callback_scheduled_at) return false
       const cbDate = new Date(log.callback_scheduled_at)
-      const todayStr = now.toISOString().split("T")[0]
-      const cbStr = cbDate.toISOString().split("T")[0]
-
-      if (cbStr < todayStr) {
-        groups.overdue.push(log)
-      } else if (cbStr === todayStr) {
-        groups.today.push(log)
-      } else {
-        groups.upcoming.push(log)
-      }
+      return (
+        cbDate.getDate() === date.getDate() &&
+        cbDate.getMonth() === date.getMonth() &&
+        cbDate.getFullYear() === date.getFullYear() &&
+        cbDate.getHours() === hour
+      )
     })
-
-    // Sort each group by scheduled time
-    const sortByTime = (a: CallLog, b: CallLog) =>
-      new Date(a.callback_scheduled_at!).getTime() -
-      new Date(b.callback_scheduled_at!).getTime()
-
-    groups.overdue.sort(sortByTime)
-    groups.today.sort(sortByTime)
-    groups.upcoming.sort(sortByTime)
-
-    return groups
-  }, [callLogs])
+  }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse font-medium">Loading your schedule...</p>
       </div>
-    )
-  }
-
-  // Removed full-screen error return to allow banner display at top of page content
-
-  const renderCallbackCard = (log: CallLog, isOverdue = false) => {
-    const prospect = prospects[log.prospect_id]
-    if (!prospect) return null
-
-    const scheduledTime = new Date(log.callback_scheduled_at!)
-    const calledTime = new Date(log.called_at)
-
-    return (
-      <Card
-        key={log.id}
-        className={cn(
-          "transition-colors",
-          isOverdue && "border-red-200 bg-red-50/30"
-        )}
-      >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold">{prospect.name}</span>
-                {isOverdue && (
-                  <Badge variant="destructive" className="text-xs">
-                    Overdue
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3 w-3" />
-                  <span className="font-mono">{prospect.mobile}</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {prospect.location || "—"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-blue-700 font-medium">
-                  Scheduled:{" "}
-                  {scheduledTime.toLocaleString("en-IN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </span>
-              </div>
-              {log.notes && (
-                <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
-                  {log.notes}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Originally called:{" "}
-                {calledTime.toLocaleString("en-IN", {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                })}
-              </p>
-            </div>
-            <Button 
-              size="sm" 
-              onClick={() => handleCall(prospect)}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <PhoneCall className="h-4 w-4 mr-1" />
-              )}
-              Call Now
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <Alert variant="destructive" className="bg-destructive text-destructive-foreground border-none shadow-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>System Error</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>{error}</span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchData}
-              className="h-7 bg-white/10 hover:bg-white/20 border-white/20 text-white"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" /> Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full space-y-6">
+      {/* Premium Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background/50 backdrop-blur-sm sticky top-0 z-20 pb-4 border-b">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Callbacks</h1>
-          <p className="text-muted-foreground">
-            {callLogs.length} scheduled callbacks
+          <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+            Schedule
+          </h1>
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5" />
+            {weekDates[0].toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-        </Button>
+
+        <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-2xl border shadow-sm">
+          <Button variant="ghost" size="sm" onClick={goToToday} className="font-bold hover:bg-background">
+            Today
+          </Button>
+          <div className="flex items-center gap-1 px-2 border-l">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => navigateWeek('prev')}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => navigateWeek('next')}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+          <span className="text-sm font-bold px-3 min-w-[140px] text-center">
+            {weekDates[0].getDate()} - {weekDates[6].getDate()} {weekDates[6].toLocaleDateString('en-IN', { month: 'short' })}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button onClick={fetchData} variant="outline" size="sm" className="rounded-xl border-2 font-bold shadow-sm">
+            <RefreshCw className={cn("h-4 w-4 mr-2", isSaving && "animate-spin")} />
+            Sync
+          </Button>
+          <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1.5 rounded-xl font-bold">
+            {callLogs.length} Callbacks
+          </Badge>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg p-2 bg-red-100">
-              <Clock className="h-5 w-5 text-red-600" />
+      {/* Teams Style Calendar Grid */}
+      <div className="bg-card border-2 rounded-[28px] shadow-2xl overflow-hidden flex flex-col h-[700px] relative">
+        {/* Scrollable Container */}
+        <div className="flex-1 overflow-y-auto relative scrollbar-thin scrollbar-thumb-muted-foreground/20">
+          <div className="grid grid-cols-[80px_repeat(7,1fr)] min-h-full">
+            {/* STICKY HEADER ROW */}
+            <div className="sticky top-0 z-30 col-span-full grid grid-cols-[80px_repeat(7,1fr)] border-b bg-background/95 backdrop-blur-md">
+              <div className="h-16 flex items-center justify-center border-r bg-muted/30">
+                <Clock className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+              {weekDates.map((date, i) => {
+                const isToday = new Date().toDateString() === date.toDateString()
+                return (
+                  <div key={i} className={cn(
+                    "h-16 flex flex-col items-center justify-center border-r last:border-r-0 transition-colors",
+                    isToday && "bg-primary/5"
+                  )}>
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", isToday ? "text-primary" : "text-muted-foreground/60")}>
+                      {date.toLocaleDateString('en-IN', { weekday: 'short' })}
+                    </span>
+                    <span className={cn(
+                      "text-lg font-black mt-0.5 h-8 w-8 flex items-center justify-center rounded-xl",
+                      isToday ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-slate-900"
+                    )}>
+                      {date.getDate()}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-            <div>
-              <p className="text-2xl font-bold">{groupedCallbacks.overdue.length}</p>
-              <p className="text-xs text-muted-foreground">Overdue</p>
+
+            {/* Time Column */}
+            <div className="border-r bg-muted/10 relative">
+              {HOURS.map(hour => (
+                <div key={hour} className="h-24 border-b flex items-start justify-center pt-2">
+                  <span className="text-[10px] font-black text-muted-foreground/70 tabular-nums">
+                    {hour > 12 ? `${hour - 12} PM` : (hour === 12 ? "12 PM" : `${hour} AM`)}
+                  </span>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg p-2 bg-blue-100">
-              <Calendar className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{groupedCallbacks.today.length}</p>
-              <p className="text-xs text-muted-foreground">Today</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg p-2 bg-green-100">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{groupedCallbacks.upcoming.length}</p>
-              <p className="text-xs text-muted-foreground">Upcoming</p>
-            </div>
-          </CardContent>
-        </Card>
+
+            {/* Days Columns */}
+            {weekDates.map((date, dayIdx) => (
+              <div key={dayIdx} className="relative border-r last:border-r-0 group">
+                {/* Hour Slots */}
+                {HOURS.map(hour => {
+                  const events = getEventsForSlot(date, hour)
+                  const isToday = new Date().toDateString() === date.toDateString()
+                  
+                  return (
+                    <div key={hour} className={cn(
+                      "h-24 border-b relative transition-colors duration-300",
+                      isToday ? "bg-primary/[0.02]" : "group-hover:bg-muted/[0.02]"
+                    )}>
+                      {/* Grid Line Visual Aid */}
+                      <div className="absolute inset-x-0 top-0 h-px bg-muted/30" />
+                      
+                      {/* Event Blocks */}
+                      <div className="absolute inset-0 p-1 flex flex-col gap-1 z-10">
+                        {events.map(event => {
+                          const prospect = prospects[event.prospect_id]
+                          if (!prospect) return null
+                          
+                          const eventTime = new Date(event.callback_scheduled_at!)
+                          const minutes = eventTime.getMinutes()
+                          
+                          return (
+                            <button
+                              key={event.id}
+                              onClick={() => handleCall(prospect)}
+                              className={cn(
+                                "absolute left-1.5 right-1.5 p-2.5 rounded-xl border-2 text-left transition-all duration-300 shadow-sm group/event",
+                                "bg-white hover:scale-[1.02] hover:z-20 border-blue-100 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10",
+                                minutes > 0 && "translate-y-2"
+                              )}
+                              style={{ height: '85%' }}
+                            >
+                              <div className="flex flex-col h-full justify-between">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-tight">
+                                      {eventTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                    </span>
+                                    <div className="h-5 w-5 rounded-full bg-blue-50 flex items-center justify-center">
+                                      <PhoneCall className="h-2.5 w-2.5 text-blue-500" />
+                                    </div>
+                                  </div>
+                                  <p className="text-[11px] font-black text-slate-900 truncate uppercase tracking-tight">
+                                    {prospect.name}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex items-center gap-1.5 mt-auto">
+                                  <Badge className="text-[8px] bg-blue-50 text-blue-700 border-blue-100 font-black px-1.5 h-3.5 leading-none uppercase">
+                                    Callback
+                                  </Badge>
+                                  <span className="text-[9px] text-muted-foreground truncate font-bold">
+                                    {prospect.location || 'Unknown'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Hover Tooltip Overlay */}
+                              <div className="absolute inset-0 bg-blue-600 text-white opacity-0 group-hover/event:opacity-100 transition-opacity rounded-xl p-2 flex flex-col justify-center items-center text-center gap-1">
+                                <Maximize2 className="h-4 w-4 mb-1" />
+                                <p className="font-black text-[10px] uppercase tracking-wider">Start Call</p>
+                                <p className="text-[9px] opacity-80 font-bold tabular-nums">{prospect.mobile}</p>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Overdue */}
-      {groupedCallbacks.overdue.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-red-700 flex items-center gap-2">
-            <Clock className="h-5 w-5" /> Overdue Callbacks
-          </h2>
-          <div className="space-y-3">
-            {groupedCallbacks.overdue.map((log) => renderCallbackCard(log, true))}
-          </div>
-        </div>
-      )}
-
-      {/* Today */}
-      {groupedCallbacks.today.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
-            <Calendar className="h-5 w-5" /> Today&apos;s Callbacks
-          </h2>
-          <div className="space-y-3">
-            {groupedCallbacks.today.map((log) => renderCallbackCard(log))}
-          </div>
-        </div>
-      )}
-
-      {/* Upcoming */}
-      {groupedCallbacks.upcoming.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-green-700 flex items-center gap-2">
-            <Calendar className="h-5 w-5" /> Upcoming Callbacks
-          </h2>
-          <div className="space-y-3">
-            {groupedCallbacks.upcoming.map((log) => renderCallbackCard(log))}
-          </div>
-        </div>
-      )}
-
-      {callLogs.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-30" />
-            <p className="font-medium">No scheduled callbacks</p>
-            <p className="text-sm">Callbacks will appear here when you schedule them during calls.</p>
-          </CardContent>
-        </Card>
-      )}
-      
       <CallOutcomeModal
         prospect={selectedProspect}
         open={isModalOpen}
@@ -412,3 +376,4 @@ export default function CallbacksPage() {
     </div>
   )
 }
+

@@ -35,6 +35,20 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
 
+import {
+  Download,
+  Calendar as CalendarIcon,
+} from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
 const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   not_answered: { label: "Not Answered", color: "bg-orange-100 text-orange-800" },
   busy: { label: "Busy", color: "bg-yellow-100 text-yellow-800" },
@@ -58,6 +72,11 @@ export default function CallHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [outcomeFilter, setOutcomeFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
+  
+  // Export states
+  const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0])
+  const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [isExporting, setIsExporting] = useState(false)
 
   const telecallerId = user ? Number(user.id) : 0
 
@@ -91,6 +110,71 @@ export default function CallHistoryPage() {
   useEffect(() => {
     fetchData()
   }, [telecallerId])
+
+  const handleExportCSV = () => {
+    setIsExporting(true)
+    try {
+      const start = new Date(exportStartDate)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(exportEndDate)
+      end.setHours(23, 59, 59, 999)
+
+      const exportData = callLogs.filter(log => {
+        const logDate = new Date(log.called_at)
+        return logDate >= start && logDate <= end
+      })
+
+      if (exportData.length === 0) {
+        toast({
+          title: "No data found",
+          description: "No call logs found for the selected date range.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const headers = ["Date", "Time", "Prospect Name", "Mobile", "Outcome", "Status After", "Notes"]
+      const rows = exportData.map(log => {
+        const prospect = prospects[log.prospect_id]
+        const dt = new Date(log.called_at)
+        return [
+          dt.toLocaleDateString('en-IN'),
+          dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          prospect?.name || `ID: ${log.prospect_id}`,
+          prospect?.mobile || "—",
+          OUTCOME_CONFIG[log.outcome]?.label || log.outcome,
+          log.status_after_call || "—",
+          log.notes ? log.notes.replace(/\n/g, " ") : "—"
+        ]
+      })
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${(cell || "").toString().replace(/"/g, '""')}"`).join(","))
+        .join("\n")
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.setAttribute("href", url)
+      link.setAttribute("download", `CallHistory_${exportStartDate}_to_${exportEndDate}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast({
+        title: "Export Successful ✓",
+        description: `Downloaded ${exportData.length} records.`
+      })
+    } catch (err) {
+      toast({
+        title: "Export Failed",
+        description: "An error occurred while generating the CSV.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   // Filter logs
   const filteredLogs = useMemo(() => {
@@ -162,13 +246,58 @@ export default function CallHistoryPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Call History</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {callLogs.length} total calls logged
           </p>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="font-bold">
+                <Download className="h-4 w-4 mr-2" /> Export CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Export Call History</DialogTitle>
+                <DialogDescription>
+                  Select the date range for your CSV report.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="start" className="text-right text-sm font-medium">Start</label>
+                  <Input 
+                    id="start" 
+                    type="date" 
+                    className="col-span-3" 
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="end" className="text-right text-sm font-medium">End</label>
+                  <Input 
+                    id="end" 
+                    type="date" 
+                    className="col-span-3" 
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleExportCSV} disabled={isExporting} className="w-full">
+                  {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                  Download CSV
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button onClick={fetchData} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Outcome Summary */}
@@ -179,7 +308,7 @@ export default function CallHistoryPage() {
             <Badge
               key={outcome}
               variant="outline"
-              className={cn("text-xs px-3 py-1", config?.color)}
+              className={cn("text-xs px-3 py-1 font-semibold", config?.color)}
             >
               {config?.label || outcome}: {count}
             </Badge>
@@ -188,11 +317,11 @@ export default function CallHistoryPage() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader className="pb-4">
+      <Card className="border-2 shadow-lg rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b bg-muted/5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" /> Call Log
+            <CardTitle className="flex items-center gap-2 text-lg font-bold">
+              <History className="h-5 w-5 text-primary" /> Call Log
             </CardTitle>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="relative">
@@ -201,11 +330,11 @@ export default function CallHistoryPage() {
                   placeholder="Search prospect..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-full sm:w-56"
+                  className="pl-9 w-full sm:w-56 h-9 rounded-lg"
                 />
               </div>
               <Select value={outcomeFilter} onValueChange={setOutcomeFilter}>
-                <SelectTrigger className="w-full sm:w-44">
+                <SelectTrigger className="w-full sm:w-44 h-9 rounded-lg">
                   <SelectValue placeholder="Outcome" />
                 </SelectTrigger>
                 <SelectContent>
@@ -218,7 +347,7 @@ export default function CallHistoryPage() {
                 </SelectContent>
               </Select>
               <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-full sm:w-36">
+                <SelectTrigger className="w-full sm:w-36 h-9 rounded-lg">
                   <SelectValue placeholder="Date" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,27 +360,27 @@ export default function CallHistoryPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border overflow-hidden">
+        <CardContent className="p-0">
+          <div className="overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Prospect</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>Outcome</TableHead>
-                  <TableHead>Status After</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Called At</TableHead>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-12 text-center font-bold">#</TableHead>
+                  <TableHead className="font-bold">Prospect</TableHead>
+                  <TableHead className="font-bold">Mobile</TableHead>
+                  <TableHead className="font-bold">Outcome</TableHead>
+                  <TableHead className="font-bold">Status After</TableHead>
+                  <TableHead className="font-bold">Notes</TableHead>
+                  <TableHead className="font-bold">Called At</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <History className="h-8 w-8" />
-                        <p>No call logs found</p>
+                    <TableCell colSpan={7} className="h-40 text-center">
+                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                        <History className="h-10 w-10 opacity-20" />
+                        <p className="font-medium">No call logs found matching filters</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -261,34 +390,39 @@ export default function CallHistoryPage() {
                     const outcomeConf = OUTCOME_CONFIG[log.outcome]
 
                     return (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-muted-foreground">
+                      <TableRow key={log.id} className="hover:bg-muted/5 cursor-default group">
+                        <TableCell className="text-center text-muted-foreground font-medium">
                           {index + 1}
                         </TableCell>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-bold text-slate-900">
                           {prospect?.name || `Prospect #${log.prospect_id}`}
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
+                        <TableCell className="font-mono text-xs text-muted-foreground">
                           {prospect?.mobile || "—"}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={cn(outcomeConf?.color)}
+                            className={cn("text-[10px] uppercase font-bold px-2 py-0.5", outcomeConf?.color)}
                           >
                             {outcomeConf?.label || log.outcome}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {log.status_after_call || "—"}
+                        <TableCell className="text-xs font-semibold text-muted-foreground uppercase tracking-tighter">
+                          {log.status_after_call?.replace(/_/g, ' ') || "—"}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                          {log.notes || "—"}
+                        <TableCell className="text-xs text-muted-foreground max-w-[250px]">
+                          <span className="line-clamp-2 italic font-medium">
+                            {log.notes ? `"${log.notes}"` : "—"}
+                          </span>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        <TableCell className="text-[11px] font-bold text-muted-foreground/80 whitespace-nowrap">
                           {new Date(log.called_at).toLocaleString("en-IN", {
-                            dateStyle: "short",
-                            timeStyle: "short",
+                            day: '2-digit',
+                            month: 'short',
+                            year: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
                           })}
                         </TableCell>
                       </TableRow>
@@ -298,11 +432,15 @@ export default function CallHistoryPage() {
               </TableBody>
             </Table>
           </div>
-          <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredLogs.length} of {callLogs.length} call logs
+          <div className="p-4 border-t bg-muted/5 text-xs font-bold text-muted-foreground flex justify-between items-center">
+            <span>Showing {filteredLogs.length} of {callLogs.length} entries</span>
+            <div className="flex gap-1">
+              {/* Pagination could go here if needed */}
+            </div>
           </div>
         </CardContent>
       </Card>
     </div>
   )
 }
+

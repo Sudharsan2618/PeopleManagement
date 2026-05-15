@@ -189,13 +189,13 @@ export default function AdminDashboard() {
       color: "text-orange-600",
       bgColor: "bg-orange-100",
     },
-    {
-      title: "Pending Follow-ups",
-      value: stats.pending_followups,
-      icon: ClipboardList,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
-    },
+    // {
+    //   title: "Pending Follow-ups",
+    //   value: stats.pending_followups,
+    //   icon: ClipboardList,
+    //   color: "text-red-600",
+    //   bgColor: "bg-red-100",
+    // },
   ]
 
   // ─── Chart data ─────────────────────────────────────────────
@@ -261,52 +261,83 @@ export default function AdminDashboard() {
 
       {/* Charts Row 1 */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Call Outcome Pie Chart */}
+        {/* Call Outcome — Vertical Bar Chart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Phone className="h-4 w-4" />
               Call Outcome Distribution
+              {callOutcomeChartData.length > 0 && (
+                <Badge variant="secondary" className="ml-auto text-[10px] font-semibold">
+                  {callOutcomeChartData.reduce((s: number, d: any) => s + d.value, 0)} Total
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              {callOutcomeChartData.length > 0 ? (
+            {callOutcomeChartData.length > 0 ? (
+              <div className="h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={callOutcomeChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {callOutcomeChartData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
+                  <BarChart
+                    data={[...callOutcomeChartData].sort((a: any, b: any) => b.value - a.value)}
+                    margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 10, fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--background))",
                         border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
+                        borderRadius: "10px",
+                        padding: "8px 14px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                       }}
+                      formatter={(value: number) => [`${value} calls`, "Count"]}
+                      cursor={false}
                     />
-                    <Legend />
-                  </PieChart>
+                    <Bar
+                      dataKey="value"
+                      radius={[6, 6, 0, 0]}
+                      barSize={28}
+                      label={{
+                        position: "top",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        fill: "hsl(var(--muted-foreground))",
+                      }}
+                    >
+                      {[...callOutcomeChartData]
+                        .sort((a: any, b: any) => b.value - a.value)
+                        .map((entry: any, index: number) => (
+                          <Cell key={`bar-${index}`} fill={entry.color} />
+                        ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  No call data yet
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No call data yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Prospect Pipeline Funnel */}
+        {/* Conversion Funnel — Vertical Bar Chart */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -315,44 +346,63 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 pt-4">
-              {pipelineChartData.length > 0 ? (
-                pipelineChartData.map((stage: any, idx: number) => {
-                  const maxVal = Math.max(...pipelineChartData.map((s: any) => s.value))
-                  const percentage = maxVal > 0 ? (stage.value / maxVal) * 100 : 0
-                  
-                  return (
-                    <div key={stage.name} className="relative">
-                      <div className="flex items-center justify-between mb-1 text-xs">
-                        <span className="font-medium">{stage.name}</span>
-                        <span className="text-muted-foreground">{stage.value}</span>
-                      </div>
-                      <div className="h-8 w-full bg-muted rounded-md overflow-hidden flex items-center">
-                        <div 
-                          className="h-full transition-all duration-1000 ease-out flex items-center justify-end pr-3 text-[10px] font-bold text-white"
-                          style={{ 
-                            width: `${percentage}%`,
-                            backgroundColor: stage.fill,
-                            opacity: 0.8 + (idx / pipelineChartData.length) * 0.2 // Slight variation
-                          }}
-                        >
-                          {stage.value > 0 && `${Math.round(percentage)}%`}
-                        </div>
-                      </div>
-                      {idx < pipelineChartData.length - 1 && (
-                        <div className="absolute left-1/2 -bottom-3 -translate-x-1/2 z-10">
-                          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-muted-foreground/20" />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                  No pipeline data yet
-                </div>
-              )}
-            </div>
+            {pipelineChartData.length > 0 ? (
+              <div className="h-[320px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={pipelineChartData}
+                    margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 10, fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "10px",
+                        padding: "8px 14px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                      }}
+                      formatter={(value: number) => [`${value} prospects`, "Count"]}
+                      cursor={false}
+                    />
+                    <Bar
+                      dataKey="value"
+                      radius={[6, 6, 0, 0]}
+                      barSize={28}
+                      label={{
+                        position: "top",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        fill: "hsl(var(--muted-foreground))",
+                      }}
+                    >
+                      {pipelineChartData.map((entry: any, index: number) => (
+                        <Cell key={`funnel-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No pipeline data yet
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -519,7 +569,7 @@ export default function AdminDashboard() {
         {/* spocs Summary */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-base">Active Field Agents</CardTitle>
+            <CardTitle className="text-base">Active SPOCs</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y">

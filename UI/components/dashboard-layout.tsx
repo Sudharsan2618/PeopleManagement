@@ -54,7 +54,7 @@ const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
   { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar },
   { title: "Call History", href: "/telecaller/history", icon: History },
-  { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList },
+  // { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList },
 ]
 
 const spocNav: NavItem[] = [
@@ -63,7 +63,7 @@ const spocNav: NavItem[] = [
   { title: "Telecaller Stats", href: "/spoc/telecallers", icon: BarChart3 },
   { title: "New Report", href: "/spoc/report/new", icon: FileText },
   { title: "Past Reports", href: "/spoc/reports", icon: FolderOpen },
-  { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
+  // { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
 ]
 
 const adminNav: NavItem[] = [
@@ -73,7 +73,7 @@ const adminNav: NavItem[] = [
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
   { title: "spocs", href: "/admin/spocs", icon: MapPin },
   { title: "Field Reports", href: "/admin/field-reports", icon: FileText },
-  { title: "Follow-ups", href: "/admin/followups", icon: History },
+  // { title: "Follow-ups", href: "/admin/followups", icon: History },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
   { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
@@ -97,7 +97,7 @@ function getRoleLabel(role: UserRole): string {
     case "telecaller":
       return "Telecaller"
     case "spoc":
-      return "Field Agent"
+      return "SPOC"
     case "admin":
       return "Administrator"
     default:

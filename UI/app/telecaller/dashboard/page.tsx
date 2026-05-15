@@ -68,16 +68,16 @@ const OUTCOME_TO_DB: Record<string, string> = {
 // This is the CRM state-machine: what happens to the prospect after
 // each type of call outcome
 const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
-  NotAnswered: "contacted",
-  Busy: "contacted",
-  WrongNumber: "cold_no_response",
-  CallBack: "warm",
-  NotInterested: "cold_not_interested",
-  DNC: "cold_not_interested",
-  LanguageBarrier: "contacted",
-  Interested: "hot",
-  Qualified: "visit_scheduled",
-  EnrolledElsewhere: "lost",
+  NotAnswered: "cold_no_response",       // No Response
+  Busy: "cold_no_response",              // No Response
+  WrongNumber: "cold_not_interested",    // Not Interested
+  CallBack: "warm",                      // Warm
+  NotInterested: "cold_not_interested",  // Not Interested
+  DNC: "cold_not_interested",            // Not Interested
+  LanguageBarrier: "cold_not_interested",// Not Interested
+  Interested: "hot",                     // Hot
+  Qualified: "admission_done",          // Admission Done
+  EnrolledElsewhere: "admission_done",   // Already Enrolled → Admission Done
 }
 
 // ─── Status display config ─────────────────────────────────────
@@ -166,6 +166,7 @@ export default function TelecallerDashboard() {
             lastCallAt: lastLog?.called_at || null,
             lastOutcome: lastLog?.outcome || null,
             lastReason: lastLog?.reason || null,
+            lastNotes: lastLog?.notes || null,
             callbackDateTime: lastLog?.callback_scheduled_at || null,
             totalCalls: prospectLogs.length,
           }
@@ -584,9 +585,9 @@ export default function TelecallerDashboard() {
                               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted w-fit">
                                 {prospect.lastOutcome.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                               </span>
-                              {prospect.lastReason && (
-                                <span className="text-[11px] text-muted-foreground line-clamp-1 italic">
-                                  &quot;{prospect.lastReason}&quot;
+                              {prospect.lastNotes && (
+                                <span className="text-[11px] text-muted-foreground line-clamp-2 italic mt-0.5">
+                                  &quot;{prospect.lastNotes}&quot;
                                 </span>
                               )}
                             </div>

@@ -225,23 +225,53 @@ export default function ReportsPage() {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={outcomeDistribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
+                    <BarChart
+                      data={outcomeDistribution}
+                      margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 10, fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        angle={-35}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '10px',
+                          padding: '8px 14px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        }}
+                        formatter={(value: number) => [`${value} calls`, "Count"]}
+                        cursor={false}
+                      />
+                      <Bar
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        radius={[6, 6, 0, 0]}
+                        barSize={28}
+                        label={{
+                          position: "top",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          fill: "hsl(var(--muted-foreground))",
+                        }}
                       >
                         {outcomeDistribution.map((_: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
+                      </Bar>
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
@@ -337,14 +367,14 @@ export default function ReportsPage() {
         <TabsContent value="fieldvisits" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Field Agent Performance</CardTitle>
-              <CardDescription>Individual field agent metrics</CardDescription>
+              <CardTitle>SPOC Performance</CardTitle>
+              <CardDescription>Individual SPOC metrics</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Field Agent</TableHead>
+                    <TableHead>SPOC</TableHead>
                     <TableHead className="text-center">Total Visits</TableHead>
                     <TableHead className="text-center">Successful</TableHead>
                     <TableHead className="text-center">Success Rate</TableHead>
@@ -454,25 +484,60 @@ export default function ReportsPage() {
               <CardDescription>Prospect journey through the funnel</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {conversionFunnel.map((item: any, index: number) => {
-                  const colors = ['bg-blue-500', 'bg-yellow-500', 'bg-orange-500', 'bg-red-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-purple-500', 'bg-gray-500', 'bg-slate-500', 'bg-black']
-                  return (
-                    <div key={index} className="flex items-center gap-4">
-                      <div className="w-40 text-sm font-medium capitalize">{item.stage.replace(/_/g, ' ')}</div>
-                      <div className="flex-1">
-                        <div className="h-8 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${colors[index % colors.length]} rounded-full flex items-center justify-end pr-3`}
-                            style={{ width: `${Math.max((item.count / totalProspects) * 100, 5)}%` }}
-                          >
-                            <span className="text-white text-sm font-medium">{item.count}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={conversionFunnel.map((item: any) => ({
+                      name: item.stage.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                      value: item.count,
+                    }))}
+                    margin={{ top: 20, right: 10, left: -10, bottom: 50 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 10, fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval={0}
+                      angle={-40}
+                      textAnchor="end"
+                      height={70}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '10px',
+                        padding: '8px 14px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      }}
+                      formatter={(value: number) => [`${value} prospects`, "Count"]}
+                      cursor={false}
+                    />
+                    <Bar
+                      dataKey="value"
+                      radius={[6, 6, 0, 0]}
+                      barSize={30}
+                      label={{
+                        position: "top",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        fill: "hsl(var(--muted-foreground))",
+                      }}
+                    >
+                      {conversionFunnel.map((_: any, index: number) => {
+                        const barColors = ['#93c5fd', '#60a5fa', '#f59e0b', '#ef4444', '#a78bfa', '#8b5cf6', '#10b981', '#d1d5db', '#9ca3af', '#6b7280']
+                        return <Cell key={`funnel-${index}`} fill={barColors[index % barColors.length]} />
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
