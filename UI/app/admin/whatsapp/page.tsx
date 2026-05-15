@@ -30,7 +30,8 @@ import {
   Image,
   UserPlus,
   Trash2,
-  ChevronLeft
+  ChevronLeft,
+  PlayCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -340,6 +341,19 @@ export default function WhatsAppAdmin() {
       fetchData()
     } catch (err) {
       toast({ title: "Failed to start", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleResumeCampaign = async (id: number) => {
+    try {
+      setIsSending(true)
+      const res = await whatsappApi.resumeCampaign(id)
+      toast({ title: "Campaign Resumed", description: res.message })
+      fetchData()
+    } catch (err) {
+      toast({ title: "Resume failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
       setIsSending(false)
     }
@@ -1022,6 +1036,17 @@ export default function WhatsAppAdmin() {
                                 >
                                   <UserPlus className="h-4 w-4" />
                                 </Button>
+                                {(camp.status === 'failed' || camp.status === 'sending') && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-9 px-3 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl"
+                                    onClick={() => handleResumeCampaign(camp.id)}
+                                    title="Resume Campaign"
+                                  >
+                                    <PlayCircle className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <Button 
                                   size="sm" 
                                   variant="ghost"
@@ -1775,6 +1800,38 @@ export default function WhatsAppAdmin() {
                   <SelectItem value="hot">Hot</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                {prospectsForInjection.length} Available Students
+              </p>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  const allFilteredIds = prospectsForInjection.map(p => p.id);
+                  const currentlySelectedFiltered = newCampaign.recipient_ids.filter(id => allFilteredIds.includes(id));
+                  
+                  if (currentlySelectedFiltered.length === allFilteredIds.length && allFilteredIds.length > 0) {
+                    setNewCampaign({
+                      ...newCampaign,
+                      recipient_ids: newCampaign.recipient_ids.filter(id => !allFilteredIds.includes(id))
+                    });
+                  } else {
+                    const otherSelected = newCampaign.recipient_ids.filter(id => !allFilteredIds.includes(id));
+                    setNewCampaign({
+                      ...newCampaign,
+                      recipient_ids: [...otherSelected, ...allFilteredIds]
+                    });
+                  }
+                }}
+                className="h-6 px-3 text-[9px] font-black text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg uppercase tracking-widest"
+              >
+                {prospectsForInjection.length > 0 && newCampaign.recipient_ids.filter(id => prospectsForInjection.some(p => p.id === id)).length === prospectsForInjection.length
+                  ? 'Deselect All Filtered' 
+                  : 'Select All Filtered'}
+              </Button>
             </div>
 
             <ScrollArea className="h-[300px] border border-slate-100 rounded-2xl p-2 bg-slate-50/30 shadow-inner">

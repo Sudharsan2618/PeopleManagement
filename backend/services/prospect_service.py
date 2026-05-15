@@ -161,10 +161,32 @@ class ProspectService:
 
     @staticmethod
     def create_bulk_prospects(prospects: List[dict]) -> int:
-        """Create multiple prospects at once."""
+        """Create multiple prospects at once with internal deduplication."""
         if not prospects:
             return 0
         
+        # --- SMART DEDUPLICATION ---
+        # If the same mobile exists twice in the input list, PostgreSQL crashes on 'ON CONFLICT DO UPDATE'.
+        # We merge them here by mobile number, keeping the latest one.
+        deduped_map = {}
+        for p in prospects:
+            mobile = clean_phone_number(p.get("mobile", ""))
+            if not mobile: continue
+            
+            # If already exists, we could merge tags or just overwrite with the newer one
+            if mobile in deduped_map:
+                # Optional: Merge tags if they are lists
+                old_tags = deduped_map[mobile].get("tags") or []
+                new_tags = p.get("tags") or []
+                if isinstance(old_tags, list) and isinstance(new_tags, list):
+                    p["tags"] = list(set(old_tags + new_tags))
+            
+            deduped_map[mobile] = p
+        
+        final_prospects = list(deduped_map.values())
+        if not final_prospects:
+            return 0
+
         # Prepare the query
         columns = [
             "name", "mobile", "email", "location", "sourced_from", "status", 
@@ -175,7 +197,7 @@ class ProspectService:
         params = []
         
         ist_now = get_ist_now()
-        for p in prospects:
+        for p in final_prospects:
             placeholders = ["%s"] * len(columns)
             values_placeholders.append(f"({', '.join(placeholders)})")
             for col in columns:

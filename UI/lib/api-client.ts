@@ -464,6 +464,9 @@ export const whatsappApi = {
     method: "POST",
     body: JSON.stringify({ recipient_ids }),
   }),
+  resumeCampaign: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/resume`, {
+    method: "POST",
+  }),
 }
 
 // Dashboard API

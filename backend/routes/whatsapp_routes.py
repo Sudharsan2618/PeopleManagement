@@ -243,3 +243,11 @@ async def upload_media(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/campaigns/{id}/resume")
+async def resume_campaign(id: int):
+    """Resume a stalled or failed campaign."""
+    try:
+        return await WhatsAppCampaignService.resume_campaign(id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -295,8 +295,8 @@ class WorkerSettings:
     """
     functions = [task_complete_lead_and_send_prospectus, task_run_whatsapp_campaign]
     redis_settings = None          # set dynamically in worker.py
-    max_jobs       = 20            # concurrent coroutines per worker
-    job_timeout    = 60            # seconds before a job is killed
-    keep_result    = 3_600         # keep result in Redis for 1 hour
+    max_jobs       = 5             # reduced for better stability per worker
+    job_timeout    = 3600          # increased to 1 hour to allow large campaigns to finish
+    keep_result    = 3600          # keep result in Redis for 1 hour
     retry_jobs     = True
-    max_tries      = 3
+    max_tries      = 2

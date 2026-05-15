@@ -244,6 +244,31 @@ class WhatsAppCampaignService:
         finally:
             cur.close()
             conn.close()
+    @staticmethod
+    async def resume_campaign(campaign_id: int):
+        """Re-trigger a campaign that might have stalled or failed."""
+        conn = get_connection()
+        cur = conn.cursor()
+        try:
+            # Check if there are still queued messages
+            cur.execute("SELECT COUNT(*) FROM whatsapp_messages WHERE campaign_id = %s AND status = 'queued'", (campaign_id,))
+            queued_count = cur.fetchone()[0]
+            
+            if queued_count == 0:
+                return {"status": "success", "message": "No queued messages to send"}
+
+            # Update status to sending
+            cur.execute("UPDATE whatsapp_campaigns SET status = 'sending' WHERE id = %s", (campaign_id,))
+            conn.commit()
+
+            # Enqueue the background task
+            from tasks import enqueue_whatsapp_campaign
+            await enqueue_whatsapp_campaign(campaign_id)
+            
+            return {"status": "success", "message": f"Resumed campaign with {queued_count} messages queued"}
+        finally:
+            cur.close()
+            conn.close()
 
     @staticmethod
     async def add_recipients_to_campaign(campaign_id: int, recipient_ids: List[int]):
