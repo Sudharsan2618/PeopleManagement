@@ -27,7 +27,10 @@ import {
   Layers,
   Upload,
   FileText,
-  Image
+  Image,
+  UserPlus,
+  Trash2,
+  ChevronLeft
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -129,21 +132,54 @@ export default function WhatsAppAdmin() {
   const [mediaNickname, setMediaNickname] = useState("")
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [isUploadingMedia, setIsUploadingMedia] = useState(false)
+  
+  // Agile Campaign state
+  const [isAddingRecipients, setIsAddingRecipients] = useState(false)
+  const [targetCampaignId, setTargetCampaignId] = useState<number | null>(null)
+
+  // Pagination State
+  const [campaignPagination, setCampaignPagination] = useState({
+    currentPage: 1,
+    pageSize: 10,
+    totalPages: 1,
+    totalItems: 0
+  })
+
+  const fetchCampaigns = async (page: number) => {
+    try {
+      const data = await whatsappApi.getCampaigns(page, campaignPagination.pageSize)
+      setCampaigns(data.items)
+      setCampaignPagination(prev => ({
+        ...prev,
+        currentPage: data.page,
+        totalPages: data.total_pages,
+        totalItems: data.total
+      }))
+    } catch (err) {
+       console.error("Failed to fetch campaigns", err)
+    }
+  }
 
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const [tpls, flws, camps, prospers, convs, assets] = await Promise.all([
+      const [tpls, flws, campsData, prospers, convs, assets] = await Promise.all([
         whatsappApi.getTemplates(),
         whatsappApi.getFlows(),
-        whatsappApi.getCampaigns(),
+        whatsappApi.getCampaigns(1, campaignPagination.pageSize),
         prospectsApi.getAll(),
         whatsappApi.getConversations(),
         whatsappApi.getMediaAssets()
       ])
       setTemplates(tpls)
       setFlows(flws)
-      setCampaigns(camps)
+      setCampaigns(campsData.items)
+      setCampaignPagination(prev => ({
+        ...prev,
+        currentPage: campsData.page,
+        totalPages: campsData.total_pages,
+        totalItems: campsData.total
+      }))
       setProspects(prospers)
       setConversations(convs)
       setMediaAssets(assets)
@@ -226,6 +262,12 @@ export default function WhatsAppAdmin() {
     })
   }, [prospects, searchProspects, statusFilter, selectedTags])
 
+  const prospectsForInjection = useMemo(() => {
+    // Hide prospects who are already in this specific campaign's message list
+    const existingProspectIds = new Set(campaignMessages.map(m => m.prospect_id))
+    return filteredProspects.filter(p => !existingProspectIds.has(p.id))
+  }, [filteredProspects, campaignMessages])
+
   const allTags = useMemo(() => {
     const tags = new Set<string>()
     prospects.forEach(p => {
@@ -298,6 +340,36 @@ export default function WhatsAppAdmin() {
       fetchData()
     } catch (err) {
       toast({ title: "Failed to start", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleDeleteCampaign = async (id: number) => {
+    if (!confirm("Are you sure? This will delete the campaign and all message logs.")) return
+    try {
+      await whatsappApi.deleteCampaign(id)
+      toast({ title: "Campaign Deleted" })
+      fetchData()
+    } catch (err) {
+      toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    }
+  }
+
+  const handleAddRecipients = async () => {
+    if (!targetCampaignId || newCampaign.recipient_ids.length === 0) return
+    try {
+      setIsSending(true)
+      await whatsappApi.addRecipients(targetCampaignId, newCampaign.recipient_ids)
+      toast({ 
+        title: "Students Injected", 
+        description: `Successfully added ${newCampaign.recipient_ids.length} students to the campaign.` 
+      })
+      setIsAddingRecipients(false)
+      setNewCampaign({ ...newCampaign, recipient_ids: [] })
+      fetchData()
+    } catch (err) {
+      toast({ title: "Injection failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
       setIsSending(false)
     }
@@ -472,7 +544,7 @@ export default function WhatsAppAdmin() {
 
       {/* Main Container */}
       <div className="flex-1 overflow-hidden p-3 flex gap-3">
-        <div className="h-full w-full relative">
+        <div className="h-full w-full relative flex flex-col">
           {activeTab === "inbox" && (
             <div className="h-full flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
               {/* --- PREMIUM SIDEBAR --- */}
@@ -744,7 +816,7 @@ export default function WhatsAppAdmin() {
           )}
 
           {activeTab === "campaigns" && (
-            <div className="h-full animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex-1 flex flex-col min-h-0 animate-in fade-in slide-in-from-right-4 duration-500">
               {selectedCampaign ? (
                 <div className="h-full flex flex-col gap-4">
                   {/* --- CAMPAIGN HEADER & STATS --- */}
@@ -767,6 +839,18 @@ export default function WhatsAppAdmin() {
                         <Badge className={cn("px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest border-none", getStatusColor(selectedCampaign.status))}>
                           {selectedCampaign.status}
                         </Badge>
+                        
+                        <Button 
+                          size="sm" 
+                          onClick={() => {
+                            setTargetCampaignId(selectedCampaign.id)
+                            setIsAddingRecipients(true)
+                          }}
+                          className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest ml-auto"
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          ADD RECIPIENTS
+                        </Button>
                       </div>
                       
                       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -857,82 +941,158 @@ export default function WhatsAppAdmin() {
                           ))}
                         </TableBody>
                       </Table>
-                      {filteredCampaignMessages.length === 0 && (
-                        <div className="p-20 text-center">
-                          <p className="text-slate-300 font-black text-xs uppercase tracking-widest">No data matching filter</p>
-                        </div>
-                      )}
                     </ScrollArea>
                   </Card>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {/* --- CAMPAIGN LIST GRID --- */}
-                  <div className="flex items-center justify-between px-2">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-3xl font-black tracking-tighter text-slate-900">CAMPAIGNS</h2>
-                      <Badge className="bg-slate-100 text-slate-500 border-none font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
-                        {campaigns.length} TOTAL
-                      </Badge>
-                    </div>
+                <Card className="h-full border-none shadow-2xl rounded-[32px] bg-white overflow-hidden flex flex-col">
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Campaigns</h2>
+                    <Badge className="bg-slate-100 text-slate-500 border-none font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
+                      {campaignPagination.totalItems} TOTAL
+                    </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12">
-                    {campaigns.map((camp) => (
-                      <Card 
-                        key={camp.id} 
-                        className="group border-none shadow-xl hover:shadow-2xl transition-all duration-500 rounded-[32px] bg-white overflow-hidden cursor-pointer active:scale-[0.98]"
-                        onClick={() => handleSelectCampaign(camp)}
-                      >
-                        <div className="p-8 pb-4">
-                          <div className="flex justify-between items-start mb-6">
-                            <div className="h-14 w-14 rounded-[22px] bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500 shadow-inner">
-                              <Zap className="h-6 w-6" />
-                            </div>
-                            <Badge className={cn("text-[9px] px-3 h-5 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(camp.status))}>
-                              {camp.status}
-                            </Badge>
-                          </div>
-                          
-                          <h3 className="text-xl font-black text-slate-900 tracking-tighter line-clamp-1 mb-1">{camp.name}</h3>
-                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mb-6">{camp.template_name}</p>
-                          
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                              <span className="text-slate-400">ENGAGEMENT</span>
-                              <span className="text-slate-900">{Math.round((camp.sent_count / (camp.total_recipients || 1)) * 100)}%</span>
-                            </div>
-                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 shadow-inner">
-                              <div 
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.4)]" 
-                                style={{ width: `${(camp.sent_count / (camp.total_recipients || 1)) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="px-8 py-6 bg-slate-50/80 flex items-center justify-between border-t border-slate-100">
-                          <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">LAST SYNC</span>
-                            <span className="text-[11px] font-black text-slate-900 tracking-tight">{new Date(camp.created_at).toLocaleDateString()}</span>
-                          </div>
-                          <div onClick={e => e.stopPropagation()}>
-                             {camp.status === 'draft' && (
+                  <ScrollArea className="flex-1 min-h-0">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50">
+                        <TableRow className="hover:bg-transparent border-none">
+                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Campaign Details</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Date</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Engagement</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {campaigns.map((camp) => (
+                          <TableRow 
+                            key={camp.id} 
+                            className="hover:bg-slate-50/50 transition-colors border-slate-50 cursor-pointer"
+                            onClick={() => handleSelectCampaign(camp)}
+                          >
+                            <TableCell className="px-8 py-5">
+                              <div>
+                                <p className="font-black text-sm text-slate-900 tracking-tight mb-0.5 uppercase">{camp.name}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{camp.template_name}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-8 py-5 text-[11px] font-bold text-slate-500">
+                              {new Date(camp.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="px-8 py-5">
+                              <Badge className={cn("text-[9px] px-3 h-5 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(camp.status))}>
+                                {camp.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="px-8 py-5">
+                              <div className="flex flex-col gap-1.5 w-32">
+                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                  <span>{camp.sent_count}/{camp.total_recipients}</span>
+                                  <span>{Math.round((camp.sent_count / (camp.total_recipients || 1)) * 100)}%</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
+                                  <div 
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                                    style={{ width: `${(camp.sent_count / (camp.total_recipients || 1)) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-8 py-5 text-right" onClick={e => e.stopPropagation()}>
+                              <div className="flex justify-end gap-2">
+                                {camp.status === 'draft' && (
+                                  <Button 
+                                    size="sm" 
+                                    className="h-9 px-4 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                                    onClick={() => handleStartCampaign(camp.id)}
+                                    disabled={isSending}
+                                  >
+                                    LAUNCH
+                                  </Button>
+                                )}
                                 <Button 
                                   size="sm" 
-                                  className="h-10 px-6 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-slate-200 transition-all hover:-translate-y-1"
-                                  onClick={() => handleStartCampaign(camp.id)}
-                                  disabled={isSending}
+                                  variant="ghost"
+                                  className="h-9 px-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl"
+                                  onClick={() => {
+                                    setTargetCampaignId(camp.id)
+                                    setIsAddingRecipients(true)
+                                  }}
                                 >
-                                  LAUNCH
+                                  <UserPlus className="h-4 w-4" />
                                 </Button>
-                              )}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="h-9 px-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                                  onClick={() => handleDeleteCampaign(camp.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+
+                  {/* Pagination Controls - Enhanced Visibility */}
+                  <div className="p-4 border-t border-slate-100 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between shrink-0">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Page {campaignPagination.currentPage} of {Math.max(1, campaignPagination.totalPages)}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={campaignPagination.currentPage <= 1}
+                        onClick={() => fetchCampaigns(campaignPagination.currentPage - 1)}
+                        className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: campaignPagination.totalPages }, (_, i) => i + 1)
+                          .filter(p => {
+                            const curr = campaignPagination.currentPage;
+                            return p === 1 || p === campaignPagination.totalPages || (p >= curr - 1 && p <= curr + 1);
+                          })
+                          .map((page, idx, array) => (
+                            <div key={page} className="flex items-center gap-1">
+                              {idx > 0 && array[idx-1] !== page - 1 && <span className="text-slate-300 text-[10px]">...</span>}
+                              <Button
+                                variant={campaignPagination.currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => fetchCampaigns(page)}
+                                className={cn(
+                                  "h-8 w-8 p-0 rounded-xl font-black text-[10px] transition-all",
+                                  campaignPagination.currentPage === page 
+                                    ? "bg-slate-900 text-white border-slate-900" 
+                                    : "border-slate-200 text-slate-600 hover:bg-white"
+                                )}
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          ))
+                        }
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={campaignPagination.currentPage >= campaignPagination.totalPages}
+                        onClick={() => fetchCampaigns(campaignPagination.currentPage + 1)}
+                        className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                </Card>
               )}
             </div>
           )}
@@ -1577,6 +1737,103 @@ export default function WhatsAppAdmin() {
                   </>
                 )}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Add Recipients Modal */}
+      <Dialog open={isAddingRecipients} onOpenChange={setIsAddingRecipients}>
+        <DialogContent className="sm:max-w-2xl rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-[#1A1F2B] text-white">
+            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-emerald-400" />
+              Inject New Recipients
+            </DialogTitle>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+              Select students to add to the existing campaign flow.
+            </p>
+          </DialogHeader>
+          
+          <div className="p-6 space-y-6 bg-white">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input 
+                  placeholder="Search name or number..." 
+                  value={searchProspects} 
+                  onChange={e => setSearchProspects(e.target.value)}
+                  className="pl-9 h-11 border-2 rounded-xl text-sm font-bold"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40 h-11 border-2 rounded-xl text-sm font-bold">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="hot">Hot</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <ScrollArea className="h-[300px] border border-slate-100 rounded-2xl p-2 bg-slate-50/30 shadow-inner">
+              <div className="space-y-1">
+                {prospectsForInjection.map((prospect) => (
+                  <div 
+                    key={prospect.id} 
+                    onClick={() => {
+                      if (newCampaign.recipient_ids.includes(prospect.id)) {
+                        setNewCampaign({...newCampaign, recipient_ids: newCampaign.recipient_ids.filter(id => id !== prospect.id)})
+                      } else {
+                        setNewCampaign({...newCampaign, recipient_ids: [...newCampaign.recipient_ids, prospect.id]})
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all",
+                      newCampaign.recipient_ids.includes(prospect.id) ? "bg-emerald-600 text-white shadow-lg" : "hover:bg-white text-slate-600"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0",
+                      newCampaign.recipient_ids.includes(prospect.id) ? "bg-white border-white" : "border-slate-200"
+                    )}>
+                      {newCampaign.recipient_ids.includes(prospect.id) && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-xs uppercase tracking-tight truncate">{prospect.name}</p>
+                      <p className={cn("text-[10px] font-bold opacity-70", newCampaign.recipient_ids.includes(prospect.id) ? "text-white" : "text-slate-400")}>
+                        +{prospect.mobile}
+                      </p>
+                    </div>
+                    <Badge className={cn("text-[8px] h-4 font-black uppercase border-none", getStatusColor(prospect.status))}>
+                      {prospect.status}
+                    </Badge>
+                  </div>
+                ))}
+                {prospectsForInjection.length === 0 && (
+                  <div className="p-12 text-center">
+                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">No new students available to add</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            <div className="flex items-center justify-between px-2 pt-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {newCampaign.recipient_ids.length} Selected to add
+              </p>
+              <div className="flex gap-3">
+                <Button variant="ghost" onClick={() => setIsAddingRecipients(false)} className="h-10 px-4 text-[10px] font-black uppercase">Cancel</Button>
+                <Button 
+                  onClick={handleAddRecipients}
+                  disabled={isSending || newCampaign.recipient_ids.length === 0}
+                  className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-200"
+                >
+                  {isSending ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                  Inject Recipients
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

@@ -25,10 +25,10 @@ def get_flows():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/campaigns")
-def get_campaigns():
-    """Get all WhatsApp campaigns."""
+def get_campaigns(page: int = Query(1), page_size: int = Query(10)):
+    """Get paginated WhatsApp campaigns."""
     try:
-        return WhatsAppCampaignService.get_campaigns()
+        return WhatsAppCampaignService.get_campaigns(page, page_size)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -56,6 +56,24 @@ async def start_campaign(campaign_id: int):
         from tasks import enqueue_whatsapp_campaign
         await enqueue_whatsapp_campaign(campaign_id)
         return {"message": "Campaign started in background"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/campaigns/{campaign_id}")
+def delete_campaign(campaign_id: int):
+    """Delete a campaign and its associated records."""
+    try:
+        WhatsAppCampaignService.delete_campaign(campaign_id)
+        return {"message": "Campaign deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/campaigns/{campaign_id}/add-recipients")
+async def add_recipients_to_campaign(campaign_id: int, recipient_ids: List[int] = Body(..., embed=True)):
+    """Add new recipients to an existing campaign and trigger messages."""
+    try:
+        result = await WhatsAppCampaignService.add_recipients_to_campaign(campaign_id, recipient_ids)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

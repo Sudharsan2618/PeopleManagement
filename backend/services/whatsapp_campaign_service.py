@@ -91,8 +91,6 @@ class WhatsAppCampaignService:
             )
             queued_messages = cur.fetchall()
             
-            sent_count = 0
-            
             async with httpx.AsyncClient(timeout=30.0) as client:
                 for msg_data in queued_messages:
                     msg_id, mobile, p_name, p_location, p_course, p_email, p_source = msg_data
@@ -101,7 +99,7 @@ class WhatsAppCampaignService:
                         # Build components dynamically based on mapping
                         components = []
                         
-                        # ─── 1. Handle Header (Image) ───
+                        # Handle Header (Image)
                         header_config = campaign_params.get("header", {})
                         if header_config.get("type") == "image":
                             media_id = header_config.get("media_id")
@@ -117,7 +115,7 @@ class WhatsAppCampaignService:
                                     "parameters": [{"type": "image", "image": {"link": image_url}}]
                                 })
 
-                        # ─── 2. Handle Body Variables ───
+                        # Handle Body Variables
                         body_mappings = campaign_params.get("body_variables", [])
                         if body_mappings:
                             body_params = []
@@ -129,7 +127,6 @@ class WhatsAppCampaignService:
                                 if m_type == "static":
                                     val = m_value
                                 elif m_type == "field":
-                                    # Map database fields
                                     field_map = {
                                         "name": p_name,
                                         "location": p_location,
@@ -146,7 +143,7 @@ class WhatsAppCampaignService:
                                 "parameters": body_params
                             })
 
-                        # ─── 3. Handle Buttons (Flows) ───
+                        # Handle Buttons (Flows)
                         button_config = campaign_params.get("buttons", [])
                         for idx, btn in enumerate(button_config):
                             if btn.get("type") == "flow":
@@ -172,7 +169,6 @@ class WhatsAppCampaignService:
                             "Content-Type": "application/json"
                         }
                         
-                        # Clean up language code (Meta expects 'en' or 'en_US' strictly)
                         clean_lang = "en" if "en" in language_code.lower() else language_code
                         
                         payload = {
@@ -195,7 +191,6 @@ class WhatsAppCampaignService:
                                 "UPDATE whatsapp_messages SET status = 'sent', meta_message_id = %s, sent_at = %s WHERE id = %s",
                                 (meta_id, get_ist_now(), msg_id)
                             )
-                            sent_count += 1
                         else:
                             error_msg = str(result.get("error", result))
                             cur.execute(
@@ -209,18 +204,19 @@ class WhatsAppCampaignService:
                         )
                     
                     conn.commit()
-                    await asyncio.sleep(0.1) # Smooth out rate limiting
+                    await asyncio.sleep(0.1)
             
-            # Finalize Campaign
-            cur.execute(
-                "UPDATE whatsapp_campaigns SET status = 'completed', sent_count = %s WHERE id = %s",
-                (sent_count, campaign_id)
-            )
+            # Finalize Campaign - Accurate metrics count
+            cur.execute("""
+                UPDATE whatsapp_campaigns 
+                SET status = 'completed', 
+                    sent_count = (SELECT COUNT(*) FROM whatsapp_messages WHERE campaign_id = %s AND status IN ('sent', 'delivered', 'read'))
+                WHERE id = %s
+            """, (campaign_id, campaign_id))
             conn.commit()
             
         except Exception as e:
             conn.rollback()
-            # Mark campaign as failed
             try:
                 cur.execute("UPDATE whatsapp_campaigns SET status = 'failed' WHERE id = %s", (campaign_id,))
                 conn.commit()
@@ -231,17 +227,112 @@ class WhatsAppCampaignService:
             conn.close()
 
     @staticmethod
-    def get_campaigns():
+    def delete_campaign(campaign_id: int):
+        """Delete a campaign and its associated messages."""
         conn = get_connection()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT c.*, u.name as creator_name 
-            FROM whatsapp_campaigns c
-            LEFT JOIN users u ON c.created_by = u.id
-            ORDER BY c.created_at DESC
-        """)
-        columns = [desc[0] for desc in cur.description]
-        results = [dict(zip(columns, row)) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        return results
+        try:
+            # 1. Delete messages first (foreign key)
+            cur.execute("DELETE FROM whatsapp_messages WHERE campaign_id = %s", (campaign_id,))
+            # 2. Delete campaign
+            cur.execute("DELETE FROM whatsapp_campaigns WHERE id = %s", (campaign_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    async def add_recipients_to_campaign(campaign_id: int, recipient_ids: List[int]):
+        """Inject new recipients into an existing campaign and trigger messages for them."""
+        conn = get_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT template_name, status FROM whatsapp_campaigns WHERE id = %s", (campaign_id,))
+            camp = cur.fetchone()
+            if not camp:
+                raise ValueError("Campaign not found")
+            
+            template_name, current_status = camp
+
+            cur.execute("SELECT id, name FROM prospects WHERE id = ANY(%s)", (recipient_ids,))
+            prospects = cur.fetchall()
+
+            new_msg_ids = []
+            for p_id, p_name in prospects:
+                cur.execute("SELECT id FROM whatsapp_messages WHERE prospect_id = %s AND campaign_id = %s", (p_id, campaign_id))
+                if cur.fetchone():
+                    continue
+                
+                cur.execute(
+                    """
+                    INSERT INTO whatsapp_messages (prospect_id, campaign_id, direction, message_type, status, body)
+                    VALUES (%s, %s, 'outbound', 'template', 'queued', %s)
+                    RETURNING id
+                    """,
+                    (p_id, campaign_id, f"Template: {template_name} to {p_name}")
+                )
+                new_msg_ids.append(cur.fetchone()[0])
+
+            cur.execute(
+                "UPDATE whatsapp_campaigns SET total_recipients = total_recipients + %s WHERE id = %s",
+                (len(new_msg_ids), campaign_id)
+            )
+            
+            conn.commit()
+
+            if current_status in ['completed', 'sending', 'sent', 'failed'] and new_msg_ids:
+                from tasks import enqueue_whatsapp_campaign
+                await enqueue_whatsapp_campaign(campaign_id)
+            
+            return {"added_count": len(new_msg_ids)}
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cur.close()
+            conn.close()
+
+    @staticmethod
+    def get_campaigns(page: int = 1, page_size: int = 10):
+        """Get paginated campaigns with summarized metrics and total count."""
+        conn = get_connection()
+        cur = conn.cursor()
+        try:
+            offset = (page - 1) * page_size
+            
+            # 1. Get Total Count
+            cur.execute("SELECT COUNT(*) FROM whatsapp_campaigns")
+            total_count = cur.fetchone()[0]
+
+            # 2. Get Paginated Records
+            cur.execute("""
+                SELECT 
+                    c.*,
+                    COUNT(m.id) FILTER (WHERE m.status IN ('sent', 'delivered', 'read')) as sent_count,
+                    COUNT(m.id) FILTER (WHERE m.status = 'delivered') as delivered_count,
+                    COUNT(m.id) FILTER (WHERE m.status = 'read') as read_count,
+                    COUNT(m.id) FILTER (WHERE m.status = 'failed') as failed_count
+                FROM whatsapp_campaigns c
+                LEFT JOIN whatsapp_messages m ON c.id = m.campaign_id
+                GROUP BY c.id
+                ORDER BY c.created_at DESC
+                LIMIT %s OFFSET %s
+            """, (page_size, offset))
+            
+            columns = [desc[0] for desc in cur.description]
+            items = [dict(zip(columns, row)) for row in cur.fetchall()]
+            
+            return {
+                "items": items,
+                "total": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_count + page_size - 1) // page_size
+            }
+        finally:
+            cur.close()
+            conn.close()

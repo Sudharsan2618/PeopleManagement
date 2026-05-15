@@ -427,7 +427,7 @@ export const coursesApi = {
 export const whatsappApi = {
   getTemplates: () => apiRequest<any[]>("/whatsapp/templates"),
   getFlows: () => apiRequest<any[]>("/whatsapp/flows"),
-  getCampaigns: () => apiRequest<any[]>("/whatsapp/campaigns"),
+  getCampaigns: (page: number = 1, pageSize: number = 10) => apiRequest<any>(`/whatsapp/campaigns?page=${page}&page_size=${pageSize}`),
   getCampaignDetails: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`),
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
   getConversations: () => apiRequest<any[]>("/whatsapp/conversations"),
@@ -457,6 +457,13 @@ export const whatsappApi = {
       return res.json();
     });
   },
+  deleteCampaign: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`, {
+    method: "DELETE",
+  }),
+  addRecipients: (campaignId: number, recipient_ids: number[]) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/add-recipients`, {
+    method: "POST",
+    body: JSON.stringify({ recipient_ids }),
+  }),
 }
 
 // Dashboard API
