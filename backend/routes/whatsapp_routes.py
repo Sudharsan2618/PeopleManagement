@@ -130,24 +130,25 @@ async def handle_webhook(request: Request):
 def get_conversations():
     """Get list of prospects with recent WhatsApp activity."""
     try:
-        from database.connection import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT p.id, p.name, p.mobile, 
-                   MAX(m.created_at) as last_message_at,
-                   (SELECT body FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
-            FROM prospects p
-            LEFT JOIN whatsapp_messages m ON p.id = m.prospect_id
-            WHERE m.id IS NOT NULL
-            GROUP BY p.id, p.name, p.mobile
-            ORDER BY last_message_at DESC NULLS LAST
-        """)
-        columns = [desc[0] for desc in cur.description]
-        results = [dict(zip(columns, row)) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        return results
+        from database.connection import get_db_connection
+        from psycopg2.extras import RealDictCursor
+        with get_db_connection() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                cur.execute("""
+                    SELECT p.id, p.name, p.mobile, 
+                           MAX(m.created_at) as last_message_at,
+                           (SELECT body FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
+                    FROM prospects p
+                    LEFT JOIN whatsapp_messages m ON p.id = m.prospect_id
+                    WHERE m.id IS NOT NULL
+                    GROUP BY p.id, p.name, p.mobile
+                    ORDER BY last_message_at DESC NULLS LAST
+                """)
+                results = cur.fetchall()
+                return results
+            finally:
+                cur.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -155,19 +156,20 @@ def get_conversations():
 def get_messages(prospect_id: int):
     """Get message history for a specific prospect."""
     try:
-        from database.connection import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT * FROM whatsapp_messages 
-            WHERE prospect_id = %s 
-            ORDER BY created_at ASC
-        """, (prospect_id,))
-        columns = [desc[0] for desc in cur.description]
-        results = [dict(zip(columns, row)) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        return results
+        from database.connection import get_db_connection
+        from psycopg2.extras import RealDictCursor
+        with get_db_connection() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                cur.execute("""
+                    SELECT * FROM whatsapp_messages 
+                    WHERE prospect_id = %s 
+                    ORDER BY created_at ASC
+                """, (prospect_id,))
+                results = cur.fetchall()
+                return results
+            finally:
+                cur.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -175,24 +177,23 @@ def get_messages(prospect_id: int):
 def get_campaign_details(campaign_id: int):
     """Get detailed information about a specific campaign."""
     try:
-        from database.connection import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT wc.*, u.name as created_by_name 
-            FROM whatsapp_campaigns wc
-            LEFT JOIN users u ON wc.created_by = u.id
-            WHERE wc.id = %s
-        """, (campaign_id,))
-        columns = [desc[0] for desc in cur.description]
-        result = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="Campaign not found")
-            
-        return dict(zip(columns, result))
+        from database.connection import get_db_connection
+        from psycopg2.extras import RealDictCursor
+        with get_db_connection() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                cur.execute("""
+                    SELECT wc.*, u.name as created_by_name 
+                    FROM whatsapp_campaigns wc
+                    LEFT JOIN users u ON wc.created_by = u.id
+                    WHERE wc.id = %s
+                """, (campaign_id,))
+                result = cur.fetchone()
+                if not result:
+                    raise HTTPException(status_code=404, detail="Campaign not found")
+                return result
+            finally:
+                cur.close()
     except HTTPException:
         raise
     except Exception as e:
@@ -202,21 +203,22 @@ def get_campaign_details(campaign_id: int):
 def get_campaign_messages(campaign_id: int):
     """Get all messages for a specific campaign with prospect information."""
     try:
-        from database.connection import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT wm.*, p.name as prospect_name, p.mobile as prospect_mobile, p.email as prospect_email
-            FROM whatsapp_messages wm
-            LEFT JOIN prospects p ON wm.prospect_id = p.id
-            WHERE wm.campaign_id = %s
-            ORDER BY wm.created_at DESC
-        """, (campaign_id,))
-        columns = [desc[0] for desc in cur.description]
-        results = [dict(zip(columns, row)) for row in cur.fetchall()]
-        cur.close()
-        conn.close()
-        return results
+        from database.connection import get_db_connection
+        from psycopg2.extras import RealDictCursor
+        with get_db_connection() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                cur.execute("""
+                    SELECT wm.*, p.name as prospect_name, p.mobile as prospect_mobile, p.email as prospect_email
+                    FROM whatsapp_messages wm
+                    LEFT JOIN prospects p ON wm.prospect_id = p.id
+                    WHERE wm.campaign_id = %s
+                    ORDER BY wm.created_at DESC
+                """, (campaign_id,))
+                results = cur.fetchall()
+                return results
+            finally:
+                cur.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 @router.get("/media")
