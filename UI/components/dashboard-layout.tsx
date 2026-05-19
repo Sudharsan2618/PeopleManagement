@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -38,10 +38,9 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { type UserRole, mockNotifications } from "@/lib/mock-data"
+import { type UserRole, type Notification } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 import { dashboardApi } from "@/lib/api-client"
-import { useEffect } from "react"
 
 interface NavItem {
   title: string
@@ -131,6 +130,13 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     }
 
     fetchCounts()
+
+    const refreshCounts = () => {
+      fetchCounts()
+    }
+
+    window.addEventListener("refreshBadgeCounts", refreshCounts)
+    return () => window.removeEventListener("refreshBadgeCounts", refreshCounts)
   }, [user])
 
   // Enhance nav items with dynamic counts
@@ -147,7 +153,22 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     })
   }, [role, counts])
 
-  const unreadNotifications = mockNotifications.filter((n) => !n.read).length
+  const customNotifications: Notification[] =
+    role === "telecaller" && counts.callbacks > 0
+      ? [
+          {
+            id: "callback-alert",
+            type: "callback",
+            role: "telecaller",
+            message: `${counts.callbacks} scheduled callbacks are due`,
+            createdAt: new Date().toISOString(),
+            read: false,
+          },
+        ]
+      : []
+
+  const allowedNotifications = customNotifications
+  const unreadNotifications = customNotifications.length
 
   const handleLogout = () => {
     logout()
@@ -278,15 +299,25 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
             <DropdownMenuContent align="end" className="w-80">
               <div className="flex items-center justify-between px-4 py-2 border-b">
                 <h3 className="font-semibold text-sm">Notifications</h3>
-                <Button variant="ghost" size="sm" className="text-xs">
-                  Mark all read
-                </Button>
               </div>
-              <ScrollArea className="h-48 flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                  <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
-                  <p className="text-xs text-muted-foreground">No new notifications</p>
-                </div>
+              <ScrollArea className="h-48">
+                {allowedNotifications.length > 0 ? (
+                  <div className="space-y-2 p-3">
+                    {allowedNotifications.map((notification) => (
+                      <div key={notification.id} className="rounded-xl border border-muted/20 bg-background p-3">
+                        <p className="text-sm font-semibold">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notification.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
+                    <p className="text-xs text-muted-foreground">No new notifications</p>
+                  </div>
+                )}
               </ScrollArea>
             </DropdownMenuContent>
           </DropdownMenu>

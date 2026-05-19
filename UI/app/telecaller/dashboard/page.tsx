@@ -62,6 +62,7 @@ const OUTCOME_TO_DB: Record<string, string> = {
   Interested: "interested",
   Qualified: "qualified",
   EnrolledElsewhere: "enrolled_elsewhere",
+  ApplicationProcess: "application_process",
 }
 
 // ─── Outcome → Prospect status_after_call ─────────────────────
@@ -77,7 +78,8 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   LanguageBarrier: "cold_not_interested",// Not Interested
   Interested: "hot",                     // Hot
   Qualified: "admission_done",          // Admission Done
-  EnrolledElsewhere: "admission_done",   // Already Enrolled → Admission Done
+  EnrolledElsewhere: "cold_not_interested",   // Already Enrolled → Not Interested
+  ApplicationProcess: "admission_done",   // Application Process → Admission Done
 }
 
 // ─── Status display config ─────────────────────────────────────
@@ -289,6 +291,17 @@ export default function TelecallerDashboard() {
     setIsModalOpen(true)
   }
 
+  const parseCallbackTime = (time: string) => {
+    const match = time.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/)
+    if (!match) return time
+    let hour = Number(match[1])
+    const minute = match[2]
+    const period = match[3].toUpperCase()
+    if (period === "PM" && hour < 12) hour += 12
+    if (period === "AM" && hour === 12) hour = 0
+    return `${hour.toString().padStart(2, "0")}:${minute}`
+  }
+
   const handleOutcomeSubmit = async (
     outcome: CallOutcome,
     data: Record<string, unknown>
@@ -303,7 +316,8 @@ export default function TelecallerDashboard() {
       // Build callback timestamp if scheduled
       let callbackScheduledAt: string | null = null
       if (outcome === "CallBack" && data.callbackDate) {
-        const timeStr = (data.callbackTime as string) || "10:00"
+        const rawTime = (data.callbackTime as string) || "10:00 AM"
+        const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
       }
 
@@ -356,6 +370,9 @@ export default function TelecallerDashboard() {
 
       // 3. Refresh data
       await fetchData()
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("refreshBadgeCounts"))
+      }
     } catch (err) {
       toast({
         title: "Error saving call",

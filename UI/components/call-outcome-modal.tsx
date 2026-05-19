@@ -63,6 +63,7 @@ const DB_OUTCOME_LABELS: Record<string, string> = {
   interested: "Interested",
   qualified: "Qualified",
   enrolled_elsewhere: "Already Enrolled",
+  application_process: "Application Process",
 }
 
 const DB_OUTCOME_COLORS: Record<string, string> = {
@@ -76,6 +77,7 @@ const DB_OUTCOME_COLORS: Record<string, string> = {
   interested: "text-green-500",
   qualified: "text-emerald-600",
   enrolled_elsewhere: "text-purple-500",
+  application_process: "text-teal-600",
 }
 
 const outcomeOptions: {
@@ -155,6 +157,13 @@ const outcomeOptions: {
     icon: GraduationCap,
     color: "text-purple-500",
   },
+  {
+    value: "ApplicationProcess",
+    label: "Application Process",
+    description: "Prospect is in application processing",
+    icon: BookOpen,
+    color: "text-teal-600",
+  },
 ]
 
 const notInterestedReasons = [
@@ -182,7 +191,9 @@ export function CallOutcomeModal({
   const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome | null>(null)
   const [notes, setNotes] = useState("")
   const [callbackDate, setCallbackDate] = useState("")
-  const [callbackTime, setCallbackTime] = useState("")
+  const [callbackHour, setCallbackHour] = useState("10")
+  const [callbackMinute, setCallbackMinute] = useState("00")
+  const [callbackPeriod, setCallbackPeriod] = useState("AM")
   const [reason, setReason] = useState("")
   const [coursePreference, setCoursePreference] = useState("")
   const [studyMode, setStudyMode] = useState("")
@@ -220,7 +231,9 @@ export function CallOutcomeModal({
     setSelectedOutcome(null)
     setNotes("")
     setCallbackDate("")
-    setCallbackTime("")
+    setCallbackHour("10")
+    setCallbackMinute("00")
+    setCallbackPeriod("AM")
     setReason("")
     setCoursePreference("")
     setStudyMode("")
@@ -237,7 +250,7 @@ export function CallOutcomeModal({
 
     if (selectedOutcome === "CallBack") {
       data.callbackDate = callbackDate
-      data.callbackTime = callbackTime
+      data.callbackTime = `${callbackHour}:${callbackMinute} ${callbackPeriod}`.trim()
     } else if (selectedOutcome === "NotInterested" || selectedOutcome === "DNC") {
       data.reason = reason
     } else if (selectedOutcome === "Interested") {
@@ -463,12 +476,38 @@ export function CallOutcomeModal({
                               </div>
                               <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Time</Label>
-                                <Input
-                                  type="time"
-                                  className="h-11 border-2"
-                                  value={callbackTime}
-                                  onChange={(e) => setCallbackTime(e.target.value)}
-                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                  <Select value={callbackHour} onValueChange={setCallbackHour}>
+                                    <SelectTrigger className="h-11 bg-background border-2">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from({ length: 12 }, (_, idx) => {
+                                        const hour = (idx + 1).toString().padStart(2, "0")
+                                        return <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={callbackMinute} onValueChange={setCallbackMinute}>
+                                    <SelectTrigger className="h-11 bg-background border-2">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {['00', '15', '30', '45'].map((minute) => (
+                                        <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={callbackPeriod} onValueChange={setCallbackPeriod}>
+                                    <SelectTrigger className="h-11 bg-background border-2">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="AM">AM</SelectItem>
+                                      <SelectItem value="PM">PM</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
                             </div>
                             <div className="space-y-2">

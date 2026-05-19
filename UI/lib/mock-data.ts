@@ -22,6 +22,7 @@ export type CallOutcome =
   | "Interested"
   | "Qualified"
   | "EnrolledElsewhere"
+  | "ApplicationProcess"
 
 export type CourseInterest = "CourseA" | "CourseB" | "CourseC" | "Unknown"
 
@@ -123,6 +124,7 @@ export interface Course {
 export interface Notification {
   id: string
   type: "callback" | "assignment" | "followup" | "report" | "escalation" | "unreachable"
+  role: UserRole | "all"
   message: string
   createdAt: string
   read: boolean
@@ -579,6 +581,7 @@ export const mockNotifications: Notification[] = [
   {
     id: "n-1",
     type: "callback",
+    role: "telecaller",
     message: "Callback due for Arjun Mehta at 10:30 AM",
     createdAt: "2026-04-22T10:15:00",
     read: false,
@@ -586,6 +589,7 @@ export const mockNotifications: Notification[] = [
   {
     id: "n-2",
     type: "assignment",
+    role: "spoc",
     message: "85 new prospects assigned for today",
     createdAt: "2026-04-22T08:00:00",
     read: true,
@@ -593,6 +597,7 @@ export const mockNotifications: Notification[] = [
   {
     id: "n-3",
     type: "followup",
+    role: "spoc",
     message: "New follow-up task: DAV Public School, Poonamallee",
     createdAt: "2026-04-22T17:30:00",
     read: false,
@@ -600,6 +605,7 @@ export const mockNotifications: Notification[] = [
   {
     id: "n-4",
     type: "report",
+    role: "admin",
     message: "Vikram Singh submitted today's field report",
     createdAt: "2026-04-22T17:30:00",
     read: false,
@@ -607,6 +613,7 @@ export const mockNotifications: Notification[] = [
   {
     id: "n-5",
     type: "unreachable",
+    role: "telecaller",
     message: "Prospect Ravi Kumar unreachable for 3 days",
     createdAt: "2026-04-22T09:00:00",
     read: true,
