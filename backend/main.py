@@ -253,7 +253,12 @@ async def webhook_listener(request: Request):
                 statuses = value.get("statuses", [])
 
                 if statuses and not messages:
-                    log.info("⏭️  Status-only update — skipping")
+                    log.info("📥 Status-only update — processing")
+                    for status_update in statuses:
+                        try:
+                            WebhookService._handle_status_update(status_update)
+                        except Exception as status_err:
+                            log.error("❌ Error processing status update: %s", status_err)
                     continue
 
                 for message in messages:

@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -119,10 +120,12 @@ export default function WhatsAppAdmin() {
       buttons: [] as any[]
     },
     response_config: {
+      enabled: true,
       interested: { type: "document", media_id: "", caption: "" },
       default: { type: "document", media_id: "", caption: "" }
     }
   })
+  const [isCustomHeader, setIsCustomHeader] = useState(false)
   const [searchProspects, setSearchProspects] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -290,6 +293,7 @@ export default function WhatsAppAdmin() {
       await whatsappApi.createCampaign(newCampaign)
       toast({ title: "Campaign Created!", description: "You can now start it from the campaigns list." })
       setIsCreateCampaignOpen(false)
+      setIsCustomHeader(false)
       setNewCampaign({
         name: "",
         template_name: "",
@@ -297,6 +301,7 @@ export default function WhatsAppAdmin() {
         recipient_ids: [],
         parameters: { header: {}, body_variables: [], buttons: [] },
         response_config: {
+          enabled: true,
           interested: { type: "document", media_id: "", caption: "" },
           default: { type: "document", media_id: "", caption: "" }
         }
@@ -1270,25 +1275,63 @@ export default function WhatsAppAdmin() {
                   {/* Header Params */}
                   {newCampaign.parameters.header.type === "image" && (
                     <div className="grid gap-3 p-3 bg-white rounded-xl border border-slate-100">
-                      <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Header Image</Label>
-                      <div className="flex gap-2">
-                        <Input 
-                          placeholder="Meta Media ID or Image URL..." 
-                          value={newCampaign.parameters.header.media_id || newCampaign.parameters.header.url || ""}
-                          onChange={e => {
-                            const val = e.target.value;
-                            const isUrl = val.startsWith("http");
-                            setNewCampaign({
-                              ...newCampaign,
-                              parameters: {
-                                ...newCampaign.parameters,
-                                header: isUrl ? { type: "image", url: val } : { type: "image", media_id: val }
-                              }
-                            });
-                          }}
-                          className="text-xs h-9"
-                        />
+                      <div className="flex justify-between items-center">
+                        <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Header Image</Label>
+                        <Button
+                          variant="link"
+                          type="button"
+                          onClick={() => setIsCustomHeader(!isCustomHeader)}
+                          className="h-auto p-0 text-[9px] font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700"
+                        >
+                          {isCustomHeader ? "Select from Library" : "Enter Custom URL/ID"}
+                        </Button>
                       </div>
+
+                      {!isCustomHeader ? (
+                        <Select 
+                          value={newCampaign.parameters.header.media_id || ""}
+                          onValueChange={val => setNewCampaign({
+                            ...newCampaign,
+                            parameters: {
+                              ...newCampaign.parameters,
+                              header: { type: "image", media_id: val }
+                            }
+                          })}
+                        >
+                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-bold">
+                            <SelectValue placeholder="Choose a file from library..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mediaAssets.map(asset => (
+                              <SelectItem key={asset.id} value={asset.media_id} className="text-xs">
+                                <div className="flex items-center gap-2">
+                                  {asset.file_type.includes('pdf') ? <FileText className="h-3 w-3" /> : <Image className="h-3 w-3" />}
+                                  {asset.nickname}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="Meta Media ID or Image URL..." 
+                            value={newCampaign.parameters.header.media_id || newCampaign.parameters.header.url || ""}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const isUrl = val.startsWith("http");
+                              setNewCampaign({
+                                ...newCampaign,
+                                parameters: {
+                                  ...newCampaign.parameters,
+                                  header: isUrl ? { type: "image", url: val } : { type: "image", media_id: val }
+                                }
+                              });
+                            }}
+                            className="text-xs h-9"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1384,7 +1427,24 @@ export default function WhatsAppAdmin() {
                   <Badge className="bg-emerald-600 text-white border-none text-[8px] font-bold uppercase tracking-widest px-2">Library Linked</Badge>
                 </div>
 
-                <div className="space-y-6">
+                <div className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-emerald-100/50 shadow-sm">
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">Enable Auto-Reply</Label>
+                    <p className="text-[9px] text-slate-400 font-medium">Respond automatically to user replies or flow completions.</p>
+                  </div>
+                  <Switch 
+                    checked={newCampaign.response_config.enabled ?? true}
+                    onCheckedChange={checked => setNewCampaign({
+                      ...newCampaign,
+                      response_config: {
+                        ...newCampaign.response_config,
+                        enabled: checked
+                      }
+                    })}
+                  />
+                </div>
+
+                <div className={cn("space-y-6 transition-all duration-300", !(newCampaign.response_config.enabled ?? true) && "opacity-40 pointer-events-none select-none")}>
                   {/* Interested Response */}
                   <div className="grid gap-3 p-4 bg-white rounded-2xl border border-emerald-100/50 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">

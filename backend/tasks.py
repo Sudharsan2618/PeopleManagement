@@ -188,6 +188,11 @@ async def task_complete_lead_and_send_prospectus(
     if not wa_phone:
         return
 
+    # Check if auto-reply is disabled for this campaign
+    if campaign_id and not response_config.get("enabled", True):
+        log.info("⏭️ Auto response is disabled for campaign_id=%s — skipping reply", campaign_id)
+        return
+
     # Decide what to send based on user response
     # For now, we look for a 'default' or 'interested' key in the config
     # Flow responses usually imply interest

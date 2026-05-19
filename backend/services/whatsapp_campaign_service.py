@@ -58,6 +58,7 @@ class WhatsAppCampaignService:
         import httpx
         from arq.connections import RedisSettings
         from config import Settings
+        from utils.phone_utils import format_for_meta
         
         settings = Settings()
         with get_db_connection() as conn:
@@ -170,7 +171,7 @@ class WhatsAppCampaignService:
                             
                             payload = {
                                 "messaging_product": "whatsapp",
-                                "to": mobile,
+                                "to": format_for_meta(mobile),
                                 "type": "template",
                                 "template": {
                                     "name": template_name,
