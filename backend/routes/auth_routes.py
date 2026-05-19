@@ -29,6 +29,9 @@ def login(request: LoginRequest):
     
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Copy cached user record before mutating it
+    user = user.copy()
     
     # Verify password (plain text comparison for now)
     if user.get("password") != request.password:

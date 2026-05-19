@@ -37,6 +37,7 @@ const OUTCOME_TO_DB: Record<string, string> = {
   Interested: "interested",
   Qualified: "qualified",
   EnrolledElsewhere: "enrolled_elsewhere",
+  ApplicationProcess: "application_process",
 }
 
 // ─── Outcome → Prospect status_after_call ─────────────────────
@@ -50,7 +51,8 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   LanguageBarrier: "cold_not_interested",// Not Interested
   Interested: "hot",                     // Hot
   Qualified: "admission_done",           // Admission Done
-  EnrolledElsewhere: "admission_done",   // Already Enrolled → Admission Done
+  EnrolledElsewhere: "cold_not_interested",   // Already Enrolled → Not Interested
+  ApplicationProcess: "admission_done",   // Application Process → Admission Done
 }
 
 import { 
@@ -107,9 +109,16 @@ export default function CallbacksPage() {
       })
       setProspects(prospectMap)
 
-      const callbacks = allLogs.filter(
-        (log: CallLog) =>
-          log.outcome === "callback" && log.callback_scheduled_at
+      const latestLogByProspect = new Map<number, CallLog>()
+      allLogs.forEach((log) => {
+        const existing = latestLogByProspect.get(log.prospect_id)
+        if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+          latestLogByProspect.set(log.prospect_id, log)
+        }
+      })
+
+      const callbacks = Array.from(latestLogByProspect.values()).filter(
+        (log) => log.outcome === "callback" && log.callback_scheduled_at
       )
       setCallLogs(callbacks)
     } catch (err) {
@@ -127,6 +136,17 @@ export default function CallbacksPage() {
     setIsModalOpen(true)
   }
 
+  const parseCallbackTime = (time: string) => {
+    const match = time.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/)
+    if (!match) return time
+    let hour = Number(match[1])
+    const minute = match[2]
+    const period = match[3].toUpperCase()
+    if (period === "PM" && hour < 12) hour += 12
+    if (period === "AM" && hour === 12) hour = 0
+    return `${hour.toString().padStart(2, "0")}:${minute}`
+  }
+
   const handleOutcomeSubmit = async (
     outcome: CallOutcome,
     data: Record<string, unknown>
@@ -138,7 +158,8 @@ export default function CallbacksPage() {
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
       let callbackScheduledAt: string | null = null
       if (outcome === "CallBack" && data.callbackDate) {
-        const timeStr = (data.callbackTime as string) || "10:00"
+        const rawTime = (data.callbackTime as string) || "10:00 AM"
+        const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
       }
       let fullNotes = (data.notes as string) || ""
@@ -161,6 +182,9 @@ export default function CallbacksPage() {
       })
       toast({ title: "Call logged ✓", description: `Status updated to ${statusAfterCall}` })
       await fetchData()
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("refreshBadgeCounts"))
+      }
     } catch (err) {
       toast({ title: "Error saving call", description: err instanceof Error ? err.message : "Failed", variant: "destructive" })
     } finally {

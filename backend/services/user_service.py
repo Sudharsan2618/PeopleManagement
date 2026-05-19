@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import List, Optional
 from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete
@@ -28,14 +29,17 @@ class UserService:
         return execute_query(query, (user_id,), fetch="one")
     
     @staticmethod
+    @lru_cache(maxsize=128)
     def get_user_by_email(email: str) -> Optional[dict]:
-        """Get user by email."""
+        """Get user by email, using a small in-memory cache for repeated sign-ins."""
         query = """
             SELECT id, name, email, mobile, password, role, is_active, created_at
             FROM users
             WHERE email = %s
+            LIMIT 1
         """
-        return execute_query(query, (email,), fetch="one")
+        user = execute_query(query, (email,), fetch="one")
+        return dict(user) if user else None
     
     @staticmethod
     def get_users_by_role(role: str) -> List[dict]:

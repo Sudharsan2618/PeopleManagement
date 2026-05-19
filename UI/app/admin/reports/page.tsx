@@ -43,6 +43,8 @@ import {
   Pie,
   Cell
 } from "recharts"
+import { jsPDF } from "jspdf"
+import autoTable from "jspdf-autotable"
 import { adminApi } from "@/lib/api-client"
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
@@ -52,6 +54,91 @@ export default function ReportsPage() {
   const [reportType, setReportType] = useState("overview")
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
+
+  const formatChartDate = (value: string) => {
+    if (!value) return value
+    const parsedDate = new Date(value)
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    }
+    return value
+  }
+
+  const downloadReportPdf = () => {
+    const doc = new jsPDF({ unit: "pt", format: "a4" })
+    const title = "Reports & Analytics"
+    const periodLabel = dateRange === "7days" ? "Last 7 days" : dateRange === "30days" ? "Last 30 days" : dateRange === "90days" ? "Last 90 days" : "This year"
+    const reportDate = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    const generatedAt = new Date().toLocaleString(undefined, { hour12: false })
+
+    doc.setFontSize(18)
+    doc.text(title, 40, 50)
+    doc.setFontSize(11)
+    doc.text(`Report Date: ${reportDate}`, 40, 70)
+    doc.text(`Period: ${periodLabel}`, 40, 86)
+    doc.text(`Generated at: ${generatedAt}`, 40, 102)
+
+    const summaryBody = [
+      ["Total Calls", data?.summary?.totalCalls ?? 0],
+      ["Connected Calls", data?.summary?.connectedCalls ?? data?.summary?.totalConnected ?? 0],
+      ["Converted", data?.summary?.totalEnrollments ?? 0],
+      ["Field Visits", data?.summary?.totalVisits ?? 0],
+      ["Conversion Rate", `${Math.round(((data?.summary?.totalEnrollments ?? 0) / Math.max(data?.summary?.totalProspects ?? 1, 1)) * 100)}%`],
+    ]
+
+    const summaryTable = autoTable(doc, {
+      startY: 120,
+      head: [["Metric", "Value"]],
+      body: summaryBody,
+      theme: "striped",
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold" },
+    }) as any
+
+    let nextY = (summaryTable?.finalY ?? 140) + 30
+
+    if (data?.callAnalytics?.length) {
+      const callSummary = data.callAnalytics.reduce(
+        (totals: any, item: any) => {
+          totals.calls += item.calls ?? 0
+          totals.connected += item.connected ?? 0
+          totals.converted += item.converted ?? 0
+          return totals
+        },
+        { calls: 0, connected: 0, converted: 0 }
+      )
+
+      const callActivityBody = [
+        ["Total Calls", callSummary.calls],
+        ["Connected", callSummary.connected],
+        ["Converted", callSummary.converted],
+      ]
+
+      const callActivityTable = autoTable(doc, {
+        startY: nextY,
+        head: [["Call Activity", "Count"]],
+        body: callActivityBody,
+        theme: "grid",
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: "bold" },
+      }) as any
+      nextY = (callActivityTable?.finalY ?? nextY) + 30
+    }
+
+    if (data?.outcomeDistribution?.length) {
+      const outcomeRows = data.outcomeDistribution.map((item: any) => [item.name ?? "-", item.value ?? 0])
+      autoTable(doc, {
+        startY: nextY,
+        head: [["Outcome", "Count"]],
+        body: outcomeRows,
+        theme: "grid",
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [139, 92, 246], textColor: 255, fontStyle: "bold" },
+      })
+    }
+
+    doc.save(`reports-${dateRange}-${new Date().toISOString().slice(0, 10)}.pdf`)
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,7 +193,7 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
           <p className="text-muted-foreground">Performance metrics and insights</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Date range" />
@@ -118,6 +205,9 @@ export default function ReportsPage() {
               <SelectItem value="year" disabled>This year</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={downloadReportPdf}>
+            Export PDF
+          </Button>
         </div>
       </div>
 
@@ -199,7 +289,16 @@ export default function ReportsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={callAnalytics}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" className="text-xs" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={formatChartDate}
+                        interval={0}
+                        angle={-35}
+                        textAnchor="end"
+                        height={50}
+                        tick={{ fontSize: 10 }}
+                        label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
+                      />
                       <YAxis className="text-xs" />
                       <Tooltip 
                         contentStyle={{ 
@@ -346,7 +445,16 @@ export default function ReportsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={callAnalytics}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={formatChartDate}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={50}
+                      tick={{ fontSize: 10 }}
+                      label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
+                    />
                     <YAxis className="text-xs" />
                     <Tooltip 
                       contentStyle={{ 
@@ -428,7 +536,16 @@ export default function ReportsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={visitAnalytics}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" className="text-xs" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={formatChartDate}
+                      interval={0}
+                      angle={-35}
+                      textAnchor="end"
+                      height={50}
+                      tick={{ fontSize: 10 }}
+                      label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
+                    />
                     <YAxis className="text-xs" />
                     <Tooltip 
                       contentStyle={{ 

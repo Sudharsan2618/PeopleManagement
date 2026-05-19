@@ -60,6 +60,7 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   interested: { label: "Interested", color: "bg-green-100 text-green-800" },
   qualified: { label: "Qualified", color: "bg-emerald-100 text-emerald-800" },
   enrolled_elsewhere: { label: "Enrolled Elsewhere", color: "bg-purple-100 text-purple-800" },
+  application_process: { label: "Application Process", color: "bg-teal-100 text-teal-800" },
 }
 
 export default function CallHistoryPage() {
@@ -77,6 +78,7 @@ export default function CallHistoryPage() {
   const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0])
   const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0])
   const [isExporting, setIsExporting] = useState(false)
+  const [isPdfExporting, setIsPdfExporting] = useState(false)
 
   const telecallerId = user ? Number(user.id) : 0
 
@@ -137,12 +139,15 @@ export default function CallHistoryPage() {
       const rows = exportData.map(log => {
         const prospect = prospects[log.prospect_id]
         const dt = new Date(log.called_at)
+        const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
+        const prospectMobile = prospect ? prospect.mobile : "—"
+        const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
         return [
           dt.toLocaleDateString('en-IN'),
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          prospect?.name || `ID: ${log.prospect_id}`,
-          prospect?.mobile || "—",
-          OUTCOME_CONFIG[log.outcome]?.label || log.outcome,
+          prospectName,
+          prospectMobile,
+          outcomeLabel,
           log.status_after_call || "—",
           log.notes ? log.notes.replace(/\n/g, " ") : "—"
         ]
@@ -173,6 +178,233 @@ export default function CallHistoryPage() {
       })
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const escapePdfText = (text: string) =>
+    text
+      .replace(/\\/g, "\\\\")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)")
+      .replace(/\r\n|\n|\r/g, " ")
+
+  const createPdfBlob = (title: string, rows: string[][]) => {
+    const encoder = new TextEncoder()
+    const titleText = title
+    const rangeText = `Date range: ${exportStartDate} to ${exportEndDate}`
+
+    const pageLeft = 36
+    const pageRight = 576
+    const columns = [40, 110, 220, 340, 440, 520]
+    const tableRows = rows.slice(0, 40)
+    const headerY = 752
+    const rowHeight = 14 // This line remains unchanged
+
+    const headerText = `1 0 0 1 ${pageLeft} 780 Tm (${escapePdfText(titleText)}) Tj\n1 0 0 1 ${pageLeft} 764 Tm (${escapePdfText(rangeText)}) Tj\n`
+
+    const fontSize = 9
+    const approxCharWidth = fontSize * 0.5
+
+    const fitTextForColumn = (cell: string | number | undefined, colIndex: number) => {
+      const s = (cell ?? "").toString()
+      const colStart = columns[colIndex] ?? pageLeft // This line remains unchanged
+      const colEnd = columns[colIndex + 1] ?? pageRight
+      const colWidth = Math.max(10, colEnd - colStart - 8)
+      const maxChars = Math.max(3, Math.floor(colWidth / approxCharWidth))
+      if (s.length > maxChars) return escapePdfText(s.slice(0, maxChars - 3) + "...")
+      return escapePdfText(s)
+    }
+
+    const tableText = tableRows
+      .map((row, rowIndex) => {
+        const y = headerY - rowIndex * rowHeight
+        return row // This line remains unchanged
+          .map((cell, columnIndex) => {
+            const x = columns[columnIndex] ?? pageLeft
+            const cellText = fitTextForColumn(cell, columnIndex)
+            return `1 0 0 1 ${x} ${y} Tm (${cellText}) Tj`
+          })
+          .join("\n")
+      })
+      .join("\n")
+
+    const textContent = `${headerText}${tableText}`
+    const tableTop = 742
+    const tableBottom = 72
+    const rowLines = tableRows // This line remains unchanged
+      .map((_, rowIndex) => ` ${pageLeft} ${tableTop - (rowIndex + 1) * rowHeight} m ${pageRight} ${tableTop - (rowIndex + 1) * rowHeight} l S`)
+      .join("\n")
+    const tableLines = [
+      `0.5 w`,
+      `${pageLeft} ${tableTop} m ${pageRight} ${tableTop} l S`,
+      `${pageLeft} ${tableBottom} m ${pageRight} ${tableBottom} l S`,
+      ...columns.map((x) => `${x} ${tableTop} m ${x} ${tableBottom} l S`),
+      `${pageRight} ${tableTop} m ${pageRight} ${tableBottom} l S`,
+      tableTop > tableBottom ? rowLines : "",
+    ]
+      .filter(Boolean)
+      .join("\n")
+
+    // Draw table lines first so text renders on top of the grid
+    const pageStream = `${tableLines}\nBT\n/F1 ${fontSize} Tf\n${textContent}\nET`
+    const streamBytes = encoder.encode(pageStream)
+
+    const pdfHeader = "%PDF-1.3\n%âãÏÓ\n"
+    const objects = [
+      "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
+      "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
+      "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj\n",
+      `4 0 obj << /Length ${streamBytes.length} >> stream\n${pageStream}\nendstream\nendobj\n`,
+      "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
+    ]
+
+    const pdfHeaderBytes = encoder.encode(pdfHeader).length
+    let offset = pdfHeaderBytes
+    const xrefEntries = "0000000000 65535 f \n"
+    const objectOffsets: number[] = []
+    objects.forEach((obj) => {
+      objectOffsets.push(offset)
+      offset += encoder.encode(obj).length
+    })
+
+    const xref = objects
+      .map((_, idx) => `${objectOffsets[idx].toString().padStart(10, "0")} 00000 n \n`)
+      .join("")
+
+    const pdfBody = `${objects.join("")}xref\n0 ${objects.length + 1}\n${xrefEntries}${xref}trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${offset}\n%%EOF\n`
+
+    const fullPdf = `${pdfHeader}${pdfBody}`
+    return new Blob([fullPdf], { type: "application/pdf" })
+  }
+
+  const handleExportPDF = async () => {
+    setIsPdfExporting(true)
+    try {
+      const start = new Date(exportStartDate)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(exportEndDate)
+      end.setHours(23, 59, 59, 999)
+
+      const exportData = callLogs.filter(log => {
+        const logDate = new Date(log.called_at)
+        return logDate >= start && logDate <= end
+      })
+
+      if (exportData.length === 0) {
+        toast({
+          title: "No data found",
+          description: "No call logs found for the selected date range.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const rows = exportData.map(log => {
+        const prospect = prospects[log.prospect_id]
+        const dt = new Date(log.called_at)
+        const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
+        const prospectMobile = prospect ? prospect.mobile : "—"
+        const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
+        return [
+          dt.toLocaleDateString('en-IN'),
+          dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          prospectName,
+          prospectMobile,
+          outcomeLabel,
+          log.status_after_call || "—",
+        ]
+      })
+
+      // Try client-side PDF generation via jsPDF + autoTable for a direct download.
+      const headers = ["Date", "Time", "Prospect", "Mobile", "Outcome", "Status"]
+      try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        const { jsPDF } = await import('jspdf')
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        await import('jspdf-autotable')
+
+        // Create PDF (landscape for better column fit)
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' })
+        doc.setFontSize(14)
+        doc.text('Call History Report', 40, 40)
+        doc.setFontSize(10)
+        doc.text(`Date range: ${exportStartDate} to ${exportEndDate}`, 40, 58)
+
+        // autoTable will paginate and repeat headers
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        doc.autoTable({
+          head: [headers],
+          body: rows,
+          startY: 80,
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [240, 240, 240] },
+          theme: 'grid',
+          margin: { left: 40, right: 40 }
+        })
+
+        doc.save(`CallHistory_${exportStartDate}_to_${exportEndDate}.pdf`)
+        toast({ title: 'PDF Downloaded', description: `Downloaded ${exportData.length} records.` })
+        return
+      } catch (e) {
+        console.error('jsPDF export failed', e)
+        // fall through to printable HTML fallback
+      }
+
+      // Fallback: Build an HTML table and open print dialog (user can Save as PDF).
+      // Use an inline builder to avoid dynamic-import/runtime issues.
+      const esc = (s: any) => (s == null ? "" : String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"))
+      const head = headers.map(h => `<th>${esc(h)}</th>`).join("")
+      const body = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc("Call History Report")}</title><style>
+        @page { size: letter; margin: 16mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111 }
+        h1{font-size:16px;margin:0 0 6px}
+        p{margin:0 0 10px}
+        table{width:100%;border-collapse:collapse}
+        th,td{border:1px solid #222;padding:6px 8px;vertical-align:top;text-align:left}
+        th{background:#f3f3f3;font-weight:700}
+        td{word-wrap:break-word}
+      </style></head><body>
+      <h1>Call History Report</h1>
+      <p>Date range: ${esc(`${exportStartDate} to ${exportEndDate}`)}</p>
+      <table>
+        <thead><tr>${head}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+      </body></html>`
+
+      const win = window.open("", "_blank", "noopener,noreferrer")
+      if (!win) {
+        console.error('Unable to open print window')
+        toast({ title: 'Export Failed', description: 'Unable to open print window.', variant: 'destructive' })
+        return
+      }
+      win.document.open()
+      win.document.write(html)
+      win.document.close()
+      win.focus()
+      setTimeout(() => {
+        try {
+          win.print()
+        } catch (e) {
+          console.error(e)
+          toast({ title: 'Export Failed', description: String(e), variant: 'destructive' })
+        }
+      }, 500)
+      toast({ title: 'PDF Export Ready', description: `Print dialog opened for ${exportData.length} records.` })
+    } catch (err) {
+      toast({
+        title: "Export Failed",
+        description: "An error occurred while generating the PDF.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsPdfExporting(false)
     }
   }
 
@@ -286,7 +518,7 @@ export default function CallHistoryPage() {
                   />
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="grid grid-cols-1 gap-2">
                 <Button onClick={handleExportCSV} disabled={isExporting} className="w-full">
                   {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
                   Download CSV

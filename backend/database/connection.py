@@ -19,6 +19,7 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "course_enrollment"),
     "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", "password"),
+    "connect_timeout": 5,
     "options": "-c timezone=Asia/Kolkata"
 }
 
