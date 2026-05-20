@@ -48,8 +48,14 @@ export default function spocProspectImportPage() {
       setIsUploading(true)
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data)
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+      
+      let jsonData: any[] = []
+      workbook.SheetNames.forEach(sheetName => {
+        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName])
+        if (Array.isArray(sheetData)) {
+          jsonData = jsonData.concat(sheetData)
+        }
+      })
 
       if (jsonData.length === 0) {
         throw new Error("No data found in the file.")

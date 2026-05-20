@@ -98,6 +98,11 @@ export default function WhatsAppAdmin() {
   const [campaignMessages, setCampaignMessages] = useState<any[]>([])
   const [isCampaignDetailLoading, setIsCampaignDetailLoading] = useState(false)
   const [messageStatusFilter, setMessageStatusFilter] = useState("all")
+  const [isResendingFailed, setIsResendingFailed] = useState(false)
+
+  const failedMessagesCount = useMemo(() => {
+    return campaignMessages.filter((msg: any) => msg.status === "failed").length
+  }, [campaignMessages])
 
   // Template Detail State
   const [templateDetailOpen, setTemplateDetailOpen] = useState(false)
@@ -148,6 +153,16 @@ export default function WhatsAppAdmin() {
     totalPages: 1,
     totalItems: 0
   })
+
+  // Create Campaign Page/Range state
+  const [prospectsPage, setProspectsPage] = useState(1)
+  const [rangeStart, setRangeStart] = useState("1")
+  const [rangeEnd, setRangeEnd] = useState("500")
+
+  // Inject Page/Range state
+  const [injectPage, setInjectPage] = useState(1)
+  const [injectRangeStart, setInjectRangeStart] = useState("1")
+  const [injectRangeEnd, setInjectRangeEnd] = useState("500")
 
   const fetchCampaigns = async (page: number) => {
     try {
@@ -272,6 +287,23 @@ export default function WhatsAppAdmin() {
     return filteredProspects.filter(p => !existingProspectIds.has(p.id))
   }, [filteredProspects, campaignMessages])
 
+  const paginatedProspects = useMemo(() => {
+    const startIdx = (prospectsPage - 1) * 500
+    const endIdx = startIdx + 500
+    return filteredProspects.slice(startIdx, endIdx)
+  }, [filteredProspects, prospectsPage])
+
+  const paginatedInjectProspects = useMemo(() => {
+    const startIdx = (injectPage - 1) * 500
+    const endIdx = startIdx + 500
+    return prospectsForInjection.slice(startIdx, endIdx)
+  }, [prospectsForInjection, injectPage])
+
+  useEffect(() => {
+    setProspectsPage(1)
+    setInjectPage(1)
+  }, [searchProspects, statusFilter, selectedTags])
+
   const allTags = useMemo(() => {
     const tags = new Set<string>()
     prospects.forEach(p => {
@@ -361,6 +393,79 @@ export default function WhatsAppAdmin() {
       toast({ title: "Resume failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleResendFailed = async () => {
+    if (!selectedCampaign) return
+    try {
+      setIsResendingFailed(true)
+      const res = await whatsappApi.resendFailed(selectedCampaign.id)
+      toast({ title: "Failed Messages Re-queued", description: res.message })
+      // Refresh details
+      const [details, messages] = await Promise.all([
+        whatsappApi.getCampaignDetails(selectedCampaign.id),
+        whatsappApi.getCampaignMessages(selectedCampaign.id)
+      ])
+      setCampaignDetails(details)
+      setCampaignMessages(messages)
+      fetchData()
+    } catch (err) {
+      toast({ title: "Resend failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    } finally {
+      setIsResendingFailed(false)
+    }
+  }
+
+  const handleSelectRange = (isSelect: boolean) => {
+    const start = Math.max(1, parseInt(rangeStart) || 1) - 1
+    const end = Math.min(filteredProspects.length, parseInt(rangeEnd) || filteredProspects.length)
+    
+    if (isNaN(start) || isNaN(end) || start >= end || start < 0) {
+      toast({ title: "Invalid range", description: "Please enter a valid range.", variant: "destructive" })
+      return
+    }
+
+    const rangeIds = filteredProspects.slice(start, end).map(p => p.id)
+    
+    if (isSelect) {
+      setNewCampaign(prev => ({
+        ...prev,
+        recipient_ids: Array.from(new Set([...prev.recipient_ids, ...rangeIds]))
+      }))
+      toast({ title: "Range Selected", description: `Selected prospects from index ${start + 1} to ${end}.` })
+    } else {
+      setNewCampaign(prev => ({
+        ...prev,
+        recipient_ids: prev.recipient_ids.filter(id => !rangeIds.includes(id))
+      }))
+      toast({ title: "Range Deselected", description: `Deselected prospects from index ${start + 1} to ${end}.` })
+    }
+  }
+
+  const handleSelectInjectRange = (isSelect: boolean) => {
+    const start = Math.max(1, parseInt(injectRangeStart) || 1) - 1
+    const end = Math.min(prospectsForInjection.length, parseInt(injectRangeEnd) || prospectsForInjection.length)
+    
+    if (isNaN(start) || isNaN(end) || start >= end || start < 0) {
+      toast({ title: "Invalid range", description: "Please enter a valid range.", variant: "destructive" })
+      return
+    }
+
+    const rangeIds = prospectsForInjection.slice(start, end).map(p => p.id)
+    
+    if (isSelect) {
+      setNewCampaign(prev => ({
+        ...prev,
+        recipient_ids: Array.from(new Set([...prev.recipient_ids, ...rangeIds]))
+      }))
+      toast({ title: "Range Selected", description: `Selected prospects from index ${start + 1} to ${end}.` })
+    } else {
+      setNewCampaign(prev => ({
+        ...prev,
+        recipient_ids: prev.recipient_ids.filter(id => !rangeIds.includes(id))
+      }))
+      toast({ title: "Range Deselected", description: `Deselected prospects from index ${start + 1} to ${end}.` })
     }
   }
 
@@ -790,7 +895,7 @@ export default function WhatsAppAdmin() {
                 <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Message Templates</h2>
                 <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest">{templates.length} Total</Badge>
               </div>
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <Table>
                   <TableHeader className="bg-slate-50/30">
                     <TableRow>
@@ -837,7 +942,7 @@ export default function WhatsAppAdmin() {
           {activeTab === "campaigns" && (
             <div className="flex-1 flex flex-col min-h-0 animate-in fade-in slide-in-from-right-4 duration-500">
               {selectedCampaign ? (
-                <div className="h-full flex flex-col gap-4">
+                <div className="h-full flex flex-col gap-4 overflow-hidden min-h-0">
                   {/* --- CAMPAIGN HEADER & STATS --- */}
                   <Card className="border-none shadow-2xl rounded-[32px] bg-[#1A1F2B] text-white p-8 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-8 opacity-10">
@@ -890,6 +995,23 @@ export default function WhatsAppAdmin() {
                             <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">SENT</p>
                             <p className="text-2xl font-black text-emerald-400">{selectedCampaign.sent_count}</p>
                           </div>
+                          {failedMessagesCount > 0 && (
+                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-[24px] px-6 py-4 backdrop-blur-md flex items-center gap-4">
+                              <div>
+                                <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">FAILED</p>
+                                <p className="text-2xl font-black text-rose-400">{failedMessagesCount}</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={handleResendFailed}
+                                disabled={isResendingFailed}
+                                className="h-8 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center gap-1.5 shadow-lg shadow-rose-600/20"
+                              >
+                                <RefreshCw className={cn("h-3 w-3", isResendingFailed && "animate-spin")} />
+                                {isResendingFailed ? "Resending..." : "Resend"}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -922,7 +1044,7 @@ export default function WhatsAppAdmin() {
                       </div>
                     </div>
                     
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="flex-1 min-h-0">
                       <Table>
                         <TableHeader className="bg-slate-50/50">
                           <TableRow className="hover:bg-transparent border-none">
@@ -1646,9 +1768,87 @@ export default function WhatsAppAdmin() {
                   </Button>
                 </div>
 
+                {/* Range Selector & Pagination Controls */}
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100/80 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    <span>Quick Range Selection</span>
+                    <span>Total Filtered: {filteredProspects.length}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</span>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max={filteredProspects.length}
+                        value={rangeStart}
+                        onChange={e => setRangeStart(e.target.value)}
+                        className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                      />
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max={filteredProspects.length}
+                        value={rangeEnd}
+                        onChange={e => setRangeEnd(e.target.value)}
+                        className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-1.5 shrink-0">
+                      <Button
+                        size="sm"
+                        onClick={() => handleSelectRange(true)}
+                        className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md shadow-emerald-600/10"
+                      >
+                        Select Range
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSelectRange(false)}
+                        className="h-8 px-2.5 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest"
+                      >
+                        Deselect Range
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {filteredProspects.length > 500 && (
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/50">
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        Page {prospectsPage} of {Math.ceil(filteredProspects.length / 500)} (500 per page)
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={prospectsPage === 1}
+                          onClick={() => setProspectsPage(prev => Math.max(1, prev - 1))}
+                          className="h-7 w-7 p-0 rounded-lg border-2"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={prospectsPage >= Math.ceil(filteredProspects.length / 500)}
+                          onClick={() => setProspectsPage(prev => prev + 1)}
+                          className="h-7 w-7 p-0 rounded-lg border-2"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="border rounded-xl overflow-hidden shadow-inner bg-slate-50/30 min-h-[300px]">
                   <div className="divide-y divide-slate-100">
-                    {filteredProspects.map((prospect) => (
+                    {paginatedProspects.map((prospect: any) => (
                       <div 
                         key={prospect.id} 
                         className={cn(
@@ -1894,9 +2094,87 @@ export default function WhatsAppAdmin() {
               </Button>
             </div>
 
+            {/* Range Selector & Pagination Controls */}
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100/80 space-y-3 shadow-sm">
+              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <span>Quick Range Selection</span>
+                <span>Total Filtered: {prospectsForInjection.length}</span>
+              </div>
+              
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</span>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max={prospectsForInjection.length}
+                    value={injectRangeStart}
+                    onChange={e => setInjectRangeStart(e.target.value)}
+                    className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                  />
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max={prospectsForInjection.length}
+                    value={injectRangeEnd}
+                    onChange={e => setInjectRangeEnd(e.target.value)}
+                    className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                  />
+                </div>
+                
+                <div className="flex gap-1.5 shrink-0">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSelectInjectRange(true)}
+                    className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md shadow-emerald-600/10"
+                  >
+                    Select Range
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleSelectInjectRange(false)}
+                    className="h-8 px-2.5 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest"
+                  >
+                    Deselect Range
+                  </Button>
+                </div>
+              </div>
+
+              {/* Pagination Controls */}
+              {prospectsForInjection.length > 500 && (
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/50">
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    Page {injectPage} of {Math.ceil(prospectsForInjection.length / 500)} (500 per page)
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={injectPage === 1}
+                      onClick={() => setInjectPage(prev => Math.max(1, prev - 1))}
+                      className="h-7 w-7 p-0 rounded-lg border-2"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={injectPage >= Math.ceil(prospectsForInjection.length / 500)}
+                      onClick={() => setInjectPage(prev => prev + 1)}
+                      className="h-7 w-7 p-0 rounded-lg border-2"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <ScrollArea className="h-[300px] border border-slate-100 rounded-2xl p-2 bg-slate-50/30 shadow-inner">
               <div className="space-y-1">
-                {prospectsForInjection.map((prospect) => (
+                {paginatedInjectProspects.map((prospect: any) => (
                   <div 
                     key={prospect.id} 
                     onClick={() => {

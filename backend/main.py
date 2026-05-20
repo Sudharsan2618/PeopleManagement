@@ -58,27 +58,40 @@ async def lifespan(app: FastAPI):
     async with db_lifespan():
         settings = get_settings()
         
-        # 1. Setup ARQ Worker inside the web process
+        # 1. Setup ARQ Worker inside the web process with robust auto-recovery
         redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
-        worker = Worker(
-            functions=WorkerSettings.functions,
-            redis_settings=redis_settings,
-            max_jobs=WorkerSettings.max_jobs,
-            job_timeout=WorkerSettings.job_timeout,
-            keep_result=WorkerSettings.keep_result,
-            retry_jobs=WorkerSettings.retry_jobs,
-            max_tries=WorkerSettings.max_tries,
-        )
+        current_worker = None
         
-        log.info("🚀 Starting background ARQ worker inside Web process...")
-        worker_task = asyncio.create_task(worker.async_run())
+        async def run_worker_loop():
+            nonlocal current_worker
+            while True:
+                try:
+                    log.info("🚀 Starting background ARQ worker inside Web process...")
+                    current_worker = Worker(
+                        functions=WorkerSettings.functions,
+                        redis_settings=redis_settings,
+                        max_jobs=WorkerSettings.max_jobs,
+                        job_timeout=WorkerSettings.job_timeout,
+                        keep_result=WorkerSettings.keep_result,
+                        retry_jobs=WorkerSettings.retry_jobs,
+                        max_tries=WorkerSettings.max_tries,
+                    )
+                    await current_worker.async_run()
+                    log.warning("⚠️ ARQ worker loop finished cleanly.")
+                    break
+                except Exception as exc:
+                    log.error("❌ ARQ worker crashed: %s. Reconnecting in 10 seconds...", exc, exc_info=True)
+                    await asyncio.sleep(10.0)
+
+        worker_task = asyncio.create_task(run_worker_loop())
         
         log.info("✅ App startup complete (MongoDB + Postgres + Worker ready)")
         yield
         
         # 2. Shutdown
         log.info("🛑 Shutting down background worker...")
-        await worker.close()
+        if current_worker:
+            await current_worker.close()
         worker_task.cancel()
         try:
             await worker_task

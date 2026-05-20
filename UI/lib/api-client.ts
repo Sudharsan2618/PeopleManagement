@@ -467,6 +467,9 @@ export const whatsappApi = {
   resumeCampaign: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/resume`, {
     method: "POST",
   }),
+  resendFailed: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/resend-failed`, {
+    method: "POST",
+  }),
 }
 
 // Dashboard API

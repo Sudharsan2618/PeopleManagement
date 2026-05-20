@@ -355,3 +355,50 @@ class WhatsAppCampaignService:
                 }
             finally:
                 cur.close()
+
+    @staticmethod
+    async def resend_failed_campaign_messages(campaign_id: int):
+        """Reset failed messages in a campaign back to queued and run the campaign again."""
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            try:
+                # 1. Reset all 'failed' messages to 'queued' and clear meta_message_id/sent_at/delivered_at/read_at/payload
+                cur.execute(
+                    """
+                    UPDATE whatsapp_messages 
+                    SET status = 'queued', 
+                        meta_message_id = NULL, 
+                        sent_at = NULL, 
+                        delivered_at = NULL, 
+                        read_at = NULL, 
+                        payload = NULL 
+                    WHERE campaign_id = %s AND status = 'failed'
+                    """,
+                    (campaign_id,)
+                )
+                affected_rows = cur.rowcount
+                
+                if affected_rows == 0:
+                    return {"status": "success", "message": "No failed messages to resend", "count": 0}
+                
+                # 2. Set campaign status back to sending (if it was completed/failed)
+                cur.execute(
+                    "UPDATE whatsapp_campaigns SET status = 'sending' WHERE id = %s",
+                    (campaign_id,)
+                )
+                conn.commit()
+
+                # 3. Enqueue the task
+                from tasks import enqueue_whatsapp_campaign
+                await enqueue_whatsapp_campaign(campaign_id)
+
+                return {
+                    "status": "success", 
+                    "message": f"Queued {affected_rows} failed messages for resending.", 
+                    "count": affected_rows
+                }
+            except Exception as e:
+                conn.rollback()
+                raise e
+            finally:
+                cur.close()

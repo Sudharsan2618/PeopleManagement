@@ -253,3 +253,11 @@ async def resume_campaign(id: int):
         return await WhatsAppCampaignService.resume_campaign(id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/campaigns/{campaign_id}/resend-failed")
+async def resend_failed(campaign_id: int):
+    """Reset failed messages in a campaign back to queued and run the campaign again."""
+    try:
+        return await WhatsAppCampaignService.resend_failed_campaign_messages(campaign_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
