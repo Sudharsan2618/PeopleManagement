@@ -47,9 +47,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import {
   type CallOutcome,
-  mockCourses,
 } from "@/lib/mock-data"
-import { callLogsApi, type CallLog } from "@/lib/api-client"
+import { callLogsApi, coursesApi, type CallLog, type Course } from "@/lib/api-client"
 
 // ─── DB outcome → UI label mapping ─────────────────────────────
 const DB_OUTCOME_LABELS: Record<string, string> = {
@@ -145,8 +144,8 @@ const outcomeOptions: {
   },
   {
     value: "Qualified",
-    label: "Qualified - Admission Done",
-    description: "Ready for admission — move to admitted",
+    label: "Qualified",
+    description: "Prospect is qualified and scheduled for a visit",
     icon: CheckCircle2,
     color: "text-emerald-600",
   },
@@ -201,6 +200,8 @@ export function CallOutcomeModal({
   const [parentAware, setParentAware] = useState("")
   const [bestTimeToCall, setBestTimeToCall] = useState("")
   const [institutionName, setInstitutionName] = useState("")
+  const [courses, setCourses] = useState<Course[]>([])
+  const [coursesLoading, setCoursesLoading] = useState(false)
 
   // Real call history from API
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
@@ -224,6 +225,14 @@ export function CallOutcomeModal({
             setHistoryLoading(false)
           })
       }
+    }
+    if (open) {
+      setCoursesLoading(true)
+      coursesApi
+        .getAll()
+        .then((data) => setCourses(data))
+        .catch(() => setCourses([]))
+        .finally(() => setCoursesLoading(false))
     }
   }, [prospect, open])
 
@@ -260,7 +269,7 @@ export function CallOutcomeModal({
       data.parentAware = parentAware
       data.bestTimeToCall = bestTimeToCall
     } else if (selectedOutcome === "Qualified") {
-      data.courseConfirmed = coursePreference
+      data.visitDate = callbackDate
     } else if (selectedOutcome === "EnrolledElsewhere") {
       data.institutionName = institutionName
     }
@@ -535,11 +544,17 @@ export function CallOutcomeModal({
                                   <SelectValue placeholder="Select course" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {mockCourses.map((course) => (
-                                    <SelectItem key={course.id} value={course.code}>
-                                      {course.name} ({course.code})
-                                    </SelectItem>
-                                  ))}
+                                    {courses.length > 0 ? (
+                                      courses.map((course) => (
+                                        <SelectItem key={course.id} value={course.code}>
+                                          {course.name} ({course.code})
+                                        </SelectItem>
+                                      ))
+                                    ) : (
+                                      <SelectItem value="" disabled>
+                                        {coursesLoading ? "Loading courses..." : "No courses available"}
+                                      </SelectItem>
+                                    )}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -577,6 +592,7 @@ export function CallOutcomeModal({
                     </section>
                   </>
                 )}
+
               </div>
 
             {/* Sticky Footer */}

@@ -1,5 +1,5 @@
 """
-main.py — Course Enrollment Management System + WhatsApp Automation
+main.py — TATTI CRM + WhatsApp Automation
 Async-first, Cloud Run ready, Redis-backed task queue via ARQ.
 """
 

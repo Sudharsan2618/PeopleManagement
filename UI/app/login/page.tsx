@@ -62,7 +62,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Sign in to the Course Enrollment Management System
+            Sign in to TATTI CRM
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,6 +150,12 @@ export default function LoginPage() {
                 className="text-sm text-primary hover:underline"
               >
                 Forgot your password?
+              </Link>
+            </div>
+            <div className="text-center mt-2 text-sm">
+              Don&apos;t have an account?{' '}
+              <Link href="/signup" className="text-primary hover:underline">
+                Sign up
               </Link>
             </div>
           </form>

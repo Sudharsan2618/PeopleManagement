@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
-import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
+import { callLogsApi, prospectsApi, assignmentsApi, type CallLog, type Prospect } from "@/lib/api-client"
 
 import {
   Download,
@@ -63,13 +63,29 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   application_process: { label: "Application Process", color: "bg-teal-100 text-teal-800" },
 }
 
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  new: { label: "New", color: "bg-blue-100 text-blue-800" },
+  contacted: { label: "Contacted", color: "bg-sky-100 text-sky-800" },
+  warm: { label: "Warm", color: "bg-orange-100 text-orange-800" },
+  hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800" },
+  visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800" },
+  visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800" },
+  admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800" },
+  cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800" },
+  cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800" },
+  lost: { label: "Lost", color: "bg-red-50 text-red-600" },
+}
+
+const EXCLUDED_STATUSES = new Set(["contacted", "status_update", "lost", "cold_no_response"])
+
 export default function CallHistoryPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [callLogs, setCallLogs] = useState<CallLog[]>([])
   const [prospects, setProspects] = useState<Record<number, Prospect>>({})
+  const [assignments, setAssignments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [outcomeFilter, setOutcomeFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
@@ -86,9 +102,10 @@ export default function CallHistoryPage() {
     if (!telecallerId) return
     try {
       setIsLoading(true)
-      const [logs, allProspects] = await Promise.all([
+      const [logs, allProspects, apiAssignments] = await Promise.all([
         callLogsApi.getByTelecaller(telecallerId),
         prospectsApi.getAll(),
+        assignmentsApi.getByTelecaller(telecallerId),
       ])
 
       const prospectMap: Record<number, Prospect> = {}
@@ -97,6 +114,7 @@ export default function CallHistoryPage() {
       })
       setProspects(prospectMap)
       setCallLogs(logs)
+      setAssignments(apiAssignments)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch call history")
       toast({
@@ -449,11 +467,26 @@ export default function CallHistoryPage() {
     })
   }, [callLogs, prospects, searchQuery, outcomeFilter, dateFilter])
 
-  // Outcome summary stats
-  const outcomeCounts = useMemo(() => {
+  // Total leads assigned to this telecaller
+  const totalLeads = assignments.length
+
+  // Pending to call
+  const pendingLeadsCount = useMemo(() => {
+    const assignedProspectIds = new Set(assignments.map((a) => a.prospect_id))
+    return Object.values(prospects).filter((p) => {
+      if (!assignedProspectIds.has(p.id)) return false
+      const hasCalls = callLogs.some((log) => log.prospect_id === p.id)
+      return p.status === "new" || (p.status === "contacted" && !hasCalls)
+    }).length
+  }, [assignments, prospects, callLogs])
+
+  // Status summary stats
+  const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     callLogs.forEach((log) => {
-      counts[log.outcome] = (counts[log.outcome] || 0) + 1
+      if (log.status_after_call) {
+        counts[log.status_after_call] = (counts[log.status_after_call] || 0) + 1
+      }
     })
     return counts
   }, [callLogs])
@@ -532,20 +565,48 @@ export default function CallHistoryPage() {
         </div>
       </div>
 
-      {/* Outcome Summary */}
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(outcomeCounts).map(([outcome, count]) => {
-          const config = OUTCOME_CONFIG[outcome]
-          return (
-            <Badge
-              key={outcome}
-              variant="outline"
-              className={cn("text-xs px-3 py-1 font-semibold", config?.color)}
-            >
-              {config?.label || outcome}: {count}
-            </Badge>
-          )
-        })}
+      {/* Stats Summary */}
+      <div className="space-y-4">
+        {/* Main Stats */}
+        <div className="flex flex-wrap gap-4">
+          <Badge
+            variant="outline"
+            className="text-xs px-4 py-2 font-bold bg-blue-50 text-blue-700 border-blue-200 shadow-sm rounded-lg flex items-center gap-2"
+          >
+            <span>Total Leads:</span>
+            <span className="text-sm bg-blue-100 px-2 py-0.5 rounded-md">{totalLeads}</span>
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-xs px-4 py-2 font-bold bg-yellow-50 text-yellow-700 border-yellow-200 shadow-sm rounded-lg flex items-center gap-2"
+          >
+            <span>Pending to Call:</span>
+            <span className="text-sm bg-yellow-100 px-2 py-0.5 rounded-md">{pendingLeadsCount}</span>
+          </Badge>
+        </div>
+
+        {/* Status Breakdown (excluding specific ones) */}
+        {Object.keys(statusCounts).some(status => !EXCLUDED_STATUSES.has(status)) && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
+            {Object.entries(statusCounts)
+              .filter(([status]) => !EXCLUDED_STATUSES.has(status))
+              .map(([status, count]) => {
+                const config = STATUS_CONFIG[status] || {
+                  label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                  color: "bg-slate-100 text-slate-800 border-slate-200"
+                }
+                return (
+                  <Badge
+                    key={status}
+                    variant="outline"
+                    className={cn("text-xs px-3 py-1 font-semibold", config.color)}
+                  >
+                    {config.label}: {count}
+                  </Badge>
+                )
+              })}
+          </div>
+        )}
       </div>
 
       {/* Filters */}

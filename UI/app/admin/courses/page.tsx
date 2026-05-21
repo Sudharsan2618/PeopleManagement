@@ -57,6 +57,8 @@ export default function CoursesPage() {
   const [prospects, setProspects] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingCourse, setEditingCourse] = useState<any | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState<any | null>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -129,6 +131,16 @@ export default function CoursesPage() {
       }
     }
   }
+
+  const handleOpenDetails = (course: any) => {
+    setSelectedCourse(course)
+    setIsDetailsDialogOpen(true)
+  }
+
+  const selectedCourseProspects = useMemo(() => {
+    if (!selectedCourse) return []
+    return prospects.filter(p => p.course_interest === selectedCourse.code)
+  }, [prospects, selectedCourse])
 
   return (
     <div className="space-y-6">
@@ -308,8 +320,8 @@ export default function CoursesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Course</TableHead>
@@ -389,7 +401,7 @@ export default function CoursesPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenDetails(course)}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
@@ -408,7 +420,7 @@ export default function CoursesPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit Course
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenDetails(course)}>
                                 <Users className="h-4 w-4 mr-2" />
                                 View Enrollments
                               </DropdownMenuItem>
@@ -432,6 +444,68 @@ export default function CoursesPage() {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{selectedCourse?.name ?? "Course Details"}</DialogTitle>
+            <DialogDescription>View course information, enrollment status, and recent prospects.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-sm">
+            <div className="grid gap-1">
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Course Code</span>
+              <p className="font-medium">{selectedCourse?.code ?? "-"}</p>
+            </div>
+            <div className="grid gap-1">
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Duration</span>
+              <p>{selectedCourse?.duration ?? "-"}</p>
+            </div>
+            <div className="grid gap-1">
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Fee</span>
+              <p>₹{selectedCourse ? (selectedCourse.fees || 0).toLocaleString("en-US") : "-"}</p>
+            </div>
+            <div className="grid gap-1">
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Status</span>
+              <Badge variant="outline" className={selectedCourse?.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200"}>
+                {selectedCourse?.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+            <div className="grid gap-1">
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Description</span>
+              <p className="text-sm text-muted-foreground">{selectedCourse?.description ?? "No description provided."}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Interested</span>
+                <p className="font-medium">{selectedCourseProspects.length}</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Enrolled</span>
+                <p className="font-medium">{selectedCourseProspects.filter(p => p.status === "admission_done").length}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Recent Prospects</span>
+              {selectedCourseProspects.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No prospects are linked to this course yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {selectedCourseProspects.slice(0, 5).map((prospect: any) => (
+                    <li key={prospect.id} className="rounded-md border p-3">
+                      <p className="font-medium">{prospect.name || prospect.email || "Unnamed prospect"}</p>
+                      <p className="text-sm text-muted-foreground">{prospect.status === "admission_done" ? "Enrolled" : "Interested"}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

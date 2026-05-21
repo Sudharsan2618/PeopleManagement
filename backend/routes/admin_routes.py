@@ -116,26 +116,44 @@ def get_prospect_pipeline():
 
 
 @router.get("/reports")
-def get_admin_reports():
+def get_admin_reports(telecaller_id: int = None):
     """Consolidated analytics for the admin reports screen."""
     
     # 1. Call Analytics (Last 7 Days)
-    call_analytics = execute_query("""
-        WITH RECURSIVE days AS (
-            SELECT CURRENT_DATE - INTERVAL '6 days' AS day
-            UNION ALL
-            SELECT day + INTERVAL '1 day' FROM days WHERE day < CURRENT_DATE
-        )
-        SELECT 
-            TO_CHAR(d.day, 'Dy') as date,
-            COUNT(cl.id) as calls,
-            COUNT(cl.id) FILTER (WHERE cl.outcome NOT IN ('not_answered', 'busy', 'wrong_number')) as connected,
-            COUNT(cl.id) FILTER (WHERE cl.outcome IN ('interested', 'qualified')) as converted
-        FROM days d
-        LEFT JOIN call_logs cl ON cl.called_at::date = d.day
-        GROUP BY d.day
-        ORDER BY d.day
-    """, fetch="all")
+    if telecaller_id is not None:
+        call_analytics = execute_query("""
+            WITH RECURSIVE days AS (
+                SELECT CURRENT_DATE - INTERVAL '6 days' AS day
+                UNION ALL
+                SELECT day + INTERVAL '1 day' FROM days WHERE day < CURRENT_DATE
+            )
+            SELECT 
+                TO_CHAR(d.day, 'Dy') as date,
+                COUNT(cl.id) as calls,
+                COUNT(cl.id) FILTER (WHERE cl.outcome NOT IN ('not_answered', 'busy', 'wrong_number')) as connected,
+                COUNT(cl.id) FILTER (WHERE cl.outcome IN ('interested', 'qualified')) as converted
+            FROM days d
+            LEFT JOIN call_logs cl ON cl.called_at::date = d.day AND cl.telecaller_id = %s
+            GROUP BY d.day
+            ORDER BY d.day
+        """, (telecaller_id,), fetch="all")
+    else:
+        call_analytics = execute_query("""
+            WITH RECURSIVE days AS (
+                SELECT CURRENT_DATE - INTERVAL '6 days' AS day
+                UNION ALL
+                SELECT day + INTERVAL '1 day' FROM days WHERE day < CURRENT_DATE
+            )
+            SELECT 
+                TO_CHAR(d.day, 'Dy') as date,
+                COUNT(cl.id) as calls,
+                COUNT(cl.id) FILTER (WHERE cl.outcome NOT IN ('not_answered', 'busy', 'wrong_number')) as connected,
+                COUNT(cl.id) FILTER (WHERE cl.outcome IN ('interested', 'qualified')) as converted
+            FROM days d
+            LEFT JOIN call_logs cl ON cl.called_at::date = d.day
+            GROUP BY d.day
+            ORDER BY d.day
+        """, fetch="all")
 
     # 2. Visit Analytics (Last 7 Days)
     visit_analytics = execute_query("""
@@ -156,22 +174,38 @@ def get_admin_reports():
     """, fetch="all")
 
     # 3. Outcome Distribution
-    outcome_distribution = execute_query("""
-        SELECT 
-            INITCAP(REPLACE(outcome, '_', ' ')) as name, 
-            COUNT(*) as value
-        FROM call_logs
-        GROUP BY outcome
-        ORDER BY value DESC
-    """, fetch="all")
+    if telecaller_id is not None:
+        outcome_distribution = execute_query("""
+            SELECT 
+                INITCAP(REPLACE(outcome, '_', ' ')) as name, 
+                COUNT(*) as value
+            FROM call_logs
+            WHERE telecaller_id = %s
+            GROUP BY outcome
+            ORDER BY value DESC
+        """, (telecaller_id,), fetch="all")
+    else:
+        outcome_distribution = execute_query("""
+            SELECT 
+                INITCAP(REPLACE(outcome, '_', ' ')) as name, 
+                COUNT(*) as value
+            FROM call_logs
+            GROUP BY outcome
+            ORDER BY value DESC
+        """, fetch="all")
 
     # 4. Telecaller Performance
     telecaller_performance = execute_query("""
         SELECT 
-            u.id, u.name,
+            u.id,
+            u.name,
             COUNT(cl.id) as "totalCalls",
+            COUNT(cl.id) FILTER (WHERE cl.outcome = 'interested') as interested,
+            COUNT(cl.id) FILTER (WHERE cl.outcome = 'callback') as "followupsRaised",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as enrollments,
             COUNT(cl.id) FILTER (WHERE cl.outcome IN ('interested', 'qualified')) as "successfulCalls",
-            0 as "avgDuration"
+            0 as "avgDuration",
+            COUNT(DISTINCT cl.prospect_id) FILTER (WHERE cl.outcome IN ('not_answered', 'busy', 'wrong_number', 'callback')) as "pendingLeads"
         FROM users u
         LEFT JOIN call_logs cl ON cl.telecaller_id = u.id
         WHERE u.role = 'telecaller' AND u.is_active = TRUE
@@ -185,11 +219,10 @@ def get_admin_reports():
             u.id, u.name,
             COUNT(v.id) as "totalVisits",
             COUNT(v.id) FILTER (WHERE v.follow_up_role IS NOT NULL) as "successfulVisits",
-            COUNT(f.id) FILTER (WHERE f.status = 'pending') as "pendingFollowups"
+            0 as "pendingFollowups"
         FROM users u
         LEFT JOIN spoc_reports r ON r.spoc_id = u.id
         LEFT JOIN spoc_visit_entries v ON v.report_id = r.id
-        LEFT JOIN follow_up_tasks f ON f.assigned_to_user_id = u.id AND f.status = 'pending'
         WHERE u.role = 'spoc' AND u.is_active = TRUE
         GROUP BY u.id, u.name
         ORDER BY "totalVisits" DESC
@@ -219,8 +252,32 @@ def get_admin_reports():
     """, fetch="all")
 
     # 7. Summary Stats
+    call_summary = execute_query("""
+        SELECT
+            COUNT(*) AS "totalCalls",
+            COUNT(*) FILTER (WHERE outcome != 'not_answered') AS "answeredCalls",
+            COUNT(*) FILTER (WHERE outcome = 'not_answered') AS "missedCalls",
+            COUNT(*) FILTER (WHERE outcome = 'callback') AS "callbackRequests",
+            COUNT(*) FILTER (WHERE outcome = 'interested') AS interested,
+            COUNT(*) FILTER (WHERE outcome = 'qualified') AS qualified,
+            COUNT(*) FILTER (WHERE outcome = 'not_interested') AS "notInterested",
+            COUNT(*) FILTER (WHERE outcome = 'busy') AS busy,
+            COUNT(*) FILTER (WHERE outcome = 'wrong_number') AS "wrongNumbers",
+            COUNT(*) FILTER (WHERE outcome = 'dnc') AS dnc
+        FROM call_logs
+    """, fetch="one")
+
     summary = {
-        "totalCalls": execute_query("SELECT COUNT(*) FROM call_logs", fetch="one")["count"],
+        "totalCalls": call_summary["totalCalls"],
+        "answeredCalls": call_summary["answeredCalls"],
+        "missedCalls": call_summary["missedCalls"],
+        "callbackRequests": call_summary["callbackRequests"],
+        "interested": call_summary["interested"],
+        "qualified": call_summary["qualified"],
+        "notInterested": call_summary["notInterested"],
+        "busy": call_summary["busy"],
+        "wrongNumbers": call_summary["wrongNumbers"],
+        "dnc": call_summary["dnc"],
         "totalVisits": execute_query("SELECT COUNT(*) FROM spoc_visit_entries", fetch="one")["count"],
         "totalEnrollments": execute_query("SELECT COUNT(*) FROM prospects WHERE status = 'admission_done'", fetch="one")["count"],
         "totalProspects": execute_query("SELECT COUNT(*) FROM prospects", fetch="one")["count"]

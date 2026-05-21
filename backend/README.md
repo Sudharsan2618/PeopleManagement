@@ -1,6 +1,6 @@
-# Course Enrollment Management System - Backend API
+# TATTI CRM - Backend API
 
-FastAPI-based backend for the Course Enrollment Management System (CEMS) with PostgreSQL database.
+FastAPI-based backend for TATTI CRM (previously Course Enrollment Management System) with PostgreSQL database.
 
 ## Project Structure
 

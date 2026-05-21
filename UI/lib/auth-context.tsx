@@ -24,6 +24,13 @@ interface AuthContextType {
   isInitialized: boolean
   error: string | null
   login: (email: string, password: string) => Promise<User | null>
+  register: (data: {
+    name: string
+    email: string
+    mobile: string
+    password: string
+    role: UserRole
+  }) => Promise<User | null>
   logout: () => void
 }
 
@@ -88,6 +95,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const register = useCallback(async (data: {
+    name: string
+    email: string
+    mobile: string
+    password: string
+    role: UserRole
+  }): Promise<User | null> => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const apiUser = await authApi.register(data)
+      const uiUser = convertApiUserToUser(apiUser)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(uiUser))
+      setUser(uiUser)
+      setIsLoading(false)
+      return uiUser
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed")
+      setIsLoading(false)
+      return null
+    }
+  }, [])
+
   const logout = useCallback(() => {
     setUser(null)
     setError(null)
@@ -95,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isInitialized, error, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isInitialized, error, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

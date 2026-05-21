@@ -47,6 +47,8 @@ import {
   callLogsApi,
   adaptApiProspectToUiProspect,
   type CallLog,
+  coursesApi,
+  type Course,
 } from "@/lib/api-client"
 
 // ─── Outcome → DB mapping ────────────────────────────────────
@@ -77,7 +79,7 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   DNC: "cold_not_interested",            // Not Interested
   LanguageBarrier: "cold_not_interested",// Not Interested
   Interested: "hot",                     // Hot
-  Qualified: "admission_done",          // Admission Done
+  Qualified: "visit_scheduled",          // Visit Scheduled
   EnrolledElsewhere: "cold_not_interested",   // Already Enrolled → Not Interested
   ApplicationProcess: "admission_done",   // Application Process → Admission Done
 }
@@ -105,6 +107,7 @@ export default function TelecallerDashboard() {
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [prospects, setProspects] = useState<any[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
   const [callLogs, setCallLogs] = useState<CallLog[]>([])
   const [assignments, setAssignments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -120,13 +123,15 @@ export default function TelecallerDashboard() {
       setIsLoading(true)
       setError(null)
 
-      const [apiProspects, apiAssignments, apiCallLogs] = await Promise.all([
+      const [apiProspects, apiAssignments, apiCallLogs, apiCourses] = await Promise.all([
         prospectsApi.getAll(),
         assignmentsApi.getByTelecaller(telecallerId),
         callLogsApi.getByTelecaller(telecallerId),
+        coursesApi.getAll(),
       ])
 
       setAssignments(apiAssignments)
+      setCourses(apiCourses)
       setCallLogs(apiCallLogs)
 
       // Build prospect list from today's assignments
@@ -486,8 +491,8 @@ export default function TelecallerDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {mockCourses.map((course) => (
-                    <SelectItem key={course.id} value={course.name}>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.code}>
                       {course.name}
                     </SelectItem>
                   ))}

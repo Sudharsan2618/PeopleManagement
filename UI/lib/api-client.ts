@@ -226,6 +226,25 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     })
   },
+  async register(data: {
+    name: string
+    email: string
+    mobile: string
+    password: string
+    role: UserRole
+  }): Promise<User> {
+    return apiRequest<User>('/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        mobile: data.mobile,
+        password: data.password,
+        role: data.role,
+        is_active: true,
+      }),
+    })
+  },
 }
 
 // Users API
@@ -484,5 +503,8 @@ export const adminApi = {
   getStats: () => apiRequest<any>("/admin/stats"),
   getTelecallerPerformance: () => apiRequest<any[]>("/admin/telecaller-performance"),
   getProspectPipeline: () => apiRequest<any[]>("/admin/prospect-pipeline"),
-  getReports: () => apiRequest<any>("/admin/reports"),
+  getReports: (telecallerId?: number) => {
+    const query = telecallerId ? `?telecaller_id=${telecallerId}` : ""
+    return apiRequest<any>(`/admin/reports${query}`)
+  },
 }
