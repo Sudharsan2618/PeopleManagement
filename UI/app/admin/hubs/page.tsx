@@ -65,7 +65,7 @@ export default function HubsPage() {
       telecallers: users.filter(u => u.role === 'telecaller').length,
       spocs: users.filter(u => u.role === 'spoc').length,
       prospects: prospects.length,
-      enrolled: prospects.filter(p => p.status === 'enrolled').length,
+      enrolled: prospects.filter(p => p.status === 'Enrolled').length,
     }
   }
 

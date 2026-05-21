@@ -32,6 +32,8 @@ class Settings(BaseSettings):
 
     # Redis (Cloud Memorystore or Upstash)
     REDIS_URL          : str = "redis://localhost:6379"
+    REDIS_POLL_DELAY   : float = 5.0   # Poll Redis for new jobs every 5.0 seconds
+    RUN_WORKER_IN_WEB  : bool = False  # Whether to run an ARQ worker loop inside the web process
 
     # Prospectus message body
     PROSPECTUS_MESSAGE : str = (

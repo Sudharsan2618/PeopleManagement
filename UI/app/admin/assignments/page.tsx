@@ -69,14 +69,14 @@ export default function AssignmentsPage() {
   const telecallers = mockUsers.filter(u => u.role === 'telecaller' && u.isActive)
   const spocs = mockUsers.filter(u => u.role === 'spoc' && u.isActive)
 
-  const unassignedProspects = mockProspects.filter(p => !p.assignedToId)
-  const assignedProspects = mockProspects.filter(p => p.assignedToId)
+  const unassignedProspects = mockProspects.filter(p => !p.assignedTo)
+  const assignedProspects = mockProspects.filter(p => p.assignedTo)
 
   const filteredProspects = mockProspects.filter(prospect => {
     const matchesSearch = 
       prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prospect.phone.includes(searchQuery) ||
-      prospect.city.toLowerCase().includes(searchQuery.toLowerCase())
+      prospect.mobile.includes(searchQuery) ||
+      prospect.location.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === "all" || prospect.status === statusFilter
     const matchesHub = hubFilter === "all" || prospect.hubId === hubFilter
@@ -110,7 +110,7 @@ export default function AssignmentsPage() {
 
   // Calculate workload for each user
   const getUserWorkload = (userId: string) => {
-    return mockProspects.filter(p => p.assignedToId === userId).length
+    return mockProspects.filter(p => p.assignedTo === userId).length
   }
 
   return (
@@ -274,11 +274,11 @@ export default function AssignmentsPage() {
                           <TableCell>
                             <div>
                               <p className="font-medium">{prospect.name}</p>
-                              <p className="text-sm text-muted-foreground">{prospect.phone}</p>
+                              <p className="text-sm text-muted-foreground">{prospect.mobile}</p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">{prospect.city}, {prospect.state}</span>
+                            <span className="text-sm">{prospect.location}</span>
                           </TableCell>
                           <TableCell>
                             <Badge className={statusColors[prospect.status]} variant="secondary">
@@ -286,18 +286,21 @@ export default function AssignmentsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {prospect.assignedToName ? (
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarFallback className="text-xs">
-                                    {prospect.assignedToName.split(' ').map(n => n[0]).join('')}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm">{prospect.assignedToName}</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">Unassigned</span>
-                            )}
+                            {(() => {
+                              const assignedUser = mockUsers.find(u => u.id === prospect.assignedTo)
+                              return assignedUser ? (
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-xs">
+                                      {assignedUser.name.split(' ').map((n: string) => n[0]).join('')}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{assignedUser.name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">Unassigned</span>
+                              )
+                            })()}
                           </TableCell>
                         </TableRow>
                       ))
@@ -460,7 +463,7 @@ export default function AssignmentsPage() {
                     return prospect ? (
                       <div key={id} className="text-sm flex items-center gap-2">
                         <ArrowRight className="h-3 w-3" />
-                        {prospect.name} - {prospect.phone}
+                        {prospect.name} - {prospect.mobile}
                       </div>
                     ) : null
                   })}

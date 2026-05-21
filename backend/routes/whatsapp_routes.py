@@ -138,7 +138,15 @@ def get_conversations():
                 cur.execute("""
                     SELECT p.id, p.name, p.mobile, 
                            MAX(m.created_at) as last_message_at,
-                           (SELECT body FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
+                           (SELECT 
+                                CASE 
+                                    WHEN body = '' AND message_type = 'interactive' THEN 'Form Submitted'
+                                    WHEN body = '' AND message_type = 'document' THEN 'Sent Document'
+                                    WHEN body = '' AND message_type = 'image' THEN 'Sent Image'
+                                    WHEN body IS NULL OR body = '' THEN 'Message'
+                                    ELSE body 
+                                END
+                            FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
                     FROM prospects p
                     LEFT JOIN whatsapp_messages m ON p.id = m.prospect_id
                     WHERE m.id IS NOT NULL
@@ -168,6 +176,43 @@ def get_messages(prospect_id: int):
                 """, (prospect_id,))
                 results = cur.fetchall()
                 return results
+            finally:
+                cur.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/flow-submissions")
+def get_flow_submissions(page: int = Query(1), page_size: int = Query(20)):
+    """Get paginated WhatsApp flow submissions."""
+    try:
+        from database.connection import get_db_connection
+        from psycopg2.extras import RealDictCursor
+        import math
+        with get_db_connection() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                # Get total count
+                cur.execute("SELECT count(*) FROM whatsapp_flow_submissions")
+                total = cur.fetchone()['count']
+                
+                # Get paginated submissions
+                offset = (page - 1) * page_size
+                cur.execute("""
+                    SELECT wfs.*, p.name as prospect_name, p.mobile as prospect_mobile 
+                    FROM whatsapp_flow_submissions wfs
+                    LEFT JOIN prospects p ON wfs.prospect_id = p.id
+                    ORDER BY wfs.received_at DESC
+                    LIMIT %s OFFSET %s
+                """, (page_size, offset))
+                items = cur.fetchall()
+                
+                return {
+                    "items": items,
+                    "total": total,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": math.ceil(total / page_size) if total > 0 else 1
+                }
             finally:
                 cur.close()
     except Exception as e:

@@ -30,6 +30,7 @@ export interface Prospect {
   created_by?: number
   created_at: string
   updated_at: string
+  tags?: string[]
 }
 
 export interface CallLog {
@@ -432,6 +433,7 @@ export const whatsappApi = {
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
   getConversations: () => apiRequest<any[]>("/whatsapp/conversations"),
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
+  getFlowSubmissions: (page: number = 1, pageSize: number = 20) => apiRequest<any>(`/whatsapp/flow-submissions?page=${page}&page_size=${pageSize}`),
   createCampaign: (data: any) => apiRequest<any>("/whatsapp/campaigns", {
     method: "POST",
     body: JSON.stringify(data),

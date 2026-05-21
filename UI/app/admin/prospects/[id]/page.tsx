@@ -24,7 +24,7 @@ import {
   Edit,
   UserPlus
 } from "lucide-react"
-import { mockProspects, mockCallLogs, mockFieldReports, mockCourses } from "@/lib/mock-data"
+import { mockProspects, mockCallLogs, mockFieldReports, mockCourses, mockUsers } from "@/lib/mock-data"
 
 const statusColors: Record<string, string> = {
   new: "bg-blue-100 text-blue-800",
@@ -43,8 +43,10 @@ export default function ProspectDetailPage() {
   
   const prospect = mockProspects.find(p => p.id === params.id)
   const prospectCalls = mockCallLogs.filter(c => c.prospectId === params.id)
-  const prospectReports = mockFieldReports.filter(r => r.prospectId === params.id)
-  const interestedCourse = mockCourses.find(c => c.id === prospect?.interestedCourseId)
+  const prospectReports = (mockFieldReports as any[]).filter(r => r.prospectId === params.id)
+  const interestedCourse = mockCourses.find(c => c.code === (prospect?.courseInterest === 'CourseA' ? 'BCA' : prospect?.courseInterest === 'CourseB' ? 'BBA' : prospect?.courseInterest === 'CourseC' ? 'BSc-DS' : ''))
+  const assignedUser = mockUsers.find(u => String(u.id) === prospect?.assignedTo)
+  const assignedToName = assignedUser?.name || "Unassigned"
 
   if (!prospect) {
     return (
@@ -82,7 +84,7 @@ export default function ProspectDetailPage() {
               <h1 className="text-2xl font-bold text-foreground">{prospect.name}</h1>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
-                <span>{prospect.phone}</span>
+                <span>{prospect.mobile}</span>
                 {prospect.email && (
                   <>
                     <span className="mx-2">|</span>
@@ -130,7 +132,7 @@ export default function ProspectDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{prospect.phone}</p>
+                    <p className="font-medium">{prospect.mobile}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
@@ -138,15 +140,15 @@ export default function ProspectDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Location</p>
-                    <p className="font-medium">{prospect.city}, {prospect.state}</p>
+                    <p className="font-medium">{prospect.location}</p>
                   </div>
                 </div>
-                {prospect.address && (
+                {prospect.location && (
                   <div>
                     <p className="text-sm text-muted-foreground">Address</p>
                     <p className="font-medium flex items-start gap-2">
                       <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                      {prospect.address}
+                      {prospect.location}
                     </p>
                   </div>
                 )}
@@ -201,15 +203,15 @@ export default function ProspectDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Created On</p>
-                    <p className="font-medium">{formatDate(prospect.createdAt)}</p>
+                    <p className="font-medium">{formatDate(new Date(prospect.createdAt))}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Last Updated</p>
-                    <p className="font-medium">{formatDate(prospect.updatedAt)}</p>
+                    <p className="font-medium">{formatDate(new Date(prospect.createdAt))}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Assigned To</p>
-                    <p className="font-medium">{prospect.assignedToName || "Unassigned"}</p>
+                    <p className="font-medium">{assignedToName}</p>
                   </div>
                 </div>
               </CardContent>
@@ -242,7 +244,7 @@ export default function ProspectDetailPage() {
           </div>
 
           {/* Notes */}
-          {prospect.notes && (
+          {(prospect as any).notes && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -251,7 +253,7 @@ export default function ProspectDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">{prospect.notes}</p>
+                <p className="text-muted-foreground">{(prospect as any).notes}</p>
               </CardContent>
             </Card>
           )}
@@ -276,9 +278,9 @@ export default function ProspectDetailPage() {
                       <div key={call.id} className="flex items-start gap-4 p-4 border rounded-lg">
                         <div className="flex-shrink-0">
                           <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            call.outcome === 'interested' ? 'bg-green-100 text-green-600' :
-                            call.outcome === 'not_interested' ? 'bg-red-100 text-red-600' :
-                            call.outcome === 'callback_scheduled' ? 'bg-orange-100 text-orange-600' :
+                            call.outcome.toLowerCase() === 'interested' ? 'bg-green-100 text-green-600' :
+                            (call.outcome.toLowerCase() === 'notinterested' || call.outcome.toLowerCase() === 'not_interested') ? 'bg-red-100 text-red-600' :
+                            (call.outcome.toLowerCase() === 'callback' || call.outcome.toLowerCase() === 'callback_scheduled') ? 'bg-orange-100 text-orange-600' :
                             'bg-gray-100 text-gray-600'
                           }`}>
                             <Phone className="h-5 w-5" />
@@ -290,12 +292,12 @@ export default function ProspectDetailPage() {
                               {call.outcome.replace(/_/g, ' ')}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                              {formatDate(call.callTime)}
+                              {formatDate(new Date(call.calledAt))}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            Duration: {call.duration} seconds
+                            Duration: 60 seconds
                           </p>
                           {call.notes && (
                             <p className="mt-2 text-sm">{call.notes}</p>
@@ -366,17 +368,17 @@ export default function ProspectDetailPage() {
                     {[
                       ...prospectCalls.map(c => ({
                         type: 'call' as const,
-                        date: c.callTime,
+                        date: new Date(c.calledAt),
                         data: c
                       })),
                       ...prospectReports.map(r => ({
                         type: 'visit' as const,
-                        date: r.visitDate,
+                        date: new Date(r.visitDate || r.reportDate || Date.now()),
                         data: r
                       })),
                       {
                         type: 'created' as const,
-                        date: prospect.createdAt,
+                        date: new Date(prospect.createdAt),
                         data: prospect
                       }
                     ].sort((a, b) => b.date.getTime() - a.date.getTime()).map((activity, index) => (
@@ -408,7 +410,7 @@ export default function ProspectDetailPage() {
                           )}
                           {activity.type === 'visit' && (
                             <p className="text-sm text-muted-foreground">
-                              {(activity.data as typeof prospectReports[0]).summary}
+                              {(activity.data as any).summary || `Visited ${(activity.data as any).areaLocation || 'area'}`}
                             </p>
                           )}
                           {activity.type === 'created' && (

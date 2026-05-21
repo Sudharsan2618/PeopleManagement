@@ -176,21 +176,21 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   }
 
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className={cn("flex flex-col h-full", mobile ? "pt-4" : "")}>
+    <div className={cn("flex flex-col h-full bg-[#0f172a] text-slate-100", mobile ? "pt-4" : "")}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-          <GraduationCap className="h-5 w-5 text-primary-foreground" />
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800">
+        <div className="flex h-9 w-9 items-center justify-center rounded bg-[#10b981] text-white">
+          <GraduationCap className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="font-semibold text-sm">CEMS</h1>
-          <p className="text-xs text-muted-foreground">{getRoleLabel(role)}</p>
+          <h1 className="font-semibold text-sm text-white tracking-tight">CEMS</h1>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{getRoleLabel(role)}</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-4">
-        <nav className="space-y-1">
+      <ScrollArea className="flex-1 py-4">
+        <nav className="space-y-0.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -199,18 +199,23 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 href={item.href}
                 onClick={() => mobile && setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 py-2.5 text-sm transition-all duration-150 border-l-[3px]",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-slate-800 text-white border-[#10b981] pl-[9px] font-semibold"
+                    : "text-slate-400 border-transparent pl-3 hover:bg-slate-800/40 hover:text-slate-200"
                 )}
               >
                 <item.icon className="h-4 w-4" />
                 <span className="flex-1">{item.title}</span>
                 {item.badge && (
                   <Badge
-                    variant={isActive ? "secondary" : "default"}
-                    className="h-5 min-w-5 px-1.5 text-xs"
+                    variant="outline"
+                    className={cn(
+                      "h-5 min-w-5 px-1.5 text-[10px] font-bold border-none",
+                      isActive
+                        ? "bg-[#10b981] text-white"
+                        : "bg-slate-800 text-[#10b981]"
+                    )}
                   >
                     {item.badge}
                   </Badge>
@@ -222,12 +227,12 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       </ScrollArea>
 
       {/* User Section */}
-      <div className="border-t p-3">
+      <div className="border-t border-slate-800 p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start gap-3 px-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+            <Button variant="ghost" className="w-full justify-start gap-3 px-3 hover:bg-slate-800/60 hover:text-white text-slate-300">
+              <Avatar className="h-8 w-8 rounded border border-slate-700">
+                <AvatarFallback className="bg-[#10b981]/25 text-[#10b981] text-xs font-bold rounded">
                   {userName
                     .split(" ")
                     .map((n) => n[0])
@@ -236,23 +241,23 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium truncate">{userName}</p>
-                <p className="text-xs text-muted-foreground">{getRoleLabel(role)}</p>
+                <p className="text-sm font-medium text-white truncate">{userName}</p>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wide mt-0.5">{getRoleLabel(role)}</p>
               </div>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 text-slate-400" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem>
-              <UserCircle className="mr-2 h-4 w-4" />
+          <DropdownMenuContent align="end" className="w-56 bg-slate-900 border-slate-800 text-slate-200">
+            <DropdownMenuItem className="hover:bg-slate-800 focus:bg-slate-800 focus:text-white">
+              <UserCircle className="mr-2 h-4 w-4 text-slate-400" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
+            <DropdownMenuItem className="hover:bg-slate-800 focus:bg-slate-800 focus:text-white">
+              <Settings className="mr-2 h-4 w-4 text-slate-400" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+            <DropdownMenuSeparator className="bg-slate-800" />
+            <DropdownMenuItem onClick={handleLogout} className="text-rose-400 hover:bg-rose-950 focus:bg-rose-950 focus:text-rose-200">
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
@@ -263,9 +268,9 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   )
 
   return (
-    <div className="flex h-screen bg-muted/30">
+    <div className="flex h-screen bg-[#f7f9fb]">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col border-r bg-background">
+      <aside className="hidden lg:flex lg:w-[260px] lg:flex-col border-r border-slate-200 bg-[#0f172a] shrink-0">
         <Sidebar />
       </aside>
 

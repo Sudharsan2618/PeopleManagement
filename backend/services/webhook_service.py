@@ -92,6 +92,39 @@ class WebhookService:
                 body = interactive.get("button_reply", {}).get("title", "")
             elif interactive.get("type") == "list_reply":
                 body = interactive.get("list_reply", {}).get("title", "")
+            elif interactive.get("type") == "nfm_reply":
+                nfm_reply = interactive.get("nfm_reply", {})
+                response_json_str = nfm_reply.get("response_json", "{}")
+                try:
+                    flow_data = json.loads(response_json_str)
+                    summary_parts = []
+                    if "full_name" in flow_data:
+                        summary_parts.append(f"Name: {flow_data['full_name']}")
+                    if "degree" in flow_data:
+                        summary_parts.append(f"Degree: {flow_data['degree']}")
+                    if "confirmed" in flow_data:
+                        summary_parts.append(f"Confirmed: {flow_data['confirmed']}")
+                    
+                    if summary_parts:
+                        body = "Form: " + ", ".join(summary_parts)
+                    else:
+                        body = "Form Submitted"
+                except Exception:
+                    body = "Form Submitted"
+        elif msg_type == "document":
+            doc = message.get("document", {})
+            filename = doc.get("filename", "document")
+            body = f"[Document] {filename}"
+        elif msg_type == "image":
+            image = message.get("image", {})
+            caption = image.get("caption")
+            body = f"[Image] {caption}" if caption else "[Image]"
+        elif msg_type == "video":
+            video = message.get("video", {})
+            caption = video.get("caption")
+            body = f"[Video] {caption}" if caption else "[Video]"
+        elif msg_type == "audio":
+            body = "[Voice Message]"
 
         with get_db_connection() as conn:
             cur = conn.cursor()

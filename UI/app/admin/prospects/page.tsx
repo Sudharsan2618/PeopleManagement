@@ -285,6 +285,8 @@ export default function AdminProspectsPage() {
               sourced_from: "",
               status: "new",
               course_interest: "",
+              parent_name: "",
+              department: "",
             })
             setIsProspectDialogOpen(true)
           }}>
@@ -296,54 +298,54 @@ export default function AdminProspectsPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2">
-                <Users className="h-5 w-5 text-blue-600" />
+        <Card className="transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/80">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="rounded-xl bg-primary/5 p-3 text-primary">
+                <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Total Prospects</p>
+                <p className="text-2xl font-bold tracking-tight">{stats.total.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Total Prospects</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2">
-                <UserCog className="h-5 w-5 text-purple-600" />
+        <Card className="transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/80">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="rounded-xl bg-secondary/5 p-3 text-secondary">
+                <UserCog className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.assigned.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">Assigned</p>
+                <p className="text-2xl font-bold tracking-tight">{stats.assigned.toLocaleString()}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Assigned</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2">
-                <Users className="h-5 w-5 text-green-600" />
+        <Card className="transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/80">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-600">
+                <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.qualified}</p>
-                <p className="text-xs text-muted-foreground">Qualified</p>
+                <p className="text-2xl font-bold tracking-tight">{stats.qualified}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Qualified</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-yellow-100 p-2">
-                <Users className="h-5 w-5 text-yellow-600" />
+        <Card className="transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/80">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="rounded-xl bg-amber-500/10 p-3 text-amber-600">
+                <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold tracking-tight">{stats.pending}</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Pending</p>
               </div>
             </div>
           </CardContent>
@@ -533,7 +535,7 @@ export default function AdminProspectsPage() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={cn(statusColors[prospect.status])}
+                            className={cn(statusColors[prospect.status as ProspectStatus])}
                           >
                             {prospect.status === "NotInterested"
                               ? "Not Interested"
@@ -727,7 +729,7 @@ export default function AdminProspectsPage() {
                       <span className="text-muted-foreground">Current Status:</span>
                       <Badge
                         variant="outline"
-                        className={cn(statusColors[selectedProspect.status], "ml-2")}
+                        className={cn(statusColors[selectedProspect.status as ProspectStatus], "ml-2")}
                       >
                         {selectedProspect.status}
                       </Badge>

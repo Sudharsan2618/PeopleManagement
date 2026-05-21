@@ -154,22 +154,22 @@ export default function AdminDashboard() {
       title: "Total Prospects",
       value: stats.total_prospects,
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-primary",
+      bgColor: "bg-primary/5",
     },
     {
       title: "Assignments Today",
       value: stats.assignments_today,
       icon: Calendar,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
+      color: "text-secondary",
+      bgColor: "bg-secondary/5",
     },
     {
       title: "Calls Today",
       value: stats.calls_today,
       icon: Phone,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-500/10",
     },
     {
       title: "Qualified (Hot+)",
@@ -179,23 +179,16 @@ export default function AdminDashboard() {
         (stats.prospect_status_counts?.visit_done || 0) +
         (stats.prospect_status_counts?.admission_done || 0),
       icon: CheckCircle2,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-100",
+      color: "text-teal-600",
+      bgColor: "bg-teal-500/10",
     },
     {
-      title: "Field Reports Today",
+      title: "Reports Today",
       value: stats.reports_today,
       icon: FileText,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
+      color: "text-amber-600",
+      bgColor: "bg-amber-500/10",
     },
-    // {
-    //   title: "Pending Follow-ups",
-    //   value: stats.pending_followups,
-    //   icon: ClipboardList,
-    //   color: "text-red-600",
-    //   bgColor: "bg-red-100",
-    // },
   ]
 
   // ─── Chart data ─────────────────────────────────────────────
@@ -243,17 +236,19 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className={cn("rounded-lg p-2", stat.bgColor)}>
-                  <stat.icon className={cn("h-4 w-4", stat.color)} />
+          <Card key={stat.title} className="transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border border-border/80">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className={cn("rounded-xl p-3 shrink-0", stat.bgColor, stat.color)}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{stat.title}</p>
                 </div>
               </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.title}</p>
             </CardContent>
           </Card>
         ))}

@@ -27,11 +27,15 @@ import {
   Layers,
   Upload,
   FileText,
+  File,
+  ExternalLink,
   Image,
   UserPlus,
   Trash2,
   ChevronLeft,
-  PlayCircle
+  PlayCircle,
+  Download,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -82,6 +86,7 @@ export default function WhatsAppAdmin() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("inbox")
   const [isLoading, setIsLoading] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
   const [templates, setTemplates] = useState<any[]>([])
   const [flows, setFlows] = useState<any[]>([])
   const [campaigns, setCampaigns] = useState<any[]>([])
@@ -91,6 +96,15 @@ export default function WhatsAppAdmin() {
   const [messages, setMessages] = useState<any[]>([])
   const [replyText, setReplyText] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Submissions State
+  const [submissions, setSubmissions] = useState<any[]>([])
+  const [submissionsPagination, setSubmissionsPagination] = useState({
+    currentPage: 1,
+    pageSize: 5,
+    totalPages: 1,
+    totalItems: 0
+  })
 
   // Campaign Detail State
   const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null)
@@ -120,7 +134,7 @@ export default function WhatsAppAdmin() {
     language_code: "",
     recipient_ids: [] as number[],
     parameters: {
-      header: {},
+      header: {} as any,
       body_variables: [] as any[],
       buttons: [] as any[]
     },
@@ -178,6 +192,130 @@ export default function WhatsAppAdmin() {
        console.error("Failed to fetch campaigns", err)
     }
   }
+
+  const fetchSubmissions = async (page: number) => {
+    try {
+      setIsLoading(true)
+      const data = await whatsappApi.getFlowSubmissions(page, submissionsPagination.pageSize)
+      setSubmissions(data.items)
+      setSubmissionsPagination(prev => ({
+        ...prev,
+        currentPage: data.page,
+        totalPages: data.total_pages,
+        totalItems: data.total
+      }))
+    } catch (err) {
+      console.error("Failed to fetch submissions", err)
+      toast({
+        title: "Error fetching submissions",
+        description: err instanceof Error ? err.message : "Failed to load flow submissions",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDownloadExcel = async () => {
+    try {
+      setIsExporting(true)
+      const data = await whatsappApi.getFlowSubmissions(1, 100000)
+      const items = data.items || []
+
+      if (items.length === 0) {
+        toast({
+          title: "No data to export",
+          description: "There are no flow submissions available to export.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Headers
+      const headers = [
+        "Submission ID",
+        "Received At",
+        "Wa Phone",
+        "Prospect Name",
+        "Prospect Mobile",
+        "Flow Token",
+        "Full Name",
+        "Email",
+        "City",
+        "Qualification",
+        "Current Status",
+        "Degree",
+        "Confirmed"
+      ]
+
+      // Create CSV rows
+      const csvRows = [
+        headers.join(","), // header row
+        ...items.map((item: any) => {
+          let raw: any = {}
+          try {
+            raw = typeof item.raw_payload === 'string' ? JSON.parse(item.raw_payload) : (item.raw_payload || {})
+          } catch(e) {}
+          
+          const confirmed = raw.confirmed === 'yes' || raw.confirmed === true || item.confirmed === 'yes' ? 'YES' : 'NO'
+          
+          const rowData = [
+            item.id || '',
+            item.received_at ? new Date(item.received_at).toLocaleString() : '',
+            item.wa_phone || '',
+            item.prospect_name || '',
+            item.prospect_mobile || '',
+            item.flow_token || '',
+            item.full_name || raw.full_name || '',
+            item.email || raw.email || '',
+            item.city || raw.city || '',
+            item.qualification || raw.qualification || '',
+            item.current_status || raw.current_status || '',
+            item.degree || raw.degree || '',
+            confirmed
+          ]
+          
+          return rowData.map(val => {
+            const stringVal = String(val === null || val === undefined ? "" : val);
+            const escaped = stringVal.replace(/"/g, '""');
+            return `"${escaped}"`;
+          }).join(",")
+        })
+      ]
+
+      // Add UTF-8 BOM so Excel opens it with proper encoding
+      const csvContent = "\uFEFF" + csvRows.join("\n")
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      
+      const link = document.createElement("a")
+      link.setAttribute("href", url)
+      link.setAttribute("download", `whatsapp_flow_submissions_${new Date().toISOString().split('T')[0]}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast({
+        title: "Export Successful",
+        description: `Downloaded ${items.length} submissions as Excel CSV.`,
+      })
+    } catch (err) {
+      console.error("Failed to export submissions", err)
+      toast({
+        title: "Export Failed",
+        description: err instanceof Error ? err.message : "Failed to export data",
+        variant: "destructive"
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "submissions") {
+      fetchSubmissions(1)
+    }
+  }, [activeTab])
 
   const fetchData = async () => {
     try {
@@ -244,6 +382,34 @@ export default function WhatsAppAdmin() {
     fetchMessages(conv.id)
   }
 
+  const handleViewInInbox = (prospectId: number) => {
+    const conv = conversations.find(c => Number(c.id) === prospectId);
+    if (conv) {
+      handleSelectChat(conv);
+      setActiveTab("inbox");
+    } else {
+      whatsappApi.getConversations().then(convs => {
+        setConversations(convs);
+        const found = convs.find(c => Number(c.id) === prospectId);
+        if (found) {
+          handleSelectChat(found);
+          setActiveTab("inbox");
+        } else {
+          // Create a temp conversation object if not found in sidebar list
+          const tempConv = {
+            id: prospectId,
+            name: "WhatsApp Contact",
+            mobile: "",
+            last_message_at: new Date().toISOString(),
+            last_message: "Form Submission"
+          };
+          handleSelectChat(tempConv);
+          setActiveTab("inbox");
+        }
+      });
+    }
+  };
+
   const handleSendReply = async () => {
     if (!selectedChat || !replyText.trim()) return
     try {
@@ -308,7 +474,7 @@ export default function WhatsAppAdmin() {
     const tags = new Set<string>()
     prospects.forEach(p => {
       if (Array.isArray(p.tags)) {
-        p.tags.forEach(t => tags.add(t))
+        p.tags.forEach((t: any) => tags.add(t))
       }
     })
     return Array.from(tags).sort()
@@ -638,6 +804,7 @@ export default function WhatsAppAdmin() {
               <TabsTrigger value="templates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Templates</TabsTrigger>
               <TabsTrigger value="campaigns" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Campaigns</TabsTrigger>
               <TabsTrigger value="flows" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Flows</TabsTrigger>
+              <TabsTrigger value="submissions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Submissions</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -672,19 +839,19 @@ export default function WhatsAppAdmin() {
           {activeTab === "inbox" && (
             <div className="h-full flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
               {/* --- PREMIUM SIDEBAR --- */}
-              <Card className="w-[320px] flex flex-col overflow-hidden border-none shadow-2xl rounded-[32px] bg-white/80 backdrop-blur-xl shrink-0 border border-white/20">
+              <Card className="w-[320px] flex flex-col overflow-hidden border border-slate-200 bg-white shrink-0 rounded-lg shadow-none">
                 <div className="p-6 pb-4">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-black tracking-tighter text-slate-900">MESSAGES</h2>
-                    <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-black text-[10px] px-2 py-0.5 rounded-full">
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">MESSAGES</h2>
+                    <Badge className="bg-[#10b981]/10 text-[#10b981] border-none font-semibold text-[10px] px-2 py-0.5 rounded-sm">
                       {conversations.length} ACTIVE
                     </Badge>
                   </div>
                   <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#10b981] transition-colors" />
                     <Input 
                       placeholder="Search prospects..." 
-                      className="pl-10 h-11 bg-slate-100/50 border-none rounded-2xl text-xs font-bold placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-emerald-500/20 transition-all" 
+                      className="pl-10 h-10 bg-slate-50 border border-slate-200 rounded-md text-xs placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#10b981]/20 transition-all font-sans font-normal" 
                     />
                   </div>
                 </div>
@@ -696,10 +863,10 @@ export default function WhatsAppAdmin() {
                         key={conv.id}
                         onClick={() => handleSelectChat(conv)}
                         className={cn(
-                          "p-4 cursor-pointer transition-all duration-300 relative rounded-[24px] group",
+                          "p-4 cursor-pointer transition-all duration-150 relative rounded-md group",
                           selectedChat?.id === conv.id 
-                            ? "bg-[#1A1F2B] text-white shadow-xl shadow-slate-200" 
-                            : "hover:bg-slate-50 text-slate-600"
+                            ? "bg-[#0f172a] text-white" 
+                            : "hover:bg-slate-50 text-slate-600 border border-transparent hover:border-slate-100"
                         )}
                       >
                         <div className="flex gap-4">
@@ -745,49 +912,49 @@ export default function WhatsAppAdmin() {
               </Card>
               
               {/* --- PREMIUM CHAT VIEW --- */}
-              <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-2xl rounded-[32px] bg-white/40 backdrop-blur-md relative border border-white/20">
+              <Card className="flex-1 flex flex-col overflow-hidden border border-slate-200 bg-white relative rounded-lg shadow-none">
                 {selectedChat ? (
                   <>
-                    <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/60">
+                    <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
                       <div className="flex items-center gap-4">
                         <div className="relative">
-                           <Avatar className="h-12 w-12 border-2 border-white shadow-md">
-                            <AvatarFallback className={cn("text-white text-xs font-black", getAvatarColor(conversations.findIndex(c => c.id === selectedChat.id)))}>
+                           <Avatar className="h-12 w-12 border border-slate-200">
+                            <AvatarFallback className={cn("text-white text-xs font-semibold rounded-md", getAvatarColor(conversations.findIndex(c => c.id === selectedChat.id)))}>
                               {selectedChat.name[0]?.toUpperCase() || "P"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 border-2 border-white rounded-full" />
+                          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-[#10b981] border-2 border-white rounded-full" />
                         </div>
                         <div>
-                          <h3 className="font-black text-base text-slate-900 tracking-tight leading-none">{selectedChat.name}</h3>
+                          <h3 className="font-semibold text-base text-slate-900 tracking-tight leading-none">{selectedChat.name}</h3>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[8px] font-black px-2 py-0">ONLINE</Badge>
+                            <Badge variant="outline" className="bg-[#10b981]/10 text-[#10b981] border-none text-[8px] font-semibold px-2 py-0.5 rounded-sm">ONLINE</Badge>
                             <span className="text-[10px] text-slate-400 font-bold tracking-tight">+{selectedChat.mobile}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
                           <Phone className="h-5 w-5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition-all">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
                           <Video className="h-5 w-5" />
                         </Button>
                         <Separator orientation="vertical" className="h-6 mx-2" />
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md">
                           <MoreVertical className="h-5 w-5" />
                         </Button>
                       </div>
                     </div>
                     
                     <div className="flex-1 overflow-hidden relative">
-                      <ScrollArea className="h-full bg-[#F8FAFC]" ref={scrollRef}>
+                      <ScrollArea className="h-full bg-slate-50/40" ref={scrollRef}>
                         {/* WhatsApp-style pattern overlay */}
-                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat" />
+                        <div className="absolute inset-0 opacity-[0.015] pointer-events-none bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat" />
                         
                         <div className="p-8 space-y-8 relative">
                           <div className="flex justify-center">
-                            <span className="bg-white/80 backdrop-blur-sm text-slate-500 text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-sm border border-slate-100">
+                            <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-semibold px-3 py-1 rounded-md uppercase tracking-wider">
                               Conversation History
                             </span>
                           </div>
@@ -795,6 +962,34 @@ export default function WhatsAppAdmin() {
                           <div className="space-y-6 pb-4">
                             {messages.map((msg) => {
                               const isTemplate = msg.body?.toLowerCase().includes("template:");
+                              const getFlowData = (m: any) => {
+                                if (m.payload && m.message_type === "interactive") {
+                                  let payloadObj = typeof m.payload === "string" ? null : m.payload;
+                                  if (typeof m.payload === "string") {
+                                    try { payloadObj = JSON.parse(m.payload); } catch (e) {}
+                                  }
+                                  const interactive = payloadObj?.interactive;
+                                  if (interactive && interactive.type === "nfm_reply" && interactive.nfm_reply) {
+                                    try { return JSON.parse(interactive.nfm_reply.response_json); } catch (e) {}
+                                  }
+                                }
+                                return null;
+                              };
+
+                              const getDocumentData = (m: any) => {
+                                if (m.payload && m.message_type === "document") {
+                                  let payloadObj = typeof m.payload === "string" ? null : m.payload;
+                                  if (typeof m.payload === "string") {
+                                    try { payloadObj = JSON.parse(m.payload); } catch (e) {}
+                                  }
+                                  return payloadObj?.document;
+                                }
+                                return null;
+                              };
+
+                              const flowData = getFlowData(msg);
+                              const docData = getDocumentData(msg);
+
                               return (
                                 <div
                                   key={msg.id}
@@ -805,10 +1000,12 @@ export default function WhatsAppAdmin() {
                                 >
                                   <div
                                     className={cn(
-                                      "max-w-[85%] rounded-[24px] px-5 py-3.5 text-[13px] shadow-sm relative group",
+                                      "max-w-[85%] rounded-lg px-4 py-2.5 text-[13px] relative group border",
                                       msg.direction === "outbound" 
-                                        ? "bg-emerald-600 text-white rounded-tr-none shadow-emerald-200/50" 
-                                        : "bg-white text-slate-700 rounded-tl-none border border-slate-100 shadow-slate-200/50"
+                                        ? isTemplate 
+                                          ? "bg-slate-900 border-slate-900 text-white border-l-4 border-l-indigo-500 rounded-tr-none shadow-none" 
+                                          : "bg-[#0f172a] border-[#0f172a] text-white border-l-4 border-l-[#10b981] rounded-tr-none shadow-none"
+                                        : "bg-[#F1F5F9] border-slate-200 text-slate-800 rounded-tl-none shadow-none"
                                     )}
                                   >
                                     {isTemplate ? (
@@ -821,6 +1018,77 @@ export default function WhatsAppAdmin() {
                                         <div className="bg-white/10 p-2 rounded-xl text-[11px] font-medium italic border border-white/10 mt-2">
                                           Waiting for student interaction...
                                         </div>
+                                      </div>
+                                    ) : flowData ? (
+                                      <div className="space-y-3 min-w-[280px]">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100 mb-2">
+                                          <FileText className="h-4 w-4 text-emerald-600" />
+                                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Form Submission</span>
+                                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-bold text-[8px] ml-auto">FLOW</Badge>
+                                        </div>
+                                        <div className="space-y-2 text-xs">
+                                          {flowData.full_name && (
+                                            <div className="flex justify-between border-b border-slate-50 pb-1">
+                                              <span className="text-slate-400 font-bold">Name</span>
+                                              <span className="text-slate-800 font-black">{flowData.full_name}</span>
+                                            </div>
+                                          )}
+                                          {flowData.email && (
+                                            <div className="flex justify-between border-b border-slate-50 pb-1">
+                                              <span className="text-slate-400 font-bold">Email</span>
+                                              <span className="text-slate-800 font-black">{flowData.email}</span>
+                                            </div>
+                                          )}
+                                          {flowData.qualification && (
+                                            <div className="flex justify-between border-b border-slate-50 pb-1">
+                                              <span className="text-slate-400 font-bold">Qualification</span>
+                                              <span className="text-slate-800 font-black uppercase">{flowData.qualification.replace('_', ' ')}</span>
+                                            </div>
+                                          )}
+                                          {flowData.degree && (
+                                            <div className="flex justify-between border-b border-slate-50 pb-1">
+                                              <span className="text-slate-400 font-bold">Interested Course</span>
+                                              <span className="text-slate-800 font-black uppercase">{flowData.degree.replace('_', ' ')}</span>
+                                            </div>
+                                          )}
+                                          {flowData.current_status && (
+                                            <div className="flex justify-between border-b border-slate-50 pb-1">
+                                              <span className="text-slate-400 font-bold">Current Status</span>
+                                              <span className="text-slate-800 font-black uppercase">{flowData.current_status}</span>
+                                            </div>
+                                          )}
+                                          {flowData.confirmed && (
+                                            <div className="flex justify-between pt-1">
+                                              <span className="text-slate-400 font-bold">Confirmed Interest</span>
+                                              <Badge className={cn(
+                                                "border-none text-[9px] font-black uppercase",
+                                                flowData.confirmed.toLowerCase() === 'yes' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                              )}>
+                                                {flowData.confirmed}
+                                              </Badge>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : docData ? (
+                                      <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100 min-w-[240px]">
+                                        <div className="h-10 w-10 bg-rose-50 rounded-lg flex items-center justify-center text-rose-500">
+                                          <File className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-black text-slate-800 truncate">{docData.filename || "Document"}</p>
+                                          <p className="text-[9px] text-slate-400 font-bold uppercase">{docData.mime_type || "PDF File"}</p>
+                                        </div>
+                                        {docData.url && (
+                                          <a 
+                                            href={docData.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-800 transition-colors"
+                                          >
+                                            <ExternalLink className="h-4 w-4" />
+                                          </a>
+                                        )}
                                       </div>
                                     ) : (
                                       <p className="whitespace-pre-wrap leading-relaxed font-bold tracking-tight">{msg.body}</p>
@@ -846,19 +1114,19 @@ export default function WhatsAppAdmin() {
                       </ScrollArea>
                     </div>
                     
-                    <div className="p-6 bg-white/80 backdrop-blur-xl border-t border-slate-100">
-                      <div className="flex items-center gap-3 bg-slate-100/80 rounded-3xl p-2 pr-3 shadow-inner border border-slate-200/50 group focus-within:bg-white focus-within:shadow-xl focus-within:shadow-slate-200/50 transition-all duration-300">
+                    <div className="p-6 bg-white border-t border-slate-200">
+                      <div className="flex items-center gap-3 bg-slate-50 rounded-md p-1.5 border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#10b981]/25 transition-all duration-150">
                         <div className="flex gap-1">
-                           <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-2xl transition-all">
-                            <Smile className="h-5 w-5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-2xl transition-all">
-                            <Paperclip className="h-5 w-5" />
-                          </Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
+                             <Smile className="h-5 w-5" />
+                           </Button>
+                           <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
+                             <Paperclip className="h-5 w-5" />
+                           </Button>
                         </div>
                         <Input 
                           placeholder="Compose message..." 
-                          className="border-none bg-transparent focus-visible:ring-0 shadow-none text-sm h-10 px-0 font-bold placeholder:text-slate-400"
+                          className="border-none bg-transparent focus-visible:ring-0 shadow-none text-sm h-9 px-0 font-sans font-normal placeholder:text-slate-400"
                           value={replyText}
                           onChange={e => setReplyText(e.target.value)}
                           onKeyDown={e => e.key === "Enter" && handleSendReply()}
@@ -867,7 +1135,7 @@ export default function WhatsAppAdmin() {
                           onClick={handleSendReply}
                           disabled={!replyText.trim() || isSending}
                           size="icon" 
-                          className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 h-10 w-12 shrink-0 transition-all active:scale-95" 
+                          className="rounded-md bg-[#10b981] hover:bg-emerald-700 h-9 w-10 shrink-0 transition-all shadow-none" 
                         >
                           {isSending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 text-white" />}
                         </Button>
@@ -876,11 +1144,11 @@ export default function WhatsAppAdmin() {
                   </>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/30">
-                    <div className="h-32 w-32 bg-white rounded-[48px] shadow-2xl flex items-center justify-center mb-8 animate-pulse">
-                      <MessageSquare className="h-16 w-16 text-emerald-500/20" />
+                    <div className="h-16 w-16 bg-white rounded-lg border border-slate-200 flex items-center justify-center mb-6">
+                      <MessageSquare className="h-8 w-8 text-slate-300" />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter mb-2">PICK A CONVERSATION</h3>
-                    <p className="text-slate-400 text-sm font-bold uppercase tracking-widest max-w-[280px] leading-relaxed">
+                    <h3 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">No conversation selected</h3>
+                    <p className="text-slate-500 text-sm max-w-[280px] leading-relaxed">
                       Select a prospect from the left to start high-conversion outreach.
                     </p>
                   </div>
@@ -944,7 +1212,7 @@ export default function WhatsAppAdmin() {
               {selectedCampaign ? (
                 <div className="h-full flex flex-col gap-4 overflow-hidden min-h-0">
                   {/* --- CAMPAIGN HEADER & STATS --- */}
-                  <Card className="border-none shadow-2xl rounded-[32px] bg-[#1A1F2B] text-white p-8 relative overflow-hidden">
+                  <Card className="border border-slate-800 rounded-lg bg-[#0f172a] text-white p-6 relative overflow-hidden shadow-none">
                     <div className="absolute top-0 right-0 p-8 opacity-10">
                       <Zap className="h-32 w-32" />
                     </div>
@@ -955,12 +1223,12 @@ export default function WhatsAppAdmin() {
                           variant="ghost" 
                           size="sm" 
                           onClick={handleBackToCampaigns} 
-                          className="h-10 px-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-white/10"
+                          className="h-9 px-4 bg-white/10 hover:bg-white/20 text-white rounded-md font-semibold text-[10px] uppercase tracking-wider border border-white/10"
                         >
                           <ArrowLeft className="h-4 w-4 mr-2" />
                           BACK TO LIST
                         </Button>
-                        <Badge className={cn("px-4 py-1 rounded-full font-black text-[10px] uppercase tracking-widest border-none", getStatusColor(selectedCampaign.status))}>
+                        <Badge className={cn("px-3 py-1 rounded-sm font-semibold text-[10px] uppercase tracking-wider border-none", getStatusColor(selectedCampaign.status))}>
                           {selectedCampaign.status}
                         </Badge>
                         
@@ -970,7 +1238,7 @@ export default function WhatsAppAdmin() {
                             setTargetCampaignId(selectedCampaign.id)
                             setIsAddingRecipients(true)
                           }}
-                          className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest ml-auto"
+                          className="h-9 px-4 bg-[#10b981] hover:bg-emerald-600 text-white rounded-md font-semibold text-[10px] uppercase tracking-wider ml-auto shadow-none"
                         >
                           <UserPlus className="h-4 w-4 mr-2" />
                           ADD RECIPIENTS
@@ -1005,7 +1273,7 @@ export default function WhatsAppAdmin() {
                                 size="sm"
                                 onClick={handleResendFailed}
                                 disabled={isResendingFailed}
-                                className="h-8 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center gap-1.5 shadow-lg shadow-rose-600/20"
+                                className="h-8 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-md font-semibold text-[9px] uppercase tracking-wider flex items-center gap-1.5 shadow-none"
                               >
                                 <RefreshCw className={cn("h-3 w-3", isResendingFailed && "animate-spin")} />
                                 {isResendingFailed ? "Resending..." : "Resend"}
@@ -1018,11 +1286,11 @@ export default function WhatsAppAdmin() {
                   </Card>
                   
                   {/* --- MESSAGE RECIPIENT TABLE --- */}
-                  <Card className="flex-1 border-none shadow-2xl rounded-[32px] bg-white overflow-hidden flex flex-col">
-                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                  <Card className="flex-1 border border-slate-200 rounded-lg bg-white overflow-hidden flex flex-col shadow-none">
+                    <div className="p-6 border-b border-slate-200 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-1 bg-emerald-500 rounded-full" />
-                        <h3 className="font-black text-sm text-slate-900 tracking-tight uppercase">Recipient Tracking</h3>
+                        <div className="h-4 w-1 bg-[#10b981] rounded-sm" />
+                        <h3 className="font-semibold text-sm text-slate-900 tracking-tight uppercase">Recipient Tracking</h3>
                       </div>
                       <div className="flex gap-2">
                         {["all", "sent", "delivered", "read", "failed"].map((status) => (
@@ -1031,7 +1299,7 @@ export default function WhatsAppAdmin() {
                             variant="outline" 
                             size="sm" 
                             className={cn(
-                              "h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all",
+                              "h-8 px-3 text-[10px] font-semibold uppercase tracking-wider rounded-md transition-all",
                               messageStatusFilter === status 
                                 ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200" 
                                 : "text-slate-400 border-slate-100 hover:bg-slate-50"
@@ -1086,10 +1354,10 @@ export default function WhatsAppAdmin() {
                   </Card>
                 </div>
               ) : (
-                <Card className="h-full border-none shadow-2xl rounded-[32px] bg-white overflow-hidden flex flex-col">
-                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Campaigns</h2>
-                    <Badge className="bg-slate-100 text-slate-500 border-none font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest">
+                <Card className="h-full border border-slate-200 rounded-lg bg-white overflow-hidden flex flex-col shadow-none">
+                  <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/20">
+                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight uppercase">Campaigns</h2>
+                    <Badge className="bg-slate-100 text-slate-500 border-none font-semibold text-[10px] px-3 py-1 rounded-sm uppercase tracking-wider">
                       {campaignPagination.totalItems} TOTAL
                     </Badge>
                   </div>
@@ -1097,12 +1365,12 @@ export default function WhatsAppAdmin() {
                   <ScrollArea className="flex-1 min-h-0">
                     <Table>
                       <TableHeader className="bg-slate-50/50">
-                        <TableRow className="hover:bg-transparent border-none">
-                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Campaign Details</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Date</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400">Engagement</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Actions</TableHead>
+                        <TableRow className="hover:bg-transparent border-b border-slate-200">
+                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Campaign Details</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Date</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Engagement</TableHead>
+                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1270,6 +1538,199 @@ export default function WhatsAppAdmin() {
                    ))}
                 </div>
              </div>
+          )}
+
+          {activeTab === "submissions" && (
+            <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white border border-slate-200 rounded-lg p-6 overflow-hidden shadow-none">
+              <div className="flex justify-between items-center mb-6 shrink-0">
+                <div>
+                  <h2 className="text-xl font-semibold tracking-tight text-slate-900">FORM SUBMISSIONS</h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Structured responses captured from Meta Flows ({submissionsPagination.totalItems} total)
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleDownloadExcel}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 border-slate-200 text-[10px] font-semibold uppercase tracking-wider hover:bg-slate-50 rounded-md text-emerald-700 hover:text-emerald-800 gap-1.5"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    Download Excel
+                  </Button>
+                  <Button onClick={() => fetchSubmissions(submissionsPagination.currentPage)} variant="outline" size="sm" className="h-8 border-slate-200 text-[10px] font-semibold uppercase tracking-wider hover:bg-slate-50 rounded-md" disabled={isLoading}>
+                    <RefreshCw className={cn("h-3 w-3 mr-1.5", isLoading && "animate-spin")} />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+                <Table>
+                  <TableHeader className="bg-slate-50/50">
+                    <TableRow className="hover:bg-transparent border-b border-slate-200">
+                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Prospect / Date</TableHead>
+                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Course Interest</TableHead>
+                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Qualification</TableHead>
+                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Confirmed</TableHead>
+                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {submissions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12 text-slate-400 font-medium text-xs uppercase tracking-widest">
+                          No submissions found.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      submissions.map((sub) => {
+                        let flowData: any = {};
+                        try {
+                          if (sub.raw_payload) {
+                            flowData = typeof sub.raw_payload === 'string'
+                              ? JSON.parse(sub.raw_payload)
+                              : sub.raw_payload;
+                          }
+                        } catch (e) {}
+                        
+                        const degree = (sub.degree || flowData.degree || "").replace(/_/g, ' ');
+                        const qualification = (sub.qualification || flowData.qualification || "").replace(/_/g, ' ');
+                        const currentStatus = (flowData.current_status || sub.current_status || "—").replace(/_/g, ' ');
+                        const confirmed = flowData.confirmed || sub.confirmed || "";
+
+                        const dateFormatted = new Date(sub.received_at).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+
+                        return (
+                          <TableRow key={sub.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
+                            <TableCell className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="text-xs font-black text-slate-900 uppercase">
+                                  {flowData.full_name || sub.full_name || sub.prospect_name || "Unknown"}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-bold mt-0.5">
+                                  {sub.prospect_mobile ? `+${sub.prospect_mobile}` : "No number"} • {dateFormatted}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">
+                                {degree}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+                                {qualification}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+                                {currentStatus}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 py-4">
+                              {confirmed ? (
+                                <Badge className={cn(
+                                  "border-none text-[8px] font-black uppercase tracking-wider px-2 py-0.5",
+                                  confirmed.toLowerCase() === 'yes' 
+                                    ? "bg-emerald-100 text-emerald-700" 
+                                    : "bg-rose-100 text-rose-700"
+                                )}>
+                                  {confirmed}
+                                </Badge>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-6 py-4 text-right">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="h-8 border-slate-200 text-[10px] font-black uppercase tracking-widest px-3 hover:bg-slate-100/50 rounded-xl"
+                                onClick={() => handleViewInInbox(sub.prospect_id)}
+                              >
+                                <MessageCircle className="h-3 w-3 mr-1" />
+                                View Chat
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+
+              {/* Pagination Controls */}
+              {submissionsPagination.totalPages > 1 && (
+                <div className="p-4 border-t border-slate-100 bg-white flex items-center justify-between shrink-0">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Page {submissionsPagination.currentPage} of {submissionsPagination.totalPages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={submissionsPagination.currentPage <= 1}
+                      onClick={() => fetchSubmissions(submissionsPagination.currentPage - 1)}
+                      className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: submissionsPagination.totalPages }, (_, i) => i + 1)
+                        .filter(p => {
+                          const curr = submissionsPagination.currentPage;
+                          return p === 1 || p === submissionsPagination.totalPages || (p >= curr - 1 && p <= curr + 1);
+                        })
+                        .map((page, idx, array) => (
+                          <div key={page} className="flex items-center gap-1">
+                            {idx > 0 && array[idx-1] !== page - 1 && <span className="text-slate-300 text-[10px]">...</span>}
+                            <Button
+                              variant={submissionsPagination.currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => fetchSubmissions(page)}
+                              className={cn(
+                                "h-8 w-8 p-0 rounded-xl font-black text-[10px] transition-all",
+                                submissionsPagination.currentPage === page 
+                                  ? "bg-slate-900 text-white border-slate-900" 
+                                  : "border-slate-200 text-slate-600 hover:bg-white"
+                              )}
+                            >
+                              {page}
+                            </Button>
+                          </div>
+                        ))
+                      }
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={submissionsPagination.currentPage >= submissionsPagination.totalPages}
+                      onClick={() => fetchSubmissions(submissionsPagination.currentPage + 1)}
+                      className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

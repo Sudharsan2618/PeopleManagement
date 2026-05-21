@@ -40,6 +40,7 @@ async def main():
             keep_result=WorkerSettings.keep_result,
             retry_jobs=WorkerSettings.retry_jobs,
             max_tries=WorkerSettings.max_tries,
+            poll_delay=settings.REDIS_POLL_DELAY,
         )
         await worker.async_run()
 
