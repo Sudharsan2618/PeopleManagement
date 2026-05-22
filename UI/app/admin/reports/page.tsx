@@ -13,28 +13,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Phone, 
+import {
+  Phone,
   MapPin,
   TrendingUp,
   Target,
   Loader2
 } from "lucide-react"
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -45,15 +38,24 @@ import {
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import { adminApi, followUpTasksApi, SpocVisitsApi, callLogsApi } from "@/lib/api-client"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
 
 export default function ReportsPage() {
-  const [dateRange, setDateRange] = useState("7days")
   const [reportType, setReportType] = useState("overview")
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
   const [selectedTelecallerId, setSelectedTelecallerId] = useState<number | null>(null)
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0]
+  })
+  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split("T")[0])
+
+  const handleRangeChange = (start: string, end: string) => {
+    setStartDate(start)
+    setEndDate(end)
+  }
 
   const formatChartDate = (value: string) => {
     if (!value) return value
@@ -104,7 +106,7 @@ export default function ReportsPage() {
     }
 
     const title = "Telecalling Performance & Analytics Report"
-    const periodLabel = dateRange === "7days" ? "Last 7 days" : dateRange === "30days" ? "Last 30 days" : dateRange === "90days" ? "Last 90 days" : dateRange === "year" ? "This year" : dateRange
+    const periodLabel = startDate && endDate ? `${startDate} to ${endDate}` : "Custom range"
     const reportDate = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     const generatedAt = new Date().toLocaleString(undefined, { hour12: false })
     const generatedBy = typeof window !== 'undefined' && (window as any).__CURRENT_USER__?.name ? (window as any).__CURRENT_USER__.name : "Admin"
@@ -277,14 +279,14 @@ export default function ReportsPage() {
       doc.text('Company Name', margin, footerY)
     }
 
-    doc.save(`telecalling-report-${dateRange}-${new Date().toISOString().slice(0, 10)}.pdf`)
+    doc.save(`telecalling-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`)
   }
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const reports = await adminApi.getReports(selectedTelecallerId ?? undefined)
+        const reports = await adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate)
         setData(reports)
       } catch (error) {
         console.error("Failed to fetch reports:", error)
@@ -293,7 +295,7 @@ export default function ReportsPage() {
       }
     }
     fetchData()
-  }, [selectedTelecallerId])
+  }, [selectedTelecallerId, startDate, endDate])
 
   if (loading) {
     return (
@@ -336,17 +338,7 @@ export default function ReportsPage() {
           <p className="text-muted-foreground">Performance metrics and insights</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Date range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days" disabled>Last 30 days</SelectItem>
-              <SelectItem value="90days" disabled>Last 90 days</SelectItem>
-              <SelectItem value="year" disabled>This year</SelectItem>
-            </SelectContent>
-          </Select>
+          <DateRangePicker onRangeChange={handleRangeChange} />
           <Button variant="outline" onClick={downloadReportPdf}>
             Export PDF
           </Button>

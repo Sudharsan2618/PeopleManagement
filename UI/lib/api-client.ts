@@ -500,11 +500,33 @@ export const dashboardApi = {
 
 // Admin API
 export const adminApi = {
-  getStats: () => apiRequest<any>("/admin/stats"),
-  getTelecallerPerformance: () => apiRequest<any[]>("/admin/telecaller-performance"),
-  getProspectPipeline: () => apiRequest<any[]>("/admin/prospect-pipeline"),
-  getReports: (telecallerId?: number) => {
-    const query = telecallerId ? `?telecaller_id=${telecallerId}` : ""
+  getStats: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<any>(`/admin/stats${query}`)
+  },
+  getTelecallerPerformance: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<any[]>(`/admin/telecaller-performance${query}`)
+  },
+  getProspectPipeline: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<any[]>(`/admin/prospect-pipeline${query}`)
+  },
+  getReports: (telecallerId?: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (telecallerId) params.append('telecaller_id', telecallerId.toString())
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<any>(`/admin/reports${query}`)
   },
 }

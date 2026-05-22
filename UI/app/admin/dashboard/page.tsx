@@ -29,11 +29,10 @@ import {
 } from "recharts"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
-import { usersApi, SpocReportsApi, adaptApiUserToUiUser } from "@/lib/api-client"
+import { usersApi, SpocReportsApi, adaptApiUserToUiUser, adminApi } from "@/lib/api-client"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
 
 // ─── Colors for charts ──────────────────────────────────────────
 const OUTCOME_COLORS: Record<string, string> = {
@@ -97,6 +96,10 @@ export default function AdminDashboard() {
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date(); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0]
+  })
+  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split("T")[0])
 
   const fetchData = async () => {
     try {
@@ -105,9 +108,9 @@ export default function AdminDashboard() {
 
       const [statsRes, perfRes, pipelineRes, usersRes, reportsRes] =
         await Promise.all([
-          fetch(`${API_BASE_URL}/admin/stats`).then((r) => r.json()),
-          fetch(`${API_BASE_URL}/admin/telecaller-performance`).then((r) => r.json()),
-          fetch(`${API_BASE_URL}/admin/prospect-pipeline`).then((r) => r.json()),
+          adminApi.getStats(startDate || undefined, endDate || undefined),
+          adminApi.getTelecallerPerformance(startDate || undefined, endDate || undefined),
+          adminApi.getProspectPipeline(startDate || undefined, endDate || undefined),
           usersApi.getAll(),
           SpocReportsApi.getAll(),
         ])
@@ -124,13 +127,17 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleRangeChange = (start: string, end: string) => {
+    setStartDate(start)
+    setEndDate(end)
+  }
+
   useEffect(() => {
     fetchData()
-    
-    // Auto-refresh every 60 seconds
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate])
 
   if (isLoading || !stats) {
     return <DashboardSkeleton />
@@ -227,8 +234,9 @@ export default function AdminDashboard() {
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker onRangeChange={handleRangeChange} />
+          <Button onClick={() => fetchData()} variant="outline" size="sm" disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh
           </Button>

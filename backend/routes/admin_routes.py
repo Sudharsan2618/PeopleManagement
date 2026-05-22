@@ -1,58 +1,118 @@
 from fastapi import APIRouter
+from typing import Optional
 from database.connection import execute_query
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+def _date_filter_clause(column: str, start_date, end_date, params: list) -> str:
+    clauses = []
+    if start_date:
+        clauses.append(f"{column} >= %s")
+        params.append(start_date)
+    if end_date:
+        clauses.append(f"{column} <= %s")
+        params.append(end_date)
+    return (" AND " + " AND ".join(clauses)) if clauses else ""
+
+
+def _days_cte(start_date, end_date, params: list) -> str:
+    """Return a WITH RECURSIVE days CTE. Uses provided range or defaults to last 7 days."""
+    if start_date and end_date:
+        params.append(start_date)
+        params.append(end_date)
+        return """WITH RECURSIVE days AS (
+            SELECT %s::date AS day
+            UNION ALL
+            SELECT (day + INTERVAL '1 day')::date FROM days WHERE day < %s::date
+        )"""
+    else:
+        return """WITH RECURSIVE days AS (
+            SELECT (CURRENT_DATE - INTERVAL '6 days')::date AS day
+            UNION ALL
+            SELECT (day + INTERVAL '1 day')::date FROM days WHERE day < CURRENT_DATE
+        )"""
+
+
 @router.get("/stats")
-def get_admin_stats():
+def get_admin_stats(start_date: str = None, end_date: str = None):
     """Aggregate stats for admin dashboard — all computed server-side."""
 
     # Total prospects by status
-    prospect_stats = execute_query("""
-        SELECT status, COUNT(*) as count
-        FROM prospects
-        GROUP BY status
-    """, fetch="all")
+    params = []
+    date_clause = _date_filter_clause("created_at::date", start_date, end_date, params)
+    prospect_stats = execute_query(
+        f"SELECT status, COUNT(*) as count FROM prospects WHERE 1=1{date_clause} GROUP BY status",
+        tuple(params) if params else None,
+        fetch="all"
+    )
     status_counts = {row["status"]: row["count"] for row in prospect_stats}
     total_prospects = sum(status_counts.values())
 
-    # Today's assignments
-    assignments_today = execute_query("""
-        SELECT COUNT(*) as count
-        FROM prospect_assignments
-        WHERE assigned_date = CURRENT_DATE
-    """, fetch="one")
+    # Assignments (today or date range)
+    params = []
+    if start_date or end_date:
+        date_clause = _date_filter_clause("assigned_date", start_date, end_date, params)
+        assignments_today = execute_query(
+            f"SELECT COUNT(*) as count FROM prospect_assignments WHERE 1=1{date_clause}",
+            tuple(params),
+            fetch="one"
+        )
+    else:
+        assignments_today = execute_query("""
+            SELECT COUNT(*) as count
+            FROM prospect_assignments
+            WHERE assigned_date = CURRENT_DATE
+        """, fetch="one")
 
-    # Today's call logs
-    calls_today = execute_query("""
-        SELECT COUNT(*) as count
-        FROM call_logs
-        WHERE called_at::date = CURRENT_DATE
-    """, fetch="one")
+    # Call logs (today or date range)
+    params = []
+    if start_date or end_date:
+        date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
+        calls_today = execute_query(
+            f"SELECT COUNT(*) as count FROM call_logs WHERE 1=1{date_clause}",
+            tuple(params),
+            fetch="one"
+        )
+    else:
+        calls_today = execute_query("""
+            SELECT COUNT(*) as count
+            FROM call_logs
+            WHERE called_at::date = CURRENT_DATE
+        """, fetch="one")
 
-    # Call outcome breakdown (all time)
-    outcome_stats = execute_query("""
-        SELECT outcome, COUNT(*) as count
-        FROM call_logs
-        GROUP BY outcome
-        ORDER BY count DESC
-    """, fetch="all")
+    # Call outcome breakdown (filtered by date range if provided)
+    params = []
+    date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
+    outcome_stats = execute_query(
+        f"SELECT outcome, COUNT(*) as count FROM call_logs WHERE 1=1{date_clause} GROUP BY outcome ORDER BY count DESC",
+        tuple(params) if params else None,
+        fetch="all"
+    )
 
-    # Pending follow-ups
+    # Pending follow-ups (always pending count, no date filter)
     pending_followups = execute_query("""
         SELECT COUNT(*) as count
         FROM follow_up_tasks
         WHERE status = 'pending'
     """, fetch="one")
 
-    # Today's field reports
-    reports_today = execute_query("""
-        SELECT COUNT(*) as count
-        FROM spoc_reports
-        WHERE report_date = CURRENT_DATE
-    """, fetch="one")
+    # Field reports (today or date range)
+    params = []
+    if start_date or end_date:
+        date_clause = _date_filter_clause("report_date", start_date, end_date, params)
+        reports_today = execute_query(
+            f"SELECT COUNT(*) as count FROM spoc_reports WHERE 1=1{date_clause}",
+            tuple(params),
+            fetch="one"
+        )
+    else:
+        reports_today = execute_query("""
+            SELECT COUNT(*) as count
+            FROM spoc_reports
+            WHERE report_date = CURRENT_DATE
+        """, fetch="one")
 
     return {
         "total_prospects": total_prospects,
@@ -66,9 +126,11 @@ def get_admin_stats():
 
 
 @router.get("/telecaller-performance")
-def get_telecaller_performance():
+def get_telecaller_performance(start_date: str = None, end_date: str = None):
     """Per-telecaller call stats for the admin dashboard."""
-    rows = execute_query("""
+    params = []
+    date_clause = _date_filter_clause("cl.called_at::date", start_date, end_date, params)
+    query = f"""
         SELECT
             u.id,
             u.name,
@@ -80,22 +142,26 @@ def get_telecaller_performance():
             COUNT(cl.id) FILTER (WHERE cl.outcome = 'not_interested') AS not_interested,
             COUNT(DISTINCT cl.prospect_id) AS unique_prospects_called
         FROM users u
-        LEFT JOIN call_logs cl ON cl.telecaller_id = u.id
+        LEFT JOIN call_logs cl ON cl.telecaller_id = u.id{date_clause}
         WHERE u.role = 'telecaller' AND u.is_active = TRUE
         GROUP BY u.id, u.name
         ORDER BY total_calls DESC
-    """, fetch="all")
+    """
+    rows = execute_query(query, tuple(params) if params else None, fetch="all")
     return rows
 
 
 @router.get("/prospect-pipeline")
-def get_prospect_pipeline():
+def get_prospect_pipeline(start_date: str = None, end_date: str = None):
     """Funnel data: how many prospects at each stage."""
-    rows = execute_query("""
+    params = []
+    date_clause = _date_filter_clause("created_at::date", start_date, end_date, params)
+    query = f"""
         SELECT
             status,
             COUNT(*) as count
         FROM prospects
+        WHERE 1=1{date_clause}
         GROUP BY status
         ORDER BY
             CASE status
@@ -111,22 +177,22 @@ def get_prospect_pipeline():
                 WHEN 'lost' THEN 10
                 ELSE 99
             END
-    """, fetch="all")
+    """
+    rows = execute_query(query, tuple(params) if params else None, fetch="all")
     return rows
 
 
 @router.get("/reports")
-def get_admin_reports(telecaller_id: int = None):
+def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_date: str = None):
     """Consolidated analytics for the admin reports screen."""
-    
-    # 1. Call Analytics (Last 7 Days)
+
+    # 1. Call Analytics (dynamic date range)
+    params = []
+    days_cte = _days_cte(start_date, end_date, params)
     if telecaller_id is not None:
-        call_analytics = execute_query("""
-            WITH RECURSIVE days AS (
-                SELECT CURRENT_DATE - INTERVAL '6 days' AS day
-                UNION ALL
-                SELECT day + INTERVAL '1 day' FROM days WHERE day < CURRENT_DATE
-            )
+        params.append(telecaller_id)
+        call_analytics = execute_query(f"""
+            {days_cte}
             SELECT 
                 TO_CHAR(d.day, 'Dy') as date,
                 COUNT(cl.id) as calls,
@@ -136,14 +202,10 @@ def get_admin_reports(telecaller_id: int = None):
             LEFT JOIN call_logs cl ON cl.called_at::date = d.day AND cl.telecaller_id = %s
             GROUP BY d.day
             ORDER BY d.day
-        """, (telecaller_id,), fetch="all")
+        """, tuple(params), fetch="all")
     else:
-        call_analytics = execute_query("""
-            WITH RECURSIVE days AS (
-                SELECT CURRENT_DATE - INTERVAL '6 days' AS day
-                UNION ALL
-                SELECT day + INTERVAL '1 day' FROM days WHERE day < CURRENT_DATE
-            )
+        call_analytics = execute_query(f"""
+            {days_cte}
             SELECT 
                 TO_CHAR(d.day, 'Dy') as date,
                 COUNT(cl.id) as calls,
@@ -153,15 +215,13 @@ def get_admin_reports(telecaller_id: int = None):
             LEFT JOIN call_logs cl ON cl.called_at::date = d.day
             GROUP BY d.day
             ORDER BY d.day
-        """, fetch="all")
+        """, tuple(params) if params else None, fetch="all")
 
-    # 2. Visit Analytics (Last 7 Days)
-    visit_analytics = execute_query("""
-        WITH RECURSIVE days AS (
-            SELECT CURRENT_DATE - INTERVAL '6 days' AS day
-            UNION ALL
-            SELECT day + INTERVAL '1 day' FROM days WHERE day < CURRENT_DATE
-        )
+    # 2. Visit Analytics (dynamic date range)
+    params = []
+    days_cte = _days_cte(start_date, end_date, params)
+    visit_analytics = execute_query(f"""
+        {days_cte}
         SELECT 
             TO_CHAR(d.day, 'Dy') as date,
             COUNT(v.id) as visits,
@@ -171,31 +231,37 @@ def get_admin_reports(telecaller_id: int = None):
         LEFT JOIN spoc_visit_entries v ON v.report_id = r.id
         GROUP BY d.day
         ORDER BY d.day
-    """, fetch="all")
+    """, tuple(params) if params else None, fetch="all")
 
     # 3. Outcome Distribution
+    params = []
+    date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
     if telecaller_id is not None:
-        outcome_distribution = execute_query("""
+        params.append(telecaller_id)
+        outcome_distribution = execute_query(f"""
             SELECT 
                 INITCAP(REPLACE(outcome, '_', ' ')) as name, 
                 COUNT(*) as value
             FROM call_logs
-            WHERE telecaller_id = %s
+            WHERE telecaller_id = %s{date_clause}
             GROUP BY outcome
             ORDER BY value DESC
-        """, (telecaller_id,), fetch="all")
+        """, tuple(params), fetch="all")
     else:
-        outcome_distribution = execute_query("""
+        outcome_distribution = execute_query(f"""
             SELECT 
                 INITCAP(REPLACE(outcome, '_', ' ')) as name, 
                 COUNT(*) as value
             FROM call_logs
+            WHERE 1=1{date_clause}
             GROUP BY outcome
             ORDER BY value DESC
-        """, fetch="all")
+        """, tuple(params) if params else None, fetch="all")
 
     # 4. Telecaller Performance
-    telecaller_performance = execute_query("""
+    params = []
+    date_clause = _date_filter_clause("cl.called_at::date", start_date, end_date, params)
+    telecaller_performance = execute_query(f"""
         SELECT 
             u.id,
             u.name,
@@ -207,33 +273,38 @@ def get_admin_reports(telecaller_id: int = None):
             0 as "avgDuration",
             COUNT(DISTINCT cl.prospect_id) FILTER (WHERE cl.outcome IN ('not_answered', 'busy', 'wrong_number', 'callback')) as "pendingLeads"
         FROM users u
-        LEFT JOIN call_logs cl ON cl.telecaller_id = u.id
+        LEFT JOIN call_logs cl ON cl.telecaller_id = u.id{date_clause}
         WHERE u.role = 'telecaller' AND u.is_active = TRUE
         GROUP BY u.id, u.name
         ORDER BY "totalCalls" DESC
-    """, fetch="all")
+    """, tuple(params) if params else None, fetch="all")
 
-    # 5. spoc Performance
-    spoc_performance = execute_query("""
+    # 5. SPOC Performance
+    params = []
+    date_clause = _date_filter_clause("r.report_date", start_date, end_date, params)
+    spoc_performance = execute_query(f"""
         SELECT 
             u.id, u.name,
             COUNT(v.id) as "totalVisits",
             COUNT(v.id) FILTER (WHERE v.follow_up_role IS NOT NULL) as "successfulVisits",
             0 as "pendingFollowups"
         FROM users u
-        LEFT JOIN spoc_reports r ON r.spoc_id = u.id
+        LEFT JOIN spoc_reports r ON r.spoc_id = u.id{date_clause}
         LEFT JOIN spoc_visit_entries v ON v.report_id = r.id
         WHERE u.role = 'spoc' AND u.is_active = TRUE
         GROUP BY u.id, u.name
         ORDER BY "totalVisits" DESC
-    """, fetch="all")
+    """, tuple(params) if params else None, fetch="all")
 
     # 6. Conversion Funnel
-    conversion_funnel = execute_query("""
+    params = []
+    date_clause = _date_filter_clause("created_at::date", start_date, end_date, params)
+    conversion_funnel = execute_query(f"""
         SELECT
             status as stage,
             COUNT(*) as count
         FROM prospects
+        WHERE 1=1{date_clause}
         GROUP BY status
         ORDER BY
             CASE status
@@ -249,10 +320,12 @@ def get_admin_reports(telecaller_id: int = None):
                 WHEN 'lost' THEN 10
                 ELSE 99
             END
-    """, fetch="all")
+    """, tuple(params) if params else None, fetch="all")
 
     # 7. Summary Stats
-    call_summary = execute_query("""
+    params = []
+    date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
+    call_summary = execute_query(f"""
         SELECT
             COUNT(*) AS "totalCalls",
             COUNT(*) FILTER (WHERE outcome != 'not_answered') AS "answeredCalls",
@@ -265,7 +338,35 @@ def get_admin_reports(telecaller_id: int = None):
             COUNT(*) FILTER (WHERE outcome = 'wrong_number') AS "wrongNumbers",
             COUNT(*) FILTER (WHERE outcome = 'dnc') AS dnc
         FROM call_logs
-    """, fetch="one")
+        WHERE 1=1{date_clause}
+    """, tuple(params) if params else None, fetch="one")
+
+    # Visits count with date filter via spoc_reports.report_date
+    visit_params = []
+    visit_date_clause = _date_filter_clause("r.report_date", start_date, end_date, visit_params)
+    if visit_params:
+        total_visits = execute_query(f"""
+            SELECT COUNT(*) as count
+            FROM spoc_visit_entries v
+            JOIN spoc_reports r ON r.id = v.report_id
+            WHERE 1=1{visit_date_clause}
+        """, tuple(visit_params), fetch="one")
+    else:
+        total_visits = execute_query("SELECT COUNT(*) as count FROM spoc_visit_entries", fetch="one")
+
+    # Enrollments count with date filter via prospects.created_at
+    enroll_params = []
+    enroll_date_clause = _date_filter_clause("created_at::date", start_date, end_date, enroll_params)
+    total_enrollments = execute_query(f"""
+        SELECT COUNT(*) as count FROM prospects WHERE status = 'admission_done'{enroll_date_clause}
+    """, tuple(enroll_params) if enroll_params else None, fetch="one")
+
+    # Total prospects with date filter
+    prospect_params = []
+    prospect_date_clause = _date_filter_clause("created_at::date", start_date, end_date, prospect_params)
+    total_prospects = execute_query(f"""
+        SELECT COUNT(*) as count FROM prospects WHERE 1=1{prospect_date_clause}
+    """, tuple(prospect_params) if prospect_params else None, fetch="one")
 
     summary = {
         "totalCalls": call_summary["totalCalls"],
@@ -278,9 +379,9 @@ def get_admin_reports(telecaller_id: int = None):
         "busy": call_summary["busy"],
         "wrongNumbers": call_summary["wrongNumbers"],
         "dnc": call_summary["dnc"],
-        "totalVisits": execute_query("SELECT COUNT(*) FROM spoc_visit_entries", fetch="one")["count"],
-        "totalEnrollments": execute_query("SELECT COUNT(*) FROM prospects WHERE status = 'admission_done'", fetch="one")["count"],
-        "totalProspects": execute_query("SELECT COUNT(*) FROM prospects", fetch="one")["count"]
+        "totalVisits": total_visits["count"],
+        "totalEnrollments": total_enrollments["count"],
+        "totalProspects": total_prospects["count"]
     }
 
     return {
