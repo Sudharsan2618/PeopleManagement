@@ -57,36 +57,43 @@ async def lifespan(app: FastAPI):
     """Startup: connect DB + Redis + ARQ Worker. Shutdown: close them."""
     async with db_lifespan():
         settings = get_settings()
-        
-        # 1. Setup ARQ Worker inside the web process with robust auto-recovery (if enabled)
-        redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
+
         current_worker = None
         worker_task = None
-        
-        if settings.RUN_WORKER_IN_WEB:
-            async def run_worker_loop():
-                nonlocal current_worker
-                while True:
-                    try:
-                        log.info("🚀 Starting background ARQ worker inside Web process...")
-                        current_worker = Worker(
-                            functions=WorkerSettings.functions,
-                            redis_settings=redis_settings,
-                            max_jobs=WorkerSettings.max_jobs,
-                            job_timeout=WorkerSettings.job_timeout,
-                            keep_result=WorkerSettings.keep_result,
-                            retry_jobs=WorkerSettings.retry_jobs,
-                            max_tries=WorkerSettings.max_tries,
-                            poll_delay=settings.REDIS_POLL_DELAY,
-                        )
-                        await current_worker.async_run()
-                        log.warning("⚠️ ARQ worker loop finished cleanly.")
-                        break
-                    except Exception as exc:
-                        log.error("❌ ARQ worker crashed: %s. Reconnecting in 10 seconds...", exc, exc_info=True)
-                        await asyncio.sleep(10.0)
 
-            worker_task = asyncio.create_task(run_worker_loop())
+        # ARQ worker only spins up when explicitly enabled — and only then do we parse REDIS_URL.
+        # Campaigns now run directly via asyncio.create_task, so Redis is not required for startup.
+        if settings.RUN_WORKER_IN_WEB:
+            try:
+                redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
+            except Exception as exc:
+                log.error("❌ Invalid REDIS_URL — skipping in-web ARQ worker. (%s)", exc)
+                redis_settings = None
+
+            if redis_settings is not None:
+                async def run_worker_loop():
+                    nonlocal current_worker
+                    while True:
+                        try:
+                            log.info("🚀 Starting background ARQ worker inside Web process...")
+                            current_worker = Worker(
+                                functions=WorkerSettings.functions,
+                                redis_settings=redis_settings,
+                                max_jobs=WorkerSettings.max_jobs,
+                                job_timeout=WorkerSettings.job_timeout,
+                                keep_result=WorkerSettings.keep_result,
+                                retry_jobs=WorkerSettings.retry_jobs,
+                                max_tries=WorkerSettings.max_tries,
+                                poll_delay=settings.REDIS_POLL_DELAY,
+                            )
+                            await current_worker.async_run()
+                            log.warning("⚠️ ARQ worker loop finished cleanly.")
+                            break
+                        except Exception as exc:
+                            log.error("❌ ARQ worker crashed: %s. Reconnecting in 10 seconds...", exc, exc_info=True)
+                            await asyncio.sleep(10.0)
+
+                worker_task = asyncio.create_task(run_worker_loop())
         else:
             log.info("ℹ️ Web process worker disabled (RUN_WORKER_IN_WEB=False)")
         

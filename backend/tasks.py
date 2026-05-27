@@ -302,7 +302,7 @@ class WorkerSettings:
     redis_settings = None          # set dynamically in worker.py
     max_jobs       = 5             # reduced for better stability per worker
     job_timeout    = 3600          # increased to 1 hour to allow large campaigns to finish
-    keep_result    = 3600          # keep result in Redis for 1 hour
+    keep_result    = 300           # keep result 5 min — shorter retention reduces Redis reads
     retry_jobs     = True
     max_tries      = 2
-    poll_delay     = 5.0           # poll Redis for new jobs every 5 seconds (saves Redis command quota)
+    poll_delay     = 30.0          # poll every 30s — reduces Upstash daily request count ~6x

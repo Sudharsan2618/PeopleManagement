@@ -51,13 +51,11 @@ def create_campaign(campaign: CampaignCreate):
 
 @router.post("/campaigns/{campaign_id}/start")
 async def start_campaign(campaign_id: int):
-    """Start a campaign by enqueuing it in the background."""
-    try:
-        from tasks import enqueue_whatsapp_campaign
-        await enqueue_whatsapp_campaign(campaign_id)
-        return {"message": "Campaign started in background"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    """Start a campaign as a background asyncio task in the web process."""
+    import asyncio
+    from services.whatsapp_campaign_service import WhatsAppCampaignService
+    asyncio.create_task(WhatsAppCampaignService.run_campaign_async(campaign_id))
+    return {"message": "Campaign started in background"}
 
 @router.delete("/campaigns/{campaign_id}")
 def delete_campaign(campaign_id: int):

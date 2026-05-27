@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useMemo, useRef } from "react"
 import { 
-  Search, 
-  Plus, 
-  Send, 
-  MoreVertical, 
-  Phone, 
-  Video, 
-  Smile, 
-  Paperclip, 
-  RefreshCw, 
+  Search,
+  Plus,
+  Send,
+  MoreVertical,
+  Phone,
+  Video,
+  Smile,
+  Paperclip,
+  RefreshCw,
   MessageSquare,
   Users,
   CheckCircle2,
@@ -35,7 +35,8 @@ import {
   ChevronLeft,
   PlayCircle,
   Download,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -140,8 +141,8 @@ export default function WhatsAppAdmin() {
     },
     response_config: {
       enabled: true,
-      interested: { type: "document", media_id: "", caption: "" },
-      default: { type: "document", media_id: "", caption: "" }
+      interested: { type: "document", media_ids: [] as string[], caption: "" },
+      default: { type: "document", media_ids: [] as string[], caption: "" }
     }
   })
   const [isCustomHeader, setIsCustomHeader] = useState(false)
@@ -500,11 +501,11 @@ export default function WhatsAppAdmin() {
         parameters: { header: {}, body_variables: [], buttons: [] },
         response_config: {
           enabled: true,
-          interested: { type: "document", media_id: "", caption: "" },
-          default: { type: "document", media_id: "", caption: "" }
+          interested: { type: "document", media_ids: [] as string[], caption: "" },
+          default: { type: "document", media_ids: [] as string[], caption: "" }
         }
       })
-      fetchData() 
+      fetchData()
     } finally {
       setIsSending(false)
     }
@@ -513,6 +514,14 @@ export default function WhatsAppAdmin() {
   const handleMediaUpload = async () => {
     if (!mediaFile || !mediaNickname.trim()) {
       toast({ title: "Missing fields", description: "Select a file and provide a nickname", variant: "destructive" })
+      return
+    }
+
+    const isVideo = mediaFile.type.startsWith("video/")
+    const maxBytes = isVideo ? 16 * 1024 * 1024 : 5 * 1024 * 1024
+    const maxLabel = isVideo ? "16MB" : "5MB"
+    if (mediaFile.size > maxBytes) {
+      toast({ title: "File too large", description: `${isVideo ? "Video" : "Image/PDF"} files must be under ${maxLabel} for WhatsApp delivery`, variant: "destructive" })
       return
     }
 
@@ -635,6 +644,22 @@ export default function WhatsAppAdmin() {
     }
   }
 
+  const toggleAutoReplyMedia = (mediaId: string, responseType: 'interested' | 'default') => {
+    setNewCampaign(prev => {
+      const current = prev.response_config[responseType].media_ids
+      const updated = current.includes(mediaId)
+        ? current.filter(id => id !== mediaId)
+        : [...current, mediaId]
+      return {
+        ...prev,
+        response_config: {
+          ...prev.response_config,
+          [responseType]: { ...prev.response_config[responseType], media_ids: updated }
+        }
+      }
+    })
+  }
+
   const handleDeleteCampaign = async (id: number) => {
     if (!confirm("Are you sure? This will delete the campaign and all message logs.")) return
     try {
@@ -753,6 +778,14 @@ export default function WhatsAppAdmin() {
       }
     });
   };
+
+  const getMediaIcon = (fileType: string, size = "h-3 w-3") => {
+    if (!fileType) return <File className={cn(size, "text-slate-400")} />
+    if (fileType.includes("pdf")) return <FileText className={cn(size, "text-rose-500")} />
+    if (fileType.includes("video") || fileType.includes("mp4") || fileType.includes("3gp"))
+      return <Video className={cn(size, "text-blue-500")} />
+    return <Image className={cn(size, "text-emerald-500")} />
+  }
 
   // --- Render Components ---
   const TemplatePreview = ({ template }: { template: any }) => {
@@ -1888,7 +1921,7 @@ export default function WhatsAppAdmin() {
                             {mediaAssets.map(asset => (
                               <SelectItem key={asset.id} value={asset.media_id} className="text-xs">
                                 <div className="flex items-center gap-2">
-                                  {asset.file_type.includes('pdf') ? <FileText className="h-3 w-3" /> : <Image className="h-3 w-3" />}
+                                  {getMediaIcon(asset.file_type)}
                                   {asset.nickname}
                                 </div>
                               </SelectItem>
@@ -2037,37 +2070,69 @@ export default function WhatsAppAdmin() {
                     
                     <div className="grid gap-4">
                       <div className="grid gap-1.5">
-                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Select from Media Library</Label>
-                        <Select 
-                          value={newCampaign.response_config.interested.media_id}
-                          onValueChange={val => setNewCampaign({
-                            ...newCampaign,
-                            response_config: {
-                              ...newCampaign.response_config,
-                              interested: { ...newCampaign.response_config.interested, media_id: val }
-                            }
-                          })}
-                        >
-                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-bold">
-                            <SelectValue placeholder="Choose a file from library..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {mediaAssets.map(asset => (
-                              <SelectItem key={asset.id} value={asset.media_id} className="text-xs">
-                                <div className="flex items-center gap-2">
-                                  {asset.file_type.includes('pdf') ? <FileText className="h-3 w-3" /> : <Image className="h-3 w-3" />}
-                                  {asset.nickname}
+                        <div className="flex items-center justify-between ml-1">
+                          <Label className="text-[9px] font-bold uppercase text-slate-400">Select Media (multi-select)</Label>
+                          {newCampaign.response_config.interested.media_ids.length > 0 && (
+                            <Badge className="bg-emerald-100 text-emerald-700 border-none text-[9px] font-bold px-2">
+                              {newCampaign.response_config.interested.media_ids.length} selected
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Selected chips */}
+                        {newCampaign.response_config.interested.media_ids.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 p-2 bg-emerald-50/60 border border-emerald-100 rounded-xl">
+                            {newCampaign.response_config.interested.media_ids.map(id => {
+                              const asset = mediaAssets.find(a => a.media_id === id)
+                              return asset ? (
+                                <span key={id} className="inline-flex items-center gap-1.5 bg-white border border-emerald-200 rounded-lg px-2 py-1 text-[10px] font-bold text-emerald-700 shadow-sm">
+                                  {getMediaIcon(asset.file_type)}
+                                  <span className="max-w-[90px] truncate">{asset.nickname}</span>
+                                  <button type="button" onClick={() => toggleAutoReplyMedia(id, 'interested')} className="text-emerald-300 hover:text-rose-500 transition-colors">
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                </span>
+                              ) : null
+                            })}
+                          </div>
+                        )}
+
+                        {/* Media checklist */}
+                        {mediaAssets.length > 0 ? (
+                          <div className="max-h-[160px] overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white shadow-sm">
+                            {mediaAssets.map(asset => {
+                              const isSelected = newCampaign.response_config.interested.media_ids.includes(asset.media_id)
+                              return (
+                                <div
+                                  key={asset.id}
+                                  onClick={() => toggleAutoReplyMedia(asset.media_id, 'interested')}
+                                  className={cn("flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all select-none", isSelected ? "bg-emerald-50" : "hover:bg-slate-50")}
+                                >
+                                  <div className={cn("h-4 w-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-all", isSelected ? "bg-emerald-600 border-emerald-600" : "border-slate-300")}>
+                                    {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
+                                  </div>
+                                  {getMediaIcon(asset.file_type)}
+                                  <span className={cn("text-[11px] font-bold truncate flex-1", isSelected ? "text-emerald-700" : "text-slate-700")}>{asset.nickname}</span>
+                                  <span className="text-[9px] text-slate-400 font-medium uppercase shrink-0">
+                                    {asset.file_type?.includes('video') || asset.file_type?.includes('mp4') ? 'video' : asset.file_type?.includes('pdf') ? 'pdf' : 'image'}
+                                  </span>
                                 </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-5 border border-dashed border-slate-200 rounded-xl bg-slate-50/30">
+                            <Upload className="h-5 w-5 text-slate-300 mb-1.5" />
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No media in library</p>
+                            <p className="text-[9px] text-slate-300 font-medium mt-0.5">Upload via Media Library button above</p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid gap-1.5">
                         <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Response Caption</Label>
-                        <Textarea 
-                          placeholder="Write a compelling caption for this document..." 
+                        <Textarea
+                          placeholder="Write a compelling caption for these files..."
                           value={newCampaign.response_config.interested.caption}
                           onChange={e => setNewCampaign({
                             ...newCampaign,
@@ -2091,37 +2156,69 @@ export default function WhatsAppAdmin() {
                     
                     <div className="grid gap-4">
                       <div className="grid gap-1.5">
-                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Select from Media Library</Label>
-                        <Select 
-                          value={newCampaign.response_config.default.media_id}
-                          onValueChange={val => setNewCampaign({
-                            ...newCampaign,
-                            response_config: {
-                              ...newCampaign.response_config,
-                              default: { ...newCampaign.response_config.default, media_id: val }
-                            }
-                          })}
-                        >
-                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-bold">
-                            <SelectValue placeholder="Choose a file from library..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {mediaAssets.map(asset => (
-                              <SelectItem key={asset.id} value={asset.media_id} className="text-xs">
-                                <div className="flex items-center gap-2">
-                                  {asset.file_type.includes('pdf') ? <FileText className="h-3 w-3" /> : <Image className="h-3 w-3" />}
-                                  {asset.nickname}
+                        <div className="flex items-center justify-between ml-1">
+                          <Label className="text-[9px] font-bold uppercase text-slate-400">Select Media (multi-select)</Label>
+                          {newCampaign.response_config.default.media_ids.length > 0 && (
+                            <Badge className="bg-slate-200 text-slate-600 border-none text-[9px] font-bold px-2">
+                              {newCampaign.response_config.default.media_ids.length} selected
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Selected chips */}
+                        {newCampaign.response_config.default.media_ids.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                            {newCampaign.response_config.default.media_ids.map(id => {
+                              const asset = mediaAssets.find(a => a.media_id === id)
+                              return asset ? (
+                                <span key={id} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-600 shadow-sm">
+                                  {getMediaIcon(asset.file_type)}
+                                  <span className="max-w-[90px] truncate">{asset.nickname}</span>
+                                  <button type="button" onClick={() => toggleAutoReplyMedia(id, 'default')} className="text-slate-300 hover:text-rose-500 transition-colors">
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                </span>
+                              ) : null
+                            })}
+                          </div>
+                        )}
+
+                        {/* Media checklist */}
+                        {mediaAssets.length > 0 ? (
+                          <div className="max-h-[160px] overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white shadow-sm">
+                            {mediaAssets.map(asset => {
+                              const isSelected = newCampaign.response_config.default.media_ids.includes(asset.media_id)
+                              return (
+                                <div
+                                  key={asset.id}
+                                  onClick={() => toggleAutoReplyMedia(asset.media_id, 'default')}
+                                  className={cn("flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-all select-none", isSelected ? "bg-slate-100" : "hover:bg-slate-50")}
+                                >
+                                  <div className={cn("h-4 w-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-all", isSelected ? "bg-slate-700 border-slate-700" : "border-slate-300")}>
+                                    {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
+                                  </div>
+                                  {getMediaIcon(asset.file_type)}
+                                  <span className={cn("text-[11px] font-bold truncate flex-1", isSelected ? "text-slate-900" : "text-slate-700")}>{asset.nickname}</span>
+                                  <span className="text-[9px] text-slate-400 font-medium uppercase shrink-0">
+                                    {asset.file_type?.includes('video') || asset.file_type?.includes('mp4') ? 'video' : asset.file_type?.includes('pdf') ? 'pdf' : 'image'}
+                                  </span>
                                 </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-5 border border-dashed border-slate-200 rounded-xl bg-slate-50/30">
+                            <Upload className="h-5 w-5 text-slate-300 mb-1.5" />
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No media in library</p>
+                            <p className="text-[9px] text-slate-300 font-medium mt-0.5">Upload via Media Library button above</p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid gap-1.5">
                         <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Response Caption</Label>
-                        <Textarea 
-                          placeholder="Write a message to accompany the file..." 
+                        <Textarea
+                          placeholder="Write a message to accompany the files..."
                           value={newCampaign.response_config.default.caption}
                           onChange={e => setNewCampaign({
                             ...newCampaign,
@@ -2419,31 +2516,45 @@ export default function WhatsAppAdmin() {
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Select File (PDF, Image)</Label>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Select File (PDF, Image, Video)</Label>
               <div className="relative group">
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   id="media-upload"
                   className="hidden"
                   onChange={e => setMediaFile(e.target.files?.[0] || null)}
-                  accept=".pdf,image/*"
+                  accept=".pdf,image/*,video/mp4,video/3gpp,.mp4,.mov,.3gp"
                 />
-                <label 
+                <label
                   htmlFor="media-upload"
                   className={cn(
-                    "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer transition-all",
-                    mediaFile 
-                      ? "border-emerald-500 bg-emerald-50/30" 
+                    "flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-all",
+                    mediaFile
+                      ? "border-emerald-500 bg-emerald-50/30"
                       : "border-slate-200 hover:border-emerald-400 bg-slate-50/50 hover:bg-white"
                   )}
                 >
                   {mediaFile ? (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                        <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                      <div className={cn(
+                        "h-10 w-10 rounded-full flex items-center justify-center",
+                        mediaFile.type.startsWith("video/") ? "bg-blue-100" : "bg-emerald-100"
+                      )}>
+                        {mediaFile.type.startsWith("video/")
+                          ? <Video className="h-5 w-5 text-blue-600" />
+                          : <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                        }
                       </div>
                       <span className="text-xs font-bold text-slate-700">{mediaFile.name}</span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                        {mediaFile.type.startsWith("video/") && (
+                          <Badge className="bg-blue-100 text-blue-700 border-none text-[8px] font-bold uppercase">Video</Badge>
+                        )}
+                        {mediaFile.size > (mediaFile.type.startsWith("video/") ? 16 * 1024 * 1024 : 5 * 1024 * 1024) && (
+                          <Badge className="bg-rose-100 text-rose-600 border-none text-[8px] font-bold uppercase">Too Large</Badge>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
@@ -2451,7 +2562,17 @@ export default function WhatsAppAdmin() {
                         <Upload className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
                       </div>
                       <span className="text-xs font-bold text-slate-500">Click to browse or drag and drop</span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase">PDF or JPG/PNG up to 5MB</span>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                          <FileText className="h-3 w-3 text-rose-400" /> PDF
+                        </span>
+                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                          <Image className="h-3 w-3 text-emerald-400" /> Image · max 5MB
+                        </span>
+                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                          <Video className="h-3 w-3 text-blue-400" /> Video · max 16MB
+                        </span>
+                      </div>
                     </div>
                   )}
                 </label>

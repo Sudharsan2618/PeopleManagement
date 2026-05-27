@@ -89,6 +89,10 @@ class WhatsAppCampaignService:
                 )
                 queued_messages = cur.fetchall()
                 
+                # Counters used for circuit-breaker + Meta-held visibility
+                consecutive_failures = 0
+                held_count = 0
+
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     for msg_data in queued_messages:
                         msg_id, mobile, p_name, p_location, p_course, p_email, p_source = msg_data
@@ -182,36 +186,83 @@ class WhatsAppCampaignService:
                             
                             resp = await client.post(wa_url, headers=wa_headers, json=payload)
                             result = resp.json()
-                            
+
                             if resp.status_code in [200, 201] and "messages" in result:
-                                meta_id = result["messages"][0]["id"]
-                                cur.execute(
-                                    "UPDATE whatsapp_messages SET status = 'sent', meta_message_id = %s, sent_at = %s WHERE id = %s",
-                                    (meta_id, get_ist_now(), msg_id)
-                                )
+                                msg_obj = result["messages"][0]
+                                meta_id = msg_obj.get("id")
+                                # Meta returns message_status — 'accepted' is normal,
+                                # 'held_for_quality_assessment' means Meta will NOT deliver
+                                meta_status = (msg_obj.get("message_status") or "accepted").lower()
+
+                                if meta_status == "held_for_quality_assessment":
+                                    # Meta accepted the API call but will silently drop it.
+                                    # Mark it as 'failed' with a clear reason so it surfaces in the UI.
+                                    cur.execute(
+                                        "UPDATE whatsapp_messages SET status = 'failed', meta_message_id = %s, payload = %s WHERE id = %s",
+                                        (meta_id, json.dumps({
+                                            "error": "held_for_quality_assessment",
+                                            "reason": "Meta is holding this message — account quality is low or template is flagged. Message will NOT be delivered.",
+                                            "raw": result,
+                                        }), msg_id)
+                                    )
+                                    held_count += 1
+                                else:
+                                    # 'accepted' — message is in Meta's queue. Actual delivery confirmed via webhook.
+                                    cur.execute(
+                                        "UPDATE whatsapp_messages SET status = 'sent', meta_message_id = %s, sent_at = %s, payload = %s WHERE id = %s",
+                                        (meta_id, get_ist_now(), json.dumps({"meta_response": result}), msg_id)
+                                    )
+                                    consecutive_failures = 0
                             else:
                                 error_msg = str(result.get("error", result))
                                 cur.execute(
                                     "UPDATE whatsapp_messages SET status = 'failed', payload = %s WHERE id = %s",
-                                    (json.dumps({"error": error_msg}), msg_id)
+                                    (json.dumps({"error": error_msg, "status_code": resp.status_code, "raw": result}), msg_id)
                                 )
+                                consecutive_failures += 1
+                                # Circuit breaker: stop the campaign if Meta keeps rejecting
+                                if consecutive_failures >= 5:
+                                    conn.commit()
+                                    raise RuntimeError(
+                                        f"Aborting campaign — {consecutive_failures} consecutive Meta API failures. "
+                                        f"Last error: {error_msg}"
+                                    )
+                        except RuntimeError:
+                            raise
                         except Exception as msg_error:
                             cur.execute(
                                 "UPDATE whatsapp_messages SET status = 'failed', payload = %s WHERE id = %s",
                                 (json.dumps({"error": str(msg_error)}), msg_id)
                             )
-                        
+                            consecutive_failures += 1
+
                         conn.commit()
-                        await asyncio.sleep(0.1)
+                        # Gentler pace (~1.4 msgs/sec) reduces "Ecosystem health" drops on
+                        # unverified WABAs. Tune via settings if quality tier improves.
+                        await asyncio.sleep(0.7)
                 
-                # Finalize Campaign - Accurate metrics count
+                # Finalize Campaign — sent_count = messages Meta actually accepted (NOT held).
+                # 'sent' here means Meta acknowledged + queued for delivery; webhook updates it to 'delivered'/'read'/'failed'.
                 cur.execute("""
-                    UPDATE whatsapp_campaigns 
-                    SET status = 'completed', 
+                    UPDATE whatsapp_campaigns
+                    SET status = 'completed',
                         sent_count = (SELECT COUNT(*) FROM whatsapp_messages WHERE campaign_id = %s AND status IN ('sent', 'delivered', 'read'))
                     WHERE id = %s
                 """, (campaign_id, campaign_id))
                 conn.commit()
+
+                # Diagnostic log so the admin sees Meta-side holds even without webhooks
+                import logging
+                cur.execute(
+                    "SELECT COUNT(*) FROM whatsapp_messages WHERE campaign_id = %s AND status = 'failed'",
+                    (campaign_id,)
+                )
+                failed_total = cur.fetchone()[0]
+                logging.getLogger(__name__).info(
+                    "📊 Campaign %s finished — Meta-held: %s, total failed (incl. held): %s. "
+                    "Note: 'sent' means Meta accepted; final delivery requires webhook updates from Meta.",
+                    campaign_id, held_count, failed_total
+                )
                 
             except Exception as e:
                 conn.rollback()
@@ -258,10 +309,9 @@ class WhatsAppCampaignService:
                 cur.execute("UPDATE whatsapp_campaigns SET status = 'sending' WHERE id = %s", (campaign_id,))
                 conn.commit()
 
-                # Enqueue the background task
-                from tasks import enqueue_whatsapp_campaign
-                await enqueue_whatsapp_campaign(campaign_id)
-                
+                import asyncio
+                asyncio.create_task(WhatsAppCampaignService.run_campaign_async(campaign_id))
+
                 return {"status": "success", "message": f"Resumed campaign with {queued_count} messages queued"}
             finally:
                 cur.close()
@@ -306,8 +356,8 @@ class WhatsAppCampaignService:
                 conn.commit()
 
                 if current_status in ['completed', 'sending', 'sent', 'failed'] and new_msg_ids:
-                    from tasks import enqueue_whatsapp_campaign
-                    await enqueue_whatsapp_campaign(campaign_id)
+                    import asyncio
+                    asyncio.create_task(WhatsAppCampaignService.run_campaign_async(campaign_id))
                 
                 return {"added_count": len(new_msg_ids)}
             except Exception as e:
@@ -388,9 +438,9 @@ class WhatsAppCampaignService:
                 )
                 conn.commit()
 
-                # 3. Enqueue the task
-                from tasks import enqueue_whatsapp_campaign
-                await enqueue_whatsapp_campaign(campaign_id)
+                # 3. Run directly as asyncio task
+                import asyncio
+                asyncio.create_task(WhatsAppCampaignService.run_campaign_async(campaign_id))
 
                 return {
                     "status": "success", 
