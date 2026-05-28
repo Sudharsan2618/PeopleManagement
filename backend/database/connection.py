@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 import psycopg2
@@ -12,7 +13,10 @@ load_dotenv()
 
 log = logging.getLogger(__name__)
 
-# Database configuration
+# Database configuration.
+# NOTE for Cloud Run: connect_timeout covers TCP only — DNS+SSL handshake can
+# stall indefinitely without sslmode set. Render.com PG requires SSL, so we
+# pin sslmode=require for deterministic, fast handshake on cold start.
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", "5432"),
@@ -20,11 +24,13 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", "password"),
     "connect_timeout": 5,
+    "sslmode": os.getenv("DB_SSLMODE", "require"),
     "options": "-c timezone=Asia/Kolkata"
 }
 
 # ── Pool tuning ───────────────────────────────────────────────────────────────
-POOL_MIN_CONN = 2
+# minconn=1 keeps cold-start work small — only one connection opened at init.
+POOL_MIN_CONN = 1
 POOL_MAX_CONN = 20
 
 
@@ -123,12 +129,19 @@ class SafeConnectionPool:
 
 # ── Global pool ──────────────────────────────────────────────────────────────
 _pool: SafeConnectionPool | None = None
+_init_lock = threading.Lock()  # protects concurrent init_pool() calls
 
 
 def init_pool():
-    """Initialize the global connection pool."""
+    """Initialize the global connection pool. Safe to call from multiple threads."""
     global _pool
-    if _pool is None:
+    # Fast path: already initialized
+    if _pool is not None:
+        return
+    with _init_lock:
+        # Re-check under the lock — another thread may have initialized while we waited
+        if _pool is not None:
+            return
         try:
             _pool = SafeConnectionPool(
                 minconn=POOL_MIN_CONN,
@@ -265,11 +278,36 @@ def execute_update_delete(query: str, params: tuple = None):
 
 @asynccontextmanager
 async def db_lifespan():
-    """App lifespan: database initialization."""
+    """
+    App lifespan: pool warms up in a BACKGROUND task so uvicorn can bind the
+    port immediately (Cloud Run startup probe needs PORT=8080 reachable within
+    the probe timeout). If the warm-up fails, the error is logged but does NOT
+    block the container — the next DB-using request will retry init_pool()
+    lazily via get_connection().
+    """
+    async def _warm_pool():
+        try:
+            # init_pool() is synchronous (opens real psycopg2 sockets) —
+            # run it in a worker thread so it never blocks the event loop.
+            await asyncio.to_thread(init_pool)
+            log.info("✅ PostgreSQL pool warm-up complete (background)")
+        except Exception as exc:
+            log.error(
+                "⚠️  Background pool warm-up failed — will retry lazily on "
+                "first DB call. Error: %s", exc
+            )
+
+    warmup_task = asyncio.create_task(_warm_pool())
+    log.info("⏳ DB pool warming up in background (non-blocking)")
     try:
-        init_pool()
-        log.info("✅ PostgreSQL connection pool ready")
         yield
     finally:
+        # On shutdown, cancel the warm-up if still running
+        if not warmup_task.done():
+            warmup_task.cancel()
+            try:
+                await warmup_task
+            except (asyncio.CancelledError, Exception):
+                pass
         close_pool()
         log.info("🛑 App shutting down")
