@@ -478,6 +478,10 @@ export const whatsappApi = {
       return res.json();
     });
   },
+  renameCampaign: (campaignId: number, name: string) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  }),
   deleteCampaign: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`, {
     method: "DELETE",
   }),

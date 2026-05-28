@@ -36,6 +36,9 @@ import {
   PlayCircle,
   Download,
   Loader2,
+  Pencil,
+  Copy,
+  Check,
   X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -158,6 +161,11 @@ export default function WhatsAppAdmin() {
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [isUploadingMedia, setIsUploadingMedia] = useState(false)
   
+  // Inline name editing state
+  const [editingCampaignId, setEditingCampaignId] = useState<number | null>(null)
+  const [editingCampaignName, setEditingCampaignName] = useState("")
+  const [isSavingName, setIsSavingName] = useState(false)
+
   // Agile Campaign state
   const [isAddingRecipients, setIsAddingRecipients] = useState(false)
   const [targetCampaignId, setTargetCampaignId] = useState<number | null>(null)
@@ -669,6 +677,55 @@ export default function WhatsAppAdmin() {
       fetchData()
     } catch (err) {
       toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    }
+  }
+
+  const handleDuplicateCampaign = (camp: any) => {
+    // Normalise parameters / response_config (may be string or object from API)
+    let params = camp.parameters || {}
+    let respConfig = camp.response_config || {}
+    if (typeof params === "string") { try { params = JSON.parse(params) } catch { params = {} } }
+    if (typeof respConfig === "string") { try { respConfig = JSON.parse(respConfig) } catch { respConfig = {} } }
+
+    // If original header had a custom URL (not library), reflect that toggle
+    setIsCustomHeader(!!(params.header?.url))
+
+    setNewCampaign({
+      name: `Copy of ${camp.name}`,
+      template_name: camp.template_name,
+      language_code: camp.language_code,
+      recipient_ids: [],                         // user picks fresh recipients
+      parameters: {
+        header:         params.header         || {},
+        body_variables: params.body_variables  || [],
+        buttons:        params.buttons         || [],
+      },
+      response_config: {
+        enabled:    respConfig.enabled  ?? true,
+        interested: respConfig.interested || { type: "document", media_ids: [], caption: "" },
+        default:    respConfig.default    || { type: "document", media_ids: [], caption: "" },
+      }
+    })
+    setIsCreateCampaignOpen(true)
+  }
+
+  const handleSaveCampaignName = async (campaignId: number) => {
+    const name = editingCampaignName.trim()
+    if (!name) { setEditingCampaignId(null); return }
+    try {
+      setIsSavingName(true)
+      await whatsappApi.renameCampaign(campaignId, name)
+      toast({ title: "Campaign renamed" })
+      setEditingCampaignId(null)
+      // Update local list immediately — no full refetch needed
+      setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, name } : c))
+      if (selectedCampaign?.id === campaignId) {
+        setSelectedCampaign((prev: any) => ({ ...prev, name }))
+      }
+    } catch (err) {
+      toast({ title: "Rename failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    } finally {
+      setIsSavingName(false)
     }
   }
 
@@ -1281,7 +1338,36 @@ export default function WhatsAppAdmin() {
                       
                       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
-                          <h2 className="text-4xl font-black tracking-tighter mb-2">{selectedCampaign.name}</h2>
+                          {editingCampaignId === selectedCampaign.id ? (
+                            <div className="flex items-center gap-2 mb-2">
+                              <Input
+                                value={editingCampaignName}
+                                onChange={e => setEditingCampaignName(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") handleSaveCampaignName(selectedCampaign.id)
+                                  if (e.key === "Escape") setEditingCampaignId(null)
+                                }}
+                                onBlur={() => handleSaveCampaignName(selectedCampaign.id)}
+                                autoFocus
+                                className="h-12 text-2xl font-black uppercase bg-white/10 border-white/30 text-white placeholder:text-white/40 focus-visible:ring-white/20 w-80"
+                              />
+                              {isSavingName
+                                ? <Loader2 className="h-5 w-5 animate-spin text-white/60" />
+                                : <Check className="h-5 w-5 text-emerald-400 cursor-pointer" onClick={() => handleSaveCampaignName(selectedCampaign.id)} />
+                              }
+                            </div>
+                          ) : (
+                            <div className="flex items-end gap-3 mb-2 group/title">
+                              <h2 className="text-4xl font-black tracking-tighter">{selectedCampaign.name}</h2>
+                              <button
+                                onClick={() => { setEditingCampaignId(selectedCampaign.id); setEditingCampaignName(selectedCampaign.name) }}
+                                className="opacity-0 group-hover/title:opacity-100 transition-opacity p-1.5 hover:bg-white/10 rounded-lg mb-0.5"
+                                title="Rename campaign"
+                              >
+                                <Pencil className="h-4 w-4 text-slate-300" />
+                              </button>
+                            </div>
+                          )}
                           <div className="flex items-center gap-4 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
                             <span className="flex items-center gap-2"><Layers className="h-3 w-3" /> {selectedCampaign.template_name}</span>
                             <span className="flex items-center gap-2"><Clock className="h-3 w-3" /> {new Date(selectedCampaign.created_at).toLocaleDateString()}</span>
@@ -1414,9 +1500,32 @@ export default function WhatsAppAdmin() {
                             className="hover:bg-slate-50/50 transition-colors border-slate-50 cursor-pointer"
                             onClick={() => handleSelectCampaign(camp)}
                           >
-                            <TableCell className="px-8 py-5">
+                            <TableCell className="px-8 py-5" onClick={e => e.stopPropagation()}>
                               <div>
-                                <p className="font-black text-sm text-slate-900 tracking-tight mb-0.5 uppercase">{camp.name}</p>
+                                {editingCampaignId === camp.id ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <Input
+                                      value={editingCampaignName}
+                                      onChange={e => setEditingCampaignName(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === "Enter") handleSaveCampaignName(camp.id)
+                                        if (e.key === "Escape") setEditingCampaignId(null)
+                                      }}
+                                      onBlur={() => handleSaveCampaignName(camp.id)}
+                                      autoFocus
+                                      className="h-7 w-44 text-xs font-black uppercase border-2 border-emerald-500 focus-visible:ring-0 px-2"
+                                    />
+                                    {isSavingName
+                                      ? <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
+                                      : <Check className="h-3 w-3 text-emerald-600 shrink-0 cursor-pointer" onClick={() => handleSaveCampaignName(camp.id)} />
+                                    }
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 group/name cursor-pointer" onClick={() => { setEditingCampaignId(camp.id); setEditingCampaignName(camp.name) }}>
+                                    <p className="font-black text-sm text-slate-900 tracking-tight mb-0.5 uppercase">{camp.name}</p>
+                                    <Pencil className="h-3 w-3 text-slate-300 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0 mb-0.5" />
+                                  </div>
+                                )}
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{camp.template_name}</p>
                               </div>
                             </TableCell>
@@ -1476,8 +1585,17 @@ export default function WhatsAppAdmin() {
                                     <PlayCircle className="h-4 w-4" />
                                   </Button>
                                 )}
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-9 px-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl"
+                                  title="Duplicate campaign"
+                                  onClick={() => handleDuplicateCampaign(camp)}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
                                   variant="ghost"
                                   className="h-9 px-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
                                   onClick={() => handleDeleteCampaign(camp.id)}

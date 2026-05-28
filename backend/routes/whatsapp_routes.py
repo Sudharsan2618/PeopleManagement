@@ -57,6 +57,30 @@ async def start_campaign(campaign_id: int):
     asyncio.create_task(WhatsAppCampaignService.run_campaign_async(campaign_id))
     return {"message": "Campaign started in background"}
 
+@router.patch("/campaigns/{campaign_id}")
+def rename_campaign(campaign_id: int, name: str = Body(..., embed=True)):
+    """Rename an existing campaign."""
+    try:
+        from database.connection import get_db_connection
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    "UPDATE whatsapp_campaigns SET name = %s WHERE id = %s RETURNING id",
+                    (name.strip(), campaign_id)
+                )
+                if not cur.fetchone():
+                    raise HTTPException(status_code=404, detail="Campaign not found")
+                conn.commit()
+                return {"message": "Campaign renamed successfully"}
+            finally:
+                cur.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/campaigns/{campaign_id}")
 def delete_campaign(campaign_id: int):
     """Delete a campaign and its associated records."""

@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     WHATSAPP_PROSPECTUS_MEDIA_ID: str = "1981955689074811"
     WHATSAPP_WABA_ID: str
 
-    # MongoDB
-    MONGO_URI          : str
+    # MongoDB (legacy — no longer used, kept optional so old env files don't break)
+    MONGO_URI          : str = ""
 
     # Redis (Cloud Memorystore or Upstash)
     REDIS_URL          : str = "redis://localhost:6379"

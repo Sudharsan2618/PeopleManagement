@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI):
         else:
             log.info("ℹ️ Web process worker disabled (RUN_WORKER_IN_WEB=False)")
         
-        log.info("✅ App startup complete (MongoDB + Postgres + Worker ready)")
+        log.info("✅ App startup complete (Postgres + Worker ready)")
         yield
         
         # 2. Shutdown
