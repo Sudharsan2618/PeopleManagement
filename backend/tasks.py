@@ -80,6 +80,8 @@ async def task_complete_lead_and_send_prospectus(
     from utils.timezone_utils import get_ist_now
     now        = get_ist_now()
 
+    log.info("🔄 [auto-reply] START phone=%s msg_id=%s flow_token=%s", wa_phone, wa_msg_id, flow_token or "(none)")
+
     # ── 1. Idempotency ────────────────────────────────────────────────────────
     existing = execute_query("SELECT id FROM whatsapp_flow_submissions WHERE wa_message_id = %s", (wa_msg_id,), fetch="one")
     if existing:
@@ -163,18 +165,22 @@ async def task_complete_lead_and_send_prospectus(
     if flow_token and flow_token.startswith("camp_"):
         try:
             campaign_id = int(flow_token.split("_")[1])
-        except (IndexError, ValueError):
-            pass
-    
+            log.info("🔄 [auto-reply] campaign_id=%s resolved from flow_token", campaign_id)
+        except (IndexError, ValueError) as e:
+            log.warning("⚠️ [auto-reply] Could not parse campaign_id from flow_token=%s: %s", flow_token, e)
+
     # 4b. Fallback: Lookup latest outbound message for this prospect
     if not campaign_id and prospect_id:
         last_outbound = execute_query("""
-            SELECT campaign_id FROM whatsapp_messages 
+            SELECT campaign_id FROM whatsapp_messages
             WHERE prospect_id = %s AND direction = 'outbound' AND campaign_id IS NOT NULL
             ORDER BY created_at DESC LIMIT 1
         """, (prospect_id,), fetch="one")
         if last_outbound:
             campaign_id = last_outbound["campaign_id"]
+            log.info("🔄 [auto-reply] campaign_id=%s resolved from outbound message history", campaign_id)
+        else:
+            log.info("🔄 [auto-reply] No campaign context found for prospect_id=%s", prospect_id)
 
     # 4c. Load Campaign Response Config
     if campaign_id:
@@ -183,6 +189,10 @@ async def task_complete_lead_and_send_prospectus(
             response_config = campaign["response_config"]
             if isinstance(response_config, str):
                 response_config = json.loads(response_config)
+            log.info("🔄 [auto-reply] response_config loaded: enabled=%s keys=%s",
+                     response_config.get("enabled"), list(response_config.keys()))
+        else:
+            log.info("🔄 [auto-reply] campaign_id=%s has no response_config — will use generic prospectus", campaign_id)
 
     # ── 5. Send Response (Dynamic) ───────────────────────────────────────────
     if not wa_phone:
@@ -194,44 +204,111 @@ async def task_complete_lead_and_send_prospectus(
         return
 
     # Decide what to send based on user response
-    # For now, we look for a 'default' or 'interested' key in the config
-    # Flow responses usually imply interest
+    # Flow responses with confirmed=yes → "interested", anything else → "default"
     resp_key = "interested" if flow_data.get("confirmed") else "default"
     custom_resp = response_config.get(resp_key) or response_config.get("default")
 
-    if custom_resp and custom_resp.get("type") == "document":
-        log.info("🎯 Sending custom campaign response for campaign_id=%s", campaign_id)
-        # We'll temporarily reuse _send_prospectus but pass the custom media_id
-        media_id = custom_resp.get("media_id")
-        caption = custom_resp.get("caption", settings.PROSPECTUS_MESSAGE)
-        await _send_custom_document(wa_phone, media_id, caption, settings)
-    else:
-        # Fallback to the generic one
-        log.info("📜 No custom response found for campaign_id=%s — sending generic prospectus", campaign_id)
+    sent_custom = False
+
+    log.info("🔄 [auto-reply] resp_key=%s custom_resp=%s", resp_key, bool(custom_resp))
+
+    if custom_resp:
+        # Resolve media IDs — support both new (media_ids: list) and legacy (media_id: str)
+        media_ids = custom_resp.get("media_ids") or []
+        if isinstance(media_ids, str):
+            media_ids = [media_ids] if media_ids else []
+        # Fallback to legacy single media_id field
+        if not media_ids:
+            legacy_id = custom_resp.get("media_id", "")
+            if legacy_id:
+                media_ids = [legacy_id]
+
+        caption = custom_resp.get("caption", "") or settings.PROSPECTUS_MESSAGE
+        log.info("🔄 [auto-reply] media_ids=%s caption_len=%d", media_ids, len(caption))
+
+        if media_ids:
+            log.info("🎯 [auto-reply] Sending caption text + %d media file(s) campaign_id=%s resp_key=%s", len(media_ids), campaign_id, resp_key)
+            # Send caption once as a plain text message, then each media file without caption
+            await _send_text(wa_phone, caption, settings)
+            for mid in media_ids:
+                await _send_custom_media(wa_phone, mid, settings)
+            sent_custom = True
+        else:
+            log.warning("⚠️ [auto-reply] campaign_id=%s response_config has no media — raw config=%s", campaign_id, custom_resp)
+
+    if not sent_custom:
+        log.info("📜 [auto-reply] No custom media for campaign_id=%s — sending generic prospectus", campaign_id)
         await _send_prospectus(wa_phone, settings)
 
 
-async def _send_custom_document(wa_phone: str, media_id: str, caption: str, settings: Settings):
-    """Internal helper to send a specific document by media ID."""
-    if not media_id: return
+async def _send_text(wa_phone: str, text: str, settings: Settings):
+    """Send a plain text WhatsApp message."""
     url     = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type"   : "individual",
         "to"               : format_for_meta(wa_phone),
-        "type"             : "document",
-        "document"         : {
-            "id"      : media_id,
-            "caption" : caption,
-            "filename": "Prospectus.pdf",
-        },
+        "type"             : "text",
+        "text"             : {"body": text},
     }
     headers = {
         "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
         "Content-Type" : "application/json",
     }
     async with httpx.AsyncClient(timeout=15.0) as client:
-        await client.post(url, headers=headers, json=payload)
+        resp   = await client.post(url, headers=headers, json=payload)
+        result = resp.json()
+    if resp.status_code == 200 and "messages" in result:
+        log.info("✅ Caption text sent → %s | msg_id=%s", wa_phone, result["messages"][0]["id"])
+    else:
+        log.error("❌ Caption text send failed → %s | error=%s", wa_phone, result)
+
+
+async def _send_custom_media(wa_phone: str, media_id: str, settings: Settings):
+    """Send a single media asset (no caption — caption is sent separately as text).
+    Looks up file_type from the media library to use the correct WA message type.
+    """
+    if not media_id:
+        log.warning("_send_custom_media called with empty media_id — skipping")
+        return
+
+    from database.connection import execute_query as _eq
+
+    asset     = _eq("SELECT file_type, file_name FROM whatsapp_media_assets WHERE media_id = %s", (media_id,), fetch="one")
+    file_type = (asset or {}).get("file_type", "") or ""
+    file_name = (asset or {}).get("file_name", "Document") or "Document"
+
+    if file_type.startswith("video/"):
+        wa_type     = "video"
+        media_block = {"id": media_id}
+    elif file_type.startswith("image/"):
+        wa_type     = "image"
+        media_block = {"id": media_id}
+    else:
+        wa_type     = "document"
+        media_block = {"id": media_id, "filename": file_name}
+
+    url     = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type"   : "individual",
+        "to"               : format_for_meta(wa_phone),
+        "type"             : wa_type,
+        wa_type            : media_block,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type" : "application/json",
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp   = await client.post(url, headers=headers, json=payload)
+        result = resp.json()
+
+    if resp.status_code == 200 and "messages" in result:
+        log.info("✅ Custom media sent → %s | type=%s | msg_id=%s", wa_phone, wa_type, result["messages"][0]["id"])
+    else:
+        log.error("❌ Custom media send failed → %s | type=%s | error=%s", wa_phone, wa_type, result)
 
 
 async def _send_prospectus(wa_phone: str, settings: Settings):

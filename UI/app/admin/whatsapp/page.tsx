@@ -68,6 +68,7 @@ import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -2501,6 +2502,9 @@ export default function WhatsAppAdmin() {
               <Upload className="h-5 w-5 text-emerald-400" />
               Upload to Media Library
             </DialogTitle>
+            <DialogDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+              Upload PDF, image, or video files for use in campaign auto-replies.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="p-6 space-y-6 bg-white">
@@ -2616,9 +2620,9 @@ export default function WhatsAppAdmin() {
               <UserPlus className="h-5 w-5 text-emerald-400" />
               Inject New Recipients
             </DialogTitle>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+            <DialogDescription className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
               Select students to add to the existing campaign flow.
-            </p>
+            </DialogDescription>
           </DialogHeader>
           
           <div className="p-6 space-y-6 bg-white">

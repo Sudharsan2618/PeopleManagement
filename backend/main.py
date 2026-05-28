@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import Settings
 from crypto import decrypt_flow_request, encrypt_flow_response
 from database import db_lifespan
-from tasks import enqueue_send_prospectus, WorkerSettings
+from tasks import enqueue_send_prospectus, WorkerSettings, task_complete_lead_and_send_prospectus
 from services.webhook_service import WebhookService
 
 from routes import (
@@ -264,7 +264,7 @@ async def verify_webhook(request: Request):
 async def webhook_listener(request: Request):
     """
     Returns 200 immediately.
-    All heavy work (DB write + WhatsApp send) is pushed to the ARQ worker.
+    DB write happens synchronously; auto-reply runs as an asyncio background task.
     """
     raw_webhook = await request.json()
     log.info("📥 /webhook POST: %s", json.dumps(raw_webhook))
@@ -305,14 +305,21 @@ async def webhook_listener(request: Request):
                     # Store message in DB first via WebhookService
                     WebhookService._handle_incoming_message(message, contacts)
 
-                    # ── Enqueue background task for auto-reply ──────
-                    await enqueue_send_prospectus(
-                        message  = message,
-                        contacts = contacts,
-                        metadata = metadata,
-                        flow_data= flow_data,
-                        raw_webhook = raw_webhook,
-                    )
+                    # ── Fire auto-reply task directly (no ARQ/Redis needed) ──────
+                    async def _run_auto_reply(msg, ctcts, meta, fdata, raw):
+                        try:
+                            await task_complete_lead_and_send_prospectus(
+                                ctx         = {},
+                                message     = msg,
+                                contacts    = ctcts,
+                                metadata    = meta,
+                                flow_data   = fdata,
+                                raw_webhook = raw,
+                            )
+                        except Exception as exc:
+                            log.error("❌ Auto-reply task failed for phone=%s: %s", msg.get("from"), exc, exc_info=True)
+
+                    asyncio.create_task(_run_auto_reply(message, contacts, metadata, flow_data, raw_webhook))
 
     except Exception as exc:
         log.error("❌ Webhook processing error: %s", exc)
