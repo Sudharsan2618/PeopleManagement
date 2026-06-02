@@ -545,14 +545,14 @@ export function CallOutcomeModal({
                                 </SelectTrigger>
                                 <SelectContent>
                                     {courses.length > 0 ? (
-                                      {courses.map((course) => {
+                                      courses.map((course) => {
                                         const courseValue = course.code?.trim() || `course-${course.id}`
                                         return (
                                           <SelectItem key={course.id} value={courseValue}>
                                             {course.name} ({course.code})
                                           </SelectItem>
                                         )
-                                      })}
+                                      })
                                     ) : (
                                       <SelectItem value="no-course" disabled>
                                         {coursesLoading ? "Loading courses..." : "No courses available"}
