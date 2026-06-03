@@ -208,13 +208,28 @@ export default function AdminDashboard() {
   ]
 
   // ─── Chart data ─────────────────────────────────────────────
-  const callOutcomeChartData = (stats.call_outcome_breakdown || []).map(
-    (item: any) => ({
-      name: OUTCOME_LABELS[item.outcome] || item.outcome,
-      value: item.count,
-      color: OUTCOME_COLORS[item.outcome] || "#6b7280",
-    })
+    const CALL_OUTCOME_ORDER = [
+    "not_answered",
+    "not_interested",
+    "enrolled_elsewhere",
+    "callback",
+    "interested",
+    "busy",
+  ]
+
+  const outcomeCounts = (stats.call_outcome_breakdown || []).reduce(
+    (acc: Record<string, number>, item: any) => {
+      acc[item.outcome] = item.count
+      return acc
+    },
+    {}
   )
+
+  const callOutcomeChartData = CALL_OUTCOME_ORDER.map((outcome) => ({
+    name: OUTCOME_LABELS[outcome] || outcome,
+    value: outcomeCounts[outcome] || 0,
+    color: OUTCOME_COLORS[outcome] || "#6b7280",
+  }))
 
   const pipelineChartData = pipeline.map((item: any) => ({
     name: STATUS_LABELS[item.status] || item.status,

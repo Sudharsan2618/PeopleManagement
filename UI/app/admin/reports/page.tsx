@@ -122,21 +122,18 @@ export default function ReportsPage() {
 
     let cursorY = 110
 
+    const getOutcomeValue = (label: string) => {
+      return data?.outcomeDistribution?.find((item: any) => item.name === label)?.value ?? 0
+    }
+
     // Summary analytics as a compact table
     const summaryMetrics: [string, any][] = [
-      ["Total Calls", data?.summary?.totalCalls ?? 0],
-      ["Answered Calls", data?.summary?.answeredCalls ?? 0],
-      ["Missed Calls", data?.summary?.missedCalls ?? 0],
+      ["Not Answered", data?.summary?.missedCalls ?? 0],
+      ["Not Interested", data?.summary?.notInterested ?? 0],
+      ["Enrolled Elsewhere", getOutcomeValue('Enrolled Elsewhere')],
       ["Callback Requests", data?.summary?.callbackRequests ?? 0],
       ["Interested Leads", data?.summary?.interested ?? 0],
-      ["Not Interested", data?.summary?.notInterested ?? 0],
-      ["Qualified Leads", data?.summary?.qualified ?? 0],
       ["Busy Calls", data?.summary?.busy ?? 0],
-      ["Wrong Numbers", data?.summary?.wrongNumbers ?? 0],
-      ["DNC", data?.summary?.dnc ?? 0],
-      ["Enrollments", data?.summary?.totalEnrollments ?? 0],
-      ["Conversion Rate", `${Math.round(((data?.summary?.totalEnrollments ?? 0) / Math.max(data?.summary?.totalProspects ?? 1, 1)) * 100)}%`],
-      ["Field Visits", data?.summary?.totalVisits ?? 0],
     ]
 
     autoTable(doc, {
