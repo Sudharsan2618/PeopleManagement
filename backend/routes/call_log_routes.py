@@ -6,11 +6,11 @@ from services.call_log_service import CallLogService
 router = APIRouter(prefix="/call-logs", tags=["call-logs"])
 
 
-@router.get("", response_model=List[CallLog])
-def get_all_call_logs():
+@router.get("")
+def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None):
     """Get all call logs."""
     try:
-        call_logs = CallLogService.get_all_call_logs()
+        call_logs = CallLogService.get_all_call_logs(start_date=start_date, end_date=end_date, telecaller_id=telecaller_id)
         return call_logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

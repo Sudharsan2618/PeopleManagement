@@ -200,19 +200,35 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
-  
+
   const defaultOptions: RequestInit = {
     headers: {
       "Content-Type": "application/json",
+      "Accept": "application/json",
       ...options.headers,
     },
   }
 
-  const response = await fetch(url, { ...defaultOptions, ...options })
+  let response: Response
+  try {
+    response = await fetch(url, { ...defaultOptions, ...options })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Network error fetching ${url}: ${message}`)
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "An error occurred" }))
-    throw new Error(error.detail || "API request failed")
+    const text = await response.text().catch(() => "")
+    let errorMessage = `API request failed: ${response.status} ${response.statusText}`
+    try {
+      const errorJson = JSON.parse(text)
+      errorMessage = errorJson.detail || errorJson.message || errorMessage
+    } catch {
+      if (text) {
+        errorMessage = `${errorMessage} - ${text}`
+      }
+    }
+    throw new Error(`${errorMessage} (${url})`)
   }
 
   return response.json()
@@ -308,7 +324,14 @@ export const assignmentsApi = {
 
 // Call Logs API
 export const callLogsApi = {
-  getAll: () => apiRequest<CallLog[]>("/call-logs"),
+  getAll: (startDate?: string, endDate?: string, telecallerId?: number) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    if (telecallerId) params.append('telecaller_id', telecallerId.toString())
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<CallLog[]>(`/call-logs${query}`)
+  },
   getById: (id: number) => apiRequest<CallLog>(`/call-logs/${id}`),
   getByProspect: (prospectId: number) => apiRequest<CallLog[]>(`/call-logs/prospect/${prospectId}`),
   getByTelecaller: (telecallerId: number) => apiRequest<CallLog[]>(`/call-logs/telecaller/${telecallerId}`),
@@ -347,7 +370,13 @@ export const SpocReportsApi = {
 
 // spoc Visits API
 export const SpocVisitsApi = {
-  getAll: () => apiRequest<SpocVisitEntry[]>("/spoc-visits"),
+  getAll: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<SpocVisitEntry[]>(`/spoc-visits${query}`)
+  },
   getById: (id: number) => apiRequest<SpocVisitEntry>(`/spoc-visits/${id}`),
   getByReport: (reportId: number) => apiRequest<SpocVisitEntry[]>(`/spoc-visits/report/${reportId}`),
   create: (data: any) => apiRequest<SpocVisitEntry>("/spoc-visits", {

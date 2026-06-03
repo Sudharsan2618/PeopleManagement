@@ -8,24 +8,67 @@ class CallLogService:
     """Service layer for Call Logs table with direct SQL queries."""
     
     @staticmethod
-    def get_all_call_logs() -> List[dict]:
-        """Get all call logs."""
+    def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None) -> List[dict]:
+        """Get all call logs with prospect and telecaller details."""
         query = """
-            SELECT id, prospect_id, telecaller_id, assignment_id, outcome, status_after_call,
-                   reason, notes, course_interest, callback_scheduled_at, called_at
-            FROM call_logs
-            ORDER BY called_at DESC
+            SELECT
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.assignment_id,
+                cl.outcome,
+                cl.status_after_call,
+                cl.reason,
+                cl.notes,
+                COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
+                cl.callback_scheduled_at,
+                cl.called_at,
+                p.name AS prospect_name,
+                p.mobile AS prospect_phone,
+                u.name AS telecaller_name,
+                p.course_interest AS prospect_course_interest
+            FROM call_logs cl
+            LEFT JOIN prospects p ON p.id = cl.prospect_id
+            LEFT JOIN users u ON u.id = cl.telecaller_id
+            WHERE 1=1
         """
-        return execute_query(query, fetch="all")
+        params = []
+        if start_date:
+            query += " AND cl.called_at::date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND cl.called_at::date <= %s"
+            params.append(end_date)
+        if telecaller_id is not None:
+            query += " AND cl.telecaller_id = %s"
+            params.append(telecaller_id)
+        query += "\n            ORDER BY cl.called_at DESC\n        "
+        return execute_query(query, tuple(params) if params else None, fetch="all")
     
     @staticmethod
     def get_call_log_by_id(log_id: int) -> Optional[dict]:
         """Get call log by ID."""
         query = """
-            SELECT id, prospect_id, telecaller_id, assignment_id, outcome, status_after_call,
-                   reason, notes, course_interest, callback_scheduled_at, called_at
-            FROM call_logs
-            WHERE id = %s
+            SELECT
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.assignment_id,
+                cl.outcome,
+                cl.status_after_call,
+                cl.reason,
+                cl.notes,
+                COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
+                cl.callback_scheduled_at,
+                cl.called_at,
+                p.name AS prospect_name,
+                p.mobile AS prospect_phone,
+                u.name AS telecaller_name,
+                p.course_interest AS prospect_course_interest
+            FROM call_logs cl
+            LEFT JOIN prospects p ON p.id = cl.prospect_id
+            LEFT JOIN users u ON u.id = cl.telecaller_id
+            WHERE cl.id = %s
         """
         return execute_query(query, (log_id,), fetch="one")
     
@@ -33,11 +76,27 @@ class CallLogService:
     def get_call_logs_by_prospect(prospect_id: int) -> List[dict]:
         """Get all call logs for a specific prospect."""
         query = """
-            SELECT id, prospect_id, telecaller_id, assignment_id, outcome, status_after_call,
-                   reason, notes, course_interest, callback_scheduled_at, called_at
-            FROM call_logs
-            WHERE prospect_id = %s
-            ORDER BY called_at DESC
+            SELECT
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.assignment_id,
+                cl.outcome,
+                cl.status_after_call,
+                cl.reason,
+                cl.notes,
+                COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
+                cl.callback_scheduled_at,
+                cl.called_at,
+                p.name AS prospect_name,
+                p.mobile AS prospect_phone,
+                u.name AS telecaller_name,
+                p.course_interest AS prospect_course_interest
+            FROM call_logs cl
+            LEFT JOIN prospects p ON p.id = cl.prospect_id
+            LEFT JOIN users u ON u.id = cl.telecaller_id
+            WHERE cl.prospect_id = %s
+            ORDER BY cl.called_at DESC
         """
         return execute_query(query, (prospect_id,), fetch="all")
     
@@ -45,11 +104,27 @@ class CallLogService:
     def get_call_logs_by_telecaller(telecaller_id: int) -> List[dict]:
         """Get all call logs by a specific telecaller."""
         query = """
-            SELECT id, prospect_id, telecaller_id, assignment_id, outcome, status_after_call,
-                   reason, notes, course_interest, callback_scheduled_at, called_at
-            FROM call_logs
-            WHERE telecaller_id = %s
-            ORDER BY called_at DESC
+            SELECT
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.assignment_id,
+                cl.outcome,
+                cl.status_after_call,
+                cl.reason,
+                cl.notes,
+                COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
+                cl.callback_scheduled_at,
+                cl.called_at,
+                p.name AS prospect_name,
+                p.mobile AS prospect_phone,
+                u.name AS telecaller_name,
+                p.course_interest AS prospect_course_interest
+            FROM call_logs cl
+            LEFT JOIN prospects p ON p.id = cl.prospect_id
+            LEFT JOIN users u ON u.id = cl.telecaller_id
+            WHERE cl.telecaller_id = %s
+            ORDER BY cl.called_at DESC
         """
         return execute_query(query, (telecaller_id,), fetch="all")
     
@@ -57,11 +132,27 @@ class CallLogService:
     def get_pending_callbacks() -> List[dict]:
         """Get all pending callbacks that are scheduled."""
         query = """
-            SELECT id, prospect_id, telecaller_id, assignment_id, outcome, status_after_call,
-                   reason, notes, course_interest, callback_scheduled_at, called_at
-            FROM call_logs
-            WHERE callback_scheduled_at IS NOT NULL AND callback_scheduled_at <= %s
-            ORDER BY callback_scheduled_at ASC
+            SELECT
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.assignment_id,
+                cl.outcome,
+                cl.status_after_call,
+                cl.reason,
+                cl.notes,
+                COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
+                cl.callback_scheduled_at,
+                cl.called_at,
+                p.name AS prospect_name,
+                p.mobile AS prospect_phone,
+                u.name AS telecaller_name,
+                p.course_interest AS prospect_course_interest
+            FROM call_logs cl
+            LEFT JOIN prospects p ON p.id = cl.prospect_id
+            LEFT JOIN users u ON u.id = cl.telecaller_id
+            WHERE cl.callback_scheduled_at IS NOT NULL AND cl.callback_scheduled_at <= %s
+            ORDER BY cl.callback_scheduled_at ASC
         """
         return execute_query(query, (get_ist_now(),), fetch="all")
     

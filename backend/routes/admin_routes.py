@@ -271,7 +271,15 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as enrollments,
             COUNT(cl.id) FILTER (WHERE cl.outcome IN ('interested', 'qualified')) as "successfulCalls",
             0 as "avgDuration",
-            COUNT(DISTINCT cl.prospect_id) FILTER (WHERE cl.outcome IN ('not_answered', 'busy', 'wrong_number', 'callback')) as "pendingLeads"
+            (
+                SELECT COUNT(*) FROM (
+                    SELECT DISTINCT ON (cl2.prospect_id) cl2.prospect_id, cl2.outcome, cl2.called_at
+                    FROM call_logs cl2
+                    WHERE cl2.telecaller_id = u.id
+                    ORDER BY cl2.prospect_id, cl2.called_at DESC
+                ) t
+                WHERE t.outcome = 'callback'
+            ) as "pendingLeads"
         FROM users u
         LEFT JOIN call_logs cl ON cl.telecaller_id = u.id{date_clause}
         WHERE u.role = 'telecaller' AND u.is_active = TRUE

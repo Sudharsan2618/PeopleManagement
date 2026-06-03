@@ -155,6 +155,15 @@ export default function AdminDashboard() {
   const telecallers = users.filter((u: any) => u.role === "telecaller")
   const spocs = users.filter((u: any) => u.role === "spoc")
 
+  const todayStr = new Date().toLocaleDateString("en-CA")
+  const isSingleDayRange = startDate === endDate
+  const isTodayRange = isSingleDayRange && startDate === todayStr
+  const isRange = !isSingleDayRange
+
+  const assignmentTitle = isTodayRange ? "Assignments Today" : isRange ? "Assignments (Range)" : "Assignments"
+  const callsTitle = isTodayRange ? "Calls Today" : isRange ? "Calls (Range)" : "Calls"
+  const reportsTitle = isTodayRange ? "Reports Today" : isRange ? "Reports (Range)" : "Reports"
+
   // ─── Stat cards ─────────────────────────────────────────────
   const statCards = [
     {
@@ -165,14 +174,14 @@ export default function AdminDashboard() {
       bgColor: "bg-primary/5",
     },
     {
-      title: "Assignments Today",
+      title: assignmentTitle,
       value: stats.assignments_today,
       icon: Calendar,
       color: "text-secondary",
       bgColor: "bg-secondary/5",
     },
     {
-      title: "Calls Today",
+      title: callsTitle,
       value: stats.calls_today,
       icon: Phone,
       color: "text-emerald-600",
@@ -190,7 +199,7 @@ export default function AdminDashboard() {
       bgColor: "bg-teal-500/10",
     },
     {
-      title: "Reports Today",
+      title: reportsTitle,
       value: stats.reports_today,
       icon: FileText,
       color: "text-amber-600",

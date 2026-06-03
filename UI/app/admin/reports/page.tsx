@@ -46,6 +46,7 @@ export default function ReportsPage() {
   const [reportType, setReportType] = useState("overview")
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [selectedTelecallerId, setSelectedTelecallerId] = useState<number | null>(null)
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date(); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0]
@@ -67,7 +68,7 @@ export default function ReportsPage() {
   }
 
   const downloadReportPdf = async () => {
-    const doc = new jsPDF({ unit: "pt", format: "a4" })
+    const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" })
     const pageWidth = doc.internal.pageSize.getWidth()
     const margin = 40
     const usableWidth = pageWidth - margin * 2
@@ -203,6 +204,12 @@ export default function ReportsPage() {
     try {
       const callLogs = await callLogsApi.getAll()
       if (callLogs && callLogs.length) {
+        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
+        const formatNotes = (text: string) => {
+          const normalized = normalizeText(text)
+          return normalized ? doc.splitTextToSize(normalized, 160) : '-'
+        }
+
         if (cursorY + 40 > doc.internal.pageSize.getHeight() - 60) doc.addPage(), cursorY = margin
         doc.setFontSize(12)
         doc.text('Detailed Call Logs', margin, cursorY)
@@ -211,26 +218,41 @@ export default function ReportsPage() {
         const callRows = callLogs.map((r: any) => ([
           r.called_at ? new Date(r.called_at).toLocaleDateString() : '-',
           r.called_at ? new Date(r.called_at).toLocaleTimeString() : '-',
-          r.telecaller_name || r.telecaller_id || '-',
-          r.prospect_name || '-',
-          r.phone || r.prospect_phone || '-',
-          r.course_interest || '-',
+          r.telecaller_name || `ID ${r.telecaller_id}` || '-',
+          r.prospect_name || `ID ${r.prospect_id}` || '-',
+          r.prospect_phone || '-',
+          r.course_interest || r.prospect_course_interest || '-',
           r.sourced_from || r.source || '-',
           r.duration ?? '-',
           r.status_after_call || '-',
           r.outcome || '-',
           r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleString() : '-',
-          (r.notes || '').replace(/\n/g, ' '),
+          formatNotes(r.notes || ''),
         ]))
 
         autoTable(doc, {
           startY: cursorY,
-          head: [['Date','Time','Telecaller','Student Name','Phone','Course','Lead Source','Call Duration','Status','Outcome','Callback Date','Notes']],
+          head: [['Date','Time','Telecaller','Student','Phone','Course','Lead Source','Duration','Status','Outcome','Callback Date','Notes']],
           body: callRows,
-          styles: { fontSize: 8, cellPadding: 6 },
-          headStyles: { fillColor: [139, 92, 246], textColor: 255 },
+          styles: { fontSize: 8, cellPadding: 5, overflow: 'linebreak', valign: 'top', cellWidth: 'wrap' },
+          columnStyles: {
+            0: { cellWidth: 40 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 70 },
+            3: { cellWidth: 80 },
+            4: { cellWidth: 55 },
+            5: { cellWidth: 55 },
+            6: { cellWidth: 50 },
+            7: { cellWidth: 40 },
+            8: { cellWidth: 55 },
+            9: { cellWidth: 55 },
+            10: { cellWidth: 70 },
+            11: { cellWidth: 180 },
+          },
+          tableWidth: 'auto',
+          headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 9 },
           theme: 'striped',
-          didDrawPage: (d) => {},
+          didDrawPage: () => {},
         })
         cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
       }
@@ -240,12 +262,18 @@ export default function ReportsPage() {
 
     // Field visits
     try {
-      const visits = await SpocVisitsApi.getAll()
+      const visits = await SpocVisitsApi.getAll(startDate, endDate)
       if (visits && visits.length) {
         if (cursorY + 40 > doc.internal.pageSize.getHeight() - 60) doc.addPage(), cursorY = margin
         doc.setFontSize(12)
         doc.text('Field Visits', margin, cursorY)
         cursorY += 8
+
+        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
+        const formatNotes = (text: string) => {
+          const normalized = normalizeText(text)
+          return normalized ? doc.splitTextToSize(normalized, 160) : '-'
+        }
 
         const vRows = visits.map((v: any) => ([
           v.institution_name || '-',
@@ -253,14 +281,24 @@ export default function ReportsPage() {
           v.visit_type || '-',
           v.follow_up_date || '-',
           v.next_action || '-',
-          (v.notes || '').replace(/\n/g, ' '),
+          formatNotes(v.notes || ''),
         ]))
 
         autoTable(doc, {
           startY: cursorY,
           head: [['Student/Institution','Executive','Visit Type','Follow-Up Date','Status/Next Action','Remarks']],
           body: vRows,
-          styles: { fontSize: 9, cellPadding: 6 },
+          styles: { fontSize: 9, cellPadding: 5, overflow: 'linebreak', valign: 'top' },
+          columnStyles: {
+            0: { cellWidth: 110 },
+            1: { cellWidth: 90 },
+            2: { cellWidth: 80 },
+            3: { cellWidth: 80 },
+            4: { cellWidth: 90 },
+            5: { cellWidth: 145 },
+          },
+          tableWidth: 'auto',
+          headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 9 },
           theme: 'striped',
         })
         cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
@@ -288,8 +326,11 @@ export default function ReportsPage() {
       try {
         const reports = await adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate)
         setData(reports)
+        setErrorMessage(null)
       } catch (error) {
-        console.error("Failed to fetch reports:", error)
+        const message = error instanceof Error ? error.message : String(error)
+        console.error("Failed to fetch reports:", message)
+        setErrorMessage(message)
       } finally {
         setLoading(false)
       }
@@ -308,8 +349,13 @@ export default function ReportsPage() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-3 text-center px-6">
         <p className="text-muted-foreground">Failed to load analytics data.</p>
+        {errorMessage ? (
+          <p className="text-sm text-destructive break-words">{errorMessage}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">Please make sure the backend server is running on localhost:8000.</p>
+        )}
       </div>
     )
   }
@@ -330,7 +376,7 @@ export default function ReportsPage() {
   const conversionRate = Math.round((summary.totalEnrollments / totalProspects) * 100)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -519,17 +565,18 @@ export default function ReportsPage() {
               <CardDescription>Individual telecaller metrics</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Telecaller</TableHead>
-                    <TableHead className="text-center">Total Calls</TableHead>
-                    <TableHead className="text-center">Successful</TableHead>
-                    <TableHead className="text-center">Success Rate</TableHead>
-                    <TableHead className="text-center">Performance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Telecaller</TableHead>
+                      <TableHead className="text-center">Total Calls</TableHead>
+                      <TableHead className="text-center">Successful</TableHead>
+                      <TableHead className="text-center">Success Rate</TableHead>
+                      <TableHead className="text-center">Performance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {telecallerPerformance.map((user: any) => {
                     const successRate = user.totalCalls > 0 
                       ? Math.round((user.successfulCalls / user.totalCalls) * 100) 
@@ -564,16 +611,20 @@ export default function ReportsPage() {
                   })}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
+          </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex items-start justify-between">
+            <CardHeader className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle>Call Trends{selectedTelecallerName ? ` — ${selectedTelecallerName}` : ''}</CardTitle>
+                <CardTitle>{selectedTelecallerName ? `Call Trends — ${selectedTelecallerName}` : 'Call Trends — All Telecallers'}</CardTitle>
                 <CardDescription>Weekly call volume trends</CardDescription>
               </div>
-              <div>
+              <div className="flex items-center gap-2">
+                {!selectedTelecallerId && (
+                  <Badge variant="secondary">All telecallers</Badge>
+                )}
                 {selectedTelecallerId && (
                   <Button size="sm" variant="outline" onClick={() => setSelectedTelecallerId(null)}>Show All</Button>
                 )}
@@ -618,18 +669,19 @@ export default function ReportsPage() {
               <CardDescription>Individual SPOC metrics</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>SPOC</TableHead>
-                    <TableHead className="text-center">Total Visits</TableHead>
-                    <TableHead className="text-center">Successful</TableHead>
-                    <TableHead className="text-center">Success Rate</TableHead>
-                    <TableHead className="text-center">Pending Followups</TableHead>
-                    <TableHead className="text-center">Performance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>SPOC</TableHead>
+                      <TableHead className="text-center">Total Visits</TableHead>
+                      <TableHead className="text-center">Successful</TableHead>
+                      <TableHead className="text-center">Success Rate</TableHead>
+                      <TableHead className="text-center">Pending Followups</TableHead>
+                      <TableHead className="text-center">Performance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {spocPerformance.map((user: any) => {
                     const successRate = user.totalVisits > 0 
                       ? Math.round((user.successfulVisits / user.totalVisits) * 100) 
@@ -662,7 +714,8 @@ export default function ReportsPage() {
                   })}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
+          </CardContent>
           </Card>
 
           <Card>

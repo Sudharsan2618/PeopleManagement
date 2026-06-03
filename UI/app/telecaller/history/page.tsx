@@ -491,6 +491,33 @@ export default function CallHistoryPage() {
     return counts
   }, [callLogs])
 
+  const todayReport = useMemo(() => {
+    const localDateKey = (date: Date) => date.toLocaleDateString("en-CA")
+    const today = localDateKey(new Date())
+    const report = {
+      calls: 0,
+      connected: 0,
+      interested: 0,
+      callbacks: 0,
+      notAnswered: 0,
+    }
+
+    callLogs.forEach((log) => {
+      const logDate = localDateKey(new Date(log.called_at))
+      if (logDate !== today) return
+
+      report.calls += 1
+      if (log.outcome === "callback") report.callbacks += 1
+      if (log.outcome === "interested") report.interested += 1
+      if (log.outcome === "not_answered") report.notAnswered += 1
+      if (!["not_answered", "busy", "wrong_number"].includes(log.outcome)) {
+        report.connected += 1
+      }
+    })
+
+    return report
+  }, [callLogs])
+
   if (isLoading) {
     return <PageSkeleton />
   }
@@ -607,6 +634,34 @@ export default function CallHistoryPage() {
               })}
           </div>
         )}
+
+        {/* Daily report summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4 border-t border-muted-foreground/20">
+          <Card className="border rounded-2xl shadow-sm">
+            <CardContent className="p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Today&apos;s Calls</div>
+              <div className="mt-2 text-3xl font-bold">{todayReport.calls}</div>
+            </CardContent>
+          </Card>
+          <Card className="border rounded-2xl shadow-sm">
+            <CardContent className="p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Connected</div>
+              <div className="mt-2 text-3xl font-bold">{todayReport.connected}</div>
+            </CardContent>
+          </Card>
+          <Card className="border rounded-2xl shadow-sm">
+            <CardContent className="p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Interested</div>
+              <div className="mt-2 text-3xl font-bold">{todayReport.interested}</div>
+            </CardContent>
+          </Card>
+          <Card className="border rounded-2xl shadow-sm">
+            <CardContent className="p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Callbacks</div>
+              <div className="mt-2 text-3xl font-bold">{todayReport.callbacks}</div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Filters */}
@@ -704,8 +759,8 @@ export default function CallHistoryPage() {
                         <TableCell className="text-xs font-semibold text-muted-foreground uppercase tracking-tighter">
                           {log.status_after_call?.replace(/_/g, ' ') || "—"}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[250px]">
-                          <span className="line-clamp-2 italic font-medium">
+                        <TableCell className="text-xs text-muted-foreground max-w-[260px] whitespace-normal break-words">
+                          <span className="font-medium whitespace-normal break-words italic">
                             {log.notes ? `"${log.notes}"` : "—"}
                           </span>
                         </TableCell>
