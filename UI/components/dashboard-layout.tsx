@@ -37,10 +37,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
-import { type UserRole, type Notification } from "@/lib/mock-data"
+import { cn, formatISTDateTime } from "@/lib/utils"
+import { type UserRole } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import { dashboardApi } from "@/lib/api-client"
+import { dashboardApi, callLogsApi } from "@/lib/api-client"
 
 interface NavItem {
   title: string
@@ -115,8 +115,9 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   const router = useRouter()
   const { logout, user } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [pendingCallbacks, setPendingCallbacks] = useState<any[]>([])
   const [counts, setCounts] = useState({ callbacks: 0, followups: 0 })
-  
+
   useEffect(() => {
     if (!user) return
 
@@ -139,11 +140,51 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     return () => window.removeEventListener("refreshBadgeCounts", refreshCounts)
   }, [user])
 
-  // Enhance nav items with dynamic counts
+  // Pending callbacks for notifications dropdown
+  useEffect(() => {
+    if (!user) return
+
+    const fetchPending = async () => {
+      try {
+        const telecallerId = role === "telecaller" ? Number(user.id) : undefined
+        // To match the callbacks page, fetch all logs and then compute
+        // the latest log per prospect (callbacks page uses getByTelecaller)
+        const allLogs = await callLogsApi.getByTelecaller(telecallerId!)
+        const latestLogByProspect = new Map<number, any>()
+        allLogs.forEach((log: any) => {
+          const pid = log.prospect_id
+          if (pid == null) return
+          const existing = latestLogByProspect.get(pid)
+          if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+            latestLogByProspect.set(pid, log)
+          }
+        })
+
+        const callbacks = Array.from(latestLogByProspect.values()).filter(
+          (log: any) => log.outcome === "callback" && log.callback_scheduled_at
+        )
+
+        setPendingCallbacks(callbacks || [])
+      } catch (err) {
+        console.error("Failed to fetch pending callbacks:", err)
+      }
+    }
+
+    fetchPending()
+
+    const refreshPending = () => fetchPending()
+    window.addEventListener("refreshPendingCallbacks", refreshPending)
+    return () => window.removeEventListener("refreshPendingCallbacks", refreshPending)
+  }, [user, role])
+
+  // Enhance nav items with dynamic counts; telecallers use pending callbacks
   const navItems = useMemo(() => {
     const baseItems = getNavItems(role)
     return baseItems.map(item => {
       if (item.title === "Callbacks") {
+        if (role === "telecaller") {
+          return { ...item, badge: pendingCallbacks.length > 0 ? pendingCallbacks.length : undefined }
+        }
         return { ...item, badge: counts.callbacks > 0 ? counts.callbacks : undefined }
       }
       if (item.title === "Follow-up Tasks" || item.title === "My Follow-ups") {
@@ -151,24 +192,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       }
       return item
     })
-  }, [role, counts])
-
-  const customNotifications: Notification[] =
-    role === "telecaller" && counts.callbacks > 0
-      ? [
-          {
-            id: "callback-alert",
-            type: "callback",
-            role: "telecaller",
-            message: `${counts.callbacks} scheduled callbacks are due`,
-            createdAt: new Date().toISOString(),
-            read: false,
-          },
-        ]
-      : []
-
-  const allowedNotifications = customNotifications
-  const unreadNotifications = customNotifications.length
+  }, [role, counts, pendingCallbacks.length])
 
   const handleLogout = () => {
     logout()
@@ -211,7 +235,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                   <Badge
                     variant="outline"
                     className={cn(
-                      "h-5 min-w-5 px-1.5 text-[10px] font-bold border-none",
+                      "h-8 min-w-8 px-2.5 text-sm font-bold border-none rounded-full",
                       isActive
                         ? "bg-[#10b981] text-white"
                         : "bg-slate-800 text-[#10b981]"
@@ -296,8 +320,13 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
           {/* Notifications */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
+                {pendingCallbacks.length > 0 && (
+                  <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
+                    {pendingCallbacks.length}
+                  </span>
+                )}
                 <span className="sr-only">Notifications</span>
               </Button>
             </DropdownMenuTrigger>
@@ -305,22 +334,58 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
               <div className="flex items-center justify-between px-4 py-2 border-b">
                 <h3 className="font-semibold text-sm">Notifications</h3>
               </div>
-              <ScrollArea className="h-48">
-                {allowedNotifications.length > 0 ? (
+              <ScrollArea className="max-h-[400px] h-auto">
+                {pendingCallbacks.length > 0 ? (
                   <div className="space-y-2 p-3">
-                    {allowedNotifications.map((notification) => (
-                      <div key={notification.id} className="rounded-xl border border-muted/20 bg-background p-3">
-                        <p className="text-sm font-semibold">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
+                    {pendingCallbacks.map((callback) => {
+                      const scheduledTime = callback.callback_scheduled_at
+                        ? formatISTDateTime(callback.callback_scheduled_at, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        : "N/A"
+
+                      return (
+                        <button
+                          key={callback.id}
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await callLogsApi.markNotificationShown(callback.id)
+                            } catch (err) {
+                              console.error("Failed to mark notification shown:", err)
+                            }
+                            if (callback.prospect_id) {
+                              router.push(`/telecaller/callbacks?prospect=${callback.prospect_id}`)
+                            }
+                          }}
+                          className="rounded-xl border-2 border-red-500 bg-red-50 p-3 text-left w-full cursor-pointer"
+                        >
+                          <p className="text-sm font-semibold text-red-900">
+                            📞 Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
+                          </p>
+                          <p className="text-xs text-red-700 mt-1">
+                            {callback.prospect?.mobile || callback.prospect_phone || "Unknown"}
+                          </p>
+                          {callback.course_interest && (
+                            <p className="text-xs text-red-700">
+                              📚 {callback.course_interest}
+                            </p>
+                          )}
+                          <p className="text-xs font-bold text-red-600 mt-1">
+                            ⏰ {scheduledTime}
+                          </p>
+                        </button>
+                      )
+                    })}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full py-12 text-center">
                     <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
-                    <p className="text-xs text-muted-foreground">No new notifications</p>
+                    <p className="text-xs text-muted-foreground">No pending callbacks</p>
                   </div>
                 )}
               </ScrollArea>

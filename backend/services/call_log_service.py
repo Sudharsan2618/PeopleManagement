@@ -23,6 +23,9 @@ class CallLogService:
                 COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
                 cl.callback_scheduled_at,
                 cl.called_at,
+                COALESCE(cl.notification_shown, FALSE) AS notification_shown,
+                COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
+                cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
@@ -61,6 +64,9 @@ class CallLogService:
                 COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
                 cl.callback_scheduled_at,
                 cl.called_at,
+                COALESCE(cl.notification_shown, FALSE) AS notification_shown,
+                COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
+                cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
@@ -88,6 +94,9 @@ class CallLogService:
                 COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
                 cl.callback_scheduled_at,
                 cl.called_at,
+                COALESCE(cl.notification_shown, FALSE) AS notification_shown,
+                COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
+                cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
@@ -116,6 +125,9 @@ class CallLogService:
                 COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
                 cl.callback_scheduled_at,
                 cl.called_at,
+                COALESCE(cl.notification_shown, FALSE) AS notification_shown,
+                COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
+                cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
@@ -129,8 +141,8 @@ class CallLogService:
         return execute_query(query, (telecaller_id,), fetch="all")
     
     @staticmethod
-    def get_pending_callbacks() -> List[dict]:
-        """Get all pending callbacks that are scheduled."""
+    def get_pending_callbacks(telecaller_id: int | None = None) -> List[dict]:
+        """Get all scheduled callbacks that are pending action."""
         query = """
             SELECT
                 cl.id,
@@ -144,6 +156,9 @@ class CallLogService:
                 COALESCE(NULLIF(cl.course_interest, ''), p.course_interest) AS course_interest,
                 cl.callback_scheduled_at,
                 cl.called_at,
+                COALESCE(cl.notification_shown, FALSE) AS notification_shown,
+                COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
+                cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
@@ -151,10 +166,17 @@ class CallLogService:
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
-            WHERE cl.callback_scheduled_at IS NOT NULL AND cl.callback_scheduled_at <= %s
-            ORDER BY cl.callback_scheduled_at ASC
+            WHERE cl.outcome = 'callback'
+              AND cl.callback_scheduled_at IS NOT NULL
+              AND COALESCE(cl.notification_dismissed, FALSE) = FALSE
         """
-        return execute_query(query, (get_ist_now(),), fetch="all")
+        params: list[object] = []
+        if telecaller_id is not None:
+            query += "\n              AND cl.telecaller_id = %s"
+            params.append(telecaller_id)
+
+        query += "\n            ORDER BY cl.callback_scheduled_at ASC, cl.called_at DESC"
+        return execute_query(query, tuple(params) if params else None, fetch="all")
     
     @staticmethod
     def create_call_log(prospect_id: int, telecaller_id: int, assignment_id: Optional[int],
@@ -175,7 +197,9 @@ class CallLogService:
     @staticmethod
     def update_call_log(log_id: int, outcome: Optional[str] = None, status_after_call: Optional[str] = None,
                         reason: Optional[str] = None, notes: Optional[str] = None,
-                        course_interest: Optional[str] = None, callback_scheduled_at: Optional[datetime] = None) -> int:
+                        course_interest: Optional[str] = None, callback_scheduled_at: Optional[datetime] = None,
+                        notification_shown: Optional[bool] = None, notification_dismissed: Optional[bool] = None,
+                        notification_last_shown_at: Optional[datetime] = None) -> int:
         """Update call log details."""
         updates = []
         params = []
@@ -198,6 +222,15 @@ class CallLogService:
         if callback_scheduled_at is not None:
             updates.append("callback_scheduled_at = %s")
             params.append(callback_scheduled_at)
+        if notification_shown is not None:
+            updates.append("notification_shown = %s")
+            params.append(notification_shown)
+        if notification_dismissed is not None:
+            updates.append("notification_dismissed = %s")
+            params.append(notification_dismissed)
+        if notification_last_shown_at is not None:
+            updates.append("notification_last_shown_at = %s")
+            params.append(notification_last_shown_at)
         
         if not updates:
             return 0

@@ -180,6 +180,9 @@ export default function TelecallerDashboard() {
         })
 
       setProspects(enrichedProspects)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("refreshBadgeCounts"))
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch data")
       toast({

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import date, datetime
 from typing import Optional, List, Any, Dict
 
@@ -140,10 +140,18 @@ class CallLogBase(BaseModel):
     notes: Optional[str] = None
     course_interest: Optional[str] = Field(None, max_length=100)
     callback_scheduled_at: Optional[datetime] = None
+    notification_shown: bool = False
+    notification_dismissed: bool = False
+    notification_last_shown_at: Optional[datetime] = None
 
 
 class CallLogCreate(CallLogBase):
-    pass
+    @field_validator('callback_scheduled_at')
+    @classmethod
+    def validate_callback_time(cls, v, info):
+        if info.data.get('outcome') == 'callback' and not v:
+            raise ValueError('callback_scheduled_at is required when outcome is "callback"')
+        return v
 
 
 class CallLogUpdate(BaseModel):
@@ -158,6 +166,10 @@ class CallLogUpdate(BaseModel):
 class CallLog(CallLogBase):
     id: int
     called_at: datetime
+    prospect_name: Optional[str] = None
+    prospect_phone: Optional[str] = None
+    prospect_course_interest: Optional[str] = None
+    telecaller_name: Optional[str] = None
 
     class Config:
         from_attributes = True

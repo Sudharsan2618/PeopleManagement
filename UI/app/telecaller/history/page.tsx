@@ -634,34 +634,6 @@ export default function CallHistoryPage() {
               })}
           </div>
         )}
-
-        {/* Daily report summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4 border-t border-muted-foreground/20">
-          <Card className="border rounded-2xl shadow-sm">
-            <CardContent className="p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Today&apos;s Calls</div>
-              <div className="mt-2 text-3xl font-bold">{todayReport.calls}</div>
-            </CardContent>
-          </Card>
-          <Card className="border rounded-2xl shadow-sm">
-            <CardContent className="p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Connected</div>
-              <div className="mt-2 text-3xl font-bold">{todayReport.connected}</div>
-            </CardContent>
-          </Card>
-          <Card className="border rounded-2xl shadow-sm">
-            <CardContent className="p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Interested</div>
-              <div className="mt-2 text-3xl font-bold">{todayReport.interested}</div>
-            </CardContent>
-          </Card>
-          <Card className="border rounded-2xl shadow-sm">
-            <CardContent className="p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Callbacks</div>
-              <div className="mt-2 text-3xl font-bold">{todayReport.callbacks}</div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       {/* Filters */}

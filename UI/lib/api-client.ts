@@ -44,7 +44,12 @@ export interface CallLog {
   notes?: string
   course_interest?: string
   callback_scheduled_at?: string
+  notification_shown: boolean
+  notification_dismissed: boolean
+  notification_last_shown_at?: string
   called_at: string
+  prospect_name?: string
+  prospect_phone?: string
 }
 
 export interface SpocReport {
@@ -335,7 +340,12 @@ export const callLogsApi = {
   getById: (id: number) => apiRequest<CallLog>(`/call-logs/${id}`),
   getByProspect: (prospectId: number) => apiRequest<CallLog[]>(`/call-logs/prospect/${prospectId}`),
   getByTelecaller: (telecallerId: number) => apiRequest<CallLog[]>(`/call-logs/telecaller/${telecallerId}`),
-  getPendingCallbacks: () => apiRequest<CallLog[]>("/call-logs/callbacks/pending"),
+  getPendingCallbacks: (telecallerId?: number) => {
+    const params = new URLSearchParams()
+    if (telecallerId) params.append("telecaller_id", telecallerId.toString())
+    const query = params.toString() ? `?${params.toString()}` : ""
+    return apiRequest<CallLog[]>(`/call-logs/callbacks/pending${query}`)
+  },
   create: (data: any) => apiRequest<CallLog>("/call-logs", {
     method: "POST",
     body: JSON.stringify(data),
@@ -346,6 +356,15 @@ export const callLogsApi = {
   }),
   delete: (id: number) => apiRequest<{ message: string }>(`/call-logs/${id}`, {
     method: "DELETE",
+  }),
+  markNotificationShown: (id: number) => apiRequest<CallLog>(`/call-logs/${id}/mark-notification-shown`, {
+    method: "PATCH",
+  }),
+  markNotificationDismissed: (id: number) => apiRequest<CallLog>(`/call-logs/${id}/mark-notification-dismissed`, {
+    method: "PATCH",
+  }),
+  resetNotification: (id: number) => apiRequest<CallLog>(`/call-logs/${id}/reset-notification`, {
+    method: "PATCH",
   }),
 }
 

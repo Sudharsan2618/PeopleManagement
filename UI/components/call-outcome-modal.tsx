@@ -190,6 +190,8 @@ export function CallOutcomeModal({
   const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome | null>(null)
   const [notes, setNotes] = useState("")
   const [callbackDate, setCallbackDate] = useState("")
+  const [callbackDateError, setCallbackDateError] = useState("")
+  const [callbackTimeError, setCallbackTimeError] = useState("")
   const [callbackHour, setCallbackHour] = useState("10")
   const [callbackMinute, setCallbackMinute] = useState("00")
   const [callbackPeriod, setCallbackPeriod] = useState("AM")
@@ -240,6 +242,8 @@ export function CallOutcomeModal({
     setSelectedOutcome(null)
     setNotes("")
     setCallbackDate("")
+    setCallbackDateError("")
+    setCallbackTimeError("")
     setCallbackHour("10")
     setCallbackMinute("00")
     setCallbackPeriod("AM")
@@ -252,8 +256,41 @@ export function CallOutcomeModal({
     setInstitutionName("")
   }
 
+  const isFormValid = () => {
+    if (!selectedOutcome) return false
+    
+    if (selectedOutcome === "CallBack") {
+      return !!(callbackDate && callbackHour && callbackMinute && callbackPeriod)
+    }
+    
+    return true
+  }
+
   const handleSubmit = () => {
     if (!selectedOutcome) return
+
+    // Validate CallBack fields
+    if (selectedOutcome === "CallBack") {
+      let hasErrors = false
+      
+      if (!callbackDate || callbackDate.trim() === "") {
+        setCallbackDateError("Follow-up Date is required")
+        hasErrors = true
+      } else {
+        setCallbackDateError("")
+      }
+
+      if (!callbackHour || !callbackMinute || !callbackPeriod) {
+        setCallbackTimeError("Follow-up Time is required")
+        hasErrors = true
+      } else {
+        setCallbackTimeError("")
+      }
+
+      if (hasErrors) {
+        return
+      }
+    }
 
     const data: Record<string, unknown> = { notes }
 
@@ -474,20 +511,29 @@ export function CallOutcomeModal({
                           <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Date</Label>
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Date *</Label>
                                 <Input
                                   type="date"
-                                  className="h-11 border-2"
+                                  className={`h-11 border-2 ${callbackDateError ? "border-red-500 focus:ring-red-500" : "border-input"}`}
                                   value={callbackDate}
-                                  onChange={(e) => setCallbackDate(e.target.value)}
+                                  onChange={(e) => {
+                                    setCallbackDate(e.target.value)
+                                    setCallbackDateError("")
+                                  }}
                                   min={new Date().toISOString().split("T")[0]}
                                 />
+                                {callbackDateError && (
+                                  <p className="text-xs font-semibold text-red-600">{callbackDateError}</p>
+                                )}
                               </div>
                               <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Time</Label>
+                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Time *</Label>
                                 <div className="grid grid-cols-3 gap-2">
-                                  <Select value={callbackHour} onValueChange={setCallbackHour}>
-                                    <SelectTrigger className="h-11 bg-background border-2">
+                                  <Select value={callbackHour} onValueChange={(value) => {
+                                    setCallbackHour(value)
+                                    setCallbackTimeError("")
+                                  }}>
+                                    <SelectTrigger className={`h-11 bg-background border-2 ${callbackTimeError ? "border-red-500" : "border-input"}`}>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -497,18 +543,24 @@ export function CallOutcomeModal({
                                       })}
                                     </SelectContent>
                                   </Select>
-                                  <Select value={callbackMinute} onValueChange={setCallbackMinute}>
-                                    <SelectTrigger className="h-11 bg-background border-2">
+                                  <Select value={callbackMinute} onValueChange={(value) => {
+                                    setCallbackMinute(value)
+                                    setCallbackTimeError("")
+                                  }}>
+                                    <SelectTrigger className={`h-11 bg-background border-2 ${callbackTimeError ? "border-red-500" : "border-input"}`}>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {['00', '15', '30', '45'].map((minute) => (
+                                      {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((minute) => (
                                         <SelectItem key={minute} value={minute}>{minute}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
-                                  <Select value={callbackPeriod} onValueChange={setCallbackPeriod}>
-                                    <SelectTrigger className="h-11 bg-background border-2">
+                                  <Select value={callbackPeriod} onValueChange={(value) => {
+                                    setCallbackPeriod(value)
+                                    setCallbackTimeError("")
+                                  }}>
+                                    <SelectTrigger className={`h-11 bg-background border-2 ${callbackTimeError ? "border-red-500" : "border-input"}`}>
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -517,6 +569,9 @@ export function CallOutcomeModal({
                                     </SelectContent>
                                   </Select>
                                 </div>
+                                {callbackTimeError && (
+                                  <p className="text-xs font-semibold text-red-600">{callbackTimeError}</p>
+                                )}
                               </div>
                             </div>
                             <div className="space-y-2">
@@ -614,7 +669,7 @@ export function CallOutcomeModal({
                 size="lg" 
                 className="px-12 h-12 text-md font-bold shadow-lg shadow-primary/20"
                 onClick={handleSubmit} 
-                disabled={!selectedOutcome}
+                disabled={!isFormValid()}
               >
                 Save Call Outcome
               </Button>

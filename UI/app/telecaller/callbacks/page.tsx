@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { cn, parseISTDate } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
@@ -167,6 +167,18 @@ export default function CallbacksPage() {
       if (data.coursePreference) fullNotes += `\n[Course Preference] ${data.coursePreference}`
       if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
       
+      // Mark any previous callback call logs for this prospect as shown
+      // so they don't appear in notifications after we log a new outcome
+      try {
+        const previousLogs = await callLogsApi.getByProspect(Number(selectedProspect.numericId))
+        const previousCallback = previousLogs.find(log => log.outcome === "callback" && log.callback_scheduled_at)
+        if (previousCallback) {
+          await callLogsApi.markNotificationShown(previousCallback.id)
+        }
+      } catch (err) {
+        console.error("Failed to mark previous callback as shown:", err)
+      }
+      
       await callLogsApi.create({
         prospect_id: Number(selectedProspect.numericId),
         telecaller_id: telecallerId,
@@ -208,7 +220,7 @@ export default function CallbacksPage() {
   const getEventsForSlot = (date: Date, hour: number) => {
     return callLogs.filter(log => {
       if (!log.callback_scheduled_at) return false
-      const cbDate = new Date(log.callback_scheduled_at)
+      const cbDate = parseISTDate(log.callback_scheduled_at)
       return (
         cbDate.getDate() === date.getDate() &&
         cbDate.getMonth() === date.getMonth() &&
@@ -333,7 +345,7 @@ export default function CallbacksPage() {
                           const prospect = prospects[event.prospect_id]
                           if (!prospect) return null
                           
-                          const eventTime = new Date(event.callback_scheduled_at!)
+                          const eventTime = parseISTDate(event.callback_scheduled_at!)
                           const minutes = eventTime.getMinutes()
                           
                           return (
