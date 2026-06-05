@@ -380,6 +380,7 @@ export default function TelecallerDashboard() {
       await fetchData()
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("refreshBadgeCounts"))
+        window.dispatchEvent(new Event("refreshPendingCallbacks"))
       }
     } catch (err) {
       toast({

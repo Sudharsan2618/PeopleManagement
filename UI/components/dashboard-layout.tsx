@@ -49,6 +49,8 @@ interface NavItem {
   badge?: number
 }
 
+const CALLBACK_COUNT_POLL_INTERVAL = 30 * 1000
+
 const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
   { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar },
@@ -132,12 +134,21 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
     fetchCounts()
 
+    const intervalId = window.setInterval(fetchCounts, CALLBACK_COUNT_POLL_INTERVAL)
     const refreshCounts = () => {
+      fetchCounts()
+    }
+    const handleFocus = () => {
       fetchCounts()
     }
 
     window.addEventListener("refreshBadgeCounts", refreshCounts)
-    return () => window.removeEventListener("refreshBadgeCounts", refreshCounts)
+    window.addEventListener("focus", handleFocus)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener("refreshBadgeCounts", refreshCounts)
+      window.removeEventListener("focus", handleFocus)
+    }
   }, [user])
 
   // Pending callbacks for notifications dropdown
@@ -172,9 +183,17 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
     fetchPending()
 
+    const intervalId = window.setInterval(fetchPending, CALLBACK_COUNT_POLL_INTERVAL)
     const refreshPending = () => fetchPending()
+    const handleFocus = () => fetchPending()
+
     window.addEventListener("refreshPendingCallbacks", refreshPending)
-    return () => window.removeEventListener("refreshPendingCallbacks", refreshPending)
+    window.addEventListener("focus", handleFocus)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener("refreshPendingCallbacks", refreshPending)
+      window.removeEventListener("focus", handleFocus)
+    }
   }, [user, role])
 
   // Enhance nav items with dynamic counts; telecallers use pending callbacks

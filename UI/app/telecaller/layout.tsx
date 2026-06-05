@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useAuth } from "@/lib/auth-context"
+import { CallbackReminder } from "@/components/callback-reminder"
 
 export default function TelecallerLayout({
   children,
@@ -30,6 +31,7 @@ export default function TelecallerLayout({
 
   return (
     <DashboardLayout role="telecaller" userName={user.name}>
+      <CallbackReminder />
       {children}
     </DashboardLayout>
   )

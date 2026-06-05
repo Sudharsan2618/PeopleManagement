@@ -196,6 +196,7 @@ export default function CallbacksPage() {
       await fetchData()
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("refreshBadgeCounts"))
+        window.dispatchEvent(new Event("refreshPendingCallbacks"))
       }
     } catch (err) {
       toast({ title: "Error saving call", description: err instanceof Error ? err.message : "Failed", variant: "destructive" })
