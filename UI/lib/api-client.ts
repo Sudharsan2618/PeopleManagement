@@ -206,12 +206,15 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
 
+  const headers = new Headers(options.headers)
+  headers.set("Accept", "application/json")
+
+  if (options.body != null && !(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json")
+  }
+
   const defaultOptions: RequestInit = {
-    headers: {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-      ...options.headers,
-    },
+    headers,
   }
 
   let response: Response

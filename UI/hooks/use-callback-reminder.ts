@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { callLogsApi, type CallLog } from "@/lib/api-client"
+import { parseISTDate } from "@/lib/utils"
 
 type CallbackReminderCallLog = CallLog & {
   prospect_name?: string
@@ -36,8 +37,19 @@ function saveSnoozeMap(snoozeMap: Record<string, number>) {
   window.localStorage.setItem(SNOOZE_STORAGE_KEY, JSON.stringify(snoozeMap))
 }
 
+function parseScheduledCallbackAt(value?: string) {
+  if (!value) return null
+  const parsed = parseISTDate(value)
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed
+  }
+  const fallback = new Date(value)
+  return Number.isNaN(fallback.getTime()) ? null : fallback
+}
+
 function getReminderTimestamp(callLog: CallbackReminderCallLog) {
-  return callLog.callback_scheduled_at ? new Date(callLog.callback_scheduled_at).getTime() : 0
+  const date = parseScheduledCallbackAt(callLog.callback_scheduled_at)
+  return date ? date.getTime() : 0
 }
 
 function isReminderDue(callLog: CallbackReminderCallLog, now: number) {
@@ -110,7 +122,7 @@ function playAlertSound() {
     gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.39)
 
     setTimeout(() => {
-      audioContext.close().catch(() => {})
+      audioContext.close().catch(() => { })
     }, 500)
   } catch {
     // Silence failures due to browser audio restrictions.
@@ -133,7 +145,17 @@ export function useCallbackReminder(telecallerId: number | undefined) {
     try {
       const remoteCallbacks = await callLogsApi.getPendingCallbacks(telecallerId)
       const latestCallbacks = getLatestLogPerProspect(remoteCallbacks)
-      setPendingCallbacks(latestCallbacks)
+        setPendingCallbacks(latestCallbacks)
+        // Diagnostic: log what the backend returned so we can inspect hot/visit entries
+        console.debug("[CallbackReminder] fetched pending callbacks:", latestCallbacks.map(c => ({
+          id: c.id,
+          prospect_id: c.prospect_id,
+          outcome: c.outcome,
+          status_after_call: c.status_after_call,
+          callback_scheduled_at: c.callback_scheduled_at,
+          notification_shown: c.notification_shown,
+          notification_dismissed: c.notification_dismissed,
+        })))
     } catch (err) {
       console.error("Failed to fetch callback reminders:", err)
     }
@@ -149,14 +171,10 @@ export function useCallbackReminder(telecallerId: number | undefined) {
 
     pollingTimer.current = window.setInterval(fetchPendingCallbacks, POLLING_INTERVAL)
 
-    const handleFocus = () => fetchPendingCallbacks()
-    window.addEventListener("focus", handleFocus)
-
     return () => {
       if (pollingTimer.current) {
         window.clearInterval(pollingTimer.current)
       }
-      window.removeEventListener("focus", handleFocus)
     }
   }, [telecallerId, fetchPendingCallbacks])
 
@@ -198,6 +216,14 @@ export function useCallbackReminder(telecallerId: number | undefined) {
       })
   }, [pendingCallbacks, snoozeMap])
 
+    useEffect(() => {
+      try {
+        console.debug("[CallbackReminder] computed dueCallbacks:", dueCallbacks.map(d => ({ id: d.id, prospect_id: d.prospect_id, outcome: d.outcome, callback_scheduled_at: d.callback_scheduled_at })))
+      } catch (e) {
+        // ignore diagnostic failures
+      }
+    }, [dueCallbacks])
+
   useEffect(() => {
     if (!activeReminder && dueCallbacks.length > 0) {
       setActiveReminder(dueCallbacks[0])
@@ -210,6 +236,14 @@ export function useCallbackReminder(telecallerId: number | undefined) {
       playAlertSound()
     }
   }, [isOpen, activeReminder])
+
+    useEffect(() => {
+      try {
+        console.debug("[CallbackReminder] activeReminder changed:", activeReminder && ({ id: activeReminder.id, prospect_id: activeReminder.prospect_id, outcome: activeReminder.outcome, callback_scheduled_at: activeReminder.callback_scheduled_at }))
+      } catch (e) {
+        // ignore
+      }
+    }, [activeReminder])
 
   const setReminderOpen = (open: boolean) => {
     setIsOpen(open)
@@ -277,7 +311,10 @@ export function useCallbackReminder(telecallerId: number | undefined) {
 
   const isOverdue = Boolean(
     activeReminder && activeReminder.callback_scheduled_at &&
-    new Date(activeReminder.callback_scheduled_at).getTime() < Date.now()
+    (() => {
+      const date = parseScheduledCallbackAt(activeReminder.callback_scheduled_at)
+      return date ? date.getTime() < Date.now() : false
+    })()
   )
 
   return {

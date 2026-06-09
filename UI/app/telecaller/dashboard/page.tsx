@@ -67,21 +67,52 @@ const OUTCOME_TO_DB: Record<string, string> = {
   ApplicationProcess: "application_process",
 }
 
+// ─── Outcome → Friendly UI label (for toast messages) ───────────────
+const OUTCOME_UI_LABELS: Record<string, string> = {
+  NotAnswered:        "Not Answered",
+  Busy:               "Busy",
+  WrongNumber:        "Wrong Number",
+  CallBack:           "Interested",
+  NotInterested:      "Not Interested / No response",
+  DNC:                "Do Not Call",
+  LanguageBarrier:    "Language Barrier",
+  Interested:         "Strong Interest / Ready for counselling",
+  Qualified:          "Visit planned and confirmed",
+  EnrolledElsewhere:  "Visit campus / Decision awaited",
+  ApplicationProcess: "Admission successfully completed",
+}
+
 // ─── Outcome → Prospect status_after_call ─────────────────────
 // This is the CRM state-machine: what happens to the prospect after
 // each type of call outcome
 const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
-  NotAnswered: "cold_no_response",       // No Response
-  Busy: "cold_no_response",              // No Response
-  WrongNumber: "cold_not_interested",    // Not Interested
+  NotAnswered: "cold",                   // Cold / No Response
+  Busy: "cold",                          // Cold / No Response
+  WrongNumber: "cold",                   // Cold
   CallBack: "warm",                      // Warm
-  NotInterested: "cold_not_interested",  // Not Interested
-  DNC: "cold_not_interested",            // Not Interested
-  LanguageBarrier: "cold_not_interested",// Not Interested
+  NotInterested: "cold",                 // Cold / Not Interested
+  DNC: "cold",                           // Cold / DNC
+  LanguageBarrier: "cold",               // Cold
   Interested: "hot",                     // Hot
   Qualified: "visit_scheduled",          // Visit Scheduled
-  EnrolledElsewhere: "cold_not_interested",   // Already Enrolled → Not Interested
+  EnrolledElsewhere: "visit_done",        // Visit Done → Decision Pending
   ApplicationProcess: "admission_done",   // Application Process → Admission Done
+}
+
+// ─── DB outcome → friendly UI label ──────────────────────────────
+const DB_OUTCOME_LABELS: Record<string, string> = {
+  not_answered:        "Not Answered",
+  busy:                "Busy",
+  wrong_number:        "Wrong Number",
+  callback:            "Interested",
+  not_interested:      "Not Interested / No response",
+  dnc:                 "Do Not Call",
+  language_barrier:    "Language Barrier",
+  interested:          "Strong Interest / Ready for counselling",
+  qualified:           "Visit planned and confirmed",
+  visit_done:          "Visit campus / Decision awaited",
+  enrolled_elsewhere:  "Visit campus / Decision awaited",
+  application_process: "Admission successfully completed",
 }
 
 // ─── Status display config ─────────────────────────────────────
@@ -93,8 +124,9 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
   visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800 border-gray-200" },
-  cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800 border-slate-200" },
+  cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_no_response: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_not_interested: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
   lost: { label: "Lost", color: "bg-red-50 text-red-600 border-red-200" },
 }
 
@@ -208,57 +240,84 @@ export default function TelecallerDashboard() {
     })
   }, [callLogs])
 
-  const telecallerStats = useMemo(
-    () => ({
-      todaysProspects: prospects.length,
-      called: todayLogs.length,
+  const todayAssignmentCount = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    const todaysAssignmentProspectIds = new Set(
+      assignments
+        .filter((a: any) => a.assigned_date === today)
+        .map((a: any) => a.prospect_id)
+    )
+    return todaysAssignmentProspectIds.size
+  }, [assignments])
+
+  const telecallerStats = useMemo(() => {
+    const latestLogByProspect = new Map<number, CallLog>()
+    callLogs.forEach((log) => {
+      const existing = latestLogByProspect.get(log.prospect_id)
+      if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+        latestLogByProspect.set(log.prospect_id, log)
+      }
+    })
+
+    const callbackCount = Array.from(latestLogByProspect.values()).filter(
+      (log) => log.callback_scheduled_at
+    ).length
+
+    return {
+      totalProspects: prospects.length,
+      todaysProspects: todayAssignmentCount,
+      callsMade: todayLogs.length,
+      callbacksDue: callbackCount,
+      admitted: prospects.filter((p) => p.status === "admission_done").length,
       pending: prospects.filter(
         (p) =>
           p.status === "new" || (p.status === "contacted" && p.totalCalls === 0)
       ).length,
-      callbacksDue: prospects.filter((p) => p.status === "warm").length,
-      qualified: prospects.filter(
-        (p) => p.status === "hot" || p.status === "visit_scheduled"
-      ).length,
-    }),
-    [prospects, todayLogs]
-  )
+    }
+  }, [prospects, todayAssignmentCount, callLogs, todayLogs])
 
   const statCards = [
     {
-      title: "Today's Prospects",
-      value: telecallerStats.todaysProspects,
+      title: "Total Prospects",
+      value: telecallerStats.totalProspects,
       icon: Users,
-      color: "text-blue-600",
+      color: "text-slate-700",
+      bgColor: "bg-slate-100",
+    },
+    {
+      title: "Today’s Prospects",
+      value: telecallerStats.todaysProspects,
+      icon: Phone,
+      color: "text-blue-700",
       bgColor: "bg-blue-100",
     },
     {
       title: "Calls Made",
-      value: telecallerStats.called,
-      icon: Phone,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      value: telecallerStats.callsMade,
+      icon: PhoneCall,
+      color: "text-green-700",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Callbacks",
+      value: telecallerStats.callbacksDue,
+      icon: AlertCircle,
+      color: "text-orange-700",
+      bgColor: "bg-orange-100",
+    },
+    {
+      title: "Admitted",
+      value: telecallerStats.admitted,
+      icon: CheckCircle2,
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100",
     },
     {
       title: "Pending",
       value: telecallerStats.pending,
       icon: Clock,
-      color: "text-yellow-600",
+      color: "text-yellow-700",
       bgColor: "bg-yellow-100",
-    },
-    {
-      title: "Callbacks Due",
-      value: telecallerStats.callbacksDue,
-      icon: AlertCircle,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
-    },
-    {
-      title: "Qualified / Hot",
-      value: telecallerStats.qualified,
-      icon: CheckCircle2,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-100",
     },
   ]
 
@@ -323,7 +382,8 @@ export default function TelecallerDashboard() {
 
       // Build callback timestamp if scheduled
       let callbackScheduledAt: string | null = null
-      if (outcome === "CallBack" && data.callbackDate) {
+      const callbackOutcomes = ["CallBack", "Interested", "Qualified", "NotInterested"]
+      if (callbackOutcomes.includes(outcome) && data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
@@ -346,7 +406,19 @@ export default function TelecallerDashboard() {
       if (data.courseConfirmed)
         fullNotes += `\n[Course Confirmed] ${data.courseConfirmed}`
 
-      // 1. Create call log
+      // 1. Mark ALL previous callback logs for this prospect as notification_shown
+      // so they don't re-trigger after we log a new outcome
+      try {
+        const previousLogs = await callLogsApi.getByProspect(Number(selectedProspect.numericId))
+        const previousCallbacks = previousLogs.filter((log: any) => log.callback_scheduled_at)
+        await Promise.all(
+          previousCallbacks.map((log: any) => callLogsApi.markNotificationShown(log.id))
+        )
+      } catch (err) {
+        console.error("Failed to mark previous callbacks as shown:", err)
+      }
+
+      // 2. Create call log
       await callLogsApi.create({
         prospect_id: Number(selectedProspect.numericId),
         telecaller_id: telecallerId,
@@ -362,7 +434,7 @@ export default function TelecallerDashboard() {
         callback_scheduled_at: callbackScheduledAt,
       })
 
-      // 2. Update prospect status in DB
+      // 3. Update prospect status in DB
       await prospectsApi.update(Number(selectedProspect.numericId), {
         status: statusAfterCall,
         course_interest:
@@ -373,10 +445,10 @@ export default function TelecallerDashboard() {
 
       toast({
         title: "Call logged ✓",
-        description: `${selectedProspect.name} — ${outcome} → Status: ${statusConfig[statusAfterCall]?.label || statusAfterCall}`,
+        description: `${selectedProspect.name} — ${OUTCOME_UI_LABELS[outcome] || outcome} → Status: ${statusConfig[statusAfterCall]?.label || statusAfterCall}`,
       })
 
-      // 3. Refresh data
+      // 4. Refresh data
       await fetchData()
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("refreshBadgeCounts"))
@@ -409,9 +481,9 @@ export default function TelecallerDashboard() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>{error}</span>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={fetchData}
               className="h-7 bg-white/10 hover:bg-white/20 border-white/20 text-white"
             >
@@ -425,10 +497,7 @@ export default function TelecallerDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground flex items-center gap-2">
-            Welcome back, {user?.name}! You have{" "}
-            {telecallerStats.pending} prospects pending today.
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
-            <span className="text-[10px] opacity-70">Live</span>
+            Welcome back, {user?.name}! You have {telecallerStats.pending} prospects pending today.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -440,7 +509,7 @@ export default function TelecallerDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
         {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardContent className="p-4">
@@ -600,16 +669,16 @@ export default function TelecallerDashboard() {
                         <TableCell className="text-sm text-muted-foreground">
                           {prospect.lastCallAt
                             ? new Date(prospect.lastCallAt).toLocaleString(
-                                "en-IN",
-                                { dateStyle: "short", timeStyle: "short" }
-                              )
+                              "en-IN",
+                              { dateStyle: "short", timeStyle: "short" }
+                            )
                             : "—"}
                         </TableCell>
                         <TableCell>
                           {prospect.lastOutcome ? (
                             <div className="flex flex-col gap-0.5">
                               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted w-fit">
-                                {prospect.lastOutcome.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                                {DB_OUTCOME_LABELS[prospect.lastOutcome] || prospect.lastOutcome.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                               </span>
                               {prospect.lastNotes && (
                                 <span className="text-[11px] text-muted-foreground line-clamp-2 italic mt-0.5">

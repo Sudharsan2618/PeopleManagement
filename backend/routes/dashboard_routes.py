@@ -10,12 +10,12 @@ def get_dashboard_stats(user_id: int):
     try:
         # 1. Pending Callbacks (Telecaller)
         # Definition: Count all pending scheduled callbacks for the telecaller.
-        # Must have: outcome='callback', scheduled time, and not dismissed.
+        # Must have: a scheduled callback timestamp and not dismissed.
+        # This includes warm, hot, and visit_scheduled follow-ups.
         callback_query = """
             SELECT COUNT(*) as count
             FROM call_logs cl
             WHERE cl.telecaller_id = %s
-              AND cl.outcome = 'callback'
               AND cl.callback_scheduled_at IS NOT NULL
               AND COALESCE(cl.notification_dismissed, FALSE) = FALSE
         """

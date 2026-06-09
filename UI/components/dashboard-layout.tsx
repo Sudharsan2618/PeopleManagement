@@ -138,16 +138,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     const refreshCounts = () => {
       fetchCounts()
     }
-    const handleFocus = () => {
-      fetchCounts()
-    }
 
     window.addEventListener("refreshBadgeCounts", refreshCounts)
-    window.addEventListener("focus", handleFocus)
     return () => {
       window.clearInterval(intervalId)
       window.removeEventListener("refreshBadgeCounts", refreshCounts)
-      window.removeEventListener("focus", handleFocus)
     }
   }, [user])
 
@@ -157,10 +152,15 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
     const fetchPending = async () => {
       try {
-        const telecallerId = role === "telecaller" ? Number(user.id) : undefined
+        if (role !== "telecaller") {
+          setPendingCallbacks([])
+          return
+        }
+
+        const telecallerId = Number(user.id)
         // To match the callbacks page, fetch all logs and then compute
         // the latest log per prospect (callbacks page uses getByTelecaller)
-        const allLogs = await callLogsApi.getByTelecaller(telecallerId!)
+        const allLogs = await callLogsApi.getByTelecaller(telecallerId)
         const latestLogByProspect = new Map<number, any>()
         allLogs.forEach((log: any) => {
           const pid = log.prospect_id
@@ -172,7 +172,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         })
 
         const callbacks = Array.from(latestLogByProspect.values()).filter(
-          (log: any) => log.outcome === "callback" && log.callback_scheduled_at
+          (log: any) => log.callback_scheduled_at
         )
 
         setPendingCallbacks(callbacks || [])
@@ -185,14 +185,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
     const intervalId = window.setInterval(fetchPending, CALLBACK_COUNT_POLL_INTERVAL)
     const refreshPending = () => fetchPending()
-    const handleFocus = () => fetchPending()
 
     window.addEventListener("refreshPendingCallbacks", refreshPending)
-    window.addEventListener("focus", handleFocus)
     return () => {
       window.clearInterval(intervalId)
       window.removeEventListener("refreshPendingCallbacks", refreshPending)
-      window.removeEventListener("focus", handleFocus)
     }
   }, [user, role])
 
@@ -381,20 +378,65 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                               router.push(`/telecaller/callbacks?prospect=${callback.prospect_id}`)
                             }
                           }}
-                          className="rounded-xl border-2 border-red-500 bg-red-50 p-3 text-left w-full cursor-pointer"
+                          className={cn(
+                            "rounded-xl border-2 p-3 text-left w-full cursor-pointer transition-all hover:scale-[1.01]",
+                            callback.outcome === "interested"
+                              ? "border-red-500 bg-red-50"
+                              : callback.outcome === "qualified"
+                              ? "border-purple-500 bg-purple-50"
+                              : callback.outcome === "not_interested"
+                              ? "border-slate-400 bg-slate-50"
+                              : "border-blue-500 bg-blue-50"
+                          )}
                         >
-                          <p className="text-sm font-semibold text-red-900">
-                            📞 Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
+                          <p className={cn(
+                            "text-sm font-semibold",
+                            callback.outcome === "interested"
+                              ? "text-red-900"
+                              : callback.outcome === "qualified"
+                              ? "text-purple-900"
+                              : callback.outcome === "not_interested"
+                              ? "text-slate-900"
+                              : "text-blue-900"
+                          )}>
+                            📞 {callback.outcome === "interested" ? "Hot" : callback.outcome === "qualified" ? "Visit" : callback.outcome === "not_interested" ? "Cold" : "Warm"} Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
                           </p>
-                          <p className="text-xs text-red-700 mt-1">
+                          <p className={cn(
+                            "text-xs mt-1",
+                            callback.outcome === "interested"
+                              ? "text-red-700"
+                              : callback.outcome === "qualified"
+                              ? "text-purple-700"
+                              : callback.outcome === "not_interested"
+                              ? "text-slate-700"
+                              : "text-blue-700"
+                          )}>
                             {callback.prospect?.mobile || callback.prospect_phone || "Unknown"}
                           </p>
                           {callback.course_interest && (
-                            <p className="text-xs text-red-700">
+                            <p className={cn(
+                              "text-xs",
+                              callback.outcome === "interested"
+                                ? "text-red-700"
+                                : callback.outcome === "qualified"
+                                ? "text-purple-700"
+                                : callback.outcome === "not_interested"
+                                ? "text-slate-700"
+                                : "text-blue-700"
+                            )}>
                               📚 {callback.course_interest}
                             </p>
                           )}
-                          <p className="text-xs font-bold text-red-600 mt-1">
+                          <p className={cn(
+                            "text-xs font-bold mt-1",
+                            callback.outcome === "interested"
+                              ? "text-red-600"
+                              : callback.outcome === "qualified"
+                              ? "text-purple-600"
+                              : callback.outcome === "not_interested"
+                              ? "text-slate-600"
+                              : "text-blue-600"
+                          )}>
                             ⏰ {scheduledTime}
                           </p>
                         </button>

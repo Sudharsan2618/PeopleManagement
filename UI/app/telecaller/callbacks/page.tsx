@@ -46,12 +46,12 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   Busy: "cold_no_response",              // No Response
   WrongNumber: "cold_not_interested",    // Not Interested
   CallBack: "warm",                      // Warm
-  NotInterested: "cold_not_interested",  // Not Interested
+  NotInterested: "cold_not_interested",  // Not Interested unless reason says no response
   DNC: "cold_not_interested",            // Not Interested
   LanguageBarrier: "cold_not_interested",// Not Interested
   Interested: "hot",                     // Hot
-  Qualified: "admission_done",           // Admission Done
-  EnrolledElsewhere: "cold_not_interested",   // Already Enrolled → Not Interested
+  Qualified: "visit_scheduled",          // Visit Scheduled
+  EnrolledElsewhere: "visit_done",        // Visit Done → Decision Pending
   ApplicationProcess: "admission_done",   // Application Process → Admission Done
 }
 
@@ -117,8 +117,9 @@ export default function CallbacksPage() {
         }
       })
 
+      // Show ALL prospects with a scheduled callback (warm, hot, qualified)
       const callbacks = Array.from(latestLogByProspect.values()).filter(
-        (log) => log.outcome === "callback" && log.callback_scheduled_at
+        (log) => log.callback_scheduled_at
       )
       setCallLogs(callbacks)
     } catch (err) {
@@ -157,7 +158,8 @@ export default function CallbacksPage() {
       const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
       let callbackScheduledAt: string | null = null
-      if (outcome === "CallBack" && data.callbackDate) {
+      const callbackOutcomes = ["CallBack", "Interested", "Qualified", "NotInterested"]
+      if (callbackOutcomes.includes(outcome) && data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
@@ -171,7 +173,7 @@ export default function CallbacksPage() {
       // so they don't appear in notifications after we log a new outcome
       try {
         const previousLogs = await callLogsApi.getByProspect(Number(selectedProspect.numericId))
-        const previousCallback = previousLogs.find(log => log.outcome === "callback" && log.callback_scheduled_at)
+        const previousCallback = previousLogs.find(log => log.callback_scheduled_at)
         if (previousCallback) {
           await callLogsApi.markNotificationShown(previousCallback.id)
         }
@@ -355,7 +357,14 @@ export default function CallbacksPage() {
                               onClick={() => handleCall(prospect)}
                               className={cn(
                                 "absolute left-1.5 right-1.5 p-2.5 rounded-xl border-2 text-left transition-all duration-300 shadow-sm group/event",
-                                "bg-white hover:scale-[1.02] hover:z-20 border-blue-100 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10",
+                                event.outcome === "interested"
+                                  ? "bg-red-50 hover:border-red-500 border-red-100 hover:shadow-red-500/10"
+                                  : event.outcome === "qualified"
+                                  ? "bg-purple-50 hover:border-purple-500 border-purple-100 hover:shadow-purple-500/10"
+                                  : event.outcome === "not_interested"
+                                  ? "bg-slate-50 hover:border-slate-500 border-slate-200 hover:shadow-slate-500/10"
+                                  : "bg-white hover:border-blue-500 border-blue-100 hover:shadow-blue-500/10",
+                                "hover:scale-[1.02] hover:z-20 hover:shadow-xl",
                                 minutes > 0 && "translate-y-2"
                               )}
                               style={{ height: '85%' }}
@@ -376,8 +385,17 @@ export default function CallbacksPage() {
                                 </div>
                                 
                                 <div className="flex items-center gap-1.5 mt-auto">
-                                  <Badge className="text-[8px] bg-blue-50 text-blue-700 border-blue-100 font-black px-1.5 h-3.5 leading-none uppercase">
-                                    Callback
+                                  <Badge className={cn(
+                                    "text-[8px] font-black px-1.5 h-3.5 leading-none uppercase",
+                                    event.outcome === "interested"
+                                      ? "bg-red-50 text-red-700 border-red-100"
+                                      : event.outcome === "qualified"
+                                      ? "bg-purple-50 text-purple-700 border-purple-100"
+                                      : event.outcome === "not_interested"
+                                      ? "bg-slate-100 text-slate-700 border-slate-200"
+                                      : "bg-blue-50 text-blue-700 border-blue-100"
+                                  )}>
+                                    {event.outcome === "interested" ? "Hot" : event.outcome === "qualified" ? "Visit" : event.outcome === "not_interested" ? "Cold" : "Warm"}
                                   </Badge>
                                   <span className="text-[9px] text-muted-foreground truncate font-bold">
                                     {prospect.location || 'Unknown'}

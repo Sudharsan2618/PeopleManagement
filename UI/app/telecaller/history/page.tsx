@@ -53,14 +53,14 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   not_answered: { label: "Not Answered", color: "bg-orange-100 text-orange-800" },
   busy: { label: "Busy", color: "bg-yellow-100 text-yellow-800" },
   wrong_number: { label: "Wrong Number", color: "bg-red-100 text-red-800" },
-  callback: { label: "Callback", color: "bg-blue-100 text-blue-800" },
-  not_interested: { label: "Not Interested", color: "bg-gray-100 text-gray-800" },
+  callback: { label: "Interested", color: "bg-blue-100 text-blue-800" },
+  not_interested: { label: "Not Interested / No response", color: "bg-gray-100 text-gray-800" },
   dnc: { label: "DNC", color: "bg-red-100 text-red-800" },
   language_barrier: { label: "Language Barrier", color: "bg-amber-100 text-amber-800" },
-  interested: { label: "Interested", color: "bg-green-100 text-green-800" },
-  qualified: { label: "Qualified", color: "bg-emerald-100 text-emerald-800" },
-  enrolled_elsewhere: { label: "Enrolled Elsewhere", color: "bg-purple-100 text-purple-800" },
-  application_process: { label: "Application Process", color: "bg-teal-100 text-teal-800" },
+  interested: { label: "Strong Interest / Ready for counselling", color: "bg-green-100 text-green-800" },
+  qualified: { label: "Visit planned and confirmed", color: "bg-emerald-100 text-emerald-800" },
+  enrolled_elsewhere: { label: "Visit campus / Decision awaited", color: "bg-purple-100 text-purple-800" },
+  application_process: { label: "Admission successfully completed", color: "bg-teal-100 text-teal-800" },
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -71,12 +71,20 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800" },
   visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800" },
   admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800" },
+  cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
   cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800" },
   cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800" },
   lost: { label: "Lost", color: "bg-red-50 text-red-600" },
 }
 
-const EXCLUDED_STATUSES = new Set(["contacted", "status_update", "lost", "cold_no_response"])
+const SUMMARY_STATUS_KEYS = ["cold", "warm", "hot", "visit_scheduled", "admission_done"]
+const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = {
+  cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
+  visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  admission_done: { label: "Admitted", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+}
 
 export default function CallHistoryPage() {
   const { user } = useAuth()
@@ -482,12 +490,30 @@ export default function CallHistoryPage() {
 
   // Status summary stats
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
+    const counts: Record<string, number> = {
+      cold: 0,
+      warm: 0,
+      hot: 0,
+      visit_scheduled: 0,
+      admission_done: 0,
+    }
+
     callLogs.forEach((log) => {
-      if (log.status_after_call) {
-        counts[log.status_after_call] = (counts[log.status_after_call] || 0) + 1
+      if (!log.status_after_call) return
+
+      if (["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
+        counts.cold += 1
+      } else if (log.status_after_call === "warm") {
+        counts.warm += 1
+      } else if (log.status_after_call === "hot") {
+        counts.hot += 1
+      } else if (log.status_after_call === "visit_scheduled") {
+        counts.visit_scheduled += 1
+      } else if (log.status_after_call === "admission_done") {
+        counts.admission_done += 1
       }
     })
+
     return counts
   }, [callLogs])
 
@@ -612,26 +638,22 @@ export default function CallHistoryPage() {
           </Badge>
         </div>
 
-        {/* Status Breakdown (excluding specific ones) */}
-        {Object.keys(statusCounts).some(status => !EXCLUDED_STATUSES.has(status)) && (
+        {/* Status Breakdown - limited to requested categories */}
+        {SUMMARY_STATUS_KEYS.some((status) => statusCounts[status] > 0) && (
           <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
-            {Object.entries(statusCounts)
-              .filter(([status]) => !EXCLUDED_STATUSES.has(status))
-              .map(([status, count]) => {
-                const config = STATUS_CONFIG[status] || {
-                  label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                  color: "bg-slate-100 text-slate-800 border-slate-200"
-                }
-                return (
-                  <Badge
-                    key={status}
-                    variant="outline"
-                    className={cn("text-xs px-3 py-1 font-semibold", config.color)}
-                  >
-                    {config.label}: {count}
-                  </Badge>
-                )
-              })}
+            {SUMMARY_STATUS_KEYS.map((status) => {
+              const count = statusCounts[status]
+              const config = STATUS_SUMMARY_CONFIG[status]
+              return (
+                <Badge
+                  key={status}
+                  variant="outline"
+                  className={cn("text-xs px-3 py-1 font-semibold", config.color)}
+                >
+                  {config.label}: {count}
+                </Badge>
+              )
+            })}
           </div>
         )}
       </div>

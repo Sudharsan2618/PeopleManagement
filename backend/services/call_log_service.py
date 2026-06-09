@@ -166,9 +166,12 @@ class CallLogService:
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
-            WHERE cl.outcome = 'callback'
-              AND cl.callback_scheduled_at IS NOT NULL
+            WHERE cl.callback_scheduled_at IS NOT NULL
               AND COALESCE(cl.notification_dismissed, FALSE) = FALSE
+              AND (
+                    cl.outcome = 'callback'
+                    OR cl.status_after_call IN ('warm', 'hot', 'visit_scheduled')
+                  )
         """
         params: list[object] = []
         if telecaller_id is not None:
