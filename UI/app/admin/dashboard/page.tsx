@@ -35,30 +35,20 @@ import { Button } from "@/components/ui/button"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 
 // ─── Colors for charts ──────────────────────────────────────────
-const OUTCOME_COLORS: Record<string, string> = {
-  qualified: "#10b981",
-  interested: "#3b82f6",
-  callback: "#f59e0b",
-  not_interested: "#6b7280",
-  not_answered: "#ef4444",
-  dnc: "#dc2626",
-  busy: "#eab308",
-  wrong_number: "#f97316",
-  language_barrier: "#a855f7",
-  enrolled_elsewhere: "#8b5cf6",
-}
+const CALL_OUTCOME_ORDER = [
+  "Cold",
+  "Warm",
+  "Hot",
+  "Visit Scheduled",
+  "Admitted",
+]
 
-const OUTCOME_LABELS: Record<string, string> = {
-  qualified: "Qualified",
-  interested: "Interested",
-  callback: "Callback",
-  not_interested: "Not Interested",
-  not_answered: "Not Answered",
-  dnc: "DNC",
-  busy: "Busy",
-  wrong_number: "Wrong Number",
-  language_barrier: "Language Barrier",
-  enrolled_elsewhere: "Enrolled Elsewhere",
+const CALL_OUTCOME_COLORS: Record<string, string> = {
+  Cold: "#3b82f6",
+  Warm: "#f59e0b",
+  Hot: "#ef4444",
+  "Visit Scheduled": "#a78bfa",
+  Admitted: "#10b981",
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -188,12 +178,8 @@ export default function AdminDashboard() {
       bgColor: "bg-emerald-500/10",
     },
     {
-      title: "Qualified (Hot+)",
-      value:
-        (stats.prospect_status_counts?.hot || 0) +
-        (stats.prospect_status_counts?.visit_scheduled || 0) +
-        (stats.prospect_status_counts?.visit_done || 0) +
-        (stats.prospect_status_counts?.admission_done || 0),
+      title: "Hot / Qualified",
+      value: stats.prospect_status_counts?.hot || 0,
       icon: CheckCircle2,
       color: "text-teal-600",
       bgColor: "bg-teal-500/10",
@@ -208,16 +194,7 @@ export default function AdminDashboard() {
   ]
 
   // ─── Chart data ─────────────────────────────────────────────
-    const CALL_OUTCOME_ORDER = [
-    "not_answered",
-    "not_interested",
-    "enrolled_elsewhere",
-    "callback",
-    "interested",
-    "busy",
-  ]
-
-  const outcomeCounts = (stats.call_outcome_breakdown || []).reduce(
+    const outcomeCounts = (stats.call_outcome_breakdown || []).reduce(
     (acc: Record<string, number>, item: any) => {
       acc[item.outcome] = item.count
       return acc
@@ -225,10 +202,10 @@ export default function AdminDashboard() {
     {}
   )
 
-  const callOutcomeChartData = CALL_OUTCOME_ORDER.map((outcome) => ({
-    name: OUTCOME_LABELS[outcome] || outcome,
-    value: outcomeCounts[outcome] || 0,
-    color: OUTCOME_COLORS[outcome] || "#6b7280",
+  const callOutcomeChartData = CALL_OUTCOME_ORDER.map((category) => ({
+    name: category,
+    value: outcomeCounts[category] || 0,
+    color: CALL_OUTCOME_COLORS[category] || "#6b7280",
   }))
 
   const pipelineChartData = pipeline.map((item: any) => ({
@@ -259,7 +236,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker onRangeChange={handleRangeChange} />
+          <DateRangePicker onRangeChange={handleRangeChange} defaultStart={startDate} defaultEnd={endDate} />
           <Button onClick={() => fetchData()} variant="outline" size="sm" disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh

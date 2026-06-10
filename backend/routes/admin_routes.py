@@ -82,11 +82,36 @@ def get_admin_stats(start_date: str = None, end_date: str = None):
             WHERE called_at::date = CURRENT_DATE
         """, fetch="one")
 
-    # Call outcome breakdown (filtered by date range if provided)
+    # Call outcome breakdown (telecaller-record categories filtered by date range)
     params = []
     date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
     outcome_stats = execute_query(
-        f"SELECT outcome, COUNT(*) as count FROM call_logs WHERE 1=1{date_clause} GROUP BY outcome ORDER BY count DESC",
+        f"""
+        SELECT category as outcome, COUNT(*) as count
+        FROM (
+            SELECT CASE
+                WHEN status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost') THEN 'Cold'
+                WHEN status_after_call IN ('warm', 'contacted') THEN 'Warm'
+                WHEN status_after_call = 'hot' THEN 'Hot'
+                WHEN status_after_call = 'visit_scheduled' THEN 'Visit Scheduled'
+                WHEN status_after_call = 'admission_done' THEN 'Admitted'
+                ELSE NULL
+            END as category
+            FROM call_logs
+            WHERE 1=1{date_clause}
+        ) AS categorized
+        WHERE category IS NOT NULL
+        GROUP BY category
+        ORDER BY
+            CASE category
+                WHEN 'Cold' THEN 1
+                WHEN 'Warm' THEN 2
+                WHEN 'Hot' THEN 3
+                WHEN 'Visit Scheduled' THEN 4
+                WHEN 'Admitted' THEN 5
+                ELSE 99
+            END
+        """,
         tuple(params) if params else None,
         fetch="all"
     )
@@ -233,44 +258,82 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         ORDER BY d.day
     """, tuple(params) if params else None, fetch="all")
 
-    # 3. Outcome Distribution
-    params = []
-    date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
+    # 3. Outcome Distribution (telecaller-record categories)
     if telecaller_id is not None:
-        params.append(telecaller_id)
+        params = [telecaller_id]
+        date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
         outcome_distribution = execute_query(f"""
-            SELECT 
-                INITCAP(REPLACE(outcome, '_', ' ')) as name, 
-                COUNT(*) as value
-            FROM call_logs
-            WHERE telecaller_id = %s{date_clause}
-            GROUP BY outcome
-            ORDER BY value DESC
+            SELECT category as name, COUNT(*) as value
+            FROM (
+                SELECT CASE
+                    WHEN cl.status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost') THEN 'Cold'
+                    WHEN cl.status_after_call IN ('warm', 'contacted') THEN 'Warm'
+                    WHEN cl.status_after_call = 'hot' THEN 'Hot'
+                    WHEN cl.status_after_call = 'visit_scheduled' THEN 'Visit Scheduled'
+                    WHEN cl.status_after_call = 'admission_done' THEN 'Admitted'
+                    ELSE NULL
+                END as category
+                FROM call_logs cl
+                WHERE cl.telecaller_id = %s{date_clause}
+            ) AS categorized
+            WHERE category IS NOT NULL
+            GROUP BY category
+            ORDER BY
+                CASE category
+                    WHEN 'Cold' THEN 1
+                    WHEN 'Warm' THEN 2
+                    WHEN 'Hot' THEN 3
+                    WHEN 'Visit Scheduled' THEN 4
+                    WHEN 'Admitted' THEN 5
+                    ELSE 99
+                END
         """, tuple(params), fetch="all")
     else:
+        params = []
+        date_clause = _date_filter_clause("called_at::date", start_date, end_date, params)
         outcome_distribution = execute_query(f"""
-            SELECT 
-                INITCAP(REPLACE(outcome, '_', ' ')) as name, 
-                COUNT(*) as value
-            FROM call_logs
-            WHERE 1=1{date_clause}
-            GROUP BY outcome
-            ORDER BY value DESC
+            SELECT category as name, COUNT(*) as value
+            FROM (
+                SELECT CASE
+                    WHEN cl.status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost') THEN 'Cold'
+                    WHEN cl.status_after_call IN ('warm', 'contacted') THEN 'Warm'
+                    WHEN cl.status_after_call = 'hot' THEN 'Hot'
+                    WHEN cl.status_after_call = 'visit_scheduled' THEN 'Visit Scheduled'
+                    WHEN cl.status_after_call = 'admission_done' THEN 'Admitted'
+                    ELSE NULL
+                END as category
+                FROM call_logs cl
+                WHERE 1=1{date_clause}
+            ) AS categorized
+            WHERE category IS NOT NULL
+            GROUP BY category
+            ORDER BY
+                CASE category
+                    WHEN 'Cold' THEN 1
+                    WHEN 'Warm' THEN 2
+                    WHEN 'Hot' THEN 3
+                    WHEN 'Visit Scheduled' THEN 4
+                    WHEN 'Admitted' THEN 5
+                    ELSE 99
+                END
         """, tuple(params) if params else None, fetch="all")
 
-    # 4. Telecaller Performance
+    # 4. Telecaller Performance with status breakdown
     params = []
     date_clause = _date_filter_clause("cl.called_at::date", start_date, end_date, params)
     telecaller_performance = execute_query(f"""
         SELECT 
             u.id,
             u.name,
+            (SELECT COUNT(DISTINCT pa.prospect_id) FROM prospect_assignments pa WHERE pa.telecaller_id = u.id) as "totalLeads",
             COUNT(cl.id) as "totalCalls",
+            COUNT(cl.id) FILTER (WHERE cl.outcome = 'callback') as "callbacks",
             COUNT(cl.id) FILTER (WHERE cl.outcome = 'interested') as interested,
-            COUNT(cl.id) FILTER (WHERE cl.outcome = 'callback') as "followupsRaised",
-            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as enrollments,
-            COUNT(cl.id) FILTER (WHERE cl.outcome IN ('interested', 'qualified')) as "successfulCalls",
-            0 as "avgDuration",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost')) as "coldCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('warm', 'contacted')) as "warmCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'hot') as "hotCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'visit_scheduled') as "visitScheduledCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as "admittedCount",
             (
                 SELECT COUNT(*) FROM (
                     SELECT DISTINCT ON (cl2.prospect_id) cl2.prospect_id, cl2.outcome, cl2.called_at
@@ -279,7 +342,13 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
                     ORDER BY cl2.prospect_id, cl2.called_at DESC
                 ) t
                 WHERE t.outcome = 'callback'
-            ) as "pendingLeads"
+            ) as "pendingLeads",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as enrollments,
+            CASE 
+                WHEN COUNT(cl.id) > 0 THEN ROUND(100.0 * COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') / COUNT(cl.id))
+                ELSE 0
+            END as "conversionRate",
+            0 as "avgDuration"
         FROM users u
         LEFT JOIN call_logs cl ON cl.telecaller_id = u.id{date_clause}
         WHERE u.role = 'telecaller' AND u.is_active = TRUE
@@ -376,6 +445,14 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         SELECT COUNT(*) as count FROM prospects WHERE 1=1{prospect_date_clause}
     """, tuple(prospect_params) if prospect_params else None, fetch="one")
 
+    report_params = []
+    report_date_clause = _date_filter_clause("report_date", start_date, end_date, report_params)
+    reports_count = execute_query(
+        f"SELECT COUNT(*) as count FROM spoc_reports WHERE 1=1{report_date_clause}",
+        tuple(report_params) if report_params else None,
+        fetch="one"
+    )
+
     summary = {
         "totalCalls": call_summary["totalCalls"],
         "answeredCalls": call_summary["answeredCalls"],
@@ -399,5 +476,6 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         "telecallerPerformance": telecaller_performance,
         "spocPerformance": spoc_performance,
         "conversionFunnel": conversion_funnel,
-        "summary": summary
+        "summary": summary,
+        "reportsCount": reports_count["count"]
     }
