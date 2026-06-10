@@ -50,11 +50,11 @@ import {
 } from "@/components/ui/dialog"
 
 const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
-  not_answered: { label: "Not Answered", color: "bg-orange-100 text-orange-800" },
+  not_answered: { label: "No response", color: "bg-orange-100 text-orange-800" },
   busy: { label: "Busy", color: "bg-yellow-100 text-yellow-800" },
   wrong_number: { label: "Wrong Number", color: "bg-red-100 text-red-800" },
   callback: { label: "Interested", color: "bg-blue-100 text-blue-800" },
-  not_interested: { label: "Not Interested / No response", color: "bg-gray-100 text-gray-800" },
+  not_interested: { label: "Not Interested", color: "bg-gray-100 text-gray-800" },
   dnc: { label: "DNC", color: "bg-red-100 text-red-800" },
   language_barrier: { label: "Language Barrier", color: "bg-amber-100 text-amber-800" },
   interested: { label: "Strong Interest / Ready for counselling", color: "bg-green-100 text-green-800" },
@@ -77,12 +77,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   lost: { label: "Lost", color: "bg-red-50 text-red-600" },
 }
 
-const SUMMARY_STATUS_KEYS = ["cold", "warm", "hot", "visit_scheduled", "admission_done"]
+const SUMMARY_STATUS_KEYS = ["cold_no_response", "cold_not_interested", "warm", "hot", "visit_scheduled", "decision_pending", "admission_done"]
 const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = {
-  cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold: { label: "Cold (Other)", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_no_response: { label: "Cold (No Response)", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_not_interested: { label: "Cold (Not Interested)", color: "bg-slate-100 text-slate-600 border-slate-200" },
   warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
   hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  decision_pending: { label: "Decision Pending", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   admission_done: { label: "Admitted", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
 }
 
@@ -492,16 +495,25 @@ export default function CallHistoryPage() {
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {
       cold: 0,
+      cold_no_response: 0,
+      cold_not_interested: 0,
       warm: 0,
       hot: 0,
       visit_scheduled: 0,
+      decision_pending: 0,
       admission_done: 0,
     }
 
     callLogs.forEach((log) => {
       if (!log.status_after_call) return
 
-      if (["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
+      if (log.outcome === "not_answered") {
+        counts.cold_no_response += 1
+      } else if (log.outcome === "not_interested") {
+        counts.cold_not_interested += 1
+      } else if (log.outcome === "enrolled_elsewhere" || log.status_after_call === "visit_done") {
+        counts.decision_pending += 1
+      } else if (["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
         counts.cold += 1
       } else if (log.status_after_call === "warm") {
         counts.warm += 1

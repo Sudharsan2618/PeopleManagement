@@ -69,11 +69,11 @@ const OUTCOME_TO_DB: Record<string, string> = {
 
 // ─── Outcome → Friendly UI label (for toast messages) ───────────────
 const OUTCOME_UI_LABELS: Record<string, string> = {
-  NotAnswered:        "Not Answered",
+  NotAnswered:        "No response",
   Busy:               "Busy",
   WrongNumber:        "Wrong Number",
   CallBack:           "Interested",
-  NotInterested:      "Not Interested / No response",
+  NotInterested:      "Not Interested",
   DNC:                "Do Not Call",
   LanguageBarrier:    "Language Barrier",
   Interested:         "Strong Interest / Ready for counselling",
@@ -101,11 +101,11 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
 
 // ─── DB outcome → friendly UI label ──────────────────────────────
 const DB_OUTCOME_LABELS: Record<string, string> = {
-  not_answered:        "Not Answered",
+  not_answered:        "No response",
   busy:                "Busy",
   wrong_number:        "Wrong Number",
   callback:            "Interested",
-  not_interested:      "Not Interested / No response",
+  not_interested:      "Not Interested",
   dnc:                 "Do Not Call",
   language_barrier:    "Language Barrier",
   interested:          "Strong Interest / Ready for counselling",
@@ -325,6 +325,12 @@ export default function TelecallerDashboard() {
   const sortedProspects = useMemo(() => {
     return [...prospects].sort((a, b) => {
       // Callbacks with scheduled time first, then new, then rest
+      if (a.callbackDateTime && !b.callbackDateTime) return -1
+      if (!a.callbackDateTime && b.callbackDateTime) return 1
+      if (a.callbackDateTime && b.callbackDateTime) {
+        return new Date(a.callbackDateTime).getTime() - new Date(b.callbackDateTime).getTime()
+      }
+
       const order: Record<string, number> = {
         warm: 0,
         new: 1,
@@ -382,7 +388,7 @@ export default function TelecallerDashboard() {
 
       // Build callback timestamp if scheduled
       let callbackScheduledAt: string | null = null
-      const callbackOutcomes = ["CallBack", "Interested", "Qualified", "NotInterested"]
+      const callbackOutcomes = ["CallBack", "Interested", "Qualified", "NotAnswered"]
       if (callbackOutcomes.includes(outcome) && data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)

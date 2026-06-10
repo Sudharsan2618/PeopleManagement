@@ -90,10 +90,12 @@ def get_admin_stats(start_date: str = None, end_date: str = None):
         SELECT category as outcome, COUNT(*) as count
         FROM (
             SELECT CASE
-                WHEN status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost') THEN 'Cold'
+                WHEN outcome IN ('not_interested', 'wrong_number', 'dnc', 'language_barrier') OR status_after_call = 'cold_not_interested' THEN 'Cold (Not Interested)'
+                WHEN status_after_call IN ('cold', 'cold_no_response', 'lost') OR outcome IN ('not_answered', 'busy') THEN 'Cold (No Response)'
                 WHEN status_after_call IN ('warm', 'contacted') THEN 'Warm'
                 WHEN status_after_call = 'hot' THEN 'Hot'
                 WHEN status_after_call = 'visit_scheduled' THEN 'Visit Scheduled'
+                WHEN status_after_call = 'visit_done' THEN 'Decision Pending'
                 WHEN status_after_call = 'admission_done' THEN 'Admitted'
                 ELSE NULL
             END as category
@@ -104,11 +106,13 @@ def get_admin_stats(start_date: str = None, end_date: str = None):
         GROUP BY category
         ORDER BY
             CASE category
-                WHEN 'Cold' THEN 1
-                WHEN 'Warm' THEN 2
-                WHEN 'Hot' THEN 3
-                WHEN 'Visit Scheduled' THEN 4
-                WHEN 'Admitted' THEN 5
+                WHEN 'Cold (No Response)' THEN 1
+                WHEN 'Cold (Not Interested)' THEN 2
+                WHEN 'Warm' THEN 3
+                WHEN 'Hot' THEN 4
+                WHEN 'Visit Scheduled' THEN 5
+                WHEN 'Decision Pending' THEN 6
+                WHEN 'Admitted' THEN 7
                 ELSE 99
             END
         """,
@@ -266,10 +270,12 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             SELECT category as name, COUNT(*) as value
             FROM (
                 SELECT CASE
-                    WHEN cl.status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost') THEN 'Cold'
+                    WHEN cl.outcome IN ('not_interested', 'wrong_number', 'dnc', 'language_barrier') OR cl.status_after_call = 'cold_not_interested' THEN 'Cold (Not Interested)'
+                    WHEN cl.status_after_call IN ('cold', 'cold_no_response', 'lost') OR cl.outcome IN ('not_answered', 'busy') THEN 'Cold (No Response)'
                     WHEN cl.status_after_call IN ('warm', 'contacted') THEN 'Warm'
                     WHEN cl.status_after_call = 'hot' THEN 'Hot'
                     WHEN cl.status_after_call = 'visit_scheduled' THEN 'Visit Scheduled'
+                    WHEN cl.status_after_call = 'visit_done' THEN 'Decision Pending'
                     WHEN cl.status_after_call = 'admission_done' THEN 'Admitted'
                     ELSE NULL
                 END as category
@@ -280,11 +286,13 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             GROUP BY category
             ORDER BY
                 CASE category
-                    WHEN 'Cold' THEN 1
-                    WHEN 'Warm' THEN 2
-                    WHEN 'Hot' THEN 3
-                    WHEN 'Visit Scheduled' THEN 4
-                    WHEN 'Admitted' THEN 5
+                    WHEN 'Cold (No Response)' THEN 1
+                    WHEN 'Cold (Not Interested)' THEN 2
+                    WHEN 'Warm' THEN 3
+                    WHEN 'Hot' THEN 4
+                    WHEN 'Visit Scheduled' THEN 5
+                    WHEN 'Decision Pending' THEN 6
+                    WHEN 'Admitted' THEN 7
                     ELSE 99
                 END
         """, tuple(params), fetch="all")
@@ -295,10 +303,12 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             SELECT category as name, COUNT(*) as value
             FROM (
                 SELECT CASE
-                    WHEN cl.status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost') THEN 'Cold'
+                    WHEN cl.outcome IN ('not_interested', 'wrong_number', 'dnc', 'language_barrier') OR cl.status_after_call = 'cold_not_interested' THEN 'Cold (Not Interested)'
+                    WHEN cl.status_after_call IN ('cold', 'cold_no_response', 'lost') OR cl.outcome IN ('not_answered', 'busy') THEN 'Cold (No Response)'
                     WHEN cl.status_after_call IN ('warm', 'contacted') THEN 'Warm'
                     WHEN cl.status_after_call = 'hot' THEN 'Hot'
                     WHEN cl.status_after_call = 'visit_scheduled' THEN 'Visit Scheduled'
+                    WHEN cl.status_after_call = 'visit_done' THEN 'Decision Pending'
                     WHEN cl.status_after_call = 'admission_done' THEN 'Admitted'
                     ELSE NULL
                 END as category
@@ -309,40 +319,51 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             GROUP BY category
             ORDER BY
                 CASE category
-                    WHEN 'Cold' THEN 1
-                    WHEN 'Warm' THEN 2
-                    WHEN 'Hot' THEN 3
-                    WHEN 'Visit Scheduled' THEN 4
-                    WHEN 'Admitted' THEN 5
+                    WHEN 'Cold (No Response)' THEN 1
+                    WHEN 'Cold (Not Interested)' THEN 2
+                    WHEN 'Warm' THEN 3
+                    WHEN 'Hot' THEN 4
+                    WHEN 'Visit Scheduled' THEN 5
+                    WHEN 'Decision Pending' THEN 6
+                    WHEN 'Admitted' THEN 7
                     ELSE 99
                 END
         """, tuple(params) if params else None, fetch="all")
 
     # 4. Telecaller Performance with status breakdown
     params = []
+    pa_date_clause = _date_filter_clause("pa.assigned_date", start_date, end_date, params)
     date_clause = _date_filter_clause("cl.called_at::date", start_date, end_date, params)
     telecaller_performance = execute_query(f"""
+        WITH assigned_leads AS (
+            SELECT telecaller_id, prospect_id
+            FROM prospect_assignments pa
+            WHERE 1=1 {pa_date_clause.replace("pa.", "")}
+        )
         SELECT 
             u.id,
             u.name,
-            (SELECT COUNT(DISTINCT pa.prospect_id) FROM prospect_assignments pa WHERE pa.telecaller_id = u.id) as "totalLeads",
+            (SELECT COUNT(DISTINCT al.prospect_id) FROM assigned_leads al WHERE al.telecaller_id = u.id) as "totalAssignedLeads",
             COUNT(cl.id) as "totalCalls",
-            COUNT(cl.id) FILTER (WHERE cl.outcome = 'callback') as "callbacks",
+            (
+                SELECT COUNT(DISTINCT al.prospect_id) 
+                FROM assigned_leads al 
+                WHERE al.telecaller_id = u.id
+                AND al.prospect_id NOT IN (
+                    SELECT DISTINCT cl2.prospect_id 
+                    FROM call_logs cl2 
+                    WHERE cl2.telecaller_id = u.id
+                )
+            ) as "pendingCalls",
+            COUNT(cl.id) FILTER (WHERE cl.callback_scheduled_at IS NOT NULL) as "callbacks",
             COUNT(cl.id) FILTER (WHERE cl.outcome = 'interested') as interested,
-            COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('cold', 'cold_no_response', 'cold_not_interested', 'lost')) as "coldCount",
+            COUNT(cl.id) FILTER (WHERE (cl.status_after_call IN ('cold', 'cold_no_response', 'lost') OR cl.outcome IN ('not_answered', 'busy')) AND (cl.outcome IS NULL OR cl.outcome NOT IN ('not_interested', 'wrong_number', 'dnc', 'language_barrier'))) as "coldNRCount",
+            COUNT(cl.id) FILTER (WHERE cl.outcome IN ('not_interested', 'wrong_number', 'dnc', 'language_barrier') OR cl.status_after_call = 'cold_not_interested') as "coldNICount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('warm', 'contacted')) as "warmCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'hot') as "hotCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'visit_scheduled') as "visitScheduledCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'visit_done') as "decisionPendingCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as "admittedCount",
-            (
-                SELECT COUNT(*) FROM (
-                    SELECT DISTINCT ON (cl2.prospect_id) cl2.prospect_id, cl2.outcome, cl2.called_at
-                    FROM call_logs cl2
-                    WHERE cl2.telecaller_id = u.id
-                    ORDER BY cl2.prospect_id, cl2.called_at DESC
-                ) t
-                WHERE t.outcome = 'callback'
-            ) as "pendingLeads",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as enrollments,
             CASE 
                 WHEN COUNT(cl.id) > 0 THEN ROUND(100.0 * COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') / COUNT(cl.id))

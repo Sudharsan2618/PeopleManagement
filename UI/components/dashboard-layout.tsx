@@ -364,6 +364,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                         })
                         : "N/A"
 
+                      const isHot = callback.status_after_call === "hot"
+                      const isVisit = callback.status_after_call === "visit_scheduled" || callback.status_after_call === "visit_done"
+                      const isCold = callback.status_after_call?.startsWith("cold")
+                      const isWarm = !isHot && !isVisit && !isCold
+
                       return (
                         <button
                           key={callback.id}
@@ -380,34 +385,34 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                           }}
                           className={cn(
                             "rounded-xl border-2 p-3 text-left w-full cursor-pointer transition-all hover:scale-[1.01]",
-                            callback.outcome === "interested"
+                            isHot
                               ? "border-red-500 bg-red-50"
-                              : callback.outcome === "qualified"
+                              : isVisit
                               ? "border-purple-500 bg-purple-50"
-                              : callback.outcome === "not_interested"
+                              : isCold
                               ? "border-slate-400 bg-slate-50"
                               : "border-blue-500 bg-blue-50"
                           )}
                         >
                           <p className={cn(
                             "text-sm font-semibold",
-                            callback.outcome === "interested"
+                            isHot
                               ? "text-red-900"
-                              : callback.outcome === "qualified"
+                              : isVisit
                               ? "text-purple-900"
-                              : callback.outcome === "not_interested"
+                              : isCold
                               ? "text-slate-900"
                               : "text-blue-900"
                           )}>
-                            📞 {callback.outcome === "interested" ? "Hot" : callback.outcome === "qualified" ? "Visit" : callback.outcome === "not_interested" ? "Cold" : "Warm"} Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
+                            📞 {isHot ? "Hot" : isVisit ? "Visit" : isCold ? "Cold" : "Warm"} Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
                           </p>
                           <p className={cn(
                             "text-xs mt-1",
-                            callback.outcome === "interested"
+                            isHot
                               ? "text-red-700"
-                              : callback.outcome === "qualified"
+                              : isVisit
                               ? "text-purple-700"
-                              : callback.outcome === "not_interested"
+                              : isCold
                               ? "text-slate-700"
                               : "text-blue-700"
                           )}>
@@ -416,11 +421,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                           {callback.course_interest && (
                             <p className={cn(
                               "text-xs",
-                              callback.outcome === "interested"
+                              isHot
                                 ? "text-red-700"
-                                : callback.outcome === "qualified"
+                                : isVisit
                                 ? "text-purple-700"
-                                : callback.outcome === "not_interested"
+                                : isCold
                                 ? "text-slate-700"
                                 : "text-blue-700"
                             )}>
@@ -429,11 +434,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                           )}
                           <p className={cn(
                             "text-xs font-bold mt-1",
-                            callback.outcome === "interested"
+                            isHot
                               ? "text-red-600"
-                              : callback.outcome === "qualified"
+                              : isVisit
                               ? "text-purple-600"
-                              : callback.outcome === "not_interested"
+                              : isCold
                               ? "text-slate-600"
                               : "text-blue-600"
                           )}>

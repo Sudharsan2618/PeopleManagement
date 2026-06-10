@@ -54,19 +54,21 @@ import { callLogsApi, coursesApi, type CallLog, type Course } from "@/lib/api-cl
 const DB_OUTCOME_LABELS: Record<string, string> = {
   wrong_number: "Wrong Number",
   callback: "Interested",
-  not_interested: "Not Interested / No response",
+  not_interested: "Not Interested",
+  not_answered: "No response",
   dnc: "Do Not Call",
   language_barrier: "Language Barrier",
   interested: "Strong Interest / Ready for counselling",
   qualified: "Visit planned and confirmed",
   visit_done: "Visit campus / Decision awaited",
-    application_process: "Admission successfully completed",
+  application_process: "Admission successfully completed",
 }
 
 const DB_OUTCOME_COLORS: Record<string, string> = {
   wrong_number: "text-red-500",
   callback: "text-yellow-500",
   not_interested: "text-red-500",
+  not_answered: "text-orange-500",
   dnc: "text-red-600",
   language_barrier: "text-amber-500",
   interested: "text-green-500",
@@ -90,10 +92,17 @@ const outcomeOptions: {
       color: "text-yellow-500",
     },
     {
+      value: "NotAnswered",
+      label: "No response",
+      description: "Cold outcome - requires follow-up",
+      icon: PhoneOff,
+      color: "text-orange-500",
+    },
+    {
       value: "NotInterested",
-      label: "Not Interested / No response",
-      description: "Cold outcome or no response",
-      icon: XCircle,
+      label: "Not Interested",
+      description: "Cold outcome - no follow-up needed",
+      icon: Ban,
       color: "text-red-500",
     },
     {
@@ -222,7 +231,7 @@ export function CallOutcomeModal({
     selectedOutcome === "CallBack" ||
     selectedOutcome === "Interested" ||
     selectedOutcome === "Qualified" ||
-    selectedOutcome === "NotInterested"
+    selectedOutcome === "NotAnswered"
 
   const isFormValid = () => {
     if (!selectedOutcome) return false

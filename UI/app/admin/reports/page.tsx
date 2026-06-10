@@ -40,30 +40,54 @@ import autoTable from "jspdf-autotable"
 import { adminApi, callLogsApi, SpocVisitsApi } from "@/lib/api-client"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 
-const REPORT_OUTCOME_ORDER = ['Cold', 'Warm', 'Hot', 'Visit Scheduled', 'Admitted']
+const REPORT_OUTCOME_ORDER = ['Cold (No Response)', 'Cold (Not Interested)', 'Warm', 'Hot', 'Visit Scheduled', 'Decision Pending', 'Admitted']
 const REPORT_OUTCOME_COLORS: Record<string, string> = {
-  Cold: '#3b82f6',
+  'Cold (No Response)': '#64748b',
+  'Cold (Not Interested)': '#94a3b8',
   Warm: '#f59e0b',
   Hot: '#ef4444',
-  'Visit Scheduled': '#a78bfa',
+  'Visit Scheduled': '#8b5cf6',
+  'Decision Pending': '#f97316',
   Admitted: '#10b981',
 }
 
 const CALL_HISTORY_STATUS_LABELS: Record<string, string> = {
-  cold: 'Cold',
-  cold_no_response: 'Cold',
-  cold_not_interested: 'Cold',
-  lost: 'Cold',
+  cold: 'Cold (No Response)',
+  cold_no_response: 'Cold (No Response)',
+  cold_not_interested: 'Cold (Not Interested)',
+  lost: 'Cold (No Response)',
   warm: 'Warm',
   contacted: 'Warm',
   hot: 'Hot',
   visit_scheduled: 'Visit Scheduled',
+  visit_done: 'Decision Pending',
   admission_done: 'Admitted',
 }
 
 const formatCallHistoryStatus = (status?: string) => {
   if (!status) return '-'
   return CALL_HISTORY_STATUS_LABELS[status] || status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+const DB_OUTCOME_LABELS: Record<string, string> = {
+  not_answered:        "No response",
+  busy:                "Busy",
+  wrong_number:        "Wrong Number",
+  callback:            "Interested",
+  not_interested:      "Not Interested",
+  dnc:                 "Do Not Call",
+  language_barrier:    "Language Barrier",
+  interested:          "Strong Interest / Ready for counselling",
+  qualified:           "Visit planned and confirmed",
+  visit_done:          "Visit campus / Decision awaited",
+  enrolled_elsewhere:  "Visit campus / Decision awaited",
+  application_process: "Admission successfully completed",
+}
+
+const formatCallOutcome = (outcome?: string) => {
+  if (!outcome) return '-'
+  const label = DB_OUTCOME_LABELS[outcome] || outcome.replace(/_/g, ' ')
+  return label.toUpperCase()
 }
 
 export default function ReportsPage() {
@@ -153,24 +177,55 @@ export default function ReportsPage() {
     }
 
     // Summary analytics as a compact table using telecaller-derived outcome categories
-    const summaryMetrics: [string, any][] = [
-      ["Cold", getOutcomeValue('Cold')],
-      ["Warm", getOutcomeValue('Warm')],
-      ["Hot", getOutcomeValue('Hot')],
-      ["Visit Scheduled", getOutcomeValue('Visit Scheduled')],
-      ["Admitted", getOutcomeValue('Admitted')],
+    const totalOutcomeCalls = data?.summary?.totalCalls || (data?.outcomeDistribution || []).reduce((acc: number, curr: any) => acc + curr.value, 0)
+    const calcPerc = (val: number) => totalOutcomeCalls > 0 ? `${((val / totalOutcomeCalls) * 100).toFixed(1)}%` : '0%'
+
+    const summaryMetrics: any[] = [
+      ["Cold (No Response)", getOutcomeValue('Cold (No Response)'), calcPerc(getOutcomeValue('Cold (No Response)'))],
+      ["Cold (Not Interested)", getOutcomeValue('Cold (Not Interested)'), calcPerc(getOutcomeValue('Cold (Not Interested)'))],
+      ["Warm", getOutcomeValue('Warm'), calcPerc(getOutcomeValue('Warm'))],
+      ["Hot", getOutcomeValue('Hot'), calcPerc(getOutcomeValue('Hot'))],
+      ["Visit Scheduled", getOutcomeValue('Visit Scheduled'), calcPerc(getOutcomeValue('Visit Scheduled'))],
+      ["Decision Pending", getOutcomeValue('Decision Pending'), calcPerc(getOutcomeValue('Decision Pending'))],
+      ["Admitted", getOutcomeValue('Admitted'), calcPerc(getOutcomeValue('Admitted'))],
+      ["Total Calls", totalOutcomeCalls, "100%"],
     ]
+
+    doc.setFontSize(12)
+    doc.text('Outcome Distribution Summary', margin, cursorY)
+    cursorY += 8
 
     autoTable(doc, {
       startY: cursorY,
       theme: 'grid',
-      head: [['Metric', 'Value']],
+      head: [['Outcome Category', 'Count', '% of Total Calls']],
       body: summaryMetrics,
       styles: { fontSize: 9, cellPadding: 6 },
+      columnStyles: {
+        0: { cellWidth: 170 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 90 },
+      },
       headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+      tableWidth: 'wrap',
+      didParseCell: function (dataArg) {
+        if (dataArg.section === 'body') {
+          const rowText = dataArg.row.raw[0]
+          if (rowText === 'Cold (No Response)') dataArg.cell.styles.fillColor = [241, 245, 249]
+          else if (rowText === 'Cold (Not Interested)') dataArg.cell.styles.fillColor = [241, 245, 249]
+          else if (rowText === 'Warm') dataArg.cell.styles.fillColor = [254, 243, 199]
+          else if (rowText === 'Hot') dataArg.cell.styles.fillColor = [254, 226, 226]
+          else if (rowText === 'Visit Scheduled') dataArg.cell.styles.fillColor = [237, 233, 254]
+          else if (rowText === 'Decision Pending') dataArg.cell.styles.fillColor = [255, 237, 213]
+          else if (rowText === 'Admitted') dataArg.cell.styles.fillColor = [209, 250, 229]
+          else if (rowText === 'Total Calls') {
+            dataArg.cell.styles.fontStyle = 'bold'
+          }
+        }
+      }
     })
 
-    cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
+    cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 160
 
     // Capture charts by DOM id if present and place them
     const chartIds = [
@@ -206,25 +261,27 @@ export default function ReportsPage() {
 
       const rows = performanceRows.map((t: any) => ([
         t.name || '-',
-        t.totalLeads ?? 0,
+        t.totalAssignedLeads ?? 0,
         t.totalCalls ?? 0,
+        t.pendingCalls ?? 0,
         t.callbacks ?? 0,
-        t.coldCount ?? 0,
+        t.coldNRCount ?? 0,
+        t.coldNICount ?? 0,
         t.warmCount ?? 0,
         t.hotCount ?? 0,
         t.visitScheduledCount ?? 0,
+        t.decisionPendingCount ?? 0,
         t.admittedCount ?? 0,
-        t.pendingLeads ?? 0,
       ]))
 
       autoTable(doc, {
         startY: cursorY,
-        head: [['Telecaller', 'Total Leads', 'Total Calls', 'Callbacks', 'Cold', 'Warm', 'Hot', 'Visit Scheduled', 'Admitted', 'Pending']],
+        head: [['Telecaller', 'Total Assigned Leads', 'Total Calls', 'Pending Calls', 'Callbacks', 'Cold NR', 'Cold NI', 'Warm', 'Hot', 'Visit Sched.', 'Decision Pend.', 'Admitted']],
         body: rows,
         styles: { fontSize: 8, cellPadding: 5 },
         headStyles: { fillColor: [16, 185, 129], textColor: 255 },
         theme: 'striped',
-        didDrawPage: (dataArg) => {},
+        didDrawPage: (dataArg) => { },
       })
       cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
     }
@@ -254,14 +311,14 @@ export default function ReportsPage() {
           r.sourced_from || r.source || '-',
           r.duration ?? '-',
           formatCallHistoryStatus(r.status_after_call),
-          r.outcome || '-',
+          formatCallOutcome(r.outcome),
           r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleString() : '-',
           formatNotes(r.notes || ''),
         ]))
 
         autoTable(doc, {
           startY: cursorY,
-          head: [['Date','Time','Telecaller','Student','Phone','Course','Lead Source','Duration','Status','Outcome','Callback Date','Notes']],
+          head: [['Date', 'Time', 'Telecaller', 'Student', 'Phone', 'Course', 'Lead Source', 'Duration', 'Status', 'Outcome', 'Callback Date', 'Notes']],
           body: callRows,
           styles: { fontSize: 8, cellPadding: 5, overflow: 'linebreak', valign: 'top', cellWidth: 'wrap' },
           columnStyles: {
@@ -281,7 +338,7 @@ export default function ReportsPage() {
           tableWidth: 'auto',
           headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 9 },
           theme: 'striped',
-          didDrawPage: () => {},
+          didDrawPage: () => { },
         })
         cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
       }
@@ -315,7 +372,7 @@ export default function ReportsPage() {
 
         autoTable(doc, {
           startY: cursorY,
-          head: [['Student/Institution','Executive','Visit Type','Follow-Up Date','Status/Next Action','Remarks']],
+          head: [['Student/Institution', 'Executive', 'Visit Type', 'Follow-Up Date', 'Status/Next Action', 'Remarks']],
           body: vRows,
           styles: { fontSize: 9, cellPadding: 5, overflow: 'linebreak', valign: 'top' },
           columnStyles: {
@@ -399,9 +456,9 @@ export default function ReportsPage() {
   } = data
 
   const categoryCounts: Record<string, number> = {}
-  ;(outcomeDistribution || []).forEach((item: any) => {
-    categoryCounts[item.name] = item.value
-  })
+    ; (outcomeDistribution || []).forEach((item: any) => {
+      categoryCounts[item.name] = item.value
+    })
 
   const statusChartData = REPORT_OUTCOME_ORDER.map((name) => ({
     name,
@@ -518,12 +575,12 @@ export default function ReportsPage() {
                         label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
                       />
                       <YAxis className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--background))', 
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px'
-                        }} 
+                        }}
                       />
                       <Bar dataKey="calls" fill="#3b82f6" name="Total Calls" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="connected" fill="#10b981" name="Connected" radius={[4, 4, 0, 0]} />
@@ -608,49 +665,69 @@ export default function ReportsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Telecaller</TableHead>
+                      <TableHead className="text-center">Total Assigned Leads</TableHead>
                       <TableHead className="text-center">Total Calls</TableHead>
-                      <TableHead className="text-center">Successful</TableHead>
-                      <TableHead className="text-center">Success Rate</TableHead>
-                      <TableHead className="text-center">Performance</TableHead>
+                      <TableHead className="text-center">Pending Calls</TableHead>
+                      <TableHead className="text-center">Callbacks</TableHead>
+                      <TableHead className="text-center">Cold NR</TableHead>
+                      <TableHead className="text-center">Cold NI</TableHead>
+                      <TableHead className="text-center">Warm</TableHead>
+                      <TableHead className="text-center">Hot</TableHead>
+                      <TableHead className="text-center">Visit Sched.</TableHead>
+                      <TableHead className="text-center">Decision Pend.</TableHead>
+                      <TableHead className="text-center">Admitted</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {telecallerPerformance.map((user: any) => {
-                    const successRate = user.totalCalls > 0 
-                      ? Math.round((user.successfulCalls / user.totalCalls) * 100) 
-                      : 0
-                    return (
-                      <TableRow
-                        key={user.id}
-                        className={`hover:bg-muted/50 cursor-pointer ${selectedTelecallerId === user.id ? 'bg-muted/30' : ''}`}
-                        onClick={() => setSelectedTelecallerId(prev => prev === user.id ? null : user.id)}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
-                                {user.name.split(' ').map((n: string) => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{user.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{user.totalCalls}</TableCell>
-                        <TableCell className="text-center">{user.successfulCalls}</TableCell>
-                        <TableCell className="text-center">{successRate}%</TableCell>
-                        
-                        <TableCell className="text-center">
-                          <Badge variant={successRate >= 30 ? "default" : successRate >= 15 ? "secondary" : "outline"}>
-                            {successRate >= 30 ? "Excellent" : successRate >= 15 ? "Good" : "Needs Improvement"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+                    {telecallerPerformance.map((user: any) => {
+                      return (
+                        <TableRow
+                          key={user.id}
+                          className={`hover:bg-muted/50 cursor-pointer ${selectedTelecallerId === user.id ? 'bg-muted/30' : ''}`}
+                          onClick={() => setSelectedTelecallerId(prev => prev === user.id ? null : user.id)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                                  {user.name.split(' ').map((n: string) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{user.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">{user.totalAssignedLeads ?? 0}</TableCell>
+                          <TableCell className="text-center">{user.totalCalls ?? 0}</TableCell>
+                          <TableCell className="text-center">{user.pendingCalls ?? 0}</TableCell>
+                          <TableCell className="text-center">{user.callbacks ?? 0}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{user.coldNRCount ?? 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">{user.coldNICount ?? 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">{user.warmCount ?? 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{user.hotCount ?? 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200">{user.visitScheduledCount ?? 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">{user.decisionPendingCount ?? 0}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">{user.admittedCount ?? 0}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
           </Card>
 
           <Card>
@@ -684,12 +761,12 @@ export default function ReportsPage() {
                       label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
                     />
                     <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--background))', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px'
-                      }} 
+                      }}
                     />
                     <Line type="monotone" dataKey="calls" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
                     <Line type="monotone" dataKey="connected" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
@@ -720,40 +797,40 @@ export default function ReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {spocPerformance.map((user: any) => {
-                    const successRate = user.totalVisits > 0 
-                      ? Math.round((user.successfulVisits / user.totalVisits) * 100) 
-                      : 0
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs bg-green-100 text-green-700">
-                                {user.name.split(' ').map((n: string) => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{user.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">{user.totalVisits}</TableCell>
-                        <TableCell className="text-center">{user.successfulVisits}</TableCell>
-                        <TableCell className="text-center">{successRate}%</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{user.pendingFollowups}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={successRate >= 40 ? "default" : successRate >= 20 ? "secondary" : "outline"}>
-                            {successRate >= 40 ? "Excellent" : successRate >= 20 ? "Good" : "Needs Improvement"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+                    {spocPerformance.map((user: any) => {
+                      const successRate = user.totalVisits > 0
+                        ? Math.round((user.successfulVisits / user.totalVisits) * 100)
+                        : 0
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                                  {user.name.split(' ').map((n: string) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{user.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">{user.totalVisits}</TableCell>
+                          <TableCell className="text-center">{user.successfulVisits}</TableCell>
+                          <TableCell className="text-center">{successRate}%</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline">{user.pendingFollowups}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={successRate >= 40 ? "default" : successRate >= 20 ? "secondary" : "outline"}>
+                              {successRate >= 40 ? "Excellent" : successRate >= 20 ? "Good" : "Needs Improvement"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
           </Card>
 
           <Card>
@@ -777,12 +854,12 @@ export default function ReportsPage() {
                       label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
                     />
                     <YAxis className="text-xs" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--background))', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px'
-                      }} 
+                      }}
                     />
                     <Bar dataKey="visits" fill="#10b981" name="Total Visits" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="successful" fill="#8b5cf6" name="Successful" radius={[4, 4, 0, 0]} />

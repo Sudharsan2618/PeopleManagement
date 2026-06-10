@@ -98,34 +98,105 @@ function getLatestLogPerProspect(callbacks: CallbackReminderCallLog[]) {
   return Array.from(latestByProspect.values())
 }
 
+let _sharedAudioCtx: AudioContext | null = null
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null
+  try {
+    if (!_sharedAudioCtx || _sharedAudioCtx.state === 'closed') {
+      _sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    return _sharedAudioCtx
+  } catch {
+    return null
+  }
+}
+
+// Unlock AudioContext on first user interaction (browsers require this)
+if (typeof window !== "undefined") {
+  const unlockAudio = () => {
+    const ctx = getAudioContext()
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+  }
+  window.addEventListener('click', unlockAudio, { once: true })
+  window.addEventListener('keydown', unlockAudio, { once: true })
+  window.addEventListener('touchstart', unlockAudio, { once: true })
+}
+
+function playChime(audioContext: AudioContext, startOffset: number) {
+  const notes = [
+    { freq: 988, duration: 0.18, offset: 0.0 },  // B5
+    { freq: 1319, duration: 0.18, offset: 0.2 }, // E6
+    { freq: 1175, duration: 0.18, offset: 0.4 }, // D6
+    { freq: 1047, duration: 0.3,  offset: 0.6 }, // C6
+  ]
+
+  notes.forEach(({ freq, duration, offset }) => {
+    const oscillator = audioContext.createOscillator()
+    const gain = audioContext.createGain()
+
+    oscillator.type = "sine"
+    oscillator.frequency.value = freq
+
+    const t = audioContext.currentTime + startOffset + offset
+    gain.gain.setValueAtTime(0, t)
+    gain.gain.linearRampToValueAtTime(0.9, t + 0.03)
+    gain.gain.setValueAtTime(0.9, t + duration - 0.04)
+    gain.gain.linearRampToValueAtTime(0, t + duration)
+
+    oscillator.connect(gain)
+    gain.connect(audioContext.destination)
+    oscillator.start(t)
+    oscillator.stop(t + duration + 0.05)
+  })
+}
+
 function playAlertSound() {
   if (typeof window === "undefined") {
     return
   }
 
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const oscillator = audioContext.createOscillator()
-    const gain = audioContext.createGain()
+    const audioContext = getAudioContext()
+    if (!audioContext) return
 
-    oscillator.type = "sine"
-    oscillator.frequency.value = 880
+    const resume = audioContext.state === 'suspended'
+      ? audioContext.resume()
+      : Promise.resolve()
 
-    gain.gain.setValueAtTime(0.001, audioContext.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.25, audioContext.currentTime + 0.02)
-
-    oscillator.connect(gain)
-    gain.connect(audioContext.destination)
-
-    oscillator.start()
-    oscillator.stop(audioContext.currentTime + 0.4)
-    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.39)
-
-    setTimeout(() => {
-      audioContext.close().catch(() => { })
-    }, 500)
+    resume.then(() => {
+      // Play 3 chimes back to back for maximum alertness
+      playChime(audioContext, 0)
+      playChime(audioContext, 1.2)
+      playChime(audioContext, 2.4)
+    }).catch(() => {})
   } catch {
     // Silence failures due to browser audio restrictions.
+  }
+
+  // Also trigger a browser notification for background tabs
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification('📞 Callback Reminder', {
+        body: 'You have a callback due now!',
+        icon: '/favicon.ico',
+        requireInteraction: true,
+      })
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification('📞 Callback Reminder', {
+            body: 'You have a callback due now!',
+            icon: '/favicon.ico',
+            requireInteraction: true,
+          })
+        }
+      })
+    }
+  } catch {
+    // Notification API not available
   }
 }
 
