@@ -19,7 +19,8 @@ import {
   MapPin,
   PhoneCall,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Clock
 } from "lucide-react"
 import {
   BarChart,
@@ -40,28 +41,28 @@ import autoTable from "jspdf-autotable"
 import { adminApi, callLogsApi, SpocVisitsApi } from "@/lib/api-client"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 
-const REPORT_OUTCOME_ORDER = ['Cold (No Response)', 'Cold (Not Interested)', 'Warm', 'Hot', 'Visit Scheduled', 'Decision Pending', 'Admitted']
+const REPORT_OUTCOME_ORDER = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
 const REPORT_OUTCOME_COLORS: Record<string, string> = {
-  'Cold (No Response)': '#64748b',
-  'Cold (Not Interested)': '#94a3b8',
+  'Cold / No Response': '#64748b',
+  'Cold / Not Interested': '#94a3b8',
   Warm: '#f59e0b',
   Hot: '#ef4444',
   'Visit Scheduled': '#8b5cf6',
-  'Decision Pending': '#f97316',
-  Admitted: '#10b981',
+  'Visit Done / Decision Pending': '#f97316',
+  'Admission Done ✓': '#10b981',
 }
 
 const CALL_HISTORY_STATUS_LABELS: Record<string, string> = {
-  cold: 'Cold (No Response)',
-  cold_no_response: 'Cold (No Response)',
-  cold_not_interested: 'Cold (Not Interested)',
-  lost: 'Cold (No Response)',
+  cold: 'Cold / No Response',
+  cold_no_response: 'Cold / No Response',
+  cold_not_interested: 'Cold / Not Interested',
+  lost: 'Cold / No Response',
   warm: 'Warm',
   contacted: 'Warm',
   hot: 'Hot',
   visit_scheduled: 'Visit Scheduled',
-  visit_done: 'Decision Pending',
-  admission_done: 'Admitted',
+  visit_done: 'Visit Done / Decision Pending',
+  admission_done: 'Admission Done ✓',
 }
 
 const formatCallHistoryStatus = (status?: string) => {
@@ -70,17 +71,17 @@ const formatCallHistoryStatus = (status?: string) => {
 }
 
 const DB_OUTCOME_LABELS: Record<string, string> = {
-  not_answered:        "No response",
-  busy:                "Busy",
-  wrong_number:        "Wrong Number",
-  callback:            "Interested",
-  not_interested:      "Not Interested",
-  dnc:                 "Do Not Call",
-  language_barrier:    "Language Barrier",
-  interested:          "Strong Interest / Ready for counselling",
-  qualified:           "Visit planned and confirmed",
-  visit_done:          "Visit campus / Decision awaited",
-  enrolled_elsewhere:  "Visit campus / Decision awaited",
+  not_answered: "No response",
+  busy: "Busy",
+  wrong_number: "Wrong Number",
+  callback: "Interested",
+  not_interested: "Not Interested",
+  dnc: "Do Not Call",
+  language_barrier: "Language Barrier",
+  interested: "Strong Interest / Ready for counselling",
+  qualified: "Visit planned and confirmed",
+  visit_done: "Visit campus / Decision awaited",
+  enrolled_elsewhere: "Visit campus / Decision awaited",
   application_process: "Admission successfully completed",
 }
 
@@ -181,13 +182,13 @@ export default function ReportsPage() {
     const calcPerc = (val: number) => totalOutcomeCalls > 0 ? `${((val / totalOutcomeCalls) * 100).toFixed(1)}%` : '0%'
 
     const summaryMetrics: any[] = [
-      ["Cold (No Response)", getOutcomeValue('Cold (No Response)'), calcPerc(getOutcomeValue('Cold (No Response)'))],
-      ["Cold (Not Interested)", getOutcomeValue('Cold (Not Interested)'), calcPerc(getOutcomeValue('Cold (Not Interested)'))],
+      ["Cold / No Response", getOutcomeValue('Cold / No Response'), calcPerc(getOutcomeValue('Cold / No Response'))],
+      ["Cold / Not Interested", getOutcomeValue('Cold / Not Interested'), calcPerc(getOutcomeValue('Cold / Not Interested'))],
       ["Warm", getOutcomeValue('Warm'), calcPerc(getOutcomeValue('Warm'))],
       ["Hot", getOutcomeValue('Hot'), calcPerc(getOutcomeValue('Hot'))],
       ["Visit Scheduled", getOutcomeValue('Visit Scheduled'), calcPerc(getOutcomeValue('Visit Scheduled'))],
-      ["Decision Pending", getOutcomeValue('Decision Pending'), calcPerc(getOutcomeValue('Decision Pending'))],
-      ["Admitted", getOutcomeValue('Admitted'), calcPerc(getOutcomeValue('Admitted'))],
+      ["Visit Done / Decision Pending", getOutcomeValue('Visit Done / Decision Pending'), calcPerc(getOutcomeValue('Visit Done / Decision Pending'))],
+      ["Admission Done ✓", getOutcomeValue('Admission Done ✓'), calcPerc(getOutcomeValue('Admission Done ✓'))],
       ["Total Calls", totalOutcomeCalls, "100%"],
     ]
 
@@ -211,13 +212,13 @@ export default function ReportsPage() {
       didParseCell: function (dataArg) {
         if (dataArg.section === 'body') {
           const rowText = dataArg.row.raw[0]
-          if (rowText === 'Cold (No Response)') dataArg.cell.styles.fillColor = [241, 245, 249]
-          else if (rowText === 'Cold (Not Interested)') dataArg.cell.styles.fillColor = [241, 245, 249]
+          if (rowText === 'Cold / No Response') dataArg.cell.styles.fillColor = [241, 245, 249]
+          else if (rowText === 'Cold / Not Interested') dataArg.cell.styles.fillColor = [241, 245, 249]
           else if (rowText === 'Warm') dataArg.cell.styles.fillColor = [254, 243, 199]
           else if (rowText === 'Hot') dataArg.cell.styles.fillColor = [254, 226, 226]
           else if (rowText === 'Visit Scheduled') dataArg.cell.styles.fillColor = [237, 233, 254]
-          else if (rowText === 'Decision Pending') dataArg.cell.styles.fillColor = [255, 237, 213]
-          else if (rowText === 'Admitted') dataArg.cell.styles.fillColor = [209, 250, 229]
+          else if (rowText === 'Visit Done / Decision Pending') dataArg.cell.styles.fillColor = [255, 237, 213]
+          else if (rowText === 'Admission Done ✓') dataArg.cell.styles.fillColor = [209, 250, 229]
           else if (rowText === 'Total Calls') {
             dataArg.cell.styles.fontStyle = 'bold'
           }
@@ -469,6 +470,9 @@ export default function ReportsPage() {
 
   const totalPendingCalls = summary.totalPendingCalls || 0
   const totalAdmitted = summary.totalEnrollments || 0
+  const scheduledCallbacks = (telecallerPerformance || []).reduce((sum: number, t: any) => sum + (t.callbacks ?? 0), 0)
+  const totalCalls = summary.totalCalls || 0
+  const callStatsMax = Math.max(totalCalls, totalPendingCalls, scheduledCallbacks, 1)
 
   return (
     <div className="space-y-6 overflow-x-auto">
@@ -531,8 +535,8 @@ export default function ReportsPage() {
                     <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{totalAdmitted}</div>
-                    <p className="text-xs text-muted-foreground">Admitted</p>
+                    <div className="text-2xl font-bold">{categoryCounts['Admission Done ✓'] || 0}</div>
+                    <p className="text-xs text-muted-foreground">Admission Done</p>
                   </div>
                 </div>
               </CardContent>
@@ -544,8 +548,8 @@ export default function ReportsPage() {
                     <PhoneCall className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{totalPendingCalls}</div>
-                    <p className="text-xs text-muted-foreground">Pending Callbacks</p>
+                    <div className="text-2xl font-bold">{categoryCounts['Warm'] || 0}</div>
+                    <p className="text-xs text-muted-foreground">Warm</p>
                   </div>
                 </div>
               </CardContent>
@@ -559,32 +563,112 @@ export default function ReportsPage() {
                 <CardTitle>Call Activity</CardTitle>
                 <CardDescription>Daily call volume and outcomes</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Count bars */}
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Total Calls */}
+                  <div className="rounded-xl border bg-blue-50/60 p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <Phone className="h-3.5 w-3.5 text-blue-600" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium leading-tight">Total Calls</span>
+                    </div>
+                    <div className="text-xl font-bold text-blue-700">{totalCalls}</div>
+                    <div className="h-1.5 w-full rounded-full bg-blue-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-blue-500 transition-all duration-500"
+                        style={{ width: `${Math.round((totalCalls / callStatsMax) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Total Pending Calls */}
+                  <div className="rounded-xl border bg-orange-50/60 p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                        <PhoneCall className="h-3.5 w-3.5 text-orange-600" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium leading-tight">Pending Calls</span>
+                    </div>
+                    <div className="text-xl font-bold text-orange-600">{totalPendingCalls}</div>
+                    <div className="h-1.5 w-full rounded-full bg-orange-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-orange-400 transition-all duration-500"
+                        style={{ width: `${Math.round((totalPendingCalls / callStatsMax) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Scheduled Callbacks */}
+                  <div className="rounded-xl border bg-purple-50/60 p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                        <Clock className="h-3.5 w-3.5 text-purple-600" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground font-medium leading-tight">Scheduled Callbacks</span>
+                    </div>
+                    <div className="text-xl font-bold text-purple-600">{scheduledCallbacks}</div>
+                    <div className="h-1.5 w-full rounded-full bg-purple-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-purple-500 transition-all duration-500"
+                        style={{ width: `${Math.round((scheduledCallbacks / callStatsMax) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div id="chart-call-activity" className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={callAnalytics}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <BarChart
+                      data={[
+                        { name: "Total Calls", value: totalCalls, fill: "#3b82f6" },
+                        { name: "Pending Calls", value: totalPendingCalls, fill: "#f97316" },
+                        { name: "Scheduled Callbacks", value: scheduledCallbacks, fill: "#8b5cf6" },
+                      ]}
+                      margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
                       <XAxis
-                        dataKey="date"
-                        tickFormatter={formatChartDate}
-                        interval={0}
-                        angle={-35}
-                        textAnchor="end"
-                        height={50}
-                        tick={{ fontSize: 10 }}
-                        label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
+                        dataKey="name"
+                        tick={{ fontSize: 11, fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
                       />
-                      <YAxis className="text-xs" />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: 'hsl(var(--background))',
                           border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
+                          borderRadius: '8px',
+                          padding: '8px 14px',
                         }}
+                        formatter={(value: number) => [`${value}`, "Count"]}
+                        cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
                       />
-                      <Bar dataKey="calls" fill="#3b82f6" name="Total Calls" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="connected" fill="#10b981" name="Connected" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="converted" fill="#8b5cf6" name="Converted" radius={[4, 4, 0, 0]} />
+                      <Bar
+                        dataKey="value"
+                        radius={[6, 6, 0, 0]}
+                        barSize={56}
+                        label={{
+                          position: "top",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          fill: "hsl(var(--foreground))",
+                        }}
+                      >
+                        {[
+                          { name: "Total Calls", value: totalCalls, fill: "#3b82f6" },
+                          { name: "Pending Calls", value: totalPendingCalls, fill: "#f97316" },
+                          { name: "Scheduled Callbacks", value: scheduledCallbacks, fill: "#8b5cf6" },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

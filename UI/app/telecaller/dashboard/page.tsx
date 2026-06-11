@@ -86,11 +86,11 @@ const OUTCOME_UI_LABELS: Record<string, string> = {
 // This is the CRM state-machine: what happens to the prospect after
 // each type of call outcome
 const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
-  NotAnswered: "cold",                   // Cold / No Response
-  Busy: "cold",                          // Cold / No Response
+  NotAnswered: "cold_no_response",       // Cold / No Response
+  Busy: "cold_no_response",              // Cold / No Response
   WrongNumber: "cold",                   // Cold
   CallBack: "warm",                      // Warm
-  NotInterested: "cold",                 // Cold / Not Interested
+  NotInterested: "cold_not_interested",  // Cold / Not Interested
   DNC: "cold",                           // Cold / DNC
   LanguageBarrier: "cold",               // Cold
   Interested: "hot",                     // Hot
@@ -122,11 +122,11 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
   hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
-  visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-  admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  visit_done: { label: "Visit Done / Decision Pending", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  admission_done: { label: "Admission Done ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_no_response: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_not_interested: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_no_response: { label: "Cold / No Response", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_not_interested: { label: "Cold / Not Interested", color: "bg-slate-100 text-slate-600 border-slate-200" },
   lost: { label: "Lost", color: "bg-red-50 text-red-600 border-red-200" },
 }
 
@@ -556,11 +556,13 @@ export default function TelecallerDashboard() {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="warm">Warm (Callback)</SelectItem>
+                  <SelectItem value="warm">Warm</SelectItem>
                   <SelectItem value="hot">Hot 🔥</SelectItem>
                   <SelectItem value="visit_scheduled">Visit Scheduled</SelectItem>
-                  <SelectItem value="cold_not_interested">Not Interested</SelectItem>
-                  <SelectItem value="cold_no_response">No Response</SelectItem>
+                  <SelectItem value="visit_done">Visit Done / Decision Pending</SelectItem>
+                  <SelectItem value="admission_done">Admission Done ✓</SelectItem>
+                  <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
+                  <SelectItem value="cold_no_response">Cold / No Response</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>
               </Select>

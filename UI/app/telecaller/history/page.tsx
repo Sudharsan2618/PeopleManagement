@@ -69,24 +69,24 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   warm: { label: "Warm", color: "bg-orange-100 text-orange-800" },
   hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800" },
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800" },
-  visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800" },
-  admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800" },
+  visit_done: { label: "Visit Done / Decision Pending", color: "bg-indigo-100 text-indigo-800" },
+  admission_done: { label: "Admission Done ✓", color: "bg-emerald-100 text-emerald-800" },
   cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800" },
-  cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800" },
+  cold_no_response: { label: "Cold / No Response", color: "bg-gray-100 text-gray-800" },
+  cold_not_interested: { label: "Cold / Not Interested", color: "bg-slate-100 text-slate-800" },
   lost: { label: "Lost", color: "bg-red-50 text-red-600" },
 }
 
 const SUMMARY_STATUS_KEYS = ["cold_no_response", "cold_not_interested", "warm", "hot", "visit_scheduled", "decision_pending", "admission_done"]
 const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = {
   cold: { label: "Cold (Other)", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_no_response: { label: "Cold (No Response)", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_not_interested: { label: "Cold (Not Interested)", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_no_response: { label: "Cold / No Response", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_not_interested: { label: "Cold / Not Interested", color: "bg-slate-100 text-slate-600 border-slate-200" },
   warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
   hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
-  decision_pending: { label: "Decision Pending", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-  admission_done: { label: "Admitted", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  decision_pending: { label: "Visit Done / Decision Pending", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  admission_done: { label: "Admission Done ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
 }
 
 export default function CallHistoryPage() {

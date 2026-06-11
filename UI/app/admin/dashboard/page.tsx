@@ -75,7 +75,7 @@ export default function AdminDashboard() {
     fetchData()
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate])
 
   if (isLoading || !stats) {
@@ -145,8 +145,8 @@ export default function AdminDashboard() {
   const telecallerChartData = telecallerPerf.map((tc: any) => ({
     name: tc.name.split(" ")[0],
     calls: tc.total_calls,
-    qualified: tc.qualified,
     interested: tc.interested,
+    callbacks: tc.callbacks,
   }))
 
   return (
@@ -225,14 +225,14 @@ export default function AdminDashboard() {
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
-                    dataKey="qualified"
-                    name="Qualified"
+                    dataKey="interested"
+                    name="Interested"
                     fill="#10b981"
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
-                    dataKey="interested"
-                    name="Interested"
+                    dataKey="callbacks"
+                    name="Callbacks"
                     fill="#f59e0b"
                     radius={[4, 4, 0, 0]}
                   />
@@ -274,12 +274,6 @@ export default function AdminDashboard() {
                     <div className="text-center">
                       <p className="font-bold text-lg">{tc.total_calls}</p>
                       <p className="text-muted-foreground">Calls</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-bold text-lg text-green-600">
-                        {tc.qualified}
-                      </p>
-                      <p className="text-muted-foreground">Qualified</p>
                     </div>
                     <div className="text-center">
                       <p className="font-bold text-lg text-blue-600">

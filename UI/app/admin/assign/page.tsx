@@ -40,10 +40,10 @@ const STATUS_LABELS: Record<string, string> = {
   warm: "Warm",
   hot: "Hot",
   visit_scheduled: "Visit Scheduled",
-  visit_done: "Visit Done",
-  admission_done: "Admitted",
-  cold_no_response: "No Response",
-  cold_not_interested: "Not Interested",
+  visit_done: "Visit Done / Decision Pending",
+  admission_done: "Admission Done ✓",
+  cold_no_response: "Cold / No Response",
+  cold_not_interested: "Cold / Not Interested",
   lost: "Lost",
 }
 
@@ -298,6 +298,12 @@ export default function AssignProspectsPage() {
                   <SelectItem value="contacted">Contacted</SelectItem>
                   <SelectItem value="warm">Warm</SelectItem>
                   <SelectItem value="hot">Hot</SelectItem>
+                  <SelectItem value="visit_scheduled">Visit Scheduled</SelectItem>
+                  <SelectItem value="visit_done">Visit Done / Decision Pending</SelectItem>
+                  <SelectItem value="admission_done">Admission Done ✓</SelectItem>
+                  <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
+                  <SelectItem value="cold_no_response">Cold / No Response</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>
               </Select>
             </div>

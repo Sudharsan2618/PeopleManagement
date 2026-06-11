@@ -44,11 +44,11 @@ const OUTCOME_TO_DB: Record<string, string> = {
 const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   NotAnswered: "cold_no_response",       // No Response
   Busy: "cold_no_response",              // No Response
-  WrongNumber: "cold_not_interested",    // Not Interested
+  WrongNumber: "cold",                   // Cold
   CallBack: "warm",                      // Warm
-  NotInterested: "cold_not_interested",  // Not Interested unless reason says no response
-  DNC: "cold_not_interested",            // Not Interested
-  LanguageBarrier: "cold_not_interested",// Not Interested
+  NotInterested: "cold_not_interested",  // Not Interested
+  DNC: "cold",                           // Cold / DNC
+  LanguageBarrier: "cold",               // Cold
   Interested: "hot",                     // Hot
   Qualified: "visit_scheduled",          // Visit Scheduled
   EnrolledElsewhere: "visit_done",        // Visit Done → Decision Pending
