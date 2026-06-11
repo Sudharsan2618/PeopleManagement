@@ -100,6 +100,7 @@ export default function CallHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [outcomeFilter, setOutcomeFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
+  const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0])
   
   // Export states
   const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0])
@@ -507,6 +508,11 @@ export default function CallHistoryPage() {
     callLogs.forEach((log) => {
       if (!log.status_after_call) return
 
+      if (summaryDate) {
+        const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+        if (logDateStr !== summaryDate) return
+      }
+
       if (log.outcome === "not_answered") {
         counts.cold_no_response += 1
       } else if (log.outcome === "not_interested") {
@@ -527,7 +533,7 @@ export default function CallHistoryPage() {
     })
 
     return counts
-  }, [callLogs])
+  }, [callLogs, summaryDate])
 
   const todayReport = useMemo(() => {
     const localDateKey = (date: Date) => date.toLocaleDateString("en-CA")
@@ -633,7 +639,7 @@ export default function CallHistoryPage() {
       {/* Stats Summary */}
       <div className="space-y-4">
         {/* Main Stats */}
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <Badge
             variant="outline"
             className="text-xs px-4 py-2 font-bold bg-blue-50 text-blue-700 border-blue-200 shadow-sm rounded-lg flex items-center gap-2"
@@ -648,26 +654,40 @@ export default function CallHistoryPage() {
             <span>Pending to Call:</span>
             <span className="text-sm bg-yellow-100 px-2 py-0.5 rounded-md">{pendingLeadsCount}</span>
           </Badge>
+          
+          <div className="ml-auto flex items-center gap-2 bg-muted/30 p-1.5 rounded-lg border border-muted">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">Counts for:</label>
+            <Input 
+              type="date" 
+              value={summaryDate}
+              onChange={(e) => setSummaryDate(e.target.value)}
+              className="h-7 w-[130px] text-xs px-2 py-1"
+            />
+            {summaryDate && (
+              <Button variant="ghost" size="sm" onClick={() => setSummaryDate("")} className="h-7 px-2 text-xs">
+                All-time
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Status Breakdown - limited to requested categories */}
-        {SUMMARY_STATUS_KEYS.some((status) => statusCounts[status] > 0) && (
-          <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
-            {SUMMARY_STATUS_KEYS.map((status) => {
-              const count = statusCounts[status]
-              const config = STATUS_SUMMARY_CONFIG[status]
-              return (
-                <Badge
-                  key={status}
-                  variant="outline"
-                  className={cn("text-xs px-3 py-1 font-semibold", config.color)}
-                >
-                  {config.label}: {count}
-                </Badge>
-              )
-            })}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
+          {SUMMARY_STATUS_KEYS.map((status) => {
+            const count = statusCounts[status]
+            const config = STATUS_SUMMARY_CONFIG[status]
+            if (!summaryDate && count === 0) return null; // hide zeros only for all-time
+            return (
+              <Badge
+                key={status}
+                variant="outline"
+                className={cn("text-xs px-3 py-1 font-semibold", config.color, count === 0 && "opacity-50")}
+              >
+                {config.label}: {count}
+              </Badge>
+            )
+          })}
+        </div>
       </div>
 
       {/* Filters */}

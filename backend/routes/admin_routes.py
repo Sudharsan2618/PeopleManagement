@@ -428,7 +428,6 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             COUNT(*) AS "totalCalls",
             COUNT(*) FILTER (WHERE outcome != 'not_answered') AS "answeredCalls",
             COUNT(*) FILTER (WHERE outcome = 'not_answered') AS "missedCalls",
-            COUNT(*) FILTER (WHERE outcome = 'callback') AS "callbackRequests",
             COUNT(*) FILTER (WHERE outcome = 'interested') AS interested,
             COUNT(*) FILTER (WHERE outcome = 'qualified') AS qualified,
             COUNT(*) FILTER (WHERE outcome = 'not_interested') AS "notInterested",
@@ -438,6 +437,18 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         FROM call_logs
         WHERE 1=1{date_clause}
     """, tuple(params) if params else None, fetch="one")
+
+    # Pending calls: assigned prospects (in date range) not yet called by any telecaller
+    pending_params = []
+    pending_date_clause = _date_filter_clause("pa.assigned_date", start_date, end_date, pending_params)
+    pending_calls = execute_query(f"""
+        SELECT COUNT(DISTINCT pa.prospect_id) as count
+        FROM prospect_assignments pa
+        WHERE 1=1{pending_date_clause}
+        AND pa.prospect_id NOT IN (
+            SELECT DISTINCT cl.prospect_id FROM call_logs cl
+        )
+    """, tuple(pending_params) if pending_params else None, fetch="one")
 
     # Visits count with date filter via spoc_reports.report_date
     visit_params = []
@@ -478,7 +489,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         "totalCalls": call_summary["totalCalls"],
         "answeredCalls": call_summary["answeredCalls"],
         "missedCalls": call_summary["missedCalls"],
-        "callbackRequests": call_summary["callbackRequests"],
+        "totalPendingCalls": pending_calls["count"],
         "interested": call_summary["interested"],
         "qualified": call_summary["qualified"],
         "notInterested": call_summary["notInterested"],

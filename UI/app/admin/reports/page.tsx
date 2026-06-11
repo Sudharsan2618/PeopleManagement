@@ -17,8 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Phone,
   MapPin,
-  TrendingUp,
-  Target,
+  PhoneCall,
+  CheckCircle2,
   Loader2
 } from "lucide-react"
 import {
@@ -467,8 +467,8 @@ export default function ReportsPage() {
 
   const selectedTelecallerName = data?.telecallerPerformance?.find((u: any) => u.id === selectedTelecallerId)?.name ?? null
 
-  const totalProspects = summary.totalProspects || 1
-  const conversionRate = Math.round((summary.totalEnrollments / totalProspects) * 100)
+  const totalPendingCalls = summary.totalPendingCalls || 0
+  const totalAdmitted = summary.totalEnrollments || 0
 
   return (
     <div className="space-y-6 overflow-x-auto">
@@ -527,12 +527,12 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                    <Target className="h-5 w-5 text-purple-600" />
+                  <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{summary.totalEnrollments}</div>
-                    <p className="text-xs text-muted-foreground">Enrollments</p>
+                    <div className="text-2xl font-bold">{totalAdmitted}</div>
+                    <p className="text-xs text-muted-foreground">Admitted</p>
                   </div>
                 </div>
               </CardContent>
@@ -541,11 +541,11 @@ export default function ReportsPage() {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-orange-600" />
+                    <PhoneCall className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{conversionRate}%</div>
-                    <p className="text-xs text-muted-foreground">Conversion Rate</p>
+                    <div className="text-2xl font-bold">{totalPendingCalls}</div>
+                    <p className="text-xs text-muted-foreground">Pending Callbacks</p>
                   </div>
                 </div>
               </CardContent>

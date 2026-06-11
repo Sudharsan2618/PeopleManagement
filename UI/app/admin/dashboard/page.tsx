@@ -6,18 +6,13 @@ import {
   Phone,
   CheckCircle2,
   FileText,
-  ClipboardList,
   Calendar,
-  TrendingUp,
   Loader2,
   RefreshCw,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
   XAxis,
@@ -34,54 +29,10 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 
-// ─── Colors for charts ──────────────────────────────────────────
-const CALL_OUTCOME_ORDER = [
-  "Cold",
-  "Warm",
-  "Hot",
-  "Visit Scheduled",
-  "Admitted",
-]
-
-const CALL_OUTCOME_COLORS: Record<string, string> = {
-  Cold: "#3b82f6",
-  Warm: "#f59e0b",
-  Hot: "#ef4444",
-  "Visit Scheduled": "#a78bfa",
-  Admitted: "#10b981",
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  new: "New",
-  contacted: "Contacted",
-  warm: "Warm",
-  hot: "Hot",
-  visit_scheduled: "Visit Scheduled",
-  visit_done: "Visit Done",
-  admission_done: "Admitted",
-  cold_no_response: "No Response",
-  cold_not_interested: "Not Interested",
-  lost: "Lost",
-}
-
-const PIPELINE_COLORS: Record<string, string> = {
-  new: "#93c5fd",
-  contacted: "#60a5fa",
-  warm: "#f59e0b",
-  hot: "#ef4444",
-  visit_scheduled: "#a78bfa",
-  visit_done: "#8b5cf6",
-  admission_done: "#10b981",
-  cold_no_response: "#d1d5db",
-  cold_not_interested: "#9ca3af",
-  lost: "#6b7280",
-}
-
 export default function AdminDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [telecallerPerf, setTelecallerPerf] = useState<any[]>([])
-  const [pipeline, setPipeline] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -96,18 +47,16 @@ export default function AdminDashboard() {
       setIsLoading(true)
       setError(null)
 
-      const [statsRes, perfRes, pipelineRes, usersRes, reportsRes] =
+      const [statsRes, perfRes, usersRes, reportsRes] =
         await Promise.all([
           adminApi.getStats(startDate || undefined, endDate || undefined),
           adminApi.getTelecallerPerformance(startDate || undefined, endDate || undefined),
-          adminApi.getProspectPipeline(startDate || undefined, endDate || undefined),
           usersApi.getAll(),
           SpocReportsApi.getAll(),
         ])
 
       setStats(statsRes)
       setTelecallerPerf(perfRes)
-      setPipeline(pipelineRes)
       setUsers(usersRes.map(adaptApiUserToUiUser))
       setReports(reportsRes)
     } catch (err) {
@@ -193,27 +142,6 @@ export default function AdminDashboard() {
     },
   ]
 
-  // ─── Chart data ─────────────────────────────────────────────
-    const outcomeCounts = (stats.call_outcome_breakdown || []).reduce(
-    (acc: Record<string, number>, item: any) => {
-      acc[item.outcome] = item.count
-      return acc
-    },
-    {}
-  )
-
-  const callOutcomeChartData = CALL_OUTCOME_ORDER.map((category) => ({
-    name: category,
-    value: outcomeCounts[category] || 0,
-    color: CALL_OUTCOME_COLORS[category] || "#6b7280",
-  }))
-
-  const pipelineChartData = pipeline.map((item: any) => ({
-    name: STATUS_LABELS[item.status] || item.status,
-    value: item.count,
-    fill: PIPELINE_COLORS[item.status] || "#d1d5db",
-  }))
-
   const telecallerChartData = telecallerPerf.map((tc: any) => ({
     name: tc.name.split(" ")[0],
     calls: tc.total_calls,
@@ -261,154 +189,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Call Outcome — Vertical Bar Chart */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              Call Outcome Distribution
-              {callOutcomeChartData.length > 0 && (
-                <Badge variant="secondary" className="ml-auto text-[10px] font-semibold">
-                  {callOutcomeChartData.reduce((s: number, d: any) => s + d.value, 0)} Total
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {callOutcomeChartData.length > 0 ? (
-              <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[...callOutcomeChartData].sort((a: any, b: any) => b.value - a.value)}
-                    margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 10, fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval={0}
-                      angle={-35}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "10px",
-                        padding: "8px 14px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      }}
-                      formatter={(value: number) => [`${value} calls`, "Count"]}
-                      cursor={false}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[6, 6, 0, 0]}
-                      barSize={28}
-                      label={{
-                        position: "top",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fill: "hsl(var(--muted-foreground))",
-                      }}
-                    >
-                      {[...callOutcomeChartData]
-                        .sort((a: any, b: any) => b.value - a.value)
-                        .map((entry: any, index: number) => (
-                          <Cell key={`bar-${index}`} fill={entry.color} />
-                        ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No call data yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Conversion Funnel — Vertical Bar Chart */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Conversion Funnel
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pipelineChartData.length > 0 ? (
-              <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={pipelineChartData}
-                    margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 10, fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval={0}
-                      angle={-35}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "10px",
-                        padding: "8px 14px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      }}
-                      formatter={(value: number) => [`${value} prospects`, "Count"]}
-                      cursor={false}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[6, 6, 0, 0]}
-                      barSize={28}
-                      label={{
-                        position: "top",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fill: "hsl(var(--muted-foreground))",
-                      }}
-                    >
-                      {pipelineChartData.map((entry: any, index: number) => (
-                        <Cell key={`funnel-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No pipeline data yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Telecaller Performance */}
