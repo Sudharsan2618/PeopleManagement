@@ -38,7 +38,7 @@ import {
 } from "recharts"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
-import { adminApi, callLogsApi, SpocVisitsApi } from "@/lib/api-client"
+import { adminApi, callLogsApi, SpocVisitsApi, prospectsApi } from "@/lib/api-client"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 
 const REPORT_OUTCOME_ORDER = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
@@ -101,6 +101,7 @@ export default function ReportsPage() {
     const d = new Date(); d.setDate(d.getDate() - 6); return d.toISOString().split("T")[0]
   })
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split("T")[0])
+  const [visitDoneProspects, setVisitDoneProspects] = useState<any[]>([])
 
   const handleRangeChange = (start: string, end: string) => {
     setStartDate(start)
@@ -411,8 +412,14 @@ export default function ReportsPage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const reports = await adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate)
+        const [reports, prospects] = await Promise.all([
+          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate),
+          prospectsApi.getAll()
+        ])
         setData(reports)
+        // Filter prospects with visit_done status
+        const visitDone = prospects.filter((p: any) => p.status === "visit_done")
+        setVisitDoneProspects(visitDone)
         setErrorMessage(null)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -495,8 +502,7 @@ export default function ReportsPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="telecalling">Telecalling</TabsTrigger>
-          <TabsTrigger value="fieldvisits">Field Visits</TabsTrigger>
-          <TabsTrigger value="conversions">Conversions</TabsTrigger>
+          <TabsTrigger value="fieldvisits">Visit Done / Decision Pending</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
@@ -518,12 +524,12 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-green-600" />
+                  <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-indigo-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{summary.totalVisits}</div>
-                    <p className="text-xs text-muted-foreground">Field Visits</p>
+                    <div className="text-2xl font-bold">{visitDoneProspects.length}</div>
+                    <p className="text-xs text-muted-foreground">Visit Done / Decision Pending</p>
                   </div>
                 </div>
               </CardContent>
@@ -864,185 +870,36 @@ export default function ReportsPage() {
         <TabsContent value="fieldvisits" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>SPOC Performance</CardTitle>
-              <CardDescription>Individual SPOC metrics</CardDescription>
+              <CardTitle>Students - Visit Done / Decision Pending</CardTitle>
+              <CardDescription>Prospects awaiting decision after campus visit</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>SPOC</TableHead>
-                      <TableHead className="text-center">Total Visits</TableHead>
-                      <TableHead className="text-center">Successful</TableHead>
-                      <TableHead className="text-center">Success Rate</TableHead>
-                      <TableHead className="text-center">Pending Followups</TableHead>
-                      <TableHead className="text-center">Performance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {spocPerformance.map((user: any) => {
-                      const successRate = user.totalVisits > 0
-                        ? Math.round((user.successfulVisits / user.totalVisits) * 100)
-                        : 0
-                      return (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs bg-green-100 text-green-700">
-                                  {user.name.split(' ').map((n: string) => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">{user.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">{user.totalVisits}</TableCell>
-                          <TableCell className="text-center">{user.successfulVisits}</TableCell>
-                          <TableCell className="text-center">{successRate}%</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline">{user.pendingFollowups}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={successRate >= 40 ? "default" : successRate >= 20 ? "secondary" : "outline"}>
-                              {successRate >= 40 ? "Excellent" : successRate >= 20 ? "Good" : "Needs Improvement"}
-                            </Badge>
-                          </TableCell>
+              {visitDoneProspects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground">No prospects awaiting decision at this time</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student Name</TableHead>
+                        <TableHead>Mobile</TableHead>
+                        <TableHead>Department</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visitDoneProspects.map((prospect: any) => (
+                        <TableRow key={prospect.id}>
+                          <TableCell className="font-medium">{prospect.name}</TableCell>
+                          <TableCell>{prospect.mobile}</TableCell>
+                          <TableCell>{prospect.department || "-"}</TableCell>
                         </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Visit Trends</CardTitle>
-              <CardDescription>Weekly field visit trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div id="chart-visit-trends" className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={visitAnalytics}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={formatChartDate}
-                      interval={0}
-                      angle={-35}
-                      textAnchor="end"
-                      height={50}
-                      tick={{ fontSize: 10 }}
-                      label={{ value: "Date", position: "insideBottom", dy: 20, fontSize: 12 }}
-                    />
-                    <YAxis className="text-xs" />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Bar dataKey="visits" fill="#10b981" name="Total Visits" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="successful" fill="#8b5cf6" name="Successful" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="conversions" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-primary">{summary.totalProspects}</div>
-                  <p className="text-sm text-muted-foreground mt-1">Total Prospects</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-green-600">
-                    {categoryCounts['Hot'] || 0}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">Hot / Qualified</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-purple-600">
-                    {summary.totalEnrollments}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">Enrollments</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Conversion Funnel</CardTitle>
-              <CardDescription>Prospect journey through the funnel</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div id="chart-conversion" className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={statusChartData}
-                    margin={{ top: 20, right: 10, left: -10, bottom: 50 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 10, fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval={0}
-                      angle={-40}
-                      textAnchor="end"
-                      height={70}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '10px',
-                        padding: '8px 14px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      }}
-                      formatter={(value: number) => [`${value} prospects`, "Count"]}
-                      cursor={false}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[6, 6, 0, 0]}
-                      barSize={30}
-                      label={{
-                        position: "top",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fill: "hsl(var(--muted-foreground))",
-                      }}
-                    >
-                      {statusChartData.map((entry: any, index: number) => (
-                        <Cell key={`funnel-${index}`} fill={REPORT_OUTCOME_COLORS[entry.name] || '#999'} />
                       ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

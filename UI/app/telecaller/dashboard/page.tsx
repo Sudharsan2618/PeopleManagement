@@ -273,6 +273,7 @@ export default function TelecallerDashboard() {
         (p) =>
           p.status === "new" || (p.status === "contacted" && p.totalCalls === 0)
       ).length,
+      visitDone: prospects.filter((p) => p.status === "visit_done").length,
     }
   }, [prospects, todayAssignmentCount, callLogs, todayLogs])
 
@@ -318,6 +319,13 @@ export default function TelecallerDashboard() {
       icon: Clock,
       color: "text-yellow-700",
       bgColor: "bg-yellow-100",
+    },
+    {
+      title: "Visit Done / Decision Pending",
+      value: telecallerStats.visitDone,
+      icon: CheckCircle2,
+      color: "text-indigo-700",
+      bgColor: "bg-indigo-100",
     },
   ]
 
@@ -515,7 +523,7 @@ export default function TelecallerDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
         {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardContent className="p-4">
