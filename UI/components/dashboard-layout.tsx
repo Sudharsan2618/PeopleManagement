@@ -60,11 +60,11 @@ const telecallerNav: NavItem[] = [
 
 const spocNav: NavItem[] = [
   { title: "Dashboard", href: "/spoc/dashboard", icon: LayoutDashboard },
+  { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
   { title: "Assign Prospects", href: "/spoc/prospects", icon: Users },
   { title: "Telecaller Stats", href: "/spoc/telecallers", icon: BarChart3 },
   { title: "New Report", href: "/spoc/report/new", icon: FileText },
   { title: "Past Reports", href: "/spoc/reports", icon: FolderOpen },
-  // { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
 ]
 
 const adminNav: NavItem[] = [
@@ -333,94 +333,81 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
           <div className="flex-1" />
 
-          {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                {pendingCallbacks.length > 0 && (
-                  <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
-                    {pendingCallbacks.length}
-                  </span>
-                )}
-                <span className="sr-only">Notifications</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <div className="flex items-center justify-between px-4 py-2 border-b">
-                <h3 className="font-semibold text-sm">Notifications</h3>
-              </div>
-              <ScrollArea className="max-h-[400px] h-auto">
-                {pendingCallbacks.length > 0 ? (
-                  <div className="space-y-2 p-3">
-                    {pendingCallbacks.map((callback) => {
-                      const scheduledTime = callback.callback_scheduled_at
-                        ? formatISTDateTime(callback.callback_scheduled_at, {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                        : "N/A"
+          {role === "telecaller" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {pendingCallbacks.length > 0 && (
+                    <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold">
+                      {pendingCallbacks.length}
+                    </span>
+                  )}
+                  <span className="sr-only">Notifications</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="flex items-center justify-between px-4 py-2 border-b">
+                  <h3 className="font-semibold text-sm">Notifications</h3>
+                </div>
+                <ScrollArea className="max-h-[400px] h-auto">
+                  {pendingCallbacks.length > 0 ? (
+                    <div className="space-y-2 p-3">
+                      {pendingCallbacks.map((callback) => {
+                        const scheduledTime = callback.callback_scheduled_at
+                          ? formatISTDateTime(callback.callback_scheduled_at, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                          : "N/A"
 
-                      const isHot = callback.status_after_call === "hot"
-                      const isVisit = callback.status_after_call === "visit_scheduled" || callback.status_after_call === "visit_done"
-                      const isCold = callback.status_after_call?.startsWith("cold")
-                      const isWarm = !isHot && !isVisit && !isCold
+                        const isHot = callback.status_after_call === "hot"
+                        const isVisit = callback.status_after_call === "visit_scheduled" || callback.status_after_call === "visit_done"
+                        const isCold = callback.status_after_call?.startsWith("cold")
+                        const isWarm = !isHot && !isVisit && !isCold
 
-                      return (
-                        <button
-                          key={callback.id}
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              await callLogsApi.markNotificationShown(callback.id)
-                            } catch (err) {
-                              console.error("Failed to mark notification shown:", err)
-                            }
-                            if (callback.prospect_id) {
-                              router.push(`/telecaller/callbacks?prospect=${callback.prospect_id}`)
-                            }
-                          }}
-                          className={cn(
-                            "rounded-xl border-2 p-3 text-left w-full cursor-pointer transition-all hover:scale-[1.01]",
-                            isHot
-                              ? "border-red-500 bg-red-50"
-                              : isVisit
-                              ? "border-purple-500 bg-purple-50"
-                              : isCold
-                              ? "border-slate-400 bg-slate-50"
-                              : "border-blue-500 bg-blue-50"
-                          )}
-                        >
-                          <p className={cn(
-                            "text-sm font-semibold",
-                            isHot
-                              ? "text-red-900"
-                              : isVisit
-                              ? "text-purple-900"
-                              : isCold
-                              ? "text-slate-900"
-                              : "text-blue-900"
-                          )}>
-                            📞 {isHot ? "Hot" : isVisit ? "Visit" : isCold ? "Cold" : "Warm"} Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
-                          </p>
-                          <p className={cn(
-                            "text-xs mt-1",
-                            isHot
-                              ? "text-red-700"
-                              : isVisit
-                              ? "text-purple-700"
-                              : isCold
-                              ? "text-slate-700"
-                              : "text-blue-700"
-                          )}>
-                            {callback.prospect?.mobile || callback.prospect_phone || "Unknown"}
-                          </p>
-                          {callback.course_interest && (
+                        return (
+                          <button
+                            key={callback.id}
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await callLogsApi.markNotificationShown(callback.id)
+                              } catch (err) {
+                                console.error("Failed to mark notification shown:", err)
+                              }
+                              if (callback.prospect_id) {
+                                router.push(`/telecaller/callbacks?prospect=${callback.prospect_id}`)
+                              }
+                            }}
+                            className={cn(
+                              "rounded-xl border-2 p-3 text-left w-full cursor-pointer transition-all hover:scale-[1.01]",
+                              isHot
+                                ? "border-red-500 bg-red-50"
+                                : isVisit
+                                ? "border-purple-500 bg-purple-50"
+                                : isCold
+                                ? "border-slate-400 bg-slate-50"
+                                : "border-blue-500 bg-blue-50"
+                            )}
+                          >
                             <p className={cn(
-                              "text-xs",
+                              "text-sm font-semibold",
+                              isHot
+                                ? "text-red-900"
+                                : isVisit
+                                ? "text-purple-900"
+                                : isCold
+                                ? "text-slate-900"
+                                : "text-blue-900"
+                            )}>
+                              📞 {isHot ? "Hot" : isVisit ? "Visit" : isCold ? "Cold" : "Warm"} Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
+                            </p>
+                            <p className={cn(
+                              "text-xs mt-1",
                               isHot
                                 ? "text-red-700"
                                 : isVisit
@@ -429,34 +416,48 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                                 ? "text-slate-700"
                                 : "text-blue-700"
                             )}>
-                              📚 {callback.course_interest}
+                              {callback.prospect?.mobile || callback.prospect_phone || "Unknown"}
                             </p>
-                          )}
-                          <p className={cn(
-                            "text-xs font-bold mt-1",
-                            isHot
-                              ? "text-red-600"
-                              : isVisit
-                              ? "text-purple-600"
-                              : isCold
-                              ? "text-slate-600"
-                              : "text-blue-600"
-                          )}>
-                            ⏰ {scheduledTime}
-                          </p>
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                    <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
-                    <p className="text-xs text-muted-foreground">No pending callbacks</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                            {callback.course_interest && (
+                              <p className={cn(
+                                "text-xs",
+                                isHot
+                                  ? "text-red-700"
+                                  : isVisit
+                                  ? "text-purple-700"
+                                  : isCold
+                                  ? "text-slate-700"
+                                  : "text-blue-700"
+                              )}>
+                                📚 {callback.course_interest}
+                              </p>
+                            )}
+                            <p className={cn(
+                              "text-xs font-bold mt-1",
+                              isHot
+                                ? "text-red-600"
+                                : isVisit
+                                ? "text-purple-600"
+                                : isCold
+                                ? "text-slate-600"
+                                : "text-blue-600"
+                            )}>
+                              ⏰ {scheduledTime}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                      <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
+                      <p className="text-xs text-muted-foreground">No pending callbacks</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </header>
 
         {/* Page Content */}

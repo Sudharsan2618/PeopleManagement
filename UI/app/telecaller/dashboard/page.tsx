@@ -332,24 +332,21 @@ export default function TelecallerDashboard() {
   // ─── Sort & filter ────────────────────────────────────────────
   const sortedProspects = useMemo(() => {
     return [...prospects].sort((a, b) => {
-      // Callbacks with scheduled time first, then new, then rest
+      const aCreated = new Date(a.createdAt).getTime()
+      const bCreated = new Date(b.createdAt).getTime()
+
+      if (aCreated !== bCreated) {
+        return bCreated - aCreated
+      }
+
+      // If createdAt is equal, keep callbacks with scheduled time earlier first.
       if (a.callbackDateTime && !b.callbackDateTime) return -1
       if (!a.callbackDateTime && b.callbackDateTime) return 1
       if (a.callbackDateTime && b.callbackDateTime) {
         return new Date(a.callbackDateTime).getTime() - new Date(b.callbackDateTime).getTime()
       }
 
-      const order: Record<string, number> = {
-        warm: 0,
-        new: 1,
-        contacted: 2,
-        hot: 3,
-        visit_scheduled: 4,
-        cold_not_interested: 5,
-        cold_no_response: 6,
-        lost: 7,
-      }
-      return (order[a.status] ?? 99) - (order[b.status] ?? 99)
+      return 0
     })
   }, [prospects])
 

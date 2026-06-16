@@ -62,7 +62,12 @@ import {
 
 interface InstitutionEntry {
   id: string
-  contactDetails: string
+  institutionName: string
+  designation: string
+  contactName: string
+  contactMobile: string
+  contactEmail: string
+  location: string
   nextStep: string
   assignedTo: "Telecaller" | "Me"
   followUpDate: string
@@ -158,18 +163,22 @@ export default function NewFieldReportPage() {
   // Branding
   const [brandingDone, setBrandingDone] = useState<string>("")
   const [brandingNotes, setBrandingNotes] = useState("")
+  const [brandingFollowUpDate, setBrandingFollowUpDate] = useState("")
 
   // Alumni
   const [alumniOutreach, setAlumniOutreach] = useState<string>("")
   const [alumniNotes, setAlumniNotes] = useState("")
+  const [alumniFollowUpDate, setAlumniFollowUpDate] = useState("")
 
   // Corporate
   const [corporateOutreach, setCorporateOutreach] = useState<string>("")
   const [corporateDetails, setCorporateDetails] = useState("")
+  const [corporateFollowUpDate, setCorporateFollowUpDate] = useState("")
 
   // Referral
   const [referralNetwork, setReferralNetwork] = useState<string>("")
   const [referralNotes, setReferralNotes] = useState("")
+  const [referralFollowUpDate, setReferralFollowUpDate] = useState("")
 
   // Issues
   const [challenges, setChallenges] = useState("")
@@ -181,7 +190,12 @@ export default function NewFieldReportPage() {
 
   const createEmptyEntry = (): InstitutionEntry => ({
     id: crypto.randomUUID(),
-    contactDetails: "",
+    institutionName: "",
+    designation: "",
+    contactName: "",
+    contactMobile: "",
+    contactEmail: "",
+    location: "",
     nextStep: "",
     assignedTo: "Me",
     followUpDate: "",
@@ -278,15 +292,16 @@ export default function NewFieldReportPage() {
       ]
 
       for (const entry of allEntries) {
-        if (!entry.contactDetails.trim()) continue
+        if (!entry.institutionName.trim()) continue
 
         const visitEntry = await SpocVisitsApi.create({
           report_id: reportId,
           visit_type: entry.type,
-          institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
-          contact_name: entry.contactDetails.split("|")[1]?.trim() || null,
-          contact_email: entry.contactDetails.split("|")[2]?.trim() || null,
-          contact_mobile: entry.contactDetails.split("|")[3]?.trim() || null,
+          institution_name: entry.institutionName.trim(),
+          contact_name: entry.contactName.trim() || null,
+          contact_email: entry.contactEmail.trim() || null,
+          contact_mobile: entry.contactMobile.trim() || null,
+          location: entry.location?.trim() || null,
           next_action: entry.nextStep || null,
           follow_up_role: entry.assignedTo === "Telecaller" ? "telecaller" : "self",
           follow_up_date: entry.followUpDate || null,
@@ -298,7 +313,7 @@ export default function NewFieldReportPage() {
             source_entry_id: visitEntry.id,
             assigned_to_role: entry.assignedTo === "Telecaller" ? "telecaller" : "spoc",
             assigned_to_user_id: entry.assignedTo === "Telecaller" ? null : spocId,
-            institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
+            institution_name: entry.institutionName.trim() || entry.type,
             action_description: entry.nextStep || "Follow up on visit",
             follow_up_date: entry.followUpDate,
           })
@@ -315,16 +330,44 @@ export default function NewFieldReportPage() {
 
       for (const act of activities) {
         if (act.done) {
-          await spocActivitiesApi.create({
+          const activity = await spocActivitiesApi.create({
             report_id: reportId,
             activity_type: act.type,
             done: true,
             notes: act.notes || null,
           })
+
+          // Create follow-up for alumni, corporate, and referral activities (not branding)
+          if (act.type !== "branding" && !isDraft) {
+            let followUpDate = ""
+            let actionDescription = ""
+
+            if (act.type === "alumni") {
+              followUpDate = alumniFollowUpDate
+              actionDescription = "Follow up on alumni networking"
+            } else if (act.type === "corporate") {
+              followUpDate = corporateFollowUpDate
+              actionDescription = "Follow up on corporate outreach"
+            } else if (act.type === "referral") {
+              followUpDate = referralFollowUpDate
+              actionDescription = "Follow up on referral networking"
+            }
+
+            if (followUpDate) {
+              await followUpTasksApi.create({
+                source_entry_id: activity.id,
+                assigned_to_role: "spoc",
+                assigned_to_user_id: spocId,
+                institution_name: act.type.charAt(0).toUpperCase() + act.type.slice(1),
+                action_description: actionDescription,
+                follow_up_date: followUpDate,
+              })
+            }
+          }
         }
       }
 
-      // 6. Create escalation if challenges noted
+      // 6. Create escalation if challenges noted (Section I - no follow-ups)
       if (challenges.trim()) {
         await SpocEscalationsApi.create({
           report_id: reportId,
@@ -377,29 +420,87 @@ export default function NewFieldReportPage() {
             </h4>
           </div>
           <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Contact Details</Label>
-              <Textarea
-                placeholder="Name | Contact Name | Email | Mobile"
-                value={entry.contactDetails}
-                onChange={(e) =>
-                  updateEntry(entries, setEntries, entry.id, "contactDetails", e.target.value)
-                }
-                rows={2}
-                className="mt-1"
-              />
+            <div className="grid gap-4 lg:grid-cols-4">
+              <div>
+                <Label className="text-xs"> Institute Name</Label>
+                <Input
+                  placeholder="School / Coaching / Admission Centre"
+                  value={entry.institutionName}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "institutionName", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Designation</Label>
+                <Input
+                  placeholder="Designation"
+                  value={entry.designation}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "designation", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Contact Name</Label>
+                <Input
+                  placeholder="Contact Name"
+                  value={entry.contactName}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "contactName", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Location</Label>
+                <Input
+                  placeholder="Location of the institution"
+                  value={entry.location}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "location", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Contact Number</Label>
+                <Input
+                  placeholder="Contact Number"
+                  value={entry.contactMobile}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "contactMobile", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Next Step of Action</Label>
-              <Textarea
-                placeholder="Describe the next action to be taken..."
-                value={entry.nextStep}
-                onChange={(e) =>
-                  updateEntry(entries, setEntries, entry.id, "nextStep", e.target.value)
-                }
-                rows={2}
-                className="mt-1"
-              />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <Label className="text-xs">Email ID</Label>
+                <Input
+                  placeholder="Email ID"
+                  value={entry.contactEmail}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "contactEmail", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Next Step of Action</Label>
+                <Textarea
+                  placeholder="Describe the next action to be taken..."
+                  value={entry.nextStep}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "nextStep", e.target.value)
+                  }
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -420,7 +521,7 @@ export default function NewFieldReportPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Me">Me (Field Agent)</SelectItem>
+                    <SelectItem value="Me">SPOC</SelectItem>
                     <SelectItem value="Telecaller">Telecaller</SelectItem>
                   </SelectContent>
                 </Select>
@@ -653,17 +754,27 @@ export default function NewFieldReportPage() {
               </div>
             </RadioGroup>
           </div>
-          {alumniOutreach === "Yes" && (
+          <div className="space-y-4">
+            {alumniOutreach === "Yes" && (
+              <div className="space-y-2">
+                <Label>Alumni Networking Notes</Label>
+                <Textarea
+                  placeholder="Alumni names, leads referred, follow-up needed..."
+                  value={alumniNotes}
+                  onChange={(e) => setAlumniNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label>Alumni Networking Notes</Label>
-              <Textarea
-                placeholder="Alumni names, leads referred, follow-up needed..."
-                value={alumniNotes}
-                onChange={(e) => setAlumniNotes(e.target.value)}
-                rows={3}
+              <Label>Follow-up Date</Label>
+              <Input
+                type="date"
+                value={alumniFollowUpDate}
+                onChange={(e) => setAlumniFollowUpDate(e.target.value)}
               />
             </div>
-          )}
+          </div>
         </div>
       </Section>
 
@@ -696,17 +807,27 @@ export default function NewFieldReportPage() {
               </div>
             </RadioGroup>
           </div>
-          {corporateOutreach === "Yes" && (
+          <div className="space-y-4">
+            {corporateOutreach === "Yes" && (
+              <div className="space-y-2">
+                <Label>Corporate Company Details</Label>
+                <Textarea
+                  placeholder="Company | Contact | Email | Mobile"
+                  value={corporateDetails}
+                  onChange={(e) => setCorporateDetails(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label>Corporate Company Details</Label>
-              <Textarea
-                placeholder="Company | Contact | Email | Mobile"
-                value={corporateDetails}
-                onChange={(e) => setCorporateDetails(e.target.value)}
-                rows={3}
+              <Label>Follow-up Date</Label>
+              <Input
+                type="date"
+                value={corporateFollowUpDate}
+                onChange={(e) => setCorporateFollowUpDate(e.target.value)}
               />
             </div>
-          )}
+          </div>
         </div>
       </Section>
 
@@ -739,17 +860,27 @@ export default function NewFieldReportPage() {
               </div>
             </RadioGroup>
           </div>
-          {referralNetwork === "Yes" && (
+          <div className="space-y-4">
+            {referralNetwork === "Yes" && (
+              <div className="space-y-2">
+                <Label>Referral Networking Notes</Label>
+                <Textarea
+                  placeholder="Who referred, student names, courses, follow-up status..."
+                  value={referralNotes}
+                  onChange={(e) => setReferralNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
             <div className="space-y-2">
-              <Label>Referral Networking Notes</Label>
-              <Textarea
-                placeholder="Who referred, student names, courses, follow-up status..."
-                value={referralNotes}
-                onChange={(e) => setReferralNotes(e.target.value)}
-                rows={3}
+              <Label>Follow-up Date</Label>
+              <Input
+                type="date"
+                value={referralFollowUpDate}
+                onChange={(e) => setReferralFollowUpDate(e.target.value)}
               />
             </div>
-          )}
+          </div>
         </div>
       </Section>
 

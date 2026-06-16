@@ -196,7 +196,7 @@ export default function spocDashboard() {
             </div>
           </CardContent>
         </Card>
-        {/* <Card>
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-orange-100 p-2">
@@ -212,16 +212,16 @@ export default function spocDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2">
-                <Phone className="h-5 w-5 text-purple-600" />
+              <div className="rounded-lg bg-red-100 p-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spocStats.telecallerFollowupsRaised}</p>
-                <p className="text-xs text-muted-foreground">TC Follow-ups Raised</p>
+                <p className="text-2xl font-bold">{spocStats.overdueFollowups}</p>
+                <p className="text-xs text-muted-foreground">Overdue Follow-ups</p>
               </div>
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
       </div>
 
       {/* Quick Actions */}
@@ -261,7 +261,7 @@ export default function spocDashboard() {
                 </div>
               </Link>
             </Button>
-            {/* <Button asChild variant="outline" className="h-auto py-4 justify-start">
+            <Button asChild variant="outline" className="h-auto py-4 justify-start">
               <Link href="/spoc/followups">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-orange-100 p-2">
@@ -275,7 +275,7 @@ export default function spocDashboard() {
                   </div>
                 </div>
               </Link>
-            </Button> */}
+            </Button>
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
               <Link href="/spoc/prospects">
                 <div className="flex items-center gap-3">
@@ -363,7 +363,7 @@ export default function spocDashboard() {
         </Card>
 
         {/* Pending Follow-ups */}
-        {/* <Card>
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base">Pending Follow-ups</CardTitle>
             <Button asChild variant="ghost" size="sm">
@@ -428,7 +428,7 @@ export default function spocDashboard() {
               </div>
             )}
           </CardContent>
-        </Card> */}
+        </Card>
       </div>
     </div>
   )
