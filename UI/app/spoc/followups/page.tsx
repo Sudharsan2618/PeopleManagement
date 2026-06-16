@@ -82,8 +82,14 @@ const categoryConfig: Record<
     bgColor: "bg-purple-100",
     dotColor: "#9333ea",
   },
+  admission_centre: {
+    label: "Admission Centre Partnership",
+    color: "text-amber-600",
+    bgColor: "bg-amber-100",
+    dotColor: "#d97706",
+  },
   alumni_networking: {
-    label: "Alumni Networking",
+    label: "Alumni Networking / Referral Networking",
     color: "text-green-600",
     bgColor: "bg-green-100",
     dotColor: "#16a34a",
@@ -94,15 +100,9 @@ const categoryConfig: Record<
     bgColor: "bg-blue-100",
     dotColor: "#2563eb",
   },
-  referral_networking: {
-    label: "Referral Networking",
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
-    dotColor: "#ea580c",
-  },
 }
 
-type OutreachType = "school" | "coaching_centre" | "alumni_networking" | "corporate_outreach" | "referral_networking" | "all"
+type OutreachType = "school" | "coaching_centre" | "admission_centre" | "alumni_networking" | "corporate_outreach" | "all"
 
 // Helper function to determine category of a task based on institution name
 const getTaskCategory = (task: FollowUpTask): OutreachType => {
@@ -113,14 +113,14 @@ const getTaskCategory = (task: FollowUpTask): OutreachType => {
   if (name.includes("academy") || name.includes("coaching") || name.includes("centre") || name.includes("center") || name.includes("institute")) {
     return "coaching_centre"
   }
-  if (name.includes("alumni") || name.includes("graduate") || name.includes("former")) {
+  if (name.includes("admission") || name.includes("partner")) {
+    return "admission_centre"
+  }
+  if (name.includes("alumni") || name.includes("graduate") || name.includes("former") || name.includes("referral") || name.includes("network") || name.includes("contact")) {
     return "alumni_networking"
   }
   if (name.includes("corporate") || name.includes("company") || name.includes("business") || name.includes("enterprise")) {
     return "corporate_outreach"
-  }
-  if (name.includes("referral") || name.includes("network") || name.includes("contact")) {
-    return "referral_networking"
   }
   return "school" // Default fallback
 }
@@ -389,11 +389,18 @@ export default function spocFollowupsPage() {
           Coaching Centre Outreach
         </Button>
         <Button
+          variant={outreachType === "admission_centre" ? "default" : "outline"}
+          onClick={() => setOutreachType("admission_centre")}
+          size="sm"
+        >
+          Admission Centre Partnership
+        </Button>
+        <Button
           variant={outreachType === "alumni_networking" ? "default" : "outline"}
           onClick={() => setOutreachType("alumni_networking")}
           size="sm"
         >
-          Alumni Networking
+          Alumni Networking / Referral Networking
         </Button>
         <Button
           variant={outreachType === "corporate_outreach" ? "default" : "outline"}
@@ -401,13 +408,6 @@ export default function spocFollowupsPage() {
           size="sm"
         >
           Corporate Outreach
-        </Button>
-        <Button
-          variant={outreachType === "referral_networking" ? "default" : "outline"}
-          onClick={() => setOutreachType("referral_networking")}
-          size="sm"
-        >
-          Referral Networking
         </Button>
       </div>
 

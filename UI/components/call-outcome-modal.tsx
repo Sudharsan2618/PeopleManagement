@@ -94,7 +94,7 @@ const outcomeOptions: {
     {
       value: "NotAnswered",
       label: "No response",
-      description: "Cold outcome - requires follow-up",
+      description: "Cold outcome - no follow-up needed",
       icon: PhoneOff,
       color: "text-orange-500",
     },
@@ -230,8 +230,7 @@ export function CallOutcomeModal({
   const callbackSectionActive =
     selectedOutcome === "CallBack" ||
     selectedOutcome === "Interested" ||
-    selectedOutcome === "Qualified" ||
-    selectedOutcome === "NotAnswered"
+    selectedOutcome === "Qualified"
 
   const isFormValid = () => {
     if (!selectedOutcome) return false

@@ -393,7 +393,7 @@ export default function TelecallerDashboard() {
 
       // Build callback timestamp if scheduled
       let callbackScheduledAt: string | null = null
-      const callbackOutcomes = ["CallBack", "Interested", "Qualified", "NotAnswered"]
+      const callbackOutcomes = ["CallBack", "Interested", "Qualified"]
       if (callbackOutcomes.includes(outcome) && data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)

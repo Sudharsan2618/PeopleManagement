@@ -72,12 +72,10 @@ const adminNav: NavItem[] = [
   { title: "Prospects", href: "/admin/prospects", icon: Users },
   { title: "Assign Prospects", href: "/admin/assign", icon: ClipboardList },
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
-  { title: "spocs", href: "/admin/spocs", icon: MapPin },
-  { title: "Field Reports", href: "/admin/field-reports", icon: FileText },
-  // { title: "Follow-ups", href: "/admin/followups", icon: History },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
   { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
+  { title: "SPOC Reports", href: "/admin/spoc-reports", icon: FileText },
 ]
 
 function getNavItems(role: UserRole): NavItem[] {
