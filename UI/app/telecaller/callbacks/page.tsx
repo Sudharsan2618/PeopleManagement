@@ -158,7 +158,7 @@ export default function CallbacksPage() {
       const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
       let callbackScheduledAt: string | null = null
-      const callbackOutcomes = ["CallBack", "Interested", "Qualified", "NotInterested"]
+      const callbackOutcomes = ["CallBack", "Interested", "Qualified"]
       if (callbackOutcomes.includes(outcome) && data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)
