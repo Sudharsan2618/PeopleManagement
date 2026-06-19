@@ -65,6 +65,10 @@ class spocReportService:
         query = """
             INSERT INTO spoc_reports (spoc_id, report_date, area_location, is_draft, created_at)
             VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (spoc_id, report_date) 
+            DO UPDATE SET 
+                area_location = EXCLUDED.area_location,
+                is_draft = EXCLUDED.is_draft
             RETURNING id
         """
         return execute_insert(query, (spoc_id, report_date, area_location, is_draft, get_ist_now()))

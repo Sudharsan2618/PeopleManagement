@@ -1,739 +1,701 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
+import { useState, useEffect, useCallback } from "react"
 import {
-  Search,
-  User,
-  Calendar,
-  MapPin,
-  FileText,
-  Loader2,
-  RefreshCw,
-  CheckCircle2,
-  Eye,
-  School,
-  BookOpen,
-  Building2,
-  Megaphone,
-  Users,
-  Briefcase,
-  AlertCircle,
-  Clock,
+  Search, User, Calendar, FileText, RefreshCw, School, BookOpen,
+  Building2, Megaphone, Users, Briefcase, AlertCircle, Download,
+  ChevronDown, ChevronUp, MapPin, Phone, Mail, Clock, CheckCircle2,
+  XCircle, BarChart3, Filter,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import {
-  usersApi,
-  SpocReportsApi,
-  SpocVisitsApi,
-  spocActivitiesApi,
-  SpocEscalationsApi,
-  followUpTasksApi,
-  type User as ApiUser,
+  usersApi, SpocReportsApi, SpocVisitsApi, spocActivitiesApi,
+  SpocEscalationsApi, followUpTasksApi,
+  type User as ApiUser, type SpocReport, type SpocVisitEntry,
+  type SpocActivity, type SpocEscalation, type FollowUpTask,
 } from "@/lib/api-client"
 
-type ReportTab = "all" | "school" | "coaching" | "admission" | "branding" | "alumni" | "corporate" | "issues"
+// ── Types ─────────────────────────────────────────────────────────────────
+interface EnrichedReport extends SpocReport {
+  spoc?: ApiUser
+  visits: SpocVisitEntry[]
+  activities: SpocActivity[]
+  escalations: SpocEscalation[]
+  followUps: FollowUpTask[]
+}
 
-export default function AdminSpocReportsPage() {
-  const { toast } = useToast()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterDraft, setFilterDraft] = useState<string>("all")
-  const [activeTab, setActiveTab] = useState<ReportTab>("all")
-  const [reports, setReports] = useState<any[]>([])
-  const [users, setUsers] = useState<ApiUser[]>([])
-  const [visitCounts, setVisitCounts] = useState<Record<number, number>>({})
-  const [followUps, setFollowUps] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+// ── Category config ────────────────────────────────────────────────────────
+const VISIT_TYPE_CONFIG: Record<string, { label: string; icon: any; color: string; dot: string; bg: string }> = {
+  school:            { label: "School Outreach",              icon: School,     color: "text-red-600",    dot: "#dc2626", bg: "bg-red-50 border-red-200" },
+  coaching_centre:   { label: "Coaching Centre Outreach",     icon: BookOpen,   color: "text-blue-600",   dot: "#2563eb", bg: "bg-blue-50 border-blue-200" },
+  admission_partner: { label: "Admission Centre Partnership", icon: Building2,  color: "text-purple-600", dot: "#9333ea", bg: "bg-purple-50 border-purple-200" },
+}
+const ACTIVITY_TYPE_CONFIG: Record<string, { label: string; icon: any; color: string; dot: string; bg: string }> = {
+  branding:  { label: "Local Branding Activities",             icon: Megaphone, color: "text-orange-600", dot: "#f97316", bg: "bg-orange-50 border-orange-200" },
+  alumni:    { label: "Alumni / Referral Networking",          icon: Users,     color: "text-green-600",  dot: "#16a34a", bg: "bg-green-50 border-green-200" },
+  corporate: { label: "Corporate / Local Business Outreach",   icon: Briefcase, color: "text-amber-600",  dot: "#d97706", bg: "bg-amber-50 border-amber-200" },
+  local_branding:  { label: "Local Branding Activities",             icon: Megaphone, color: "text-orange-600", dot: "#f97316", bg: "bg-orange-50 border-orange-200" },
+  alumni_networking:    { label: "Alumni / Referral Networking",          icon: Users,     color: "text-green-600",  dot: "#16a34a", bg: "bg-green-50 border-green-200" },
+  corporate_outreach: { label: "Corporate / Local Business Outreach",   icon: Briefcase, color: "text-amber-600",  dot: "#d97706", bg: "bg-amber-50 border-amber-200" },
+}
 
-  const fetchData = async () => {
-    try {
-      setIsLoading(true)
-      const [allReports, allUsers, allFollowUps] = await Promise.all([
-        SpocReportsApi.getAll(),
-        usersApi.getByRole("spoc"),
-        followUpTasksApi.getAll(),
+function parseContactDetails(actionDescription: string) {
+  try {
+    const parts = actionDescription?.split("||")
+    if (parts && parts[1]) return JSON.parse(parts[1]) as Record<string, string>
+  } catch { }
+  return null
+}
+
+// ── CSV Export ─────────────────────────────────────────────────────────────
+function exportToCSV(reports: EnrichedReport[]) {
+  const rows: string[][] = []
+  rows.push([
+    "Report Date", "SPOC Name", "Area/Location", "Status",
+    "Section", "Institution / Contact", "Contact Person", "Mobile", "Email",
+    "Designation", "Next Step / Notes", "Follow-up Date", "Follow-up Status",
+  ])
+
+  for (const r of reports) {
+    const baseRow = [r.report_date, r.spoc?.name || "", r.area_location, r.is_draft ? "Draft" : "Submitted"]
+
+    // Visits
+    for (const v of r.visits) {
+      const cfg = VISIT_TYPE_CONFIG[v.visit_type]
+      const fu = r.followUps.find(f => f.source_entry_id === v.id)
+      rows.push([
+        ...baseRow,
+        cfg?.label || v.visit_type,
+        v.institution_name,
+        v.contact_name || "",
+        v.contact_mobile || "",
+        v.contact_email || "",
+        "",
+        v.next_action || "",
+        v.follow_up_date || fu?.follow_up_date || "",
+        fu?.status || "",
       ])
-      setReports(allReports)
-      setUsers(allUsers)
-      setFollowUps(allFollowUps)
+    }
 
-      // Fetch visit entries count per report
-      const counts: Record<number, number> = {}
-      for (const report of allReports) {
-        try {
-          const entries = await SpocVisitsApi.getByReport(report.id)
-          counts[report.id] = entries.length
-        } catch {
-          counts[report.id] = 0
+    // Activities (alumni / corporate with follow-ups)
+    for (const a of r.activities) {
+      const cfg = ACTIVITY_TYPE_CONFIG[a.activity_type]
+      const relFU = r.followUps.filter(f => f.source_entry_id === a.id)
+      if (relFU.length === 0) {
+        rows.push([...baseRow, cfg?.label || a.activity_type, "", "", "", "", "", a.notes || "", "", ""])
+      } else {
+        for (const f of relFU) {
+          const cd = parseContactDetails(f.action_description) || {}
+          rows.push([
+            ...baseRow,
+            cfg?.label || a.activity_type,
+            f.institution_name || "",
+            cd.contact_name || "",
+            cd.contact_mobile || "",
+            cd.contact_email || "",
+            cd.designation || "",
+            a.notes || "",
+            f.follow_up_date || "",
+            f.status || "",
+          ])
         }
       }
-      setVisitCounts(counts)
-    } catch (err) {
-      toast({
-        title: "Error fetching SPOC reports",
-        description: err instanceof Error ? err.message : "Failed to load reports.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+    }
+
+    // Escalations
+    for (const e of r.escalations) {
+      rows.push([...baseRow, "Issues & Observations", "", "", "", "", "", e.description, "", e.resolved_at ? "Resolved" : "Open"])
+    }
+
+    if (r.visits.length === 0 && r.activities.length === 0 && r.escalations.length === 0) {
+      rows.push([...baseRow, "—", "—", "", "", "", "", "", "", ""])
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n")
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `spoc_reports_${new Date().toISOString().split("T")[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
-  const userMap = useMemo(() => {
-    const map: Record<number, ApiUser> = {}
-    users.forEach((u) => {
-      map[u.id] = u
-    })
-    return map
-  }, [users])
+// ── PDF Export ─────────────────────────────────────────────────────────────
+function exportToPDF(reports: EnrichedReport[]) {
+  const doc = new jsPDF("landscape")
+  
+  // Title
+  doc.setFontSize(18)
+  doc.setTextColor(31, 41, 55) // Gray-800
+  doc.text("SPOC Field Reports", 14, 22)
+  
+  doc.setFontSize(10)
+  doc.setTextColor(107, 114, 128) // Gray-500
+  doc.text(`Generated on: ${new Date().toLocaleDateString("en-IN")}`, 14, 30)
 
-  const filteredReports = useMemo(() => {
-    return reports
-      .filter((r: any) => {
-        const spoc = userMap[r.spoc_id]
-        const matchesSearch =
-          searchQuery === "" ||
-          (r.area_location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (spoc?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesDraft =
-          filterDraft === "all" ||
-          (filterDraft === "submitted" && !r.is_draft) ||
-          (filterDraft === "draft" && r.is_draft)
-        return matchesSearch && matchesDraft
-      })
-      .sort(
-        (a: any, b: any) =>
-          new Date(b.report_date).getTime() - new Date(a.report_date).getTime()
+  // Summary Counts
+  const totalVisits = reports.reduce((s, r) => {
+    const netCount = r.activities.filter(a => ['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type)).reduce((acc, a) => {
+      const relFU = r.followUps.filter(f => f.source_entry_id === a.id && f.action_description?.includes("||"))
+      if (!a.notes && relFU.length === 0) return acc
+      return acc + Math.max(1, relFU.length)
+    }, 0)
+    return s + r.visits.length + netCount
+  }, 0)
+
+  const pendingFU = reports.reduce((s, r) => s + r.followUps.filter(f => f.status === "pending").length, 0)
+  const completedFU = reports.reduce((s, r) => s + r.followUps.filter(f => f.status === "completed").length, 0)
+
+  doc.setFontSize(11)
+  doc.setTextColor(55, 65, 81) // Gray-700
+  doc.text(`Total Reports: ${reports.length}   |   Total Visits: ${totalVisits}   |   Pending Follow-ups: ${pendingFU}   |   Completed Follow-ups: ${completedFU}`, 14, 40)
+
+  // Table Data
+  const head = [["Date", "SPOC", "Category", "Institution", "Contact Name", "Mobile", "Email", "Follow-up", "Status"]]
+  const body: string[][] = []
+
+  for (const r of reports) {
+    const baseRow = [r.report_date, r.spoc?.name || "-"]
+    
+    // Visits
+    for (const v of r.visits) {
+      const cfg = VISIT_TYPE_CONFIG[v.visit_type]
+      const fu = r.followUps.find(f => f.source_entry_id === v.id && !f.action_description?.includes("||"))
+      body.push([
+        ...baseRow,
+        cfg?.label || v.visit_type,
+        v.institution_name || "-",
+        v.contact_name || "-",
+        v.contact_mobile || "-",
+        v.contact_email || "-",
+        v.follow_up_date || fu?.follow_up_date || "-",
+        fu?.status || "-"
+      ])
+    }
+
+    // Activities (Alumni/Corporate)
+    for (const a of r.activities) {
+      const cfg = ACTIVITY_TYPE_CONFIG[a.activity_type]
+      const relFU = r.followUps.filter(f => f.source_entry_id === a.id && f.action_description?.includes("||"))
+      
+      if (['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type)) {
+        if (relFU.length === 0 && a.notes) {
+          body.push([...baseRow, cfg?.label || a.activity_type, "-", "-", "-", "-", "-", "-"])
+        } else {
+          for (const f of relFU) {
+            const cd = parseContactDetails(f.action_description) || {}
+            body.push([
+              ...baseRow,
+              cfg?.label || a.activity_type,
+              f.institution_name || "-",
+              cd.contact_name || "-",
+              cd.contact_mobile || "-",
+              cd.contact_email || "-",
+              f.follow_up_date || "-",
+              f.status || "-"
+            ])
+          }
+        }
+      } else if (a.notes) {
+        // Branding / Other activities
+        body.push([...baseRow, cfg?.label || a.activity_type, "-", "-", "-", "-", "-", "-"])
+      }
+    }
+  }
+
+  autoTable(doc, {
+    startY: 46,
+    head: head,
+    body: body,
+    theme: "grid",
+    headStyles: { fillColor: [79, 70, 229] }, // Indigo-600
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+
+  doc.save(`spoc_reports_${new Date().toISOString().split("T")[0]}.pdf`)
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────
+export default function AdminSpocReportsPage() {
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(true)
+  const [allReports, setAllReports] = useState<EnrichedReport[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterStatus, setFilterStatus] = useState<"all" | "submitted" | "draft">("all")
+  const [filterSpoc, setFilterSpoc] = useState<string>("all")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [expandedReports, setExpandedReports] = useState<Set<number>>(new Set())
+  const [spocList, setSpocList] = useState<ApiUser[]>([])
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [reports, users, followUps] = await Promise.all([
+        SpocReportsApi.getAll(),
+        usersApi.getAll(),
+        followUpTasksApi.getAll(),
+      ])
+      const spocs = users.filter(u => u.role === "spoc")
+      setSpocList(spocs)
+      const userMap: Record<number, ApiUser> = {}
+      users.forEach(u => { userMap[u.id] = u })
+
+      const enriched: EnrichedReport[] = await Promise.all(
+        reports.map(async (r) => {
+          const [visits, activities, escalations] = await Promise.all([
+            SpocVisitsApi.getByReport(r.id).catch(() => [] as SpocVisitEntry[]),
+            spocActivitiesApi.getByReport(r.id).catch(() => [] as SpocActivity[]),
+            SpocEscalationsApi.getByReport(r.id).catch(() => [] as SpocEscalation[]),
+          ])
+          // Follow-ups linked to this report's visits or activities.
+          // Activity follow-ups are identified by '||' in action_description (they store JSON contact info).
+          // Visit follow-ups do NOT have '||'. This disambiguates overlapping source_entry_id numbers.
+          const visitIds = new Set(visits.map(v => v.id))
+          const actIds = new Set(activities.map(a => a.id))
+          const isActivityFU = (f: FollowUpTask) => f.action_description?.includes("||")
+          const reportFU = followUps.filter(f => {
+            if (f.source_entry_id == null) return false
+            if (isActivityFU(f)) return actIds.has(f.source_entry_id)
+            return visitIds.has(f.source_entry_id)
+          })
+          return { ...r, spoc: userMap[r.spoc_id], visits, activities, escalations, followUps: reportFU }
+        })
       )
-  }, [reports, searchQuery, filterDraft, userMap])
+      enriched.sort((a, b) => b.report_date.localeCompare(a.report_date))
+      setAllReports(enriched)
+    } catch (e) {
+      toast({ title: "Failed to load reports", variant: "destructive" })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [toast])
 
-  const todayStr = new Date().toISOString().split("T")[0]
-  const submittedToday = reports.filter(
-    (r: any) => r.report_date === todayStr && !r.is_draft
-  ).length
+  useEffect(() => { loadData() }, [loadData])
 
-  const totalFollowUps = followUps.length
-  const pendingFollowUps = followUps.filter((f) => f.status === "pending").length
-  const completedFollowUps = followUps.filter((f) => f.status === "completed").length
-  const overdueFollowUps = followUps.filter((f) => {
-    return f.status === "pending" && f.follow_up_date && f.follow_up_date < todayStr
-  }).length
+  const filtered = allReports.filter(r => {
+    if (filterStatus === "submitted" && r.is_draft) return false
+    if (filterStatus === "draft" && !r.is_draft) return false
+    if (filterSpoc !== "all" && String(r.spoc_id) !== filterSpoc) return false
+    if (dateFrom && r.report_date < dateFrom) return false
+    if (dateTo && r.report_date > dateTo) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      if (!r.area_location?.toLowerCase().includes(q) && !r.spoc?.name?.toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  // Summary stats
+  const totalFollowUps = filtered.reduce((s, r) => s + r.followUps.length, 0)
+  const pendingFU = filtered.reduce((s, r) => s + r.followUps.filter(f => f.status === "pending").length, 0)
+  const completedFU = filtered.reduce((s, r) => s + r.followUps.filter(f => f.status === "completed").length, 0)
+  const totalVisits = filtered.reduce((s, r) => {
+    const netCount = r.activities.filter(a => ['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type)).reduce((acc, a) => {
+      const relFU = r.followUps.filter(f => f.source_entry_id === a.id && f.action_description?.includes("||"))
+      if (!a.notes && relFU.length === 0) return acc
+      return acc + Math.max(1, relFU.length)
+    }, 0)
+    return s + r.visits.length + netCount
+  }, 0)
+
+  const toggleExpand = (id: number) => {
+    setExpandedReports(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   if (isLoading) {
-    return <PageSkeleton />
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Loading SPOC reports…</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">SPOC Reports</h1>
-          <p className="text-muted-foreground mt-1">
-            Comprehensive view of field activity reports and follow-ups
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">SPOC Field Reports</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">View, filter and export all daily field activity reports</p>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh SPOC Reports
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={loadData}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
+          <Button
+            size="sm"
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
+            onClick={() => exportToPDF(filtered)}
+          >
+            <Download className="h-4 w-4 mr-2" /> Export PDF
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{reports.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total Reports</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{submittedToday}</div>
-            <p className="text-xs text-muted-foreground mt-1">Submitted Today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{totalFollowUps}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total Follow-ups</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">{pendingFollowUps}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pending Follow-ups</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{completedFollowUps}</div>
-            <p className="text-xs text-muted-foreground mt-1">Completed Follow-ups</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">{overdueFollowUps}</div>
-            <p className="text-xs text-muted-foreground mt-1">Overdue Follow-ups</p>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Total Reports", value: filtered.length, icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Total Visits", value: totalVisits, icon: MapPin, color: "text-purple-600", bg: "bg-purple-50" },
+          { label: "Pending Follow-ups", value: pendingFU, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Completed Follow-ups", value: completedFU, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <Card key={label} className="border-0 shadow-sm">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={cn("p-2 rounded-lg", bg)}>
+                <Icon className={cn("h-5 w-5", color)} />
+              </div>
+              <div>
+                <div className="text-2xl font-bold">{value}</div>
+                <div className="text-xs text-muted-foreground">{label}</div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Follow-ups Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Follow-ups from SPOCs
+      {/* Filters */}
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filters & Date Range
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {followUps.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No follow-ups found
-              </div>
-            ) : (
-              followUps.map((followUp: any) => {
-                const spoc = users.find((u) => u.id === followUp.assigned_to_user_id)
-                const isOverdue = followUp.status === "pending" && followUp.follow_up_date && followUp.follow_up_date < todayStr
-                
-                return (
-                  <div key={followUp.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-sm">{followUp.institution_name || "Unknown Institution"}</h3>
-                        <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {spoc?.name || "Unknown SPOC"}
-                          </div>
-                          {followUp.follow_up_date && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {followUp.follow_up_date}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          followUp.status === "completed"
-                            ? "bg-green-50 text-green-700"
-                            : isOverdue
-                            ? "bg-red-50 text-red-700"
-                            : "bg-yellow-50 text-yellow-700"
-                        )}
-                      >
-                        {followUp.status === "completed"
-                          ? "Completed"
-                          : isOverdue
-                          ? "Overdue"
-                          : "Pending"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{followUp.action_description}</p>
-                  </div>
-                )
-              })
-            )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="relative lg:col-span-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search SPOC or location…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as any)}
+              className="h-9 px-3 border rounded-md bg-background text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="submitted">Submitted</option>
+              <option value="draft">Drafts</option>
+            </select>
+            <select
+              value={filterSpoc}
+              onChange={e => setFilterSpoc(e.target.value)}
+              className="h-9 px-3 border rounded-md bg-background text-sm"
+            >
+              <option value="all">All SPOCs</option>
+              {spocList.map(s => (
+                <option key={s.id} value={String(s.id)}>{s.name}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">From:</span>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-9 text-sm" />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">To:</span>
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-9 text-sm" />
+            </div>
           </div>
-          <div className="mt-4 text-sm text-muted-foreground">
-            Showing {followUps.length} follow-ups
-          </div>
+          {(dateFrom || dateTo || filterSpoc !== "all" || filterStatus !== "all" || searchQuery) && (
+            <Button
+              variant="ghost" size="sm" className="mt-2 h-7 text-xs text-muted-foreground"
+              onClick={() => { setDateFrom(""); setDateTo(""); setFilterSpoc("all"); setFilterStatus("all"); setSearchQuery("") }}
+            >
+              <XCircle className="h-3 w-3 mr-1" /> Clear filters
+            </Button>
+          )}
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportTab)}>
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
-          <TabsTrigger value="all">All Reports</TabsTrigger>
-          <TabsTrigger value="school">School</TabsTrigger>
-          <TabsTrigger value="coaching">Coaching</TabsTrigger>
-          <TabsTrigger value="admission">Admission</TabsTrigger>
-          <TabsTrigger value="branding">Branding</TabsTrigger>
-          <TabsTrigger value="alumni">Alumni/Referral</TabsTrigger>
-          <TabsTrigger value="corporate">Corporate</TabsTrigger>
-          <TabsTrigger value="issues">Issues</TabsTrigger>
-        </TabsList>
+      {/* Reports List */}
+      <div className="space-y-3">
+        {filtered.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-16 text-center text-muted-foreground">
+              <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-20" />
+              <p className="font-medium">No reports found</p>
+              <p className="text-sm">Try adjusting your filters or date range</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filtered.map(report => (
+            <ReportCard
+              key={report.id}
+              report={report}
+              expanded={expandedReports.has(report.id)}
+              onToggle={() => toggleExpand(report.id)}
+            />
+          ))
+        )}
+      </div>
 
-        <TabsContent value="all">
-          <ReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            visitCounts={visitCounts}
-            followUps={followUps}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            filterDraft={filterDraft}
-            setFilterDraft={setFilterDraft}
-          />
-        </TabsContent>
-
-        <TabsContent value="school">
-          <FieldReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            visitCounts={visitCounts}
-            fieldType="school"
-            icon={School}
-            title="School Outreach"
-          />
-        </TabsContent>
-
-        <TabsContent value="coaching">
-          <FieldReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            visitCounts={visitCounts}
-            fieldType="coaching_centre"
-            icon={BookOpen}
-            title="Coaching Centre Outreach"
-          />
-        </TabsContent>
-
-        <TabsContent value="admission">
-          <FieldReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            visitCounts={visitCounts}
-            fieldType="admission_partner"
-            icon={Building2}
-            title="Admission Centre Partnership"
-          />
-        </TabsContent>
-
-        <TabsContent value="branding">
-          <ActivityReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            activityType="branding"
-            icon={Megaphone}
-            title="Local Branding Activities"
-          />
-        </TabsContent>
-
-        <TabsContent value="alumni">
-          <ActivityReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            activityType="alumni"
-            icon={Users}
-            title="Alumni Networking / Referral Networking"
-          />
-        </TabsContent>
-
-        <TabsContent value="corporate">
-          <ActivityReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            activityType="corporate"
-            icon={Briefcase}
-            title="Corporate / Local Business Outreach"
-          />
-        </TabsContent>
-
-        <TabsContent value="issues">
-          <IssuesReportContent
-            reports={filteredReports}
-            userMap={userMap}
-            icon={AlertCircle}
-            title="Issues & Observations"
-          />
-        </TabsContent>
-      </Tabs>
+      <p className="text-xs text-muted-foreground text-right">
+        Showing {filtered.length} of {allReports.length} reports
+      </p>
     </div>
   )
 }
 
-function ReportContent({
-  reports,
-  userMap,
-  visitCounts,
-  followUps,
-  searchQuery,
-  setSearchQuery,
-  filterDraft,
-  setFilterDraft,
-}: any) {
+// ── Report Card ────────────────────────────────────────────────────────────
+function ReportCard({ report, expanded, onToggle }: { report: EnrichedReport; expanded: boolean; onToggle: () => void }) {
+  const today = new Date().toISOString().split("T")[0]
+  const totalFollowUps = report.followUps.length
+  const pendingFU = report.followUps.filter(f => f.status === "pending").length
+  const overdueFU = report.followUps.filter(f => f.status === "pending" && (f.follow_up_date || "") < today).length
+  
+  const netCount = report.activities.filter(a => ['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type)).reduce((acc, a) => {
+    const relFU = report.followUps.filter(f => f.source_entry_id === a.id && f.action_description?.includes("||"))
+    if (!a.notes && relFU.length === 0) return acc
+    return acc + Math.max(1, relFU.length)
+  }, 0)
+  const displayVisits = report.visits.length + netCount
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <CardTitle>All Reports</CardTitle>
-          <div className="flex gap-2 flex-col lg:flex-row">
-            <div className="relative flex-1 lg:flex-none lg:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by location or agent..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+    <Card className="border shadow-sm hover:shadow-md transition-shadow">
+      {/* Report Header - always visible */}
+      <div
+        className="flex items-center justify-between p-4 cursor-pointer select-none"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-bold text-indigo-700">
+              {report.spoc?.name?.charAt(0).toUpperCase() || "?"}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-sm">{report.spoc?.name || "Unknown SPOC"}</span>
+              <Badge variant="outline" className={cn(
+                "text-xs",
+                report.is_draft ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-green-50 text-green-700 border-green-200"
+              )}>
+                {report.is_draft ? "Draft" : "Submitted"}
+              </Badge>
             </div>
-            <select
-              value={filterDraft}
-              onChange={(e) => setFilterDraft(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-background text-sm"
-            >
-              <option value="all">All Reports</option>
-              <option value="submitted">Submitted</option>
-              <option value="draft">Drafts</option>
-            </select>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{report.report_date}</span>
+              <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{report.area_location}</span>
+              <span className="flex items-center gap-1"><FileText className="h-3 w-3" />{displayVisits} visits</span>
+              {totalFollowUps > 0 && (
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{totalFollowUps} follow-ups</span>
+              )}
+            </div>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {reports.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              No reports found
-            </div>
-          ) : (
-            reports.map((report: any) => {
-              const spoc = userMap[report.spoc_id]
-              const visits = visitCounts[report.id] || 0
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          {overdueFU > 0 && <Badge className="bg-red-500 text-white text-xs">{overdueFU} overdue</Badge>}
+          {pendingFU > 0 && !overdueFU && <Badge className="bg-amber-100 text-amber-700 text-xs border-amber-200" variant="outline">{pendingFU} pending</Badge>}
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </div>
+      </div>
 
-              return (
-                <div
-                  key={report.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-sm">{report.area_location}</h3>
-                        <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {spoc?.name || "Unknown Agent"}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(
-                              report.report_date + "T00:00:00"
-                            ).toLocaleDateString("en-IN", {
-                              dateStyle: "medium",
-                            })}
-                          </div>
-                          {report.submitted_at && (
-                            <div className="flex items-center gap-1">
-                              <CheckCircle2 className="h-3 w-3 text-green-600" />
-                              Submitted{" "}
-                              {new Date(report.submitted_at).toLocaleString(
-                                "en-IN",
-                                { dateStyle: "short", timeStyle: "short" }
-                              )}
-                            </div>
-                          )}
+      {/* Expanded Detail */}
+      {expanded && (
+        <div className="border-t px-4 pb-4 space-y-4 pt-4">
+          {/* Visits & Networking (Alumni/Corporate) */}
+          {(report.visits.length > 0 || report.activities.some(a => ['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type) && (a.notes || report.followUps.some(f => f.source_entry_id === a.id && f.action_description?.includes("||"))))) && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Field Visits</h3>
+              <div className="space-y-2">
+                {report.visits.map(visit => {
+                  const cfg = VISIT_TYPE_CONFIG[visit.visit_type]
+                  // Only match follow-ups that do NOT have '||' (those are activity FUs)
+                  const fu = report.followUps.find(f => f.source_entry_id === visit.id && !f.action_description?.includes("||"))
+                  const isOverdue = fu && fu.status === "pending" && (fu.follow_up_date || "") < new Date().toISOString().split("T")[0]
+                  return (
+                    <div key={visit.id} className={cn("p-3 rounded-lg border", cfg?.bg || "bg-gray-50 border-gray-200")}>
+                      <div className="flex items-start justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg?.dot || "#888" }} />
+                          <span className={cn("text-xs font-semibold", cfg?.color || "text-gray-600")}>{cfg?.label || visit.visit_type}</span>
                         </div>
+                        {fu && (
+                          <Badge variant="outline" className={cn(
+                            "text-xs",
+                            fu.status === "completed" ? "bg-green-50 text-green-700" : isOverdue ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                          )}>
+                            {fu.status === "completed" ? "Completed" : isOverdue ? "Overdue" : "Pending"}
+                          </Badge>
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-sm mb-2">{visit.institution_name}</h4>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        {visit.contact_name && <Detail icon={User} label="Contact" value={visit.contact_name} />}
+                        {visit.contact_mobile && <Detail icon={Phone} label="Mobile" value={visit.contact_mobile} />}
+                        {visit.contact_email && <Detail icon={Mail} label="Email" value={visit.contact_email} />}
+                        {visit.next_action && <Detail icon={FileText} label="Next Step" value={visit.next_action} />}
+                        {(fu?.follow_up_date || visit.follow_up_date) && (
+                          <Detail icon={Calendar} label="Follow-up Date" value={fu?.follow_up_date || visit.follow_up_date || ""} />
+                        )}
                       </div>
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        report.is_draft
-                          ? "bg-yellow-50 text-yellow-700"
-                          : "bg-green-50 text-green-700"
+                  )
+                })}
+                {/* Alumni & Corporate Activities */}
+                {report.activities.filter(a => ['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type)).map(activity => {
+                  const cfg = ACTIVITY_TYPE_CONFIG[activity.activity_type]
+                  const relFU = report.followUps.filter(f => f.source_entry_id === activity.id && f.action_description?.includes("||"))
+                  
+                  if (!activity.notes && relFU.length === 0) return null;
+
+                  return (
+                    <div key={activity.id} className={cn("p-3 rounded-lg border", cfg?.bg || "bg-gray-50 border-gray-200")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg?.dot || "#888" }} />
+                        <span className={cn("text-xs font-semibold", cfg?.color)}>{cfg?.label || activity.activity_type}</span>
+                      </div>
+                      {activity.notes && <p className="text-xs text-muted-foreground mb-2">{activity.notes}</p>}
+                      {relFU.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          {relFU.map(f => {
+                            const cd = parseContactDetails(f.action_description) || {}
+                            const isOverdue = f.status === "pending" && (f.follow_up_date || "") < new Date().toISOString().split("T")[0]
+                            return (
+                              <div key={f.id} className="bg-white/70 rounded border p-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-semibold text-sm">{f.institution_name}</span>
+                                  <Badge variant="outline" className={cn(
+                                    "text-xs",
+                                    f.status === "completed" ? "bg-green-50 text-green-700" : isOverdue ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                                  )}>
+                                    {f.status === "completed" ? "Completed" : isOverdue ? "Overdue" : "Pending"}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                  {cd.contact_name && <Detail icon={User} label="Contact" value={cd.contact_name} />}
+                                  {cd.contact_mobile && <Detail icon={Phone} label="Mobile" value={cd.contact_mobile} />}
+                                  {cd.contact_email && <Detail icon={Mail} label="Email" value={cd.contact_email} />}
+                                  {cd.designation && <Detail icon={Building2} label="Designation" value={cd.designation} />}
+                                  {f.follow_up_date && <Detail icon={Calendar} label="Follow-up Date" value={f.follow_up_date} />}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       )}
-                    >
-                      {report.is_draft ? "Draft" : "Submitted"}
-                    </Badge>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Activities (Branding) */}
+          {report.activities.some(a => !['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type) && (a.notes || report.followUps.some(f => f.source_entry_id === a.id && f.action_description?.includes("||")))) && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Activities</h3>
+              <div className="space-y-2">
+                {report.activities.filter(a => !['alumni', 'corporate', 'alumni_networking', 'corporate_outreach'].includes(a.activity_type)).map(activity => {
+                  const cfg = ACTIVITY_TYPE_CONFIG[activity.activity_type]
+                  // Only match follow-ups that have '||' (those are activity FUs with stored contact JSON)
+                  const relFU = report.followUps.filter(f => f.source_entry_id === activity.id && f.action_description?.includes("||"))
+                  
+                  if (!activity.notes && relFU.length === 0) return null;
+
+                  return (
+                    <div key={activity.id} className={cn("p-3 rounded-lg border", cfg?.bg || "bg-gray-50 border-gray-200")}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg?.dot || "#888" }} />
+                        <span className={cn("text-xs font-semibold", cfg?.color)}>{cfg?.label || activity.activity_type}</span>
+                      </div>
+                      {activity.notes && <p className="text-xs text-muted-foreground mb-2">{activity.notes}</p>}
+                      {relFU.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          {relFU.map(f => {
+                            const cd = parseContactDetails(f.action_description) || {}
+                            const isOverdue = f.status === "pending" && (f.follow_up_date || "") < new Date().toISOString().split("T")[0]
+                            return (
+                              <div key={f.id} className="bg-white/70 rounded border p-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-semibold text-sm">{f.institution_name}</span>
+                                  <Badge variant="outline" className={cn(
+                                    "text-xs",
+                                    f.status === "completed" ? "bg-green-50 text-green-700" : isOverdue ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
+                                  )}>
+                                    {f.status === "completed" ? "Completed" : isOverdue ? "Overdue" : "Pending"}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                  {cd.contact_name && <Detail icon={User} label="Contact" value={cd.contact_name} />}
+                                  {cd.contact_mobile && <Detail icon={Phone} label="Mobile" value={cd.contact_mobile} />}
+                                  {cd.contact_email && <Detail icon={Mail} label="Email" value={cd.contact_email} />}
+                                  {cd.designation && <Detail icon={Building2} label="Designation" value={cd.designation} />}
+                                  {f.follow_up_date && <Detail icon={Calendar} label="Follow-up Date" value={f.follow_up_date} />}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Escalations */}
+          {report.escalations.length > 0 && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Issues & Observations</h3>
+              <div className="space-y-2">
+                {report.escalations.map(e => (
+                  <div key={e.id} className="p-3 rounded-lg border bg-rose-50 border-rose-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+                        <span className="text-xs font-semibold text-rose-600">Issue Reported</span>
+                      </div>
+                      <Badge variant={e.resolved_at ? "default" : "destructive"} className="text-xs">
+                        {e.resolved_at ? "Resolved" : "Open"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm mt-1">{e.description}</p>
+                    {e.observations && <p className="text-xs text-muted-foreground mt-1"><span className="font-medium">Observations:</span> {e.observations}</p>}
+                    {e.resolution_note && <p className="text-xs text-green-700 mt-1"><span className="font-medium">Resolution:</span> {e.resolution_note}</p>}
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Visit Entries</div>
-                      <div className="font-semibold">{visits}</div>
-                    </div>
-                    <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Report Date</div>
-                      <div className="font-semibold text-sm">{report.report_date}</div>
-                    </div>
-                    <div className="p-2 bg-muted/50 rounded">
-                      <div className="text-xs text-muted-foreground">Report ID</div>
-                      <div className="font-semibold">#{report.id}</div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })
+                ))}
+              </div>
+            </div>
+          )}
+
+          {report.visits.length === 0 && report.activities.length === 0 && report.escalations.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No entries found for this report.</p>
           )}
         </div>
-        <div className="mt-4 text-sm text-muted-foreground">
-          Showing {reports.length} reports
-        </div>
-      </CardContent>
+      )}
     </Card>
   )
 }
 
-function FieldReportContent({
-  reports,
-  userMap,
-  visitCounts,
-  fieldType,
-  icon: Icon,
-  title,
-}: any) {
-  const [fieldVisits, setFieldVisits] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchFieldVisits = async () => {
-      try {
-        const allVisits: any[] = []
-        for (const report of reports) {
-          try {
-            const visits = await SpocVisitsApi.getByReport(report.id)
-            const filtered = visits.filter((v: any) => v.visit_type === fieldType)
-            allVisits.push(...filtered.map((v: any) => ({ ...v, report, spoc: userMap[report.spoc_id] })))
-          } catch {}
-        }
-        setFieldVisits(allVisits)
-      } catch {}
-      setIsLoading(false)
-    }
-    fetchFieldVisits()
-  }, [reports, fieldType, userMap])
-
-  if (isLoading) {
-    return <PageSkeleton />
-  }
-
+function Detail({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-5 w-5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {fieldVisits.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No {title.toLowerCase()} entries found
-            </div>
-          ) : (
-            fieldVisits.map((visit: any) => (
-              <div key={visit.id} className="p-4 border rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">{visit.institution_name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {visit.spoc?.name || "Unknown SPOC"}
-                    </p>
-                  </div>
-                  <Badge variant="outline">{visit.report.report_date}</Badge>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs mt-2">
-                  {visit.contact_name && (
-                    <div>
-                      <span className="text-muted-foreground">Contact: </span>
-                      {visit.contact_name}
-                    </div>
-                  )}
-                  {visit.contact_mobile && (
-                    <div>
-                      <span className="text-muted-foreground">Mobile: </span>
-                      {visit.contact_mobile}
-                    </div>
-                  )}
-                  {visit.contact_email && (
-                    <div>
-                      <span className="text-muted-foreground">Email: </span>
-                      {visit.contact_email}
-                    </div>
-                  )}
-                  {visit.next_action && (
-                    <div>
-                      <span className="text-muted-foreground">Next Step: </span>
-                      {visit.next_action}
-                    </div>
-                  )}
-                  {visit.follow_up_date && (
-                    <div>
-                      <span className="text-muted-foreground">Follow-up: </span>
-                      {visit.follow_up_date}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-        <div className="mt-4 text-sm text-muted-foreground">
-          Showing {fieldVisits.length} entries
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ActivityReportContent({
-  reports,
-  userMap,
-  activityType,
-  icon: Icon,
-  title,
-}: any) {
-  const [activities, setActivities] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const allActivities: any[] = []
-        for (const report of reports) {
-          try {
-            const acts = await spocActivitiesApi.getByReport(report.id)
-            const filtered = acts.filter((a: any) => a.activity_type === activityType)
-            allActivities.push(...filtered.map((a: any) => ({ ...a, report, spoc: userMap[report.spoc_id] })))
-          } catch {}
-        }
-        setActivities(allActivities)
-      } catch {}
-      setIsLoading(false)
-    }
-    fetchActivities()
-  }, [reports, activityType, userMap])
-
-  if (isLoading) {
-    return <PageSkeleton />
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-5 w-5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {activities.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No {title.toLowerCase()} entries found
-            </div>
-          ) : (
-            activities.map((activity: any) => (
-              <div key={activity.id} className="p-4 border rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">{activity.activity_type}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {activity.spoc?.name || "Unknown SPOC"}
-                    </p>
-                  </div>
-                  <Badge variant="outline">{activity.report.report_date}</Badge>
-                </div>
-                {activity.notes && (
-                  <p className="text-sm mt-2">{activity.notes}</p>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        <div className="mt-4 text-sm text-muted-foreground">
-          Showing {activities.length} entries
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function IssuesReportContent({
-  reports,
-  userMap,
-  icon: Icon,
-  title,
-}: any) {
-  const [escalations, setEscalations] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchEscalations = async () => {
-      try {
-        const allEscalations: any[] = []
-        for (const report of reports) {
-          try {
-            const escs = await SpocEscalationsApi.getByReport(report.id)
-            allEscalations.push(...escs.map((e: any) => ({ ...e, report, spoc: userMap[report.spoc_id] })))
-          } catch {}
-        }
-        setEscalations(allEscalations)
-      } catch {}
-      setIsLoading(false)
-    }
-    fetchEscalations()
-  }, [reports, userMap])
-
-  if (isLoading) {
-    return <PageSkeleton />
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-5 w-5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {escalations.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No issues or observations found
-            </div>
-          ) : (
-            escalations.map((escalation: any) => (
-              <div key={escalation.id} className="p-4 border rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-semibold text-sm">Issue Reported</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {escalation.spoc?.name || "Unknown SPOC"}
-                    </p>
-                  </div>
-                  <Badge 
-                    variant={escalation.resolved_at ? "default" : "destructive"}
-                  >
-                    {escalation.resolved_at ? "Resolved" : "Pending"}
-                  </Badge>
-                </div>
-                <p className="text-sm mt-2">{escalation.description}</p>
-                {escalation.observations && (
-                  <p className="text-sm mt-2 text-muted-foreground">
-                    <span className="font-medium">Observations:</span> {escalation.observations}
-                  </p>
-                )}
-                {escalation.resolution_note && (
-                  <p className="text-sm mt-2 text-green-600">
-                    <span className="font-medium">Resolution:</span> {escalation.resolution_note}
-                  </p>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        <div className="mt-4 text-sm text-muted-foreground">
-          Showing {escalations.length} entries
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex items-start gap-1">
+      <Icon className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+      <span className="text-muted-foreground">{label}:</span>
+      <span className="font-medium">{value}</span>
+    </div>
   )
 }

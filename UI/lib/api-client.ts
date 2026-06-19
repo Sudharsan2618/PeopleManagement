@@ -108,6 +108,7 @@ export interface FollowUpTask {
   status: string
   resolution_note?: string
   created_at: string
+  followup_category?: string
 }
 
 export interface ProspectAssignment {
@@ -120,14 +121,14 @@ export interface ProspectAssignment {
 }
 
 export interface Course {
-    id: number
-    name: string
-    code: string
-    description?: string
-    duration?: string
-    fees?: number
-    is_active: boolean
-    created_at: string
+  id: number
+  name: string
+  code: string
+  description?: string
+  duration?: string
+  fees?: number
+  is_active: boolean
+  created_at: string
 }
 
 // Adapter functions to convert backend data to UI format

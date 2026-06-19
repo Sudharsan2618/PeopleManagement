@@ -325,6 +325,7 @@ class FollowUpTask(FollowUpTaskBase):
     id: int
     resolution_note: Optional[str]
     created_at: datetime
+    followup_category: Optional[str] = None
 
     class Config:
         from_attributes = True

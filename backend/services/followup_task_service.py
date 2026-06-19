@@ -11,10 +11,26 @@ class FollowUpTaskService:
     def get_all_tasks() -> List[dict]:
         """Get all follow-up tasks."""
         query = """
-            SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                   action_description, follow_up_date, status, resolution_note, created_at
-            FROM follow_up_tasks
-            ORDER BY follow_up_date ASC, created_at DESC
+            SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                   f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                   COALESCE(
+                       CASE 
+                           WHEN v.visit_type = 'school' THEN 'school'
+                           WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                           WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                           ELSE NULL 
+                       END,
+                       CASE 
+                           WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                           WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                           ELSE NULL
+                       END,
+                       'school'
+                   ) AS followup_category
+            FROM follow_up_tasks f
+            LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+            LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+            ORDER BY f.follow_up_date ASC, f.created_at DESC
         """
         return execute_query(query, fetch="all")
     
@@ -22,10 +38,26 @@ class FollowUpTaskService:
     def get_task_by_id(task_id: int) -> Optional[dict]:
         """Get task by ID."""
         query = """
-            SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                   action_description, follow_up_date, status, resolution_note, created_at
-            FROM follow_up_tasks
-            WHERE id = %s
+            SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                   f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                   COALESCE(
+                       CASE 
+                           WHEN v.visit_type = 'school' THEN 'school'
+                           WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                           WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                           ELSE NULL 
+                       END,
+                       CASE 
+                           WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                           WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                           ELSE NULL
+                       END,
+                       'school'
+                   ) AS followup_category
+            FROM follow_up_tasks f
+            LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+            LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+            WHERE f.id = %s
         """
         return execute_query(query, (task_id,), fetch="one")
     
@@ -34,20 +66,52 @@ class FollowUpTaskService:
         """Get tasks assigned to a specific user, optionally filtered by status."""
         if status:
             query = """
-                SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                       action_description, follow_up_date, status, resolution_note, created_at
-                FROM follow_up_tasks
-                WHERE assigned_to_user_id = %s AND status = %s
-                ORDER BY follow_up_date ASC, created_at DESC
+                SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                       f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                       COALESCE(
+                           CASE 
+                               WHEN v.visit_type = 'school' THEN 'school'
+                               WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                               WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                               ELSE NULL 
+                           END,
+                           CASE 
+                               WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                               WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                               ELSE NULL
+                           END,
+                           'school'
+                       ) AS followup_category
+                FROM follow_up_tasks f
+                LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+                LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+                WHERE f.assigned_to_user_id = %s AND f.status = %s
+                ORDER BY f.follow_up_date ASC, f.created_at DESC
             """
             return execute_query(query, (user_id, status), fetch="all")
         else:
             query = """
-                SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                       action_description, follow_up_date, status, resolution_note, created_at
-                FROM follow_up_tasks
-                WHERE assigned_to_user_id = %s
-                ORDER BY follow_up_date ASC, created_at DESC
+                SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                       f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                       COALESCE(
+                           CASE 
+                               WHEN v.visit_type = 'school' THEN 'school'
+                               WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                               WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                               ELSE NULL 
+                           END,
+                           CASE 
+                               WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                               WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                               ELSE NULL
+                           END,
+                           'school'
+                       ) AS followup_category
+                FROM follow_up_tasks f
+                LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+                LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+                WHERE f.assigned_to_user_id = %s
+                ORDER BY f.follow_up_date ASC, f.created_at DESC
             """
             return execute_query(query, (user_id,), fetch="all")
     
@@ -56,20 +120,52 @@ class FollowUpTaskService:
         """Get tasks assigned to a role, optionally filtered by status."""
         if status:
             query = """
-                SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                       action_description, follow_up_date, status, resolution_note, created_at
-                FROM follow_up_tasks
-                WHERE assigned_to_role = %s AND status = %s
-                ORDER BY follow_up_date ASC, created_at DESC
+                SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                       f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                       COALESCE(
+                           CASE 
+                               WHEN v.visit_type = 'school' THEN 'school'
+                               WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                               WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                               ELSE NULL 
+                           END,
+                           CASE 
+                               WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                               WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                               ELSE NULL
+                           END,
+                           'school'
+                       ) AS followup_category
+                FROM follow_up_tasks f
+                LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+                LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+                WHERE f.assigned_to_role = %s AND f.status = %s
+                ORDER BY f.follow_up_date ASC, f.created_at DESC
             """
             return execute_query(query, (role, status), fetch="all")
         else:
             query = """
-                SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                       action_description, follow_up_date, status, resolution_note, created_at
-                FROM follow_up_tasks
-                WHERE assigned_to_role = %s
-                ORDER BY follow_up_date ASC, created_at DESC
+                SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                       f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                       COALESCE(
+                           CASE 
+                               WHEN v.visit_type = 'school' THEN 'school'
+                               WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                               WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                               ELSE NULL 
+                           END,
+                           CASE 
+                               WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                               WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                               ELSE NULL
+                           END,
+                           'school'
+                       ) AS followup_category
+                FROM follow_up_tasks f
+                LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+                LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+                WHERE f.assigned_to_role = %s
+                ORDER BY f.follow_up_date ASC, f.created_at DESC
             """
             return execute_query(query, (role,), fetch="all")
     
@@ -77,11 +173,27 @@ class FollowUpTaskService:
     def get_overdue_tasks() -> List[dict]:
         """Get all overdue tasks."""
         query = """
-            SELECT id, source_entry_id, assigned_to_role, assigned_to_user_id, institution_name,
-                   action_description, follow_up_date, status, resolution_note, created_at
-            FROM follow_up_tasks
-            WHERE status = 'pending' AND follow_up_date < %s
-            ORDER BY follow_up_date ASC
+            SELECT f.id, f.source_entry_id, f.assigned_to_role, f.assigned_to_user_id, f.institution_name,
+                   f.action_description, f.follow_up_date, f.status, f.resolution_note, f.created_at,
+                   COALESCE(
+                       CASE 
+                           WHEN v.visit_type = 'school' THEN 'school'
+                           WHEN v.visit_type = 'coaching_centre' THEN 'coaching_centre'
+                           WHEN v.visit_type = 'admission_partner' THEN 'admission_centre'
+                           ELSE NULL 
+                       END,
+                       CASE 
+                           WHEN a.activity_type = 'alumni' THEN 'alumni_networking'
+                           WHEN a.activity_type = 'corporate' THEN 'corporate_outreach'
+                           ELSE NULL
+                       END,
+                       'school'
+                   ) AS followup_category
+            FROM follow_up_tasks f
+            LEFT JOIN spoc_visit_entries v ON f.source_entry_id = v.id AND f.action_description NOT LIKE 'Follow up on alumni%%' AND f.action_description NOT LIKE 'Follow up on corporate%%'
+            LEFT JOIN spoc_activities a ON f.source_entry_id = a.id AND (f.action_description LIKE 'Follow up on alumni%%' OR f.action_description LIKE 'Follow up on corporate%%')
+            WHERE f.status = 'pending' AND f.follow_up_date < %s
+            ORDER BY f.follow_up_date ASC
         """
         return execute_query(query, (get_ist_now().date(),), fetch="all")
     

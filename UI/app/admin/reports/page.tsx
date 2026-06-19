@@ -212,7 +212,7 @@ export default function ReportsPage() {
       tableWidth: 'wrap',
       didParseCell: function (dataArg) {
         if (dataArg.section === 'body') {
-          const rowText = dataArg.row.raw[0]
+          const rowText = (dataArg.row.raw as any)[0]
           if (rowText === 'Cold / No Response') dataArg.cell.styles.fillColor = [241, 245, 249]
           else if (rowText === 'Cold / Not Interested') dataArg.cell.styles.fillColor = [241, 245, 249]
           else if (rowText === 'Warm') dataArg.cell.styles.fillColor = [254, 243, 199]

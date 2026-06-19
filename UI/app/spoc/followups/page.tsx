@@ -104,8 +104,12 @@ const categoryConfig: Record<
 
 type OutreachType = "school" | "coaching_centre" | "admission_centre" | "alumni_networking" | "corporate_outreach" | "all"
 
-// Helper function to determine category of a task based on institution name
+// Helper function to determine category of a task based on explicit category or fallback
 const getTaskCategory = (task: FollowUpTask): OutreachType => {
+  if (task.followup_category && categoryConfig[task.followup_category]) {
+    return task.followup_category as OutreachType
+  }
+
   const name = (task.institution_name || "").toLowerCase()
   if (name.includes("school") || name.includes("high school") || name.includes("hs")) {
     return "school"
@@ -180,16 +184,16 @@ export default function spocFollowupsPage() {
     if (!selectedDate) return []
     const dateStr = selectedDate.toISOString().split("T")[0]
     const tasks = filteredTasks.filter((t) => t.follow_up_date === dateStr)
-    
+
     // Sort: overdue first, then today, then upcoming
     return tasks.sort((a, b) => {
       const today = new Date().toISOString().split("T")[0]
       const aDate = a.follow_up_date || ""
       const bDate = b.follow_up_date || ""
-      
+
       const aStatus = a.status === "pending" && aDate < today ? "overdue" : a.status
       const bStatus = b.status === "pending" && bDate < today ? "overdue" : b.status
-      
+
       const statusOrder = { overdue: 0, pending: 1, completed: 2 }
       return statusOrder[aStatus as keyof typeof statusOrder] - statusOrder[bStatus as keyof typeof statusOrder]
     })
@@ -316,8 +320,8 @@ export default function spocFollowupsPage() {
                         }}
                       >
                         <div className="flex items-center gap-2 w-full mb-1">
-                          <div 
-                            className="h-2 w-2 rounded-full" 
+                          <div
+                            className="h-2 w-2 rounded-full"
                             style={{ backgroundColor: categoryConfig[category]?.dotColor }}
                           />
                           <span className="font-medium text-xs text-muted-foreground">
@@ -466,7 +470,7 @@ export default function spocFollowupsPage() {
                 DayButton: ({ day, modifiers, ...props }: any) => {
                   const dateStr = day.date.toISOString().split("T")[0]
                   const followUpInfo = datesWithFollowUps.get(dateStr)
-                  
+
                   return (
                     <Button
                       variant="ghost"
@@ -534,7 +538,49 @@ export default function spocFollowupsPage() {
 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Action Required</p>
-                  <p className="text-sm">{selectedTask.action_description}</p>
+                  {(() => {
+                    const desc = selectedTask.action_description || "";
+                    if (desc.includes("||")) {
+                      const [action, jsonStr] = desc.split("||");
+                      try {
+                        const details = JSON.parse(jsonStr);
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-sm">{action}</p>
+                            <div className="grid grid-cols-2 gap-3 mt-2 bg-slate-50 p-3 rounded-md border text-sm">
+                              {details.contact_name && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Contact Name</span>
+                                  <span className="font-medium">{details.contact_name}</span>
+                                </div>
+                              )}
+                              {details.contact_mobile && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Mobile</span>
+                                  <span className="font-medium">{details.contact_mobile}</span>
+                                </div>
+                              )}
+                              {details.contact_email && (
+                                <div className="col-span-2 sm:col-span-1">
+                                  <span className="text-xs text-muted-foreground block">Email</span>
+                                  <span className="font-medium break-all">{details.contact_email}</span>
+                                </div>
+                              )}
+                              {details.designation && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Designation</span>
+                                  <span className="font-medium">{details.designation}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } catch (e) {
+                        return <p className="text-sm">{desc}</p>;
+                      }
+                    }
+                    return <p className="text-sm">{desc}</p>;
+                  })()}
                 </div>
 
                 {selectedTask.follow_up_date && (
@@ -630,8 +676,8 @@ export default function spocFollowupsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="h-2 w-2 rounded-full flex-shrink-0" 
+                        <div
+                          className="h-2 w-2 rounded-full flex-shrink-0"
                           style={{ backgroundColor: categoryConfig[category]?.dotColor }}
                           title={categoryConfig[category]?.label}
                         />

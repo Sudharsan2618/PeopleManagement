@@ -367,12 +367,17 @@ export default function NewFieldReportPage() {
           if (act.type === "alumni" && !isDraft) {
             for (const entry of alumniEntries) {
               if (entry.followUpDate) {
+                const contactInfo = JSON.stringify({
+                  contact_name: entry.name || "",
+                  contact_mobile: entry.contactNumber || "",
+                  contact_email: entry.email || "",
+                })
                 await followUpTasksApi.create({
                   source_entry_id: activity.id,
                   assigned_to_role: "spoc",
                   assigned_to_user_id: spocId,
                   institution_name: entry.name || "Alumni Contact",
-                  action_description: "Follow up on alumni networking",
+                  action_description: `Follow up on alumni networking||${contactInfo}`,
                   follow_up_date: entry.followUpDate,
                 })
               }
@@ -382,12 +387,18 @@ export default function NewFieldReportPage() {
           if (act.type === "corporate" && !isDraft) {
             for (const entry of corporateEntries) {
               if (entry.followUpDate) {
+                const contactInfo = JSON.stringify({
+                  contact_name: entry.contactName || "",
+                  contact_mobile: entry.mobileNumber || "",
+                  contact_email: entry.email || "",
+                  designation: entry.designation || "",
+                })
                 await followUpTasksApi.create({
                   source_entry_id: activity.id,
                   assigned_to_role: "spoc",
                   assigned_to_user_id: spocId,
                   institution_name: entry.companyName || "Corporate Contact",
-                  action_description: "Follow up on corporate outreach",
+                  action_description: `Follow up on corporate outreach||${contactInfo}`,
                   follow_up_date: entry.followUpDate,
                 })
               }
