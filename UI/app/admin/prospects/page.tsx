@@ -94,6 +94,7 @@ export default function AdminProspectsPage() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [targetTelecallerId, setTargetTelecallerId] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isProspectDialogOpen, setIsProspectDialogOpen] = useState(false)
   const [editingProspect, setEditingProspect] = useState<any | null>(null)
   const [prospectFormData, setProspectFormData] = useState({
@@ -106,6 +107,15 @@ export default function AdminProspectsPage() {
     course_interest: "",
     parent_name: "",
     department: "",
+    alt_phone: "",
+    secondary_email: "",
+    city: "",
+    address: "",
+    postal_code: "",
+    designation: "",
+    company: "",
+    comments: "",
+    follow_up_date: "",
   })
   const [prospects, setProspects] = useState<any[]>([])
   const [assignments, setAssignments] = useState<any[]>([])
@@ -233,6 +243,49 @@ export default function AdminProspectsPage() {
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedProspectIds.length === 0) return
+    
+    if (!confirm(`Are you sure you want to delete ${selectedProspectIds.length} prospects? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+      
+      await Promise.all(
+        selectedProspectIds.map((prospectId) =>
+          prospectsApi.delete(prospectId)
+        )
+      )
+
+      // Refresh data
+      const [apiProspects, apiAssignments] = await Promise.all([
+        prospectsApi.getAll(),
+        assignmentsApi.getAll(),
+      ])
+      const uiProspects = apiProspects.map((p: any) =>
+        adaptApiProspectToUiProspect(p, apiAssignments)
+      )
+      setProspects(uiProspects)
+      setAssignments(apiAssignments)
+      
+      setSelectedProspectIds([])
+      toast({
+        title: "Success",
+        description: `Successfully deleted ${selectedProspectIds.length} prospects.`,
+      })
+    } catch (err) {
+      toast({
+        title: "Delete Failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const getAssignedTelecaller = (id?: string) => {
     if (!id) return null
     return telecallers.find((tc) => tc.id === id)
@@ -287,6 +340,15 @@ export default function AdminProspectsPage() {
               course_interest: "",
               parent_name: "",
               department: "",
+              alt_phone: "",
+              secondary_email: "",
+              city: "",
+              address: "",
+              postal_code: "",
+              designation: "",
+              company: "",
+              comments: "",
+              follow_up_date: "",
             })
             setIsProspectDialogOpen(true)
           }}>
@@ -433,13 +495,23 @@ export default function AdminProspectsPage() {
                 <Download className="h-4 w-4" />
               </Button>
               {selectedProspectIds.length > 0 && (
-                <Button 
-                  className="bg-primary" 
-                  onClick={() => setIsAssignDialogOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Assign ({selectedProspectIds.length})
-                </Button>
+                <>
+                  <Button 
+                    className="bg-primary" 
+                    onClick={() => setIsAssignDialogOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign ({selectedProspectIds.length})
+                  </Button>
+                  <Button 
+                    variant="destructive"
+                    onClick={handleBulkDelete}
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isDeleting ? "Deleting..." : `Delete (${selectedProspectIds.length})`}
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -467,10 +539,23 @@ export default function AdminProspectsPage() {
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile</TableHead>
+                  <TableHead>Alt Phone</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Secondary Email</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Postal Code</TableHead>
+                  <TableHead>Designation</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Parent Name</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead>Lead Source</TableHead>
+                  <TableHead>Lead Type</TableHead>
                   <TableHead>Tags</TableHead>
+                  <TableHead>Comments</TableHead>
+                  <TableHead>Follow-up Date</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Call</TableHead>
@@ -480,7 +565,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={23} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -507,9 +592,46 @@ export default function AdminProspectsPage() {
                         <TableCell className="font-mono text-sm">
                           {prospect.mobile}
                         </TableCell>
-                        <TableCell>{prospect.location}</TableCell>
-                        <TableCell>{prospect.parentName}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{prospect.department}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.altPhone || <span className="text-slate-300">—</span>}
+                        </TableCell>
+                        <TableCell>{prospect.email || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.secondaryEmail || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.city || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{prospect.address || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="font-mono text-sm">{prospect.postalCode || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="max-w-[120px] truncate">{prospect.designation || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="max-w-[120px] truncate">{prospect.company || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.location || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.parentName || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{prospect.department || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.courseInterest || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[150px]">
+                            {Array.isArray(prospect.lead_source) && prospect.lead_source.length > 0 ? (
+                              prospect.lead_source.map((s: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="text-[10px] py-0 px-1.5">
+                                  {s}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[150px]">
+                            {Array.isArray(prospect.lead_type) && prospect.lead_type.length > 0 ? (
+                              prospect.lead_type.map((t: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-[10px] py-0 px-1.5 border-primary/30 text-primary">
+                                  {t}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">—</span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[200px]">
                             {Array.isArray(prospect.tags) && prospect.tags.length > 0 ? (
@@ -523,6 +645,8 @@ export default function AdminProspectsPage() {
                             )}
                           </div>
                         </TableCell>
+                        <TableCell className="max-w-[150px] truncate">{prospect.comments || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="text-sm">{prospect.follow_up_date || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>
                           {assignedTc ? (
                             <span className="text-sm">{assignedTc.name}</span>
@@ -571,6 +695,15 @@ export default function AdminProspectsPage() {
                                   course_interest: prospect.courseInterest || "",
                                   parent_name: prospect.parentName || "",
                                   department: prospect.department || "",
+                                  alt_phone: prospect.altPhone || "",
+                                  secondary_email: prospect.secondaryEmail || "",
+                                  city: prospect.city || "",
+                                  address: prospect.address || "",
+                                  postal_code: prospect.postalCode || "",
+                                  designation: prospect.designation || "",
+                                  company: prospect.company || "",
+                                  comments: prospect.comments || "",
+                                  follow_up_date: prospect.follow_up_date || "",
                                 })
                                 setIsProspectDialogOpen(true)
                               }}>
@@ -804,7 +937,7 @@ export default function AdminProspectsPage() {
 
       {/* Add/Edit Prospect Dialog */}
       <Dialog open={isProspectDialogOpen} onOpenChange={setIsProspectDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProspect ? "Edit Prospect" : "Add New Prospect"}</DialogTitle>
           </DialogHeader>
@@ -885,6 +1018,88 @@ export default function AdminProspectsPage() {
                 id="p_source"
                 value={prospectFormData.sourced_from}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, sourced_from: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_alt_phone" className="text-right">Alt Phone</Label>
+              <Input
+                id="p_alt_phone"
+                value={prospectFormData.alt_phone}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, alt_phone: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_secondary_email" className="text-right">Secondary Email</Label>
+              <Input
+                id="p_secondary_email"
+                value={prospectFormData.secondary_email}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, secondary_email: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_city" className="text-right">City</Label>
+              <Input
+                id="p_city"
+                value={prospectFormData.city}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, city: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_address" className="text-right">Address</Label>
+              <Input
+                id="p_address"
+                value={prospectFormData.address}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, address: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_postal_code" className="text-right">Postal Code</Label>
+              <Input
+                id="p_postal_code"
+                value={prospectFormData.postal_code}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, postal_code: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_designation" className="text-right">Designation</Label>
+              <Input
+                id="p_designation"
+                value={prospectFormData.designation}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, designation: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_company" className="text-right">Company</Label>
+              <Input
+                id="p_company"
+                value={prospectFormData.company}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, company: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_comments" className="text-right">Comments</Label>
+              <Input
+                id="p_comments"
+                value={prospectFormData.comments}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, comments: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_follow_up_date" className="text-right">Follow-up Date</Label>
+              <Input
+                id="p_follow_up_date"
+                type="date"
+                value={prospectFormData.follow_up_date}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, follow_up_date: e.target.value })}
                 className="col-span-3"
               />
             </div>

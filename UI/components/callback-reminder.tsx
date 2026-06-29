@@ -69,7 +69,17 @@ export function CallbackReminder() {
   const isHot = activeReminder.status_after_call === "hot"
   const isVisit = activeReminder.status_after_call === "visit_scheduled" || activeReminder.status_after_call === "visit_done"
   const isCold = activeReminder.status_after_call?.startsWith("cold")
-  const isWarm = !isHot && !isVisit && !isCold
+  const isCollegeContact = [
+    "Interested",
+    "Interested Followup",
+    "Proposal To Be Sent",
+    "Proposal Sent",
+    "Training Date Followup",
+    "Qualified",
+    "Ringing / Not Reachable",
+    "College Contact"
+  ].includes(activeReminder.status_after_call || activeReminder.outcome || "")
+  const isWarm = !isHot && !isVisit && !isCold && !isCollegeContact
 
   return (
     <Dialog
@@ -82,7 +92,9 @@ export function CallbackReminder() {
           <div className="flex items-center gap-3">
             <span className={cn(
               "inline-flex h-10 w-10 items-center justify-center rounded-full",
-              isHot
+              isCollegeContact
+                ? "bg-cyan-100 text-cyan-600"
+                : isHot
                 ? "bg-red-100 text-red-600"
                 : isVisit
                 ? "bg-purple-100 text-purple-600"
@@ -97,7 +109,9 @@ export function CallbackReminder() {
                 <DialogTitle>Callback Reminder</DialogTitle>
                 <Badge className={cn(
                   "text-[10px] font-black uppercase tracking-wider px-2 py-0.5",
-                  isHot
+                  isCollegeContact
+                    ? "bg-cyan-50 text-cyan-700 border-cyan-200"
+                    : isHot
                     ? "bg-red-50 text-red-700 border-red-200"
                     : isVisit
                     ? "bg-purple-50 text-purple-700 border-purple-200"
@@ -105,7 +119,7 @@ export function CallbackReminder() {
                     ? "bg-slate-100 text-slate-700 border-slate-300"
                     : "bg-blue-50 text-blue-700 border-blue-200"
                 )}>
-                  {isHot ? "Hot" : isVisit ? "Visit" : isCold ? "Cold" : "Warm"}
+                  {isCollegeContact ? (activeReminder.status_after_call || activeReminder.outcome || "College Contact") : isHot ? "Hot" : isVisit ? "Visit" : isCold ? "Cold" : "Warm"}
                 </Badge>
               </div>
               <DialogDescription className="text-slate-500">

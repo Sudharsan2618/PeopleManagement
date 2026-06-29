@@ -17,7 +17,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast"
 import { prospectsApi } from "@/lib/api-client"
 import Link from "next/link"
-import * as XLSX from "xlsx"
+import { cn } from "@/lib/utils"
+import { read, utils } from "xlsx"
 
 export default function ProspectImportPage() {
   const router = useRouter()
@@ -26,9 +27,17 @@ export default function ProspectImportPage() {
   const [defaultTags, setDefaultTags] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [importResults, setImportResults] = useState<{
+    total: number
     success: number
+    duplicates: number
     failed: number
-    errors: string[]
+    details: Array<{
+      row: number
+      name: string
+      mobile: string
+      status: string
+      reason: string
+    }>
   } | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,11 +52,11 @@ export default function ProspectImportPage() {
     try {
       setIsUploading(true)
       const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data)
+      const workbook = read(data, { type: 'array', cellDates: true })
       
       let jsonData: any[] = []
-      workbook.SheetNames.forEach(sheetName => {
-        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName])
+      workbook.SheetNames.forEach((sheetName: string) => {
+        const sheetData = utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" })
         if (Array.isArray(sheetData)) {
           jsonData = jsonData.concat(sheetData)
         }
@@ -57,7 +66,10 @@ export default function ProspectImportPage() {
         throw new Error("No data found in the file.")
       }
 
-      const mappedProspects = jsonData.map((row: any) => {
+      const mappedProspects: any[] = []
+      const frontendFailures: any[] = []
+
+      jsonData.forEach((row: any, index: number) => {
         // Normalize keys to lowercase for flexible matching
         const normalizedRow: any = {}
         Object.keys(row).forEach(key => {
@@ -65,49 +77,83 @@ export default function ProspectImportPage() {
         })
 
         // Find best matches for required and optional fields
-        const name = normalizedRow.name || normalizedRow["student name"] || normalizedRow.student || ""
-        const mobile = normalizedRow.mobile || normalizedRow.number || normalizedRow.phone || normalizedRow["mobile number"] || ""
+        const name = normalizedRow.name || normalizedRow["student name"] || normalizedRow.student || normalizedRow.lastname || normalizedRow.company || ""
+        const mobile = normalizedRow.mobile || normalizedRow.number || normalizedRow.phone || normalizedRow["mobile number"] || normalizedRow.mobilephone || ""
         const parentName = normalizedRow.parent_name || normalizedRow.father_name || normalizedRow.father || normalizedRow.parent || ""
-        const department = normalizedRow.department || normalizedRow.group || ""
-        const location = normalizedRow.location || ""
-        const source = normalizedRow.source || normalizedRow.sourced_from || "File Import"
-        const course = normalizedRow.course || normalizedRow.course_interest || ""
+        const department = normalizedRow.department || normalizedRow.group || normalizedRow["department__c"] || ""
+        const location = normalizedRow.location || normalizedRow.city || ""
+        const source = normalizedRow.source || normalizedRow.sourced_from || normalizedRow.lead_source || normalizedRow.leadsource || ""
+        const course = normalizedRow.course || normalizedRow.course_interest || normalizedRow["proposed_for__c"] || ""
+        const leadType = normalizedRow.lead_type || normalizedRow["lead type"] || normalizedRow["lead_type__c"] || ""
+        const rawStatus = normalizedRow.status || "new"
+        const address = normalizedRow.address || normalizedRow["address.street"] || ""
+        const company = normalizedRow.company || normalizedRow.organization || ""
+        const designation = normalizedRow.designation || normalizedRow.job_title || normalizedRow["designation__c"] || ""
+        const altPhone = normalizedRow.alt_phone || normalizedRow["alternate mobile"] || normalizedRow["alternate phone"] || normalizedRow.secondary_phone || normalizedRow["alternate_mobile_no__c"] || ""
+        const secondaryEmail = normalizedRow.secondary_email || normalizedRow["alternate email"] || normalizedRow["secondary_email__c"] || ""
+        const postalCode = normalizedRow.postal_code || normalizedRow["postal code"] || normalizedRow.pincode || normalizedRow.zip || normalizedRow["address.postalcode"] || ""
+        const comments = normalizedRow.comments || normalizedRow.remarks || normalizedRow.notes || normalizedRow["comments__c"] || ""
+        const followUpDate = normalizedRow.follow_up_date || normalizedRow["followup date"] || normalizedRow["follow-up date"] || normalizedRow["followup_date__c"] || ""
 
-        if (!mobile) return null
+        if (!mobile) {
+          frontendFailures.push({
+            row: index + 2,
+            name: String(name).trim() || "Unknown",
+            mobile: "-",
+            status: "Failed",
+            reason: "Missing mobile number"
+          })
+          return
+        }
 
-        return {
-          name: String(name).trim() || "Unknown",
-          mobile: String(mobile).trim(),
-          email: normalizedRow.email || null,
-          location: String(location).trim() || null,
-          parent_name: String(parentName).trim() || null,
-          department: String(department).trim() || null,
-          sourced_from: String(source).trim(),
-          status: "new",
-          course_interest: String(course).trim() || null,
+        mappedProspects.push({
+          name: (String(name).trim() || "Unknown").substring(0, 150),
+          mobile: String(mobile).trim().substring(0, 20),
+          email: normalizedRow.email ? String(normalizedRow.email).substring(0, 255) : null,
+          location: String(location).trim().substring(0, 150) || null,
+          parent_name: String(parentName).trim().substring(0, 150) || null,
+          department: String(department).trim().substring(0, 150) || null,
+          sourced_from: source ? String(source).trim().substring(0, 100) : null,
+          status: String(rawStatus).trim().substring(0, 100),
+          course_interest: String(course).trim().substring(0, 100) || null,
+          lead_source: source ? [String(source).trim().substring(0, 100)] : [],
+          lead_type: leadType ? [String(leadType).trim().substring(0, 100)] : [],
+          city: String(location).trim().substring(0, 100) || null,
+          address: String(address).trim() || null,
+          postal_code: String(postalCode).trim().substring(0, 20) || null,
+          designation: String(designation).trim().substring(0, 150) || null,
+          alt_phone: String(altPhone).trim().substring(0, 20) || null,
+          secondary_email: String(secondaryEmail).trim().substring(0, 255) || null,
+          company: String(company).trim().substring(0, 200) || null,
+          comments: String(comments).trim().substring(0, 1000) || null,
+          follow_up_date: (followUpDate instanceof Date ? followUpDate.toISOString().split('T')[0] : String(followUpDate).trim()).substring(0, 50) || null,
+          is_imported: true,
           tags: [
             ... (normalizedRow.tags ? String(normalizedRow.tags).split(",").map(t => t.trim()) : []),
             ... (defaultTags ? defaultTags.split(",").map(t => t.trim()) : [])
           ].filter(t => t.length > 0),
           created_by: 1 // Default Admin ID
-        }
-      }).filter(p => p !== null)
+        })
+      })
 
-      if (mappedProspects.length === 0) {
-        throw new Error("No valid prospects found. Ensure the file contains a 'number' or 'mobile' column.")
+      if (mappedProspects.length === 0 && frontendFailures.length === 0) {
+        throw new Error("No data found in the file.")
       }
 
-      const result = await prospectsApi.bulkImport(mappedProspects)
+      let result = { total: 0, success: 0, duplicates: 0, failed: 0, details: [] as any[] }
+      if (mappedProspects.length > 0) {
+        result = await prospectsApi.bulkImport(mappedProspects)
+      }
       
-      setImportResults({
-        success: result.count,
-        failed: mappedProspects.length - result.count,
-        errors: []
-      })
+      result.total += frontendFailures.length
+      result.failed += frontendFailures.length
+      result.details = [...frontendFailures, ...result.details]
+
+      setImportResults(result)
 
       toast({
         title: "Import Complete",
-        description: `Successfully imported ${result.count} prospects.`,
+        description: `Total: ${result.total} | Success: ${result.success} | Duplicates: ${result.duplicates} | Failed: ${result.failed}`,
       })
     } catch (err) {
       toast({
@@ -121,7 +167,7 @@ export default function ProspectImportPage() {
   }
 
   const downloadTemplate = () => {
-    const csvContent = "name,mobile,email,location,parent_name,department,source,course\nJohn Doe,9876543210,john@example.com,Mumbai,Suresh B,Science,Website,ADSE\nJane Smith,9876543211,jane@example.com,Delhi,Saravanan V,Commerce,Referral,CPISM"
+    const csvContent = "name,mobile,email,parent_name,department,location,source,course,lead_type,address,postal_code,company,designation,alt_phone,secondary_email,comments,follow_up_date\nJohn Doe,9876543210,john@example.com,Suresh B,Science,Mumbai,Website,ADSE,Assist,123 Main St,400001,ABC Corp,Manager,9876543211,john2@example.com,Interested in course,2024-07-15"
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -149,7 +195,7 @@ export default function ProspectImportPage() {
           <CardTitle>Upload File</CardTitle>
           <CardDescription>
             Support for Excel (.xlsx, .xls) and CSV. Required columns: name, mobile.
-            Optional: parent_name, department, location, source, course.
+            Optional: parent_name, department, location, source, course, lead_type, address, company, designation, alt_phone, secondary_email, comments, follow_up_date.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -218,35 +264,64 @@ export default function ProspectImportPage() {
               Import Results
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="p-3 bg-background rounded-lg border">
+                <p className="text-sm text-muted-foreground">Total Records</p>
+                <p className="text-2xl font-bold">{importResults.total}</p>
+              </div>
               <div className="p-3 bg-background rounded-lg border">
                 <p className="text-sm text-muted-foreground">Successfully Imported</p>
                 <p className="text-2xl font-bold text-green-600">{importResults.success}</p>
               </div>
               <div className="p-3 bg-background rounded-lg border">
-                <p className="text-sm text-muted-foreground">Failed/Duplicates</p>
+                <p className="text-sm text-muted-foreground">Duplicates</p>
+                <p className="text-2xl font-bold text-amber-600">{importResults.duplicates}</p>
+              </div>
+              <div className="p-3 bg-background rounded-lg border">
+                <p className="text-sm text-muted-foreground">Failed</p>
                 <p className="text-2xl font-bold text-red-600">{importResults.failed}</p>
               </div>
             </div>
-            {importResults.errors.length > 0 && (
-              <div className="mt-4 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                <p className="text-sm font-medium text-destructive flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-4 w-4" />
-                  Common Errors:
-                </p>
-                <ul className="text-xs space-y-1 list-disc pl-4 text-destructive/80">
-                  {importResults.errors.map((error, i) => (
-                    <li key={i}>{error}</li>
-                  ))}
-                </ul>
+            
+            {importResults.details.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium mb-2">Import Log</p>
+                <div className="rounded-lg border bg-background overflow-hidden max-h-96 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Row</th>
+                        <th className="px-3 py-2 text-left font-medium">Name</th>
+                        <th className="px-3 py-2 text-left font-medium">Mobile</th>
+                        <th className="px-3 py-2 text-left font-medium">Status</th>
+                        <th className="px-3 py-2 text-left font-medium">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResults.details.map((detail, index) => (
+                        <tr key={index} className="border-t">
+                          <td className="px-3 py-2">{detail.row}</td>
+                          <td className="px-3 py-2">{detail.name}</td>
+                          <td className="px-3 py-2 font-mono">{detail.mobile}</td>
+                          <td className="px-3 py-2">
+                            <span className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium",
+                              detail.status === "Success" && "bg-green-100 text-green-800",
+                              detail.status === "Skipped" && "bg-amber-100 text-amber-800",
+                              detail.status === "Failed" && "bg-red-100 text-red-800"
+                            )}>
+                              {detail.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">{detail.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
-            <div className="mt-6 flex justify-end">
-              <Button asChild>
-                <Link href="/admin/prospects">Back to Prospects</Link>
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}

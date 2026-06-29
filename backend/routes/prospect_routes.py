@@ -72,7 +72,20 @@ def create_prospect(prospect: ProspectCreate):
             department=prospect.department,
             assigned_to=prospect.assigned_to,
             closing_reason=prospect.closing_reason,
-            tags=prospect.tags
+            tags=prospect.tags,
+            lead_source=prospect.lead_source,
+            lead_type=prospect.lead_type,
+            prospect_type=prospect.prospect_type,
+            alt_phone=prospect.alt_phone,
+            secondary_email=prospect.secondary_email,
+            city=prospect.city,
+            address=prospect.address,
+            postal_code=prospect.postal_code,
+            designation=prospect.designation,
+            company=prospect.company,
+            comments=prospect.comments,
+            follow_up_date=prospect.follow_up_date,
+            is_imported=prospect.is_imported
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -99,7 +112,19 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             department=prospect.department,
             assigned_to=prospect.assigned_to,
             closing_reason=prospect.closing_reason,
-            tags=prospect.tags
+            tags=prospect.tags,
+            lead_source=prospect.lead_source,
+            lead_type=prospect.lead_type,
+            alt_phone=prospect.alt_phone,
+            secondary_email=prospect.secondary_email,
+            city=prospect.city,
+            address=prospect.address,
+            postal_code=prospect.postal_code,
+            designation=prospect.designation,
+            prospect_type=prospect.prospect_type,
+            company=prospect.company,
+            comments=prospect.comments,
+            follow_up_date=prospect.follow_up_date
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -125,7 +150,7 @@ def bulk_import_prospects(data: List[ProspectCreate]):
     """Bulk import prospects."""
     try:
         prospects_dicts = [p.model_dump() for p in data]
-        count = ProspectService.create_bulk_prospects(prospects_dicts)
-        return {"message": f"Successfully imported {count} prospects", "count": count}
+        result = ProspectService.create_bulk_prospects(prospects_dicts)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

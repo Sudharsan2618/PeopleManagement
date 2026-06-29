@@ -24,6 +24,12 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check, ChevronsUpDown } from "lucide-react"
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -53,15 +59,15 @@ import { callLogsApi, coursesApi, type CallLog, type Course } from "@/lib/api-cl
 // ─── DB outcome → UI label mapping ─────────────────────────────
 const DB_OUTCOME_LABELS: Record<string, string> = {
   wrong_number: "Wrong Number",
-  callback: "Interested",
-  not_interested: "Not Interested",
-  not_answered: "No response",
-  dnc: "Do Not Call",
-  language_barrier: "Language Barrier",
-  interested: "Strong Interest / Ready for counselling",
-  qualified: "Visit planned and confirmed",
-  visit_done: "Visit campus / Decision awaited",
-  application_process: "Admission successfully completed",
+  callback: "Warm",
+  not_interested: "Cold / Not Interested",
+  not_answered: "Cold / No Response",
+  dnc: "Cold / Not Interested",
+  language_barrier: "Cold / No Response",
+  interested: "Strong Interest / Ready for Counselling",
+  qualified: "Visit Planned and Confirmed",
+  visit_done: "Visit Campus / Decision Awaited",
+  application_process: "Admission Successfully Completed",
 }
 
 const DB_OUTCOME_COLORS: Record<string, string> = {
@@ -77,63 +83,146 @@ const DB_OUTCOME_COLORS: Record<string, string> = {
   application_process: "text-emerald-600",
 }
 
-const outcomeOptions: {
-  value: CallOutcome
+// ─── Lead Source & Lead Type options ────────────────────────────
+const LEAD_SOURCE_OPTIONS = [
+  "Sourced Polytechnic College",
+  "Engineering College",
+  "Sourced ITI College",
+  "Sourcing Arts and Science Colleges",
+]
+
+const LEAD_TYPE_OPTIONS = [
+  "Assist",
+  "VAC",
+  "FDP",
+  "ZOHO YCP",
+  "Short Term Course Admission",
+]
+
+const defaultOutcomeOptions = [
+  {
+    value: "warm",
+    label: "Interested",
+    description: "Requires follow-up (interested)",
+    icon: Clock,
+    color: "text-yellow-500",
+  },
+  {
+    value: "cold_no_response",
+    label: "Cold / No Response",
+    description: "Cold outcome - no follow-up needed",
+    icon: PhoneOff,
+    color: "text-orange-500",
+  },
+  {
+    value: "cold_not_interested",
+    label: "Cold / Not Interested",
+    description: "Cold outcome - no follow-up needed",
+    icon: Ban,
+    color: "text-red-500",
+  },
+  {
+    value: "hot",
+    label: "Strong Interest / Ready for Counselling",
+    description: "Ready for counselling/admission discussion (hot)",
+    icon: ThumbsUp,
+    color: "text-green-500",
+  },
+  {
+    value: "visit_scheduled",
+    label: "Visit Planned and Confirmed",
+    description: "Visit Planned and Confirmed",
+    icon: CheckCircle2,
+    color: "text-blue-500",
+  },
+  {
+    value: "visit_done",
+    label: "Visit Campus / Decision Awaited",
+    description: "Visited campus, decision awaited",
+    icon: GraduationCap,
+    color: "text-purple-500",
+  },
+  {
+    value: "admission_done",
+    label: "Admission Successfully Completed",
+    description: "Admission Successfully Completed",
+    icon: BookOpen,
+    color: "text-emerald-600",
+  },
+]
+
+// ─── Outcome options – LEAD MODE (lead source or type selected) ──
+const leadOutcomeOptions: {
+  value: string
   label: string
   description: string
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
-    {
-      value: "CallBack",
-      label: "Interested",
-      description: "Requires follow-up (warm)",
-      icon: Clock,
-      color: "text-yellow-500",
-    },
-    {
-      value: "NotAnswered",
-      label: "No response",
-      description: "Cold outcome - no follow-up needed",
-      icon: PhoneOff,
-      color: "text-orange-500",
-    },
-    {
-      value: "NotInterested",
-      label: "Not Interested",
-      description: "Cold outcome - no follow-up needed",
-      icon: Ban,
-      color: "text-red-500",
-    },
-    {
-      value: "Interested",
-      label: "Strong Interest / Ready for counselling",
-      description: "Ready for counselling/admission discussion (hot)",
-      icon: ThumbsUp,
-      color: "text-green-500",
-    },
-    {
-      value: "Qualified",
-      label: "Visit planned and confirmed",
-      description: "Visit planned and confirmed",
-      icon: CheckCircle2,
-      color: "text-blue-500",
-    },
-    {
-      value: "EnrolledElsewhere",
-      label: "Visit campus / Decision awaited",
-      description: "Visited campus, decision awaited",
-      icon: GraduationCap,
-      color: "text-purple-500",
-    },
-    {
-      value: "ApplicationProcess",
-      label: "Admission successfully completed",
-      description: "Admission successfully completed",
-      icon: BookOpen,
-      color: "text-emerald-600",
-    },
-  ]
+  {
+    value: "New",
+    label: "New",
+    description: "Lead is newly added",
+    icon: Clock,
+    color: "text-blue-500",
+  },
+  {
+    value: "Interested",
+    label: "Interested",
+    description: "Lead has shown interest",
+    icon: ThumbsUp,
+    color: "text-green-500",
+  },
+  {
+    value: "Interested Followup",
+    label: "Interested Followup",
+    description: "Interested, requires follow-up",
+    icon: Clock,
+    color: "text-yellow-500",
+  },
+  {
+    value: "Proposal To Be Sent",
+    label: "Proposal To Be Sent",
+    description: "Proposal needs to be sent to lead",
+    icon: BookOpen,
+    color: "text-sky-500",
+  },
+  {
+    value: "Proposal Sent",
+    label: "Proposal Sent",
+    description: "Proposal has been sent",
+    icon: CheckCircle2,
+    color: "text-blue-600",
+  },
+  {
+    value: "Training Date Followup",
+    label: "Training Date Followup",
+    description: "Following up on training date",
+    icon: GraduationCap,
+    color: "text-purple-500",
+  },
+  {
+    value: "Qualified",
+    label: "Qualified",
+    description: "Lead is qualified and ready",
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+  },
+  {
+    value: "Ringing / Not Reachable",
+    label: "Ringing / Not Reachable",
+    description: "Could not reach the lead",
+    icon: PhoneOff,
+    color: "text-orange-500",
+  },
+  {
+    value: "Not Interested",
+    label: "Not Interested",
+    description: "Lead has declined",
+    icon: Ban,
+    color: "text-red-500",
+  },
+]
 
 const notInterestedReasons = [
   "No response here",
@@ -145,11 +234,78 @@ const notInterestedReasons = [
   "Other",
 ]
 
+// ─── MultiSelect Component ───────────────────────────────────────
+function MultiSelect({
+  options,
+  selected,
+  onChange,
+  placeholder
+}: {
+  options: string[]
+  selected: string[]
+  onChange: (vals: string[]) => void
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  const toggleOption = (val: string) => {
+    if (selected.includes(val)) {
+      onChange(selected.filter(item => item !== val))
+    } else {
+      onChange([...selected, val])
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-11 border-2 text-left font-normal hover:bg-background"
+        >
+          <span className="truncate text-sm">
+            {selected.length > 0 ? selected.join(", ") : <span className="text-muted-foreground">{placeholder}</span>}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0 bg-background border-2 shadow-md rounded-lg" align="start">
+        <ScrollArea className="h-48 w-full p-1">
+          {options.map((option) => {
+            const isSelected = selected.includes(option)
+            return (
+              <div
+                key={option}
+                onClick={() => toggleOption(option)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer select-none transition-colors",
+                  isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50"
+                )}
+              >
+                <div className={cn(
+                  "h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-all",
+                  isSelected ? "bg-primary border-primary text-primary-foreground" : "border-slate-300"
+                )}>
+                  {isSelected && <Check className="h-3 w-3" />}
+                </div>
+                <span>{option}</span>
+              </div>
+            )
+          })}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 interface CallOutcomeModalProps {
   prospect: any | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (outcome: CallOutcome, data: Record<string, unknown>) => void
+  onSubmit: (outcome: string, data: Record<string, unknown>) => void
+  onLeadModeActivate?: () => void
 }
 
 export function CallOutcomeModal({
@@ -157,8 +313,9 @@ export function CallOutcomeModal({
   open,
   onOpenChange,
   onSubmit,
+  onLeadModeActivate,
 }: CallOutcomeModalProps) {
-  const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome | null>(null)
+  const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
   const [callbackDate, setCallbackDate] = useState("")
   const [callbackDateError, setCallbackDateError] = useState("")
@@ -176,9 +333,29 @@ export function CallOutcomeModal({
   const [courses, setCourses] = useState<Course[]>([])
   const [coursesLoading, setCoursesLoading] = useState(false)
 
+  // Lead Source & Lead Type
+  const [leadSource, setLeadSource] = useState<string[]>([])
+  const [leadType, setLeadType] = useState<string[]>([])
+
   // Real call history from API
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+
+  // ─── Determine if we're in "lead mode" ────────────────────────
+  const isLeadMode = leadSource.length > 0 || leadType.length > 0
+  const currentOutcomeOptions = isLeadMode ? leadOutcomeOptions : defaultOutcomeOptions
+
+  // Reset outcome selection when mode changes
+  useEffect(() => {
+    setSelectedOutcome(null)
+  }, [isLeadMode])
+
+  // Notify parent when lead mode is activated
+  useEffect(() => {
+    if (isLeadMode && onLeadModeActivate) {
+      onLeadModeActivate()
+    }
+  }, [isLeadMode, onLeadModeActivate])
 
   // Fetch real call history when prospect changes
   useEffect(() => {
@@ -206,6 +383,12 @@ export function CallOutcomeModal({
         .then((data) => setCourses(data))
         .catch(() => setCourses([]))
         .finally(() => setCoursesLoading(false))
+
+      // Pre-populate lead source/type from prospect
+      if (prospect) {
+        setLeadSource(prospect.lead_source || [])
+        setLeadType(prospect.lead_type || [])
+      }
     }
   }, [prospect, open])
 
@@ -225,12 +408,18 @@ export function CallOutcomeModal({
     setParentAware("")
     setBestTimeToCall("")
     setInstitutionName("")
+    setLeadSource([])
+    setLeadType([])
   }
 
-  const callbackSectionActive =
-    selectedOutcome === "CallBack" ||
-    selectedOutcome === "Interested" ||
-    selectedOutcome === "Qualified"
+  // For default mode & lead mode – map selectedOutcome to callback-active logic
+  const callbackSectionActive = isLeadMode
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+    : (
+        selectedOutcome === "warm" ||
+        selectedOutcome === "hot" ||
+        selectedOutcome === "visit_scheduled"
+      )
 
   const isFormValid = () => {
     if (!selectedOutcome) return false
@@ -264,23 +453,28 @@ export function CallOutcomeModal({
       }
     }
 
-    const data: Record<string, unknown> = { notes }
+    const data: Record<string, unknown> = {
+      notes,
+      lead_source: leadSource,
+      lead_type: leadType,
+      status: selectedOutcome,
+    }
 
     if (callbackSectionActive && callbackDate) {
       data.callbackDate = callbackDate
       data.callbackTime = `${callbackHour}:${callbackMinute} ${callbackPeriod}`.trim()
     }
-    if (selectedOutcome === "NotInterested" || selectedOutcome === "DNC") {
+    if (selectedOutcome === "cold_not_interested" || selectedOutcome === "Not Interested") {
       data.reason = reason
-    } else if (selectedOutcome === "Interested") {
+    } else if (selectedOutcome === "warm" || selectedOutcome === "Interested") {
       data.coursePreference = coursePreference
       data.studyMode = studyMode
       data.preferredLocation = preferredLocation
       data.parentAware = parentAware
       data.bestTimeToCall = bestTimeToCall
-    } else if (selectedOutcome === "Qualified") {
+    } else if (selectedOutcome === "visit_scheduled" || selectedOutcome === "Qualified") {
       data.visitDate = callbackDate
-    } else if (selectedOutcome === "EnrolledElsewhere") {
+    } else if (selectedOutcome === "visit_done") {
       data.institutionName = institutionName
     }
 
@@ -304,7 +498,7 @@ export function CallOutcomeModal({
               <Phone className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <span className="text-xl font-bold">Call Outcome</span>
+              <span className="text-xl font-bold">Call Action</span>
               <SheetDescription className="text-sm font-normal text-muted-foreground">
                 Recording call for <span className="font-semibold text-foreground">{prospect.name}</span>
               </SheetDescription>
@@ -340,6 +534,25 @@ export function CallOutcomeModal({
                         {prospect.courseInterest || "Interest not captured"}
                       </Badge>
                     </div>
+                    {/* Show existing lead source/type if any */}
+                    {(prospect.lead_source?.length > 0 || prospect.lead_type?.length > 0) && (
+                      <div className="space-y-1">
+                        {prospect.lead_source?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {prospect.lead_source.map((s: string) => (
+                              <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {prospect.lead_type?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {prospect.lead_type.map((t: string) => (
+                              <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary">{t}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
@@ -396,14 +609,73 @@ export function CallOutcomeModal({
           {/* Right Panel: Call Logging Form */}
           <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
-              {/* Outcome Grid */}
+
+              {/* ── Step 1: Lead Information ── */}
               <section>
                 <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
                   <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">1</span>
-                  Select Outcome
+                  Lead Information
+                  {isLeadMode && (
+                    <Badge className="ml-2 text-xs bg-primary/10 text-primary border border-primary/30">
+                      Lead Mode Active
+                    </Badge>
+                  )}
+                </h3>
+                <div className="bg-muted/30 rounded-xl p-5 border space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Lead Source
+                    </Label>
+                    <MultiSelect
+                      options={LEAD_SOURCE_OPTIONS}
+                      selected={leadSource}
+                      onChange={setLeadSource}
+                      placeholder="Select lead source(s)..."
+                    />
+                    {leadSource.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {leadSource.map(s => (
+                          <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      Lead Type
+                    </Label>
+                    <MultiSelect
+                      options={LEAD_TYPE_OPTIONS}
+                      selected={leadType}
+                      onChange={setLeadType}
+                      placeholder="Select lead type(s)..."
+                    />
+                    {leadType.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {leadType.map(t => (
+                          <Badge key={t} variant="outline" className="text-xs border-primary/30 text-primary">{t}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {isLeadMode && (
+                    <p className="text-xs text-primary font-medium bg-primary/5 rounded-lg p-2 border border-primary/20">
+                      Lead mode active: Status options have been updated for lead tracking.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              {/* ── Step 2: Select Outcome ── */}
+              <section>
+                <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">2</span>
+                  Select Status
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {outcomeOptions.map((option) => (
+                  {currentOutcomeOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => {
@@ -432,16 +704,16 @@ export function CallOutcomeModal({
                 <>
                   <div className="h-px bg-border" />
 
-                  {/* Dynamic Fields */}
+                  {/* ── Step 3: Outcome Details ── */}
                   <section className="animate-in fade-in slide-in-from-top-4 duration-300">
                     <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
-                      <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">2</span>
-                      Outcome Details
+                      <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">3</span>
+                      Status Details
                     </h3>
 
                     <div className="bg-muted/30 rounded-xl p-6 border space-y-6">
-                      {/* Outcome Specific Fields */}
-                      {selectedOutcome === "NotInterested" && (
+                      {/* Status Specific Fields */}
+                      {(selectedOutcome === "cold_not_interested" || selectedOutcome === "Not Interested") && (
                         <div className="space-y-2">
                           <Label className="text-xs font-bold uppercase text-muted-foreground">Why not interested?</Label>
                           <Select value={reason} onValueChange={setReason}>
@@ -464,7 +736,7 @@ export function CallOutcomeModal({
                         </div>
                       )}
 
-                      {/* Callback toggle card removed: callbacks auto-enabled for warm/hot/cold */}
+                      {/* Callback section – only for default mode */}
                       {callbackSectionActive && (
                         <div className="space-y-6">
                           <div className="grid grid-cols-2 gap-4">
@@ -548,7 +820,7 @@ export function CallOutcomeModal({
                         </div>
                       )}
 
-                      {selectedOutcome === "Interested" && (
+                      {(selectedOutcome === "warm" || selectedOutcome === "Interested") && !isLeadMode && (
                         <div className="space-y-6">
                           <div className="space-y-2">
                             <Label className="text-xs font-bold uppercase text-muted-foreground">Course Interest</Label>
@@ -629,7 +901,7 @@ export function CallOutcomeModal({
                 onClick={handleSubmit}
                 disabled={!isFormValid()}
               >
-                Save Call Outcome
+                Save Action
               </Button>
             </div>
           </div>

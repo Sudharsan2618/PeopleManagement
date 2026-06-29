@@ -41,6 +41,9 @@ CREATE TABLE prospects (
     assigned_to      INT                 REFERENCES users(id) ON DELETE SET NULL,
     closing_reason   VARCHAR(255),
     tags             JSONB,              -- e.g. ["2024_batch", "scholarship_eligible"]
+    lead_source      JSONB               DEFAULT '[]'::jsonb,
+    lead_type        JSONB               DEFAULT '[]'::jsonb,
+    outcome          VARCHAR(100)        DEFAULT 'New',
     created_by       INT                 REFERENCES users(id) ON DELETE SET NULL,
     created_at       TIMESTAMP           NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMP           NOT NULL DEFAULT NOW()

@@ -55,9 +55,9 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   ApplicationProcess: "admission_done",   // Application Process → Admission Done
 }
 
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   Plus,
   MoreVertical,
   Maximize2
@@ -158,8 +158,8 @@ export default function CallbacksPage() {
       const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
       let callbackScheduledAt: string | null = null
-      const callbackOutcomes = ["CallBack", "Interested", "Qualified"]
-      if (callbackOutcomes.includes(outcome) && data.callbackDate) {
+      // Schedule callback whenever a callbackDate is provided
+      if (data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
@@ -168,7 +168,7 @@ export default function CallbacksPage() {
       if (data.reason) fullNotes += `\n[Reason] ${data.reason}`
       if (data.coursePreference) fullNotes += `\n[Course Preference] ${data.coursePreference}`
       if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
-      
+
       // Mark any previous callback call logs for this prospect as shown
       // so they don't appear in notifications after we log a new outcome
       try {
@@ -180,7 +180,7 @@ export default function CallbacksPage() {
       } catch (err) {
         console.error("Failed to mark previous callback as shown:", err)
       }
-      
+
       await callLogsApi.create({
         prospect_id: Number(selectedProspect.numericId),
         telecaller_id: telecallerId,
@@ -193,6 +193,10 @@ export default function CallbacksPage() {
       await prospectsApi.update(Number(selectedProspect.numericId), {
         status: statusAfterCall,
         course_interest: (data.coursePreference as string) || (data.courseConfirmed as string) || undefined,
+        // Update follow_up_date to callback date if a callback was scheduled
+        ...(callbackScheduledAt
+          ? { follow_up_date: (data.callbackDate as string) }
+          : {}),
       })
       toast({ title: "Call logged ✓", description: `Status updated to ${statusAfterCall}` })
       await fetchData()
@@ -333,7 +337,7 @@ export default function CallbacksPage() {
                 {HOURS.map(hour => {
                   const events = getEventsForSlot(date, hour)
                   const isToday = new Date().toDateString() === date.toDateString()
-                  
+
                   return (
                     <div key={hour} className={cn(
                       "h-24 border-b relative transition-colors duration-300",
@@ -341,16 +345,16 @@ export default function CallbacksPage() {
                     )}>
                       {/* Grid Line Visual Aid */}
                       <div className="absolute inset-x-0 top-0 h-px bg-muted/30" />
-                      
+
                       {/* Event Blocks */}
                       <div className="absolute inset-0 p-1 flex flex-col gap-1 z-10">
                         {events.map(event => {
                           const prospect = prospects[event.prospect_id]
                           if (!prospect) return null
-                          
+
                           const eventTime = parseISTDate(event.callback_scheduled_at!)
                           const minutes = eventTime.getMinutes()
-                          
+
                           return (
                             <button
                               key={event.id}
@@ -360,10 +364,10 @@ export default function CallbacksPage() {
                                 event.status_after_call === "hot"
                                   ? "bg-red-50 hover:border-red-500 border-red-100 hover:shadow-red-500/10"
                                   : event.status_after_call === "visit_scheduled" || event.status_after_call === "visit_done"
-                                  ? "bg-purple-50 hover:border-purple-500 border-purple-100 hover:shadow-purple-500/10"
-                                  : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
-                                  ? "bg-slate-50 hover:border-slate-500 border-slate-200 hover:shadow-slate-500/10"
-                                  : "bg-white hover:border-blue-500 border-blue-100 hover:shadow-blue-500/10",
+                                    ? "bg-purple-50 hover:border-purple-500 border-purple-100 hover:shadow-purple-500/10"
+                                    : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
+                                      ? "bg-slate-50 hover:border-slate-500 border-slate-200 hover:shadow-slate-500/10"
+                                      : "bg-white hover:border-blue-500 border-blue-100 hover:shadow-blue-500/10",
                                 "hover:scale-[1.02] hover:z-20 hover:shadow-xl",
                                 minutes > 0 && "translate-y-2"
                               )}
@@ -383,25 +387,43 @@ export default function CallbacksPage() {
                                     {prospect.name}
                                   </p>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-1.5 mt-auto">
                                   <Badge className={cn(
                                     "text-[8px] font-black px-1.5 h-3.5 leading-none uppercase",
                                     event.status_after_call === "hot"
                                       ? "bg-red-50 text-red-700 border-red-100"
                                       : event.status_after_call === "visit_scheduled" || event.status_after_call === "visit_done"
-                                      ? "bg-purple-50 text-purple-700 border-purple-100"
-                                      : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
-                                      ? "bg-slate-100 text-slate-700 border-slate-200"
-                                      : "bg-blue-50 text-blue-700 border-blue-100"
+                                        ? "bg-purple-50 text-purple-700 border-purple-100"
+                                        : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
+                                          ? "bg-slate-100 text-slate-700 border-slate-200"
+                                          : "bg-blue-50 text-blue-700 border-blue-100"
                                   )}>
-                                    {event.status_after_call === "hot"
-                                      ? "Hot"
-                                      : event.status_after_call === "visit_scheduled" || event.status_after_call === "visit_done"
-                                      ? "Visit"
-                                      : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
-                                      ? "Cold"
-                                      : "Warm"}
+                                    {(() => {
+                                      const STATUS_LABELS: Record<string, string> = {
+                                        warm: "Warm",
+                                        hot: "Hot",
+                                        visit_scheduled: "Visit",
+                                        visit_done: "Visit Done",
+                                        contacted: "Contacted",
+                                        cold_no_response: "No Response",
+                                        cold_not_interested: "Not Interested",
+                                        cold: "Cold",
+                                        lost: "Lost",
+                                        "Interested": "Interested",
+                                        "Interested Followup": "Int. Followup",
+                                        "Proposal To Be Sent": "Proposal Pending",
+                                        "Proposal Sent": "Proposal Sent",
+                                        "Training Date Followup": "Training F/U",
+                                        "Qualified": "Qualified",
+                                        "Ringing / Not Reachable": "Ringing",
+                                        "Not Interested": "Not Interested",
+                                        "Intro Call Completed": "Intro Done",
+                                      }
+                                      return event.status_after_call
+                                        ? (STATUS_LABELS[event.status_after_call] || event.status_after_call)
+                                        : "Callback"
+                                    })()}
                                   </Badge>
                                   <span className="text-[9px] text-muted-foreground truncate font-bold">
                                     {prospect.location || 'Unknown'}

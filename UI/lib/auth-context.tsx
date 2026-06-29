@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Authenticate with backend — password is verified server-side
       const apiUser = await authApi.login(email, password)
       const uiUser = convertApiUserToUser(apiUser)
-      
+
       // Persist to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(uiUser))
       setUser(uiUser)

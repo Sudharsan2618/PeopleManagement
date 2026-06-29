@@ -8,7 +8,7 @@ class CallLogService:
     """Service layer for Call Logs table with direct SQL queries."""
     
     @staticmethod
-    def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None) -> List[dict]:
+    def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None, prospect_type: str = None) -> List[dict]:
         """Get all call logs with prospect and telecaller details."""
         query = """
             SELECT
@@ -29,7 +29,8 @@ class CallLogService:
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
-                p.course_interest AS prospect_course_interest
+                p.course_interest AS prospect_course_interest,
+                COALESCE(p.department, p.designation, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -45,6 +46,9 @@ class CallLogService:
         if telecaller_id is not None:
             query += " AND cl.telecaller_id = %s"
             params.append(telecaller_id)
+        if prospect_type:
+            query += " AND p.prospect_type = %s"
+            params.append(prospect_type)
         query += "\n            ORDER BY cl.called_at DESC\n        "
         return execute_query(query, tuple(params) if params else None, fetch="all")
     
@@ -70,7 +74,8 @@ class CallLogService:
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
-                p.course_interest AS prospect_course_interest
+                p.course_interest AS prospect_course_interest,
+                COALESCE(p.department, p.designation, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -100,7 +105,8 @@ class CallLogService:
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
-                p.course_interest AS prospect_course_interest
+                p.course_interest AS prospect_course_interest,
+                COALESCE(p.department, p.designation, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -131,7 +137,8 @@ class CallLogService:
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
-                p.course_interest AS prospect_course_interest
+                p.course_interest AS prospect_course_interest,
+                COALESCE(p.department, p.designation, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -162,7 +169,8 @@ class CallLogService:
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
-                p.course_interest AS prospect_course_interest
+                p.course_interest AS prospect_course_interest,
+                COALESCE(p.department, p.designation, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id

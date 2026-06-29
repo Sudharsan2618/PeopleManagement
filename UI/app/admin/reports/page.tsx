@@ -41,8 +41,8 @@ import autoTable from "jspdf-autotable"
 import { adminApi, callLogsApi, SpocVisitsApi, prospectsApi } from "@/lib/api-client"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 
-const REPORT_OUTCOME_ORDER = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
-const REPORT_OUTCOME_COLORS: Record<string, string> = {
+const SA_OUTCOME_ORDER = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
+const SA_OUTCOME_COLORS: Record<string, string> = {
   'Cold / No Response': '#64748b',
   'Cold / Not Interested': '#94a3b8',
   Warm: '#f59e0b',
@@ -52,6 +52,19 @@ const REPORT_OUTCOME_COLORS: Record<string, string> = {
   'Admission Done ✓': '#10b981',
 }
 
+const CC_OUTCOME_ORDER = ['New', 'Interested', 'Interested Followup', 'Proposal To Be Sent', 'Proposal Sent', 'Training Date Followup', 'Qualified', 'Ringing / Not Reachable', 'Not Interested']
+const CC_OUTCOME_COLORS: Record<string, string> = {
+  'New': '#3b82f6',
+  'Interested': '#8b5cf6',
+  'Interested Followup': '#a855f7',
+  'Proposal To Be Sent': '#f59e0b',
+  'Proposal Sent': '#f97316',
+  'Training Date Followup': '#eab308',
+  'Qualified': '#10b981',
+  'Ringing / Not Reachable': '#64748b',
+  'Not Interested': '#ef4444'
+}
+
 const CALL_HISTORY_STATUS_LABELS: Record<string, string> = {
   cold: 'Cold / No Response',
   cold_no_response: 'Cold / No Response',
@@ -59,10 +72,10 @@ const CALL_HISTORY_STATUS_LABELS: Record<string, string> = {
   lost: 'Cold / No Response',
   warm: 'Warm',
   contacted: 'Warm',
-  hot: 'Hot',
-  visit_scheduled: 'Visit Scheduled',
-  visit_done: 'Visit Done / Decision Pending',
-  admission_done: 'Admission Done ✓',
+  hot: 'Strong Interest / Ready for Counselling',
+  visit_scheduled: 'Visit Planned and Confirmed',
+  visit_done: 'Visit Campus / Decision Awaited',
+  admission_done: 'Admission Successfully Completed',
 }
 
 const formatCallHistoryStatus = (status?: string) => {
@@ -71,18 +84,18 @@ const formatCallHistoryStatus = (status?: string) => {
 }
 
 const DB_OUTCOME_LABELS: Record<string, string> = {
-  not_answered: "No response",
-  busy: "Busy",
-  wrong_number: "Wrong Number",
-  callback: "Interested",
-  not_interested: "Not Interested",
-  dnc: "Do Not Call",
-  language_barrier: "Language Barrier",
-  interested: "Strong Interest / Ready for counselling",
-  qualified: "Visit planned and confirmed",
-  visit_done: "Visit campus / Decision awaited",
-  enrolled_elsewhere: "Visit campus / Decision awaited",
-  application_process: "Admission successfully completed",
+  not_answered: "Cold / No Response",
+  busy: "Cold / No Response",
+  wrong_number: "Cold",
+  callback: "Warm",
+  not_interested: "Cold / Not Interested",
+  dnc: "Cold / Not Interested",
+  language_barrier: "Cold / No Response",
+  interested: "Strong Interest / Ready for Counselling",
+  qualified: "Visit Planned and Confirmed",
+  visit_done: "Visit Campus / Decision Awaited",
+  enrolled_elsewhere: "Visit Campus / Decision Awaited",
+  application_process: "Admission Successfully Completed",
 }
 
 const formatCallOutcome = (outcome?: string) => {
@@ -92,6 +105,7 @@ const formatCallOutcome = (outcome?: string) => {
 }
 
 export default function ReportsPage() {
+  const [activeTabType, setActiveTabType] = useState<"student_admission" | "college_contact">("student_admission")
   const [reportType, setReportType] = useState("overview")
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
@@ -120,306 +134,594 @@ export default function ReportsPage() {
   const downloadReportPdf = async () => {
     const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" })
     const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 40
     const usableWidth = pageWidth - margin * 2
 
     const getSvgImageDataUrl = async (wrapperId: string) => {
       const wrapper = document.getElementById(wrapperId)
       if (!wrapper) return null
-
       const svg = wrapper.querySelector('svg') as SVGSVGElement | null
       if (!svg) return null
-
       const clonedSvg = svg.cloneNode(true) as SVGSVGElement
       clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
       clonedSvg.setAttribute('width', svg.clientWidth.toString())
       clonedSvg.setAttribute('height', svg.clientHeight.toString())
-
       const serializer = new XMLSerializer()
       const svgString = serializer.serializeToString(clonedSvg)
       const encoded = encodeURIComponent(svgString)
       const dataUrl = `data:image/svg+xml;charset=utf-8,${encoded}`
-
       const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.onerror = (err) => reject(err)
-        img.src = dataUrl
+        const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = dataUrl
       })
-
       const canvas = document.createElement('canvas')
       canvas.width = image.naturalWidth || svg.clientWidth
       canvas.height = image.naturalHeight || svg.clientHeight
-      const context = canvas.getContext('2d')
-      if (!context) return null
-      context.drawImage(image, 0, 0)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return null
+      ctx.drawImage(image, 0, 0)
       return canvas.toDataURL('image/png')
     }
 
-    const title = "Telecalling Performance & Analytics Report"
     const periodLabel = startDate && endDate ? `${startDate} to ${endDate}` : "Custom range"
     const reportDate = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     const generatedAt = new Date().toLocaleString(undefined, { hour12: false })
     const generatedBy = typeof window !== 'undefined' && (window as any).__CURRENT_USER__?.name ? (window as any).__CURRENT_USER__.name : "Admin"
-    const telecallerLabel = selectedTelecallerId && selectedTelecallerName ? `Telecaller: ${selectedTelecallerName}` : "Telecaller: All"
+    const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
+    const formatNotes = (text: string) => { const n = normalizeText(text); return n ? doc.splitTextToSize(n, 160) : '-' }
 
-    // Header
-    doc.setFontSize(14)
-    doc.text(title, margin, 50)
-    doc.setFontSize(10)
-    doc.text(`Generated: ${reportDate} ${generatedAt}`, margin, 66)
-    doc.text(`Period: ${periodLabel}`, margin, 80)
-    doc.text(`Generated by: ${generatedBy}`, margin, 94)
-    doc.text(telecallerLabel, margin, 108)
+    // ─── Use already-fetched consistent data from state ───────────────────────────
+    // Fetch fresh data for both modules to ensure PDF has complete data
+    const [allProspects, allCallLogs] = await Promise.all([
+      prospectsApi.getAll(),
+      callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined).catch(() => [] as any[])
+    ])
+    
+    // Filter prospects by module type using same logic as Telecaller Dashboard
+    const collegeContacts = allProspects.filter((p: any) => 
+      (p.lead_source && p.lead_source.length > 0) || 
+      (p.lead_type && p.lead_type.length > 0)
+    )
+    
+    const studentAdmissionProspects = allProspects.filter((p: any) => 
+      !((p.lead_source && p.lead_source.length > 0) || 
+        (p.lead_type && p.lead_type.length > 0))
+    )
+    
+    // Filter call logs by prospect type using same logic
+    const collegeContactIds = new Set(collegeContacts.map((p) => p.id))
+    const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.id))
+    
+    const collegeContactCallLogs = allCallLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
+    const studentAdmissionCallLogs = allCallLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
+    
+    // Calculate outcome distribution for both modules
+    const calculateOutcomeDistribution = (logs: any[], isCollegeContact: boolean) => {
+      const distribution: Record<string, number> = {}
+      
+      if (isCollegeContact) {
+        const ccOutcomes = ['New', 'Interested', 'Interested Followup', 'Proposal To Be Sent', 'Proposal Sent', 'Training Date Followup', 'Qualified', 'Ringing / Not Reachable', 'Not Interested']
+        ccOutcomes.forEach(outcome => distribution[outcome] = 0)
+        
+        logs.forEach((log: any) => {
+          const outcome = log.status_after_call || log.outcome || 'New'
+          if (distribution.hasOwnProperty(outcome)) {
+            distribution[outcome]++
+          }
+        })
+      } else {
+        const saOutcomes = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
+        saOutcomes.forEach(outcome => distribution[outcome] = 0)
+        
+        logs.forEach((log: any) => {
+          const status = log.status_after_call
+          let outcome = 'Cold / No Response'
+          if (status === 'visit_done') outcome = 'Visit Done / Decision Pending'
+          else if (status === 'admission_done') outcome = 'Admission Done ✓'
+          else if (status === 'visit_scheduled') outcome = 'Visit Scheduled'
+          else if (status === 'hot') outcome = 'Hot'
+          else if (status === 'warm' || status === 'contacted') outcome = 'Warm'
+          else if (status === 'cold_not_interested' || status === 'Not Interested') outcome = 'Cold / Not Interested'
+          
+          if (distribution.hasOwnProperty(outcome)) {
+            distribution[outcome]++
+          }
+        })
+      }
+      
+      return Object.entries(distribution).map(([name, value]) => ({ name, value }))
+    }
+    
+    // Calculate summary stats matching telecaller dashboard logic
+    const calculateSummary = (prospects: any[], logs: any[], isCollegeContact: boolean) => {
+      // Use all logs filtered by date range from backend, not just today
+      const totalCalls = logs.length
+      
+      // Filter prospects by date range (created_at or assigned_date within range)
+      const dateFilteredProspects = prospects.filter((p: any) => {
+        const prospectDate = new Date(p.created_at || p.assigned_date)
+        const start = startDate ? new Date(startDate) : new Date('1970-01-01')
+        const end = endDate ? new Date(endDate) : new Date()
+        end.setHours(23, 59, 59, 999)
+        return prospectDate >= start && prospectDate <= end
+      })
+      
+      // Calculate total calls per prospect for pending logic (using all logs, not just today)
+      const prospectCallCounts = new Map<number, number>()
+      logs.forEach((log: any) => {
+        const current = prospectCallCounts.get(log.prospect_id) || 0
+        prospectCallCounts.set(log.prospect_id, current + 1)
+      })
+      
+      // Match telecaller dashboard pending logic (on date-filtered prospects)
+      const pendingCalls = dateFilteredProspects.filter((p: any) => {
+        const totalCallsForProspect = prospectCallCounts.get(p.id) || 0
+        if (isCollegeContact) {
+          return (p.outcome === 'New' || p.status === 'New' || 
+                  (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === 'New'))) &&
+                  totalCallsForProspect === 0
+        } else {
+          return p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)
+        }
+      }).length
+      
+      // Match telecaller dashboard callback logic: count unique prospects with callbacks (using all logs)
+      const callbackProspectIds = new Set<number>()
+      logs.forEach((log: any) => {
+        if (log.callback_scheduled_at) {
+          callbackProspectIds.add(log.prospect_id)
+        }
+      })
+      const callbacks = callbackProspectIds.size
+      
+      return {
+        totalCalls,
+        totalPendingCalls: pendingCalls,
+        callbacks,
+        totalEnrollments: dateFilteredProspects.filter((p: any) => p.status === 'admission_done').length,
+        totalProspects: dateFilteredProspects.length
+      }
+    }
+    
+    const saOutcomeDistribution = calculateOutcomeDistribution(studentAdmissionCallLogs, false)
+    const ccOutcomeDistribution = calculateOutcomeDistribution(collegeContactCallLogs, true)
+    
+    const saData = {
+      summary: calculateSummary(studentAdmissionProspects, studentAdmissionCallLogs, false),
+      outcomeDistribution: saOutcomeDistribution
+    }
+    
+    const ccData = {
+      summary: calculateSummary(collegeContacts, collegeContactCallLogs, true),
+      outcomeDistribution: ccOutcomeDistribution
+    }
+    
+    const saLogs = studentAdmissionCallLogs
+    const ccLogs = collegeContactCallLogs
 
-    let cursorY = 128
 
-    const getOutcomeValue = (label: string) => {
-      return data?.outcomeDistribution?.find((item: any) => item.name === label)?.value ?? 0
+    // ─── Section meta info embedded in section banners ─────────────────────────
+
+    // helper: draw a coloured section banner
+    const drawSectionBanner = (title: string, subtitle: string, color: [number, number, number], y: number) => {
+      doc.setFillColor(...color)
+      doc.rect(margin, y, usableWidth, 30, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.text(title, margin + 8, y + 20)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.text(subtitle, margin + 8 + doc.getTextWidth(title) + 12, y + 20)
+      doc.setTextColor(0, 0, 0)
+      return y + 42
     }
 
-    // Summary analytics as a compact table using telecaller-derived outcome categories
-    const totalOutcomeCalls = data?.summary?.totalCalls || (data?.outcomeDistribution || []).reduce((acc: number, curr: any) => acc + curr.value, 0)
-    const calcPerc = (val: number) => totalOutcomeCalls > 0 ? `${((val / totalOutcomeCalls) * 100).toFixed(1)}%` : '0%'
-
-    const summaryMetrics: any[] = [
-      ["Cold / No Response", getOutcomeValue('Cold / No Response'), calcPerc(getOutcomeValue('Cold / No Response'))],
-      ["Cold / Not Interested", getOutcomeValue('Cold / Not Interested'), calcPerc(getOutcomeValue('Cold / Not Interested'))],
-      ["Warm", getOutcomeValue('Warm'), calcPerc(getOutcomeValue('Warm'))],
-      ["Hot", getOutcomeValue('Hot'), calcPerc(getOutcomeValue('Hot'))],
-      ["Visit Scheduled", getOutcomeValue('Visit Scheduled'), calcPerc(getOutcomeValue('Visit Scheduled'))],
-      ["Visit Done / Decision Pending", getOutcomeValue('Visit Done / Decision Pending'), calcPerc(getOutcomeValue('Visit Done / Decision Pending'))],
-      ["Admission Done ✓", getOutcomeValue('Admission Done ✓'), calcPerc(getOutcomeValue('Admission Done ✓'))],
-      ["Total Calls", totalOutcomeCalls, "100%"],
-    ]
-
-    doc.setFontSize(12)
-    doc.text('Outcome Distribution Summary', margin, cursorY)
-    cursorY += 8
-
-    autoTable(doc, {
-      startY: cursorY,
-      theme: 'grid',
-      head: [['Outcome Category', 'Count', '% of Total Calls']],
-      body: summaryMetrics,
-      styles: { fontSize: 9, cellPadding: 6 },
-      columnStyles: {
-        0: { cellWidth: 170 },
-        1: { cellWidth: 60 },
-        2: { cellWidth: 90 },
-      },
-      headStyles: { fillColor: [59, 130, 246], textColor: 255 },
-      tableWidth: 'wrap',
-      didParseCell: function (dataArg) {
-        if (dataArg.section === 'body') {
-          const rowText = (dataArg.row.raw as any)[0]
-          if (rowText === 'Cold / No Response') dataArg.cell.styles.fillColor = [241, 245, 249]
-          else if (rowText === 'Cold / Not Interested') dataArg.cell.styles.fillColor = [241, 245, 249]
-          else if (rowText === 'Warm') dataArg.cell.styles.fillColor = [254, 243, 199]
-          else if (rowText === 'Hot') dataArg.cell.styles.fillColor = [254, 226, 226]
-          else if (rowText === 'Visit Scheduled') dataArg.cell.styles.fillColor = [237, 233, 254]
-          else if (rowText === 'Visit Done / Decision Pending') dataArg.cell.styles.fillColor = [255, 237, 213]
-          else if (rowText === 'Admission Done ✓') dataArg.cell.styles.fillColor = [209, 250, 229]
-          else if (rowText === 'Total Calls') {
-            dataArg.cell.styles.fontStyle = 'bold'
+    // helper: outcome summary table
+    const drawOutcomeTable = (
+      outcomes: { label: string; color: [number, number, number] }[],
+      distData: any[],
+      totalCalls: number,
+      startY: number,
+      headColor: [number, number, number]
+    ) => {
+      const calcP = (v: number) => totalCalls > 0 ? `${((v / totalCalls) * 100).toFixed(1)}%` : '0%'
+      const body = outcomes.map(o => {
+        const val = distData.find((d: any) => d.name === o.label)?.value ?? 0
+        return [o.label, val, calcP(val)]
+      })
+      body.push(['Total Calls', totalCalls, '100%'])
+      autoTable(doc, {
+        startY,
+        theme: 'grid',
+        head: [['Outcome', 'Count', '% of Total']],
+        body,
+        styles: { fontSize: 8, cellPadding: 5 },
+        columnStyles: { 0: { cellWidth: 180 }, 1: { cellWidth: 55 }, 2: { cellWidth: 70 } },
+        headStyles: { fillColor: headColor, textColor: 255 },
+        tableWidth: 'wrap',
+        didParseCell: (d) => {
+          if (d.section === 'body') {
+            const match = outcomes.find(o => o.label === d.row.raw[0])
+            if (match) d.cell.styles.fillColor = match.color as any
+            if (d.row.raw[0] === 'Total Calls') d.cell.styles.fontStyle = 'bold'
           }
         }
-      }
-    })
-
-    cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 160
-
-    // Capture charts by DOM id if present and place them
-    const chartIds = [
-      { id: 'chart-call-activity', title: 'Daily Call Volume' },
-      { id: 'chart-outcome', title: 'Outcome Distribution' },
-      { id: 'chart-call-trends', title: 'Call Trends' },
-      { id: 'chart-conversion', title: 'Conversion Funnel' },
-      { id: 'chart-visit-trends', title: 'Field Visit Trends' },
-    ]
-
-    for (const c of chartIds) {
-      const img = await getSvgImageDataUrl(c.id)
-      if (img) {
-        if (cursorY + 240 > doc.internal.pageSize.getHeight() - 60) doc.addPage(), cursorY = margin
-        doc.setFontSize(11)
-        doc.text(c.title, margin, cursorY)
-        doc.addImage(img, 'PNG', margin, cursorY + 8, usableWidth, 200)
-        cursorY += 220
-      }
-    }
-
-    // Telecaller performance table
-    if (data?.telecallerPerformance?.length) {
-      if (cursorY + 60 > doc.internal.pageSize.getHeight() - 60) doc.addPage(), cursorY = margin
-      doc.setFontSize(12)
-      const telecallerTitle = selectedTelecallerName ? `Telecaller Performance — ${selectedTelecallerName}` : 'Telecaller Performance'
-      doc.text(telecallerTitle, margin, cursorY)
-      cursorY += 8
-
-      const performanceRows = selectedTelecallerId
-        ? data.telecallerPerformance.filter((t: any) => t.id === selectedTelecallerId)
-        : data.telecallerPerformance
-
-      const rows = performanceRows.map((t: any) => ([
-        t.name || '-',
-        t.totalAssignedLeads ?? 0,
-        t.totalCalls ?? 0,
-        t.pendingCalls ?? 0,
-        t.callbacks ?? 0,
-        t.coldNRCount ?? 0,
-        t.coldNICount ?? 0,
-        t.warmCount ?? 0,
-        t.hotCount ?? 0,
-        t.visitScheduledCount ?? 0,
-        t.decisionPendingCount ?? 0,
-        t.admittedCount ?? 0,
-      ]))
-
-      autoTable(doc, {
-        startY: cursorY,
-        head: [['Telecaller', 'Total Assigned Leads', 'Total Calls', 'Pending Calls', 'Callbacks', 'Cold NR', 'Cold NI', 'Warm', 'Hot', 'Visit Sched.', 'Decision Pend.', 'Admitted']],
-        body: rows,
-        styles: { fontSize: 8, cellPadding: 5 },
-        headStyles: { fillColor: [16, 185, 129], textColor: 255 },
-        theme: 'striped',
-        didDrawPage: (dataArg) => { },
       })
-      cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
+      return (doc as any).lastAutoTable?.finalY + 16 || startY + 140
     }
 
-    // Detailed call logs (large table) - fetch from API
-    try {
-      const callLogs = await callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined)
-      if (callLogs && callLogs.length) {
-        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
-        const formatNotes = (text: string) => {
-          const normalized = normalizeText(text)
-          return normalized ? doc.splitTextToSize(normalized, 160) : '-'
-        }
-
-        if (cursorY + 40 > doc.internal.pageSize.getHeight() - 60) doc.addPage(), cursorY = margin
-        doc.setFontSize(12)
-        doc.text('Detailed Call Logs', margin, cursorY)
-        cursorY += 8
-
-        const callRows = callLogs.map((r: any) => ([
-          r.called_at ? new Date(r.called_at).toLocaleDateString() : '-',
-          r.called_at ? new Date(r.called_at).toLocaleTimeString() : '-',
-          r.telecaller_name || `ID ${r.telecaller_id}` || '-',
-          r.prospect_name || `ID ${r.prospect_id}` || '-',
-          r.prospect_phone || '-',
-          r.course_interest || r.prospect_course_interest || '-',
-          r.sourced_from || r.source || '-',
-          r.duration ?? '-',
-          formatCallHistoryStatus(r.status_after_call),
-          formatCallOutcome(r.outcome),
-          r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleString() : '-',
-          formatNotes(r.notes || ''),
-        ]))
-
-        autoTable(doc, {
-          startY: cursorY,
-          head: [['Date', 'Time', 'Telecaller', 'Student', 'Phone', 'Course', 'Lead Source', 'Duration', 'Status', 'Outcome', 'Callback Date', 'Notes']],
-          body: callRows,
-          styles: { fontSize: 8, cellPadding: 5, overflow: 'linebreak', valign: 'top', cellWidth: 'wrap' },
-          columnStyles: {
-            0: { cellWidth: 40 },
-            1: { cellWidth: 30 },
-            2: { cellWidth: 70 },
-            3: { cellWidth: 80 },
-            4: { cellWidth: 55 },
-            5: { cellWidth: 55 },
-            6: { cellWidth: 50 },
-            7: { cellWidth: 40 },
-            8: { cellWidth: 55 },
-            9: { cellWidth: 55 },
-            10: { cellWidth: 70 },
-            11: { cellWidth: 180 },
-          },
-          tableWidth: 'auto',
-          headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 9 },
-          theme: 'striped',
-          didDrawPage: () => { },
-        })
-        cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
-      }
-    } catch (err) {
-      console.warn('Failed to fetch call logs for PDF export', err)
+    // helper: telecaller performance table
+    const drawTelecallerTable = (
+      perfData: any[],
+      isSA: boolean,
+      startY: number,
+      headColor: [number, number, number]
+    ) => {
+      if (!perfData?.length) return startY
+      const saHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Cold NR', 'Cold NI', 'Warm', 'Hot', 'Visit Sch.', 'Dec. Pend.', 'Admitted']
+      const ccHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Ringing NR', 'Not Interest.', 'Interested', 'Proposal Sent', 'Training F/U', 'Qualified']
+      const saRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.warmCount ?? 0, t.hotCount ?? 0, t.visitScheduledCount ?? 0, t.decisionPendingCount ?? 0, t.admittedCount ?? 0]
+      const ccRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.warmCount ?? 0, t.proposalSentCount ?? 0, t.hotCount ?? 0, t.qualifiedCount ?? 0]
+      autoTable(doc, {
+        startY,
+        head: [isSA ? saHead : ccHead],
+        body: perfData.map(isSA ? saRow : ccRow),
+        styles: { fontSize: 7.5, cellPadding: 4 },
+        headStyles: { fillColor: headColor, textColor: 255 },
+        theme: 'striped',
+      })
+      return (doc as any).lastAutoTable?.finalY + 16 || startY + 100
     }
 
-    // Field visits
-    try {
-      const visits = await SpocVisitsApi.getAll(startDate, endDate)
-      if (visits && visits.length) {
-        if (cursorY + 40 > doc.internal.pageSize.getHeight() - 60) doc.addPage(), cursorY = margin
-        doc.setFontSize(12)
-        doc.text('Field Visits', margin, cursorY)
-        cursorY += 8
-
-        const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
-        const formatNotes = (text: string) => {
-          const normalized = normalizeText(text)
-          return normalized ? doc.splitTextToSize(normalized, 160) : '-'
-        }
-
-        const vRows = visits.map((v: any) => ([
-          v.institution_name || '-',
-          v.contact_name || '-',
-          v.visit_type || '-',
-          v.follow_up_date || '-',
-          v.next_action || '-',
-          formatNotes(v.notes || ''),
-        ]))
-
-        autoTable(doc, {
-          startY: cursorY,
-          head: [['Student/Institution', 'Executive', 'Visit Type', 'Follow-Up Date', 'Status/Next Action', 'Remarks']],
-          body: vRows,
-          styles: { fontSize: 9, cellPadding: 5, overflow: 'linebreak', valign: 'top' },
-          columnStyles: {
-            0: { cellWidth: 110 },
-            1: { cellWidth: 90 },
-            2: { cellWidth: 80 },
-            3: { cellWidth: 80 },
-            4: { cellWidth: 90 },
-            5: { cellWidth: 145 },
-          },
-          tableWidth: 'auto',
-          headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 9 },
-          theme: 'striped',
-        })
-        cursorY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 20 : cursorY + 120
-      }
-    } catch (err) {
-      console.warn('Failed to fetch field visits for PDF export', err)
+    // helper: call logs table
+    const drawCallLogsTable = (logs: any[], isSA: boolean, startY: number, headColor: [number, number, number]) => {
+      if (!logs?.length) return startY
+      const rows = logs.map((r: any) => [
+        r.called_at ? new Date(r.called_at).toLocaleDateString() : '-',
+        r.called_at ? new Date(r.called_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+        r.telecaller_name || '-',
+        r.prospect_name || '-',
+        r.prospect_phone || '-',
+        isSA ? (r.course_interest || r.prospect_course_interest || '-') : (r.institution_name || '-'),
+        formatCallHistoryStatus(r.status_after_call),
+        r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleDateString() : '-',
+        formatNotes(r.notes || ''),
+      ])
+      const head = isSA
+        ? ['Date', 'Time', 'Telecaller', 'Student', 'Phone', 'Course', 'Status', 'Callback', 'Notes']
+        : ['Date', 'Time', 'Telecaller', 'Contact', 'Phone', 'Institution', 'Status', 'Callback', 'Notes']
+      autoTable(doc, {
+        startY,
+        head: [head],
+        body: rows,
+        styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', valign: 'top' },
+        columnStyles: {
+          0: { cellWidth: 42 }, 1: { cellWidth: 32 }, 2: { cellWidth: 70 },
+          3: { cellWidth: 80 }, 4: { cellWidth: 60 }, 5: { cellWidth: 65 },
+          6: { cellWidth: 70 }, 7: { cellWidth: 55 }, 8: { cellWidth: 150 },
+        },
+        tableWidth: 'auto',
+        headStyles: { fillColor: headColor, textColor: 255 },
+        theme: 'striped',
+      })
+      return (doc as any).lastAutoTable?.finalY + 16 || startY + 100
     }
 
-    // Footer and page numbers
+    const ensurePage = (y: number, needed = 80) => {
+      if (y + needed > pageHeight - 50) { doc.addPage(); return margin }
+      return y
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SECTION 1 — STUDENT ADMISSION
+    // ═══════════════════════════════════════════════════════════════════════════
+    let y = margin
+
+    y = drawSectionBanner("SECTION 1 — STUDENT ADMISSION", `${saData?.summary?.totalCalls ?? 0} total calls`, [37, 99, 235], y)
+
+    // KPI row
+    const saKpis = [
+      { label: 'Total Prospects', value: saData?.summary?.totalProspects ?? 0 },
+      { label: 'Total Calls', value: saData?.summary?.totalCalls ?? 0 },
+      { label: 'Warm', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Warm')?.value ?? 0 },
+      { label: 'Hot', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Hot')?.value ?? 0 },
+      { label: 'Admission Done', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Admission Done ✓')?.value ?? 0 },
+    ]
+    autoTable(doc, {
+      startY: y,
+      theme: 'plain',
+      head: [saKpis.map(k => k.label)],
+      body: [saKpis.map(k => k.value)],
+      headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontSize: 8 },
+      bodyStyles: { fontSize: 14, fontStyle: 'bold', halign: 'center' },
+    })
+    y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
+
+    // Add Call Activity Chart for Student Admission
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Call Activity Chart', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    const callActivityChart = await getSvgImageDataUrl('chart-call-activity')
+    if (callActivityChart) {
+      const chartWidth = usableWidth * 0.6
+      const chartHeight = 200
+      doc.addImage(callActivityChart, 'PNG', margin, y, chartWidth, chartHeight)
+      y += chartHeight + 15
+    }
+
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Outcome Distribution', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    
+    // Add Outcome Distribution Chart for Student Admission
+    const outcomeChart = await getSvgImageDataUrl('chart-outcome')
+    if (outcomeChart) {
+      const chartWidth = usableWidth * 0.6
+      const chartHeight = 200
+      doc.addImage(outcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
+      y += chartHeight + 15
+    }
+    
+    y = ensurePage(y, 80)
+    y = drawOutcomeTable([
+      { label: 'Cold / No Response', color: [241, 245, 249] },
+      { label: 'Cold / Not Interested', color: [241, 245, 249] },
+      { label: 'Warm', color: [254, 243, 199] },
+      { label: 'Hot', color: [254, 226, 226] },
+      { label: 'Visit Scheduled', color: [237, 233, 254] },
+      { label: 'Visit Done / Decision Pending', color: [255, 237, 213] },
+      { label: 'Admission Done ✓', color: [209, 250, 229] },
+    ], saData?.outcomeDistribution || [], saData?.summary?.totalCalls || 0, y, [37, 99, 235])
+
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Telecaller Performance', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    y = drawTelecallerTable(saData?.telecallerPerformance || [], true, y, [37, 99, 235])
+
+    y = ensurePage(y, 60)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Detailed Call Logs — Student Admission', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    y = drawCallLogsTable(saLogs || [], true, y, [67, 56, 202])
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SECTION 2 — COLLEGE CONTACT
+    // ═══════════════════════════════════════════════════════════════════════════
+    doc.addPage()
+    y = margin
+
+    y = drawSectionBanner("SECTION 2 — COLLEGE CONTACT", `${ccData?.summary?.totalCalls ?? 0} total calls`, [124, 58, 237], y)
+
+    // KPI row
+    const ccKpis = [
+      { label: 'Total Prospects', value: ccData?.summary?.totalProspects ?? 0 },
+      { label: 'Total Calls', value: ccData?.summary?.totalCalls ?? 0 },
+      { label: 'Proposal Sent', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Proposal Sent')?.value ?? 0 },
+      { label: 'Qualified', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
+      { label: 'Not Interested', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Not Interested')?.value ?? 0 },
+    ]
+    autoTable(doc, {
+      startY: y,
+      theme: 'plain',
+      head: [ccKpis.map(k => k.label)],
+      body: [ccKpis.map(k => k.value)],
+      headStyles: { fillColor: [237, 233, 254], textColor: [109, 40, 217], fontSize: 8 },
+      bodyStyles: { fontSize: 14, fontStyle: 'bold', halign: 'center' },
+    })
+    y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
+
+    // Add Call Activity Chart for College Contact
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Call Activity Chart', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    const ccCallActivityChart = await getSvgImageDataUrl('chart-call-activity')
+    if (ccCallActivityChart) {
+      const chartWidth = usableWidth * 0.6
+      const chartHeight = 200
+      doc.addImage(ccCallActivityChart, 'PNG', margin, y, chartWidth, chartHeight)
+      y += chartHeight + 15
+    }
+
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Outcome Distribution', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    
+    // Add Outcome Distribution Chart for College Contact
+    const ccOutcomeChart = await getSvgImageDataUrl('chart-outcome')
+    if (ccOutcomeChart) {
+      const chartWidth = usableWidth * 0.6
+      const chartHeight = 200
+      doc.addImage(ccOutcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
+      y += chartHeight + 15
+    }
+    
+    y = ensurePage(y, 80)
+    y = drawOutcomeTable([
+      { label: 'New', color: [219, 234, 254] },
+      { label: 'Interested', color: [237, 233, 254] },
+      { label: 'Interested Followup', color: [243, 232, 255] },
+      { label: 'Proposal To Be Sent', color: [254, 243, 199] },
+      { label: 'Proposal Sent', color: [255, 237, 213] },
+      { label: 'Training Date Followup', color: [254, 252, 232] },
+      { label: 'Qualified', color: [209, 250, 229] },
+      { label: 'Ringing / Not Reachable', color: [241, 245, 249] },
+      { label: 'Not Interested', color: [254, 226, 226] },
+    ], ccData?.outcomeDistribution || [], ccData?.summary?.totalCalls || 0, y, [124, 58, 237])
+
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Telecaller Performance', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    y = drawTelecallerTable(ccData?.telecallerPerformance || [], false, y, [124, 58, 237])
+
+    y = ensurePage(y, 60)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Detailed Call Logs — College Contact', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    y = drawCallLogsTable(ccLogs || [], false, y, [124, 58, 237])
+
+    // ─── Footer on every page ──────────────────────────────────────────────────
     const pageCount = doc.getNumberOfPages()
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i)
-      const footerY = doc.internal.pageSize.getHeight() - 20
-      doc.setFontSize(9)
-      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2 - 30, footerY)
-      doc.text('Company Name', margin, footerY)
+      const fy = pageHeight - 18
+      doc.setFontSize(8); doc.setTextColor(100, 100, 100)
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2 - 20, fy)
+      doc.text('CRM Analytics Report  ·  Confidential', margin, fy)
+      doc.text(`Generated: ${generatedAt}`, pageWidth - margin - doc.getTextWidth(`Generated: ${generatedAt}`), fy)
+      doc.setTextColor(0, 0, 0)
     }
 
-    doc.save(`telecalling-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`)
+    doc.save(`crm-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`)
   }
+
+
+
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [reports, prospects] = await Promise.all([
-          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate),
-          prospectsApi.getAll()
+        const [reports, prospects, callLogs] = await Promise.all([
+          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, activeTabType),
+          prospectsApi.getAll(),
+          callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined, activeTabType)
         ])
-        setData(reports)
-        // Filter prospects with visit_done status
-        const visitDone = prospects.filter((p: any) => p.status === "visit_done")
-        setVisitDoneProspects(visitDone)
+        
+        // Filter prospects by module type using same logic as Telecaller Dashboard
+        const collegeContacts = prospects.filter((p: any) => 
+          (p.lead_source && p.lead_source.length > 0) || 
+          (p.lead_type && p.lead_type.length > 0)
+        )
+        
+        const studentAdmissionProspects = prospects.filter((p: any) => 
+          !((p.lead_source && p.lead_source.length > 0) || 
+            (p.lead_type && p.lead_type.length > 0))
+        )
+        
+        // Filter call logs by prospect type using same logic
+        const collegeContactIds = new Set(collegeContacts.map((p) => p.id))
+        const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.id))
+        
+        const collegeContactCallLogs = callLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
+        const studentAdmissionCallLogs = callLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
+        
+        // Calculate outcome distribution from call logs (filtered by module)
+        const calculateOutcomeDistribution = (logs: any[], isCollegeContact: boolean) => {
+          const distribution: Record<string, number> = {}
+          
+          if (isCollegeContact) {
+            // College Contact outcomes
+            const ccOutcomes = ['New', 'Interested', 'Interested Followup', 'Proposal To Be Sent', 'Proposal Sent', 'Training Date Followup', 'Qualified', 'Ringing / Not Reachable', 'Not Interested']
+            ccOutcomes.forEach(outcome => distribution[outcome] = 0)
+            
+            logs.forEach((log: any) => {
+              const outcome = log.status_after_call || log.outcome || 'New'
+              if (distribution.hasOwnProperty(outcome)) {
+                distribution[outcome]++
+              }
+            })
+          } else {
+            // Student Admission outcomes
+            const saOutcomes = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
+            saOutcomes.forEach(outcome => distribution[outcome] = 0)
+            
+            logs.forEach((log: any) => {
+              const status = log.status_after_call
+              let outcome = 'Cold / No Response'
+              if (status === 'visit_done') outcome = 'Visit Done / Decision Pending'
+              else if (status === 'admission_done') outcome = 'Admission Done ✓'
+              else if (status === 'visit_scheduled') outcome = 'Visit Scheduled'
+              else if (status === 'hot') outcome = 'Hot'
+              else if (status === 'warm' || status === 'contacted') outcome = 'Warm'
+              else if (status === 'cold_not_interested' || status === 'Not Interested') outcome = 'Cold / Not Interested'
+              
+              if (distribution.hasOwnProperty(outcome)) {
+                distribution[outcome]++
+              }
+            })
+          }
+          
+          return Object.entries(distribution).map(([name, value]) => ({ name, value }))
+        }
+        
+        // Calculate summary stats from filtered data
+        const calculateSummary = (prospects: any[], logs: any[], isCollegeContact: boolean) => {
+          // Use all logs filtered by date range from backend, not just today
+          const totalCalls = logs.length
+          
+          // Filter prospects by date range (created_at or assigned_date within range)
+          const dateFilteredProspects = prospects.filter((p: any) => {
+            const prospectDate = new Date(p.created_at || p.assigned_date)
+            const start = startDate ? new Date(startDate) : new Date('1970-01-01')
+            const end = endDate ? new Date(endDate) : new Date()
+            end.setHours(23, 59, 59, 999)
+            return prospectDate >= start && prospectDate <= end
+          })
+          
+          // Calculate total calls per prospect for pending logic (using all logs, not just today)
+          const prospectCallCounts = new Map<number, number>()
+          logs.forEach((log: any) => {
+            const current = prospectCallCounts.get(log.prospect_id) || 0
+            prospectCallCounts.set(log.prospect_id, current + 1)
+          })
+          
+          // Match telecaller dashboard pending logic (on date-filtered prospects)
+          const pendingCalls = dateFilteredProspects.filter((p: any) => {
+            const totalCallsForProspect = prospectCallCounts.get(p.id) || 0
+            if (isCollegeContact) {
+              // College contact: outcome='New' or no calls
+              return (p.outcome === 'New' || p.status === 'New' || 
+                      (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === 'New'))) &&
+                      totalCallsForProspect === 0
+            } else {
+              // Student admission: status='new' OR (status='contacted' AND totalCalls=0)
+              return p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)
+            }
+          }).length
+          
+          // Match telecaller dashboard callback logic: count unique prospects with callbacks (using all logs)
+          const callbackProspectIds = new Set<number>()
+          logs.forEach((log: any) => {
+            if (log.callback_scheduled_at) {
+              callbackProspectIds.add(log.prospect_id)
+            }
+          })
+          const callbacks = callbackProspectIds.size
+          
+          return {
+            totalCalls,
+            totalPendingCalls: pendingCalls,
+            callbacks,
+            totalEnrollments: dateFilteredProspects.filter((p: any) => p.status === 'admission_done').length
+          }
+        }
+        
+        // Build consistent data object - use backend's summary and outcome distribution which are already correctly filtered
+        const consistentData = {
+          ...reports,
+          // Use backend's outcome distribution instead of recalculating - backend already handles date range and prospect type filtering
+          outcomeDistribution: reports.outcomeDistribution || [],
+          // Use backend's summary instead of recalculating - backend already handles date range and prospect type filtering
+          summary: reports.summary || {
+            totalCalls: 0,
+            totalPendingCalls: 0,
+            callbacks: 0,
+            totalEnrollments: 0
+          },
+          // Store filtered prospects for visit done tab
+          visitDoneProspects: studentAdmissionProspects.filter((p: any) => p.status === 'visit_done'),
+          // Store all filtered data for consistency
+          filteredProspects: activeTabType === 'college_contact' ? collegeContacts : studentAdmissionProspects,
+          filteredCallLogs: activeTabType === 'college_contact' ? collegeContactCallLogs : studentAdmissionCallLogs
+        }
+        
+        setData(consistentData)
+        setVisitDoneProspects(studentAdmissionProspects.filter((p: any) => p.status === 'visit_done'))
         setErrorMessage(null)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -430,7 +732,7 @@ export default function ReportsPage() {
       }
     }
     fetchData()
-  }, [selectedTelecallerId, startDate, endDate])
+  }, [selectedTelecallerId, startDate, endDate, activeTabType])
 
   if (loading) {
     return (
@@ -460,7 +762,9 @@ export default function ReportsPage() {
     outcomeDistribution,
     telecallerPerformance,
     spocPerformance,
-    summary
+    summary,
+    filteredProspects,
+    filteredCallLogs
   } = data
 
   const categoryCounts: Record<string, number> = {}
@@ -468,7 +772,7 @@ export default function ReportsPage() {
       categoryCounts[item.name] = item.value
     })
 
-  const statusChartData = REPORT_OUTCOME_ORDER.map((name) => ({
+  const statusChartData = (activeTabType === "student_admission" ? SA_OUTCOME_ORDER : CC_OUTCOME_ORDER).map((name) => ({
     name,
     value: categoryCounts[name] || 0,
   }))
@@ -477,14 +781,25 @@ export default function ReportsPage() {
 
   const totalPendingCalls = summary.totalPendingCalls || 0
   const totalAdmitted = summary.totalEnrollments || 0
-  const scheduledCallbacks = (telecallerPerformance || []).reduce((sum: number, t: any) => sum + (t.callbacks ?? 0), 0)
+  const scheduledCallbacks = summary.callbacks || (telecallerPerformance || []).reduce((sum: number, t: any) => sum + (t.callbacks ?? 0), 0)
   const totalCalls = summary.totalCalls || 0
   const callStatsMax = Math.max(totalCalls, totalPendingCalls, scheduledCallbacks, 1)
 
   return (
     <div className="space-y-6 overflow-x-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      
+      <div className="flex gap-2">
+        <Button variant={activeTabType === "student_admission" ? "default" : "outline"} onClick={() => setActiveTabType("student_admission")}
+          className={activeTabType === "student_admission" ? "bg-blue-600 hover:bg-blue-700 flex-1" : "flex-1"}>
+          Student Admission
+        </Button>
+        <Button variant={activeTabType === "college_contact" ? "default" : "outline"} onClick={() => setActiveTabType("college_contact")}
+          className={activeTabType === "college_contact" ? "bg-violet-600 hover:bg-violet-700 flex-1" : "flex-1"}>
+          College Contact
+        </Button>
+      </div>
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
           <p className="text-muted-foreground">Performance metrics and insights</p>
@@ -502,64 +817,27 @@ export default function ReportsPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="telecalling">Telecalling</TabsTrigger>
-          <TabsTrigger value="fieldvisits">Visit Done / Decision Pending</TabsTrigger>
+          {activeTabType === "student_admission" && <TabsTrigger value="fieldvisits">Visit Done / Decision Pending</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Phone className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{summary.totalCalls}</div>
-                    <p className="text-xs text-muted-foreground">Total Calls</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{visitDoneProspects.length}</div>
-                    <p className="text-xs text-muted-foreground">Visit Done / Decision Pending</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{categoryCounts['Admission Done ✓'] || 0}</div>
-                    <p className="text-xs text-muted-foreground">Admission Done</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                    <PhoneCall className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{categoryCounts['Warm'] || 0}</div>
-                    <p className="text-xs text-muted-foreground">Warm</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {activeTabType === 'student_admission' ? (
+              <>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-green-600" /></div><div><div className="text-2xl font-bold">{summary.totalCalls}</div><p className="text-xs text-muted-foreground">Calls Made</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-indigo-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Visit Done / Decision Pending'] || 0}</div><p className="text-xs text-muted-foreground">Visit Done / Decision Pending</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-emerald-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Admission Done ✓'] || 0}</div><p className="text-xs text-muted-foreground">Admission Done</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-orange-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Warm'] || 0}</div><p className="text-xs text-muted-foreground">Warm</p></div></div></CardContent></Card>
+              </>
+            ) : (
+              <>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-green-600" /></div><div><div className="text-2xl font-bold">{summary.totalCalls}</div><p className="text-xs text-muted-foreground">Calls Made</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-orange-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Proposal Sent'] || 0}</div><p className="text-xs text-muted-foreground">Proposal Sent</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-emerald-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Qualified'] || 0}</div><p className="text-xs text-muted-foreground">Qualified</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-red-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Not Interested'] || 0}</div><p className="text-xs text-muted-foreground">Not Interested</p></div></div></CardContent></Card>
+              </>
+            )}
           </div>
 
           {/* Charts */}
@@ -726,13 +1004,14 @@ export default function ReportsPage() {
                         barSize={28}
                         label={{
                           position: "top",
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: 700,
-                          fill: "hsl(var(--muted-foreground))",
+                          fill: "hsl(var(--foreground))",
+                          formatter: (value: number) => value > 0 ? value : ''
                         }}
                       >
                         {statusChartData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={REPORT_OUTCOME_COLORS[entry.name] || '#999'} />
+                          <Cell key={`cell-${index}`} fill={(activeTabType === "student_admission" ? SA_OUTCOME_COLORS : CC_OUTCOME_COLORS)[entry.name] || '#999'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -759,13 +1038,26 @@ export default function ReportsPage() {
                       <TableHead className="text-center">Total Calls</TableHead>
                       <TableHead className="text-center">Pending Calls</TableHead>
                       <TableHead className="text-center">Callbacks</TableHead>
-                      <TableHead className="text-center">Cold NR</TableHead>
-                      <TableHead className="text-center">Cold NI</TableHead>
-                      <TableHead className="text-center">Warm</TableHead>
-                      <TableHead className="text-center">Hot</TableHead>
-                      <TableHead className="text-center">Visit Sched.</TableHead>
-                      <TableHead className="text-center">Decision Pend.</TableHead>
-                      <TableHead className="text-center">Admitted</TableHead>
+                      {activeTabType === 'student_admission' ? (
+                        <>
+                          <TableHead className="text-center">Cold NR</TableHead>
+                          <TableHead className="text-center">Cold NI</TableHead>
+                          <TableHead className="text-center">Warm</TableHead>
+                          <TableHead className="text-center">Hot</TableHead>
+                          <TableHead className="text-center">Visit Sched.</TableHead>
+                          <TableHead className="text-center">Decision Pend.</TableHead>
+                          <TableHead className="text-center">Admitted</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead className="text-center">Ringing / NR</TableHead>
+                          <TableHead className="text-center">Not Interested</TableHead>
+                          <TableHead className="text-center">Interested</TableHead>
+                          <TableHead className="text-center">Proposal Sent</TableHead>
+                          <TableHead className="text-center">Training F/U</TableHead>
+                          <TableHead className="text-center">Qualified</TableHead>
+                        </>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -790,27 +1082,26 @@ export default function ReportsPage() {
                           <TableCell className="text-center">{user.totalCalls ?? 0}</TableCell>
                           <TableCell className="text-center">{user.pendingCalls ?? 0}</TableCell>
                           <TableCell className="text-center">{user.callbacks ?? 0}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{user.coldNRCount ?? 0}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">{user.coldNICount ?? 0}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">{user.warmCount ?? 0}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{user.hotCount ?? 0}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200">{user.visitScheduledCount ?? 0}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">{user.decisionPendingCount ?? 0}</Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">{user.admittedCount ?? 0}</Badge>
-                          </TableCell>
+                          {activeTabType === 'student_admission' ? (
+                            <>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{user.coldNRCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-300">{user.coldNICount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">{user.warmCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{user.hotCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200">{user.visitScheduledCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">{user.decisionPendingCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">{user.admittedCount ?? 0}</Badge></TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{user.coldNRCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{user.coldNICount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">{user.warmCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">{user.proposalSentCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{user.hotCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">{user.qualifiedCount ?? 0}</Badge></TableCell>
+                            </>
+                          )}
                         </TableRow>
                       )
                     })}
@@ -867,6 +1158,7 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
+        {activeTabType === "student_admission" && (
         <TabsContent value="fieldvisits" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
@@ -903,6 +1195,7 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+      )}
       </Tabs>
     </div>
   )

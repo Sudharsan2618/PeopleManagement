@@ -53,7 +53,7 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   not_answered: { label: "No response", color: "bg-orange-100 text-orange-800" },
   busy: { label: "Busy", color: "bg-yellow-100 text-yellow-800" },
   wrong_number: { label: "Wrong Number", color: "bg-red-100 text-red-800" },
-  callback: { label: "Interested", color: "bg-blue-100 text-blue-800" },
+  callback: { label: "Warm", color: "bg-blue-100 text-blue-800" },
   not_interested: { label: "Not Interested", color: "bg-gray-100 text-gray-800" },
   dnc: { label: "DNC", color: "bg-red-100 text-red-800" },
   language_barrier: { label: "Language Barrier", color: "bg-amber-100 text-amber-800" },
@@ -61,6 +61,27 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   qualified: { label: "Visit planned and confirmed", color: "bg-emerald-100 text-emerald-800" },
   enrolled_elsewhere: { label: "Visit campus / Decision awaited", color: "bg-purple-100 text-purple-800" },
   application_process: { label: "Admission successfully completed", color: "bg-teal-100 text-teal-800" },
+
+  // New modal default outcomes (literal strings saved as outcomes)
+  warm: { label: "Warm", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  hot: { label: "Strong Interest / Ready for Counselling", color: "bg-green-100 text-green-800 border-green-200" },
+  visit_scheduled: { label: "Visit Planned and Confirmed", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  visit_done: { label: "Visit Campus / Decision Awaited", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  admission_done: { label: "Admission Successfully Completed", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  cold_no_response: { label: "Cold / No Response", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  cold_not_interested: { label: "Cold / Not Interested", color: "bg-red-100 text-red-800 border-red-200" },
+
+  // Lead mode outcomes
+  "New": { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  "Interested": { label: "Interested (Lead)", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  "Interested Followup": { label: "Interested Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  "Proposal To Be Sent": { label: "Proposal To Be Sent", color: "bg-sky-100 text-sky-800 border-sky-200" },
+  "Proposal Sent": { label: "Proposal Sent", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  "Training Date Followup": { label: "Training Date Followup", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  "Qualified": { label: "Qualified", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  "Ringing / Not Reachable": { label: "Ringing / Not Reachable", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  "Not Interested": { label: "Not Interested (Lead)", color: "bg-red-100 text-red-800 border-red-200" },
+  "College Contact": { label: "College Contact", color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -77,7 +98,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   lost: { label: "Lost", color: "bg-red-50 text-red-600" },
 }
 
-const SUMMARY_STATUS_KEYS = ["cold_no_response", "cold_not_interested", "warm", "hot", "visit_scheduled", "decision_pending", "admission_done"]
+const SCHOOL_STATUS_KEYS = ["cold_no_response", "cold_not_interested", "warm", "hot", "visit_scheduled", "decision_pending", "admission_done"]
+const COLLEGE_STATUS_KEYS = ["New", "Interested", "Interested Followup", "Proposal To Be Sent", "Proposal Sent", "Training Date Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
+
 const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = {
   cold: { label: "Cold (Other)", color: "bg-slate-100 text-slate-600 border-slate-200" },
   cold_no_response: { label: "Cold / No Response", color: "bg-slate-100 text-slate-600 border-slate-200" },
@@ -87,6 +110,16 @@ const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = 
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
   decision_pending: { label: "Visit Done / Decision Pending", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   admission_done: { label: "Admission Done ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  // College contact outcomes
+  "New": { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  "Interested": { label: "Interested", color: "bg-green-100 text-green-800 border-green-200" },
+  "Interested Followup": { label: "Interested Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  "Proposal To Be Sent": { label: "Proposal To Be Sent", color: "bg-sky-100 text-sky-800 border-sky-200" },
+  "Proposal Sent": { label: "Proposal Sent", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  "Training Date Followup": { label: "Training Date Followup", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  "Qualified": { label: "Qualified", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  "Ringing / Not Reachable": { label: "Ringing / Not Reachable", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  "Not Interested": { label: "Not Interested", color: "bg-red-100 text-red-800 border-red-200" },
 }
 
 export default function CallHistoryPage() {
@@ -101,10 +134,12 @@ export default function CallHistoryPage() {
   const [outcomeFilter, setOutcomeFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
   const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0])
-  
+  const [contactMode, setContactMode] = useState<"school" | "college">("school")
+
   // Export states
   const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0])
   const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [exportContactMode, setExportContactMode] = useState<"school" | "college">("school")
   const [isExporting, setIsExporting] = useState(false)
   const [isPdfExporting, setIsPdfExporting] = useState(false)
 
@@ -151,15 +186,34 @@ export default function CallHistoryPage() {
       const end = new Date(exportEndDate)
       end.setHours(23, 59, 59, 999)
 
+      const collegeOutcomes = [
+        "New",
+        "Interested",
+        "Interested Followup",
+        "Proposal To Be Sent",
+        "Proposal Sent",
+        "Training Date Followup",
+        "Qualified",
+        "Ringing / Not Reachable",
+        "Not Interested",
+        "College Contact"
+      ]
+
       const exportData = callLogs.filter(log => {
         const logDate = new Date(log.called_at)
-        return logDate >= start && logDate <= end
+        if (logDate < start || logDate > end) return false
+        
+        if (exportContactMode === "college") {
+          return collegeOutcomes.includes(log.outcome)
+        } else {
+          return !collegeOutcomes.includes(log.outcome)
+        }
       })
 
       if (exportData.length === 0) {
         toast({
           title: "No data found",
-          description: "No call logs found for the selected date range.",
+          description: "No call logs found for the selected date range and contact mode.",
           variant: "destructive"
         })
         return
@@ -191,11 +245,11 @@ export default function CallHistoryPage() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.setAttribute("href", url)
-      link.setAttribute("download", `CallHistory_${exportStartDate}_to_${exportEndDate}.csv`)
+      link.setAttribute("download", `CallHistory_${exportContactMode}_${exportStartDate}_to_${exportEndDate}.csv`)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
+
       toast({
         title: "Export Successful ✓",
         description: `Downloaded ${exportData.length} records.`
@@ -438,9 +492,53 @@ export default function CallHistoryPage() {
     }
   }
 
+  const { filteredAssignments, filteredCallLogsForStats } = useMemo(() => {
+    let modeAssignments = assignments;
+    let modeCallLogs = callLogs;
+
+    const collegeOutcomes = [
+      "New",
+      "Interested",
+      "Interested Followup",
+      "Proposal To Be Sent",
+      "Proposal Sent",
+      "Training Date Followup",
+      "Qualified",
+      "Ringing / Not Reachable",
+      "Not Interested",
+      "College Contact"
+    ];
+
+    // Helper to check if lead_source or lead_type has values
+    const hasLeadInfo = (p: Prospect) => {
+      const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+        (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
+      const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+        (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
+      return sourceArray.length > 0 || typeArray.length > 0
+    }
+
+    if (contactMode === "college") {
+      modeAssignments = assignments.filter((a) => {
+        const p = prospects[a.prospect_id]
+        if (!p) return false;
+        return hasLeadInfo(p)
+      })
+      modeCallLogs = callLogs.filter(log => collegeOutcomes.includes(log.outcome))
+    } else {
+      modeAssignments = assignments.filter((a) => {
+        const p = prospects[a.prospect_id]
+        if (!p) return false;
+        return !hasLeadInfo(p)
+      })
+      modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome))
+    }
+    return { filteredAssignments: modeAssignments, filteredCallLogsForStats: modeCallLogs }
+  }, [assignments, callLogs, prospects, contactMode])
+
   // Filter logs
   const filteredLogs = useMemo(() => {
-    return callLogs.filter((log) => {
+    return filteredCallLogsForStats.filter((log) => {
       const prospect = prospects[log.prospect_id]
 
       // Search
@@ -450,9 +548,26 @@ export default function CallHistoryPage() {
           (prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             prospect.mobile.includes(searchQuery)))
 
-      // Outcome filter
-      const matchesOutcome =
-        outcomeFilter === "all" || log.outcome === outcomeFilter
+      // Outcome Filter
+      if (outcomeFilter !== "all") {
+        if (outcomeFilter === "College Contact") {
+          const leadOutcomes = [
+            "New",
+            "Interested",
+            "Interested Followup",
+            "Proposal To Be Sent",
+            "Proposal Sent",
+            "Training Date Followup",
+            "Qualified",
+            "Ringing / Not Reachable",
+            "Not Interested",
+            "College Contact"
+          ]
+          if (!leadOutcomes.includes(log.outcome)) return false
+        } else if (log.outcome !== outcomeFilter) {
+          return false
+        }
+      }
 
       // Date filter
       let matchesDate = true
@@ -475,65 +590,122 @@ export default function CallHistoryPage() {
         }
       }
 
-      return matchesSearch && matchesOutcome && matchesDate
+      return matchesSearch && matchesDate
     })
-  }, [callLogs, prospects, searchQuery, outcomeFilter, dateFilter])
+  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter])
 
   // Total leads assigned to this telecaller
-  const totalLeads = assignments.length
+  const totalLeads = filteredAssignments.length
 
   // Pending to call
   const pendingLeadsCount = useMemo(() => {
-    const assignedProspectIds = new Set(assignments.map((a) => a.prospect_id))
-    return Object.values(prospects).filter((p) => {
-      if (!assignedProspectIds.has(p.id)) return false
-      const hasCalls = callLogs.some((log) => log.prospect_id === p.id)
-      return p.status === "new" || (p.status === "contacted" && !hasCalls)
-    }).length
-  }, [assignments, prospects, callLogs])
+    const assignedProspectIds = new Set(filteredAssignments.map((a) => a.prospect_id))
+    
+    if (contactMode === "college") {
+      // For college contact: pending if no calls OR last outcome is "New"
+      return Object.values(prospects).filter((p) => {
+        if (!assignedProspectIds.has(p.id)) return false
+        const prospectCalls = filteredCallLogsForStats.filter((log) => log.prospect_id === p.id)
+        if (prospectCalls.length === 0) return true
+        const lastCall = prospectCalls[prospectCalls.length - 1]
+        return lastCall.outcome === "New"
+      }).length
+    } else {
+      // For school contact: pending if status is new OR contacted with no calls
+      return Object.values(prospects).filter((p) => {
+        if (!assignedProspectIds.has(p.id)) return false
+        const hasCalls = filteredCallLogsForStats.some((log) => log.prospect_id === p.id)
+        return p.status === "new" || (p.status === "contacted" && !hasCalls)
+      }).length
+    }
+  }, [filteredAssignments, prospects, filteredCallLogsForStats, contactMode])
 
   // Status summary stats
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      cold: 0,
-      cold_no_response: 0,
-      cold_not_interested: 0,
-      warm: 0,
-      hot: 0,
-      visit_scheduled: 0,
-      decision_pending: 0,
-      admission_done: 0,
+    if (contactMode === "college") {
+      // College contact outcomes
+      const counts: Record<string, number> = {
+        "New": 0,
+        "Interested": 0,
+        "Interested Followup": 0,
+        "Proposal To Be Sent": 0,
+        "Proposal Sent": 0,
+        "Training Date Followup": 0,
+        "Qualified": 0,
+        "Ringing / Not Reachable": 0,
+        "Not Interested": 0,
+      }
+
+      filteredCallLogsForStats.forEach((log) => {
+        if (summaryDate) {
+          const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+          if (logDateStr !== summaryDate) return
+        }
+
+        if (counts.hasOwnProperty(log.outcome)) {
+          counts[log.outcome] += 1
+        }
+      })
+
+      return counts
+    } else {
+      // School contact outcomes
+      const counts: Record<string, number> = {
+        cold: 0,
+        cold_no_response: 0,
+        cold_not_interested: 0,
+        warm: 0,
+        hot: 0,
+        visit_scheduled: 0,
+        decision_pending: 0,
+        admission_done: 0,
+      }
+
+      filteredCallLogsForStats.forEach((log) => {
+        if (summaryDate) {
+          const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+          if (logDateStr !== summaryDate) return
+        }
+
+        // Check outcome field for new modal outcomes
+        if (log.outcome === "cold_no_response") {
+          counts.cold_no_response += 1
+        } else if (log.outcome === "cold_not_interested") {
+          counts.cold_not_interested += 1
+        } else if (log.outcome === "warm") {
+          counts.warm += 1
+        } else if (log.outcome === "hot") {
+          counts.hot += 1
+        } else if (log.outcome === "visit_scheduled") {
+          counts.visit_scheduled += 1
+        } else if (log.outcome === "visit_done") {
+          counts.decision_pending += 1
+        } else if (log.outcome === "admission_done") {
+          counts.admission_done += 1
+        } 
+        // Check status_after_call for old modal outcomes
+        else if (log.outcome === "not_answered") {
+          counts.cold_no_response += 1
+        } else if (log.outcome === "not_interested") {
+          counts.cold_not_interested += 1
+        } else if (log.outcome === "enrolled_elsewhere" || log.status_after_call === "visit_done") {
+          counts.decision_pending += 1
+        } else if (["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
+          counts.cold += 1
+        } else if (log.status_after_call === "warm") {
+          counts.warm += 1
+        } else if (log.status_after_call === "hot") {
+          counts.hot += 1
+        } else if (log.status_after_call === "visit_scheduled") {
+          counts.visit_scheduled += 1
+        } else if (log.status_after_call === "admission_done") {
+          counts.admission_done += 1
+        }
+      })
+
+      return counts
     }
-
-    callLogs.forEach((log) => {
-      if (!log.status_after_call) return
-
-      if (summaryDate) {
-        const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
-        if (logDateStr !== summaryDate) return
-      }
-
-      if (log.outcome === "not_answered") {
-        counts.cold_no_response += 1
-      } else if (log.outcome === "not_interested") {
-        counts.cold_not_interested += 1
-      } else if (log.outcome === "enrolled_elsewhere" || log.status_after_call === "visit_done") {
-        counts.decision_pending += 1
-      } else if (["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
-        counts.cold += 1
-      } else if (log.status_after_call === "warm") {
-        counts.warm += 1
-      } else if (log.status_after_call === "hot") {
-        counts.hot += 1
-      } else if (log.status_after_call === "visit_scheduled") {
-        counts.visit_scheduled += 1
-      } else if (log.status_after_call === "admission_done") {
-        counts.admission_done += 1
-      }
-    })
-
-    return counts
-  }, [callLogs, summaryDate])
+  }, [filteredCallLogsForStats, summaryDate, contactMode])
 
   const todayReport = useMemo(() => {
     const localDateKey = (date: Date) => date.toLocaleDateString("en-CA")
@@ -546,7 +718,7 @@ export default function CallHistoryPage() {
       notAnswered: 0,
     }
 
-    callLogs.forEach((log) => {
+    filteredCallLogsForStats.forEach((log) => {
       const logDate = localDateKey(new Date(log.called_at))
       if (logDate !== today) return
 
@@ -560,7 +732,7 @@ export default function CallHistoryPage() {
     })
 
     return report
-  }, [callLogs])
+  }, [filteredCallLogsForStats])
 
   if (isLoading) {
     return <PageSkeleton />
@@ -583,8 +755,26 @@ export default function CallHistoryPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Call History</h1>
           <p className="text-sm text-muted-foreground">
-            {callLogs.length} total calls logged
+            {filteredCallLogsForStats.length} total calls logged
           </p>
+        </div>
+        <div className="flex bg-muted p-1 rounded-lg">
+          <Button
+            variant={contactMode === "school" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setContactMode("school")}
+            className="font-bold rounded-md"
+          >
+            School Contact
+          </Button>
+          <Button
+            variant={contactMode === "college" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setContactMode("college")}
+            className="font-bold rounded-md"
+          >
+            College Contact
+          </Button>
         </div>
         <div className="flex items-center gap-3">
           <Dialog>
@@ -597,29 +787,50 @@ export default function CallHistoryPage() {
               <DialogHeader>
                 <DialogTitle>Export Call History</DialogTitle>
                 <DialogDescription>
-                  Select the date range for your CSV report.
+                  Select the date range and contact mode for your CSV report.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="start" className="text-right text-sm font-medium">Start</label>
-                  <Input 
-                    id="start" 
-                    type="date" 
-                    className="col-span-3" 
+                  <Input
+                    id="start"
+                    type="date"
+                    className="col-span-3"
                     value={exportStartDate}
                     onChange={(e) => setExportStartDate(e.target.value)}
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="end" className="text-right text-sm font-medium">End</label>
-                  <Input 
-                    id="end" 
-                    type="date" 
-                    className="col-span-3" 
+                  <Input
+                    id="end"
+                    type="date"
+                    className="col-span-3"
                     value={exportEndDate}
                     onChange={(e) => setExportEndDate(e.target.value)}
                   />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium">Mode</label>
+                  <div className="col-span-3 flex bg-muted p-1 rounded-lg">
+                    <Button
+                      variant={exportContactMode === "school" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setExportContactMode("school")}
+                      className="flex-1 font-bold rounded-md text-xs"
+                    >
+                      School
+                    </Button>
+                    <Button
+                      variant={exportContactMode === "college" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setExportContactMode("college")}
+                      className="flex-1 font-bold rounded-md text-xs"
+                    >
+                      College
+                    </Button>
+                  </div>
                 </div>
               </div>
               <DialogFooter className="grid grid-cols-1 gap-2">
@@ -644,8 +855,35 @@ export default function CallHistoryPage() {
             variant="outline"
             className="text-xs px-4 py-2 font-bold bg-blue-50 text-blue-700 border-blue-200 shadow-sm rounded-lg flex items-center gap-2"
           >
-            <span>Total Leads:</span>
-            <span className="text-sm bg-blue-100 px-2 py-0.5 rounded-md">{totalLeads}</span>
+            <span>School Contact:</span>
+            <span className="text-sm bg-blue-100 px-2 py-0.5 rounded-md">
+              {assignments.filter((a) => {
+                const p = prospects[a.prospect_id]
+                if (!p) return false
+                const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+                  (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
+                const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+                  (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
+                return !(sourceArray.length > 0 || typeArray.length > 0)
+              }).length}
+            </span>
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-xs px-4 py-2 font-bold bg-purple-50 text-purple-700 border-purple-200 shadow-sm rounded-lg flex items-center gap-2"
+          >
+            <span>College Contact:</span>
+            <span className="text-sm bg-purple-100 px-2 py-0.5 rounded-md">
+              {assignments.filter((a) => {
+                const p = prospects[a.prospect_id]
+                if (!p) return false
+                const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+                  (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
+                const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+                  (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
+                return sourceArray.length > 0 || typeArray.length > 0
+              }).length}
+            </span>
           </Badge>
           <Badge
             variant="outline"
@@ -654,11 +892,11 @@ export default function CallHistoryPage() {
             <span>Pending to Call:</span>
             <span className="text-sm bg-yellow-100 px-2 py-0.5 rounded-md">{pendingLeadsCount}</span>
           </Badge>
-          
+
           <div className="ml-auto flex items-center gap-2 bg-muted/30 p-1.5 rounded-lg border border-muted">
             <label className="text-xs font-semibold text-muted-foreground ml-1">Counts for:</label>
-            <Input 
-              type="date" 
+            <Input
+              type="date"
               value={summaryDate}
               onChange={(e) => setSummaryDate(e.target.value)}
               className="h-7 w-[130px] text-xs px-2 py-1"
@@ -673,7 +911,7 @@ export default function CallHistoryPage() {
 
         {/* Status Breakdown - limited to requested categories */}
         <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
-          {SUMMARY_STATUS_KEYS.map((status) => {
+          {(contactMode === "college" ? COLLEGE_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
             const count = statusCounts[status]
             const config = STATUS_SUMMARY_CONFIG[status]
             if (!summaryDate && count === 0) return null; // hide zeros only for all-time

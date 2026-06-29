@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import {
   Phone,
   Users,
@@ -11,6 +11,9 @@ import {
   PhoneCall,
   Loader2,
   RefreshCw,
+  X,
+  Building2,
+  GraduationCap,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
@@ -26,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Table,
   TableBody,
@@ -51,83 +61,260 @@ import {
   type Course,
 } from "@/lib/api-client"
 
-// ─── Outcome → DB mapping ────────────────────────────────────
-// UI uses PascalCase, DB uses snake_case
-const OUTCOME_TO_DB: Record<string, string> = {
-  NotAnswered: "not_answered",
-  Busy: "busy",
-  WrongNumber: "wrong_number",
-  CallBack: "callback",
-  NotInterested: "not_interested",
-  DNC: "dnc",
-  LanguageBarrier: "language_barrier",
-  Interested: "interested",
-  Qualified: "qualified",
-  EnrolledElsewhere: "enrolled_elsewhere",
-  ApplicationProcess: "application_process",
-}
+// ─── Lead Source & Lead Type option lists ─────────────────────
+const LEAD_SOURCE_OPTIONS = [
+  "Sourced Polytechnic College",
+  "Engineering College",
+  "Sourced ITI College",
+  "Sourcing Arts and Science Colleges",
+]
 
-// ─── Outcome → Friendly UI label (for toast messages) ───────────────
-const OUTCOME_UI_LABELS: Record<string, string> = {
-  NotAnswered:        "No response",
-  Busy:               "Busy",
-  WrongNumber:        "Wrong Number",
-  CallBack:           "Interested",
-  NotInterested:      "Not Interested",
-  DNC:                "Do Not Call",
-  LanguageBarrier:    "Language Barrier",
-  Interested:         "Strong Interest / Ready for counselling",
-  Qualified:          "Visit planned and confirmed",
-  EnrolledElsewhere:  "Visit campus / Decision awaited",
-  ApplicationProcess: "Admission successfully completed",
-}
+const LEAD_TYPE_OPTIONS = [
+  "Assist",
+  "VAC",
+  "FDP",
+  "ZOHO YCP",
+  "Short Term Course Admission",
+]
 
-// ─── Outcome → Prospect status_after_call ─────────────────────
-// This is the CRM state-machine: what happens to the prospect after
-// each type of call outcome
-const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
-  NotAnswered: "cold_no_response",       // Cold / No Response
-  Busy: "cold_no_response",              // Cold / No Response
-  WrongNumber: "cold",                   // Cold
-  CallBack: "warm",                      // Warm
-  NotInterested: "cold_not_interested",  // Cold / Not Interested
-  DNC: "cold",                           // Cold / DNC
-  LanguageBarrier: "cold",               // Cold
-  Interested: "hot",                     // Hot
-  Qualified: "visit_scheduled",          // Visit Scheduled
-  EnrolledElsewhere: "visit_done",        // Visit Done → Decision Pending
-  ApplicationProcess: "admission_done",   // Application Process → Admission Done
-}
+// ─── MultiSelect filter component ─────────────────────────────
+function MultiSelectFilter({
+  options,
+  selected,
+  onChange,
+  placeholder,
+}: {
+  options: string[]
+  selected: string[]
+  onChange: (vals: string[]) => void
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
 
-// ─── DB outcome → friendly UI label ──────────────────────────────
-const DB_OUTCOME_LABELS: Record<string, string> = {
-  not_answered:        "No response",
-  busy:                "Busy",
-  wrong_number:        "Wrong Number",
-  callback:            "Interested",
-  not_interested:      "Not Interested",
-  dnc:                 "Do Not Call",
-  language_barrier:    "Language Barrier",
-  interested:          "Strong Interest / Ready for counselling",
-  qualified:           "Visit planned and confirmed",
-  visit_done:          "Visit campus / Decision awaited",
-  enrolled_elsewhere:  "Visit campus / Decision awaited",
-  application_process: "Admission successfully completed",
+  const toggleOption = (val: string) => {
+    if (selected.includes(val)) {
+      onChange(selected.filter((item) => item !== val))
+    } else {
+      onChange([...selected, val])
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full sm:w-52 justify-between h-10 border text-left font-normal"
+        >
+          <span className="truncate text-sm">
+            {selected.length > 0
+              ? `${selected.length} selected`
+              : <span className="text-muted-foreground">{placeholder}</span>}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[260px] p-0 bg-background border shadow-md rounded-lg" align="start">
+        <ScrollArea className="h-48 w-full p-1">
+          {options.map((option) => {
+            const isSelected = selected.includes(option)
+            return (
+              <div
+                key={option}
+                onClick={() => toggleOption(option)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer select-none transition-colors",
+                  isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50"
+                )}
+              >
+                <div
+                  className={cn(
+                    "h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-all",
+                    isSelected ? "bg-primary border-primary text-primary-foreground" : "border-slate-300"
+                  )}
+                >
+                  {isSelected && <Check className="h-3 w-3" />}
+                </div>
+                <span>{option}</span>
+              </div>
+            )
+          })}
+        </ScrollArea>
+        {selected.length > 0 && (
+          <div className="border-t p-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs h-7"
+              onClick={() => onChange([])}
+            >
+              <X className="h-3 w-3 mr-1" /> Clear selection
+            </Button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // ─── Status display config ─────────────────────────────────────
 const statusConfig: Record<string, { label: string; color: string }> = {
   new: { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
   contacted: { label: "Contacted", color: "bg-sky-100 text-sky-800 border-sky-200" },
-  warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
-  hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
-  visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
-  visit_done: { label: "Visit Done / Decision Pending", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
-  admission_done: { label: "Admission Done ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  warm: { label: "Warm", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  hot: { label: "Strong Interest / Ready for Counselling", color: "bg-green-100 text-green-800 border-green-200" },
+  visit_scheduled: { label: "Visit Planned and Confirmed", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  visit_done: { label: "Visit Campus / Decision Awaited", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  admission_done: { label: "Admission Successfully Completed", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   cold: { label: "Cold", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_no_response: { label: "Cold / No Response", color: "bg-slate-100 text-slate-600 border-slate-200" },
-  cold_not_interested: { label: "Cold / Not Interested", color: "bg-slate-100 text-slate-600 border-slate-200" },
+  cold_no_response: { label: "Cold / No Response", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  cold_not_interested: { label: "Cold / Not Interested", color: "bg-red-100 text-red-800 border-red-200" },
   lost: { label: "Lost", color: "bg-red-50 text-red-600 border-red-200" },
+  // Lead mode statuses
+  "New": { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  "Interested": { label: "Interested", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  "Interested Followup": { label: "Interested Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  "Proposal To Be Sent": { label: "Proposal To Be Sent", color: "bg-sky-100 text-sky-800 border-sky-200" },
+  "Proposal Sent": { label: "Proposal Sent", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  "Training Date Followup": { label: "Training Date Followup", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  "Qualified": { label: "Qualified", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  "Ringing / Not Reachable": { label: "Ringing / Not Reachable", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  "Not Interested": { label: "Not Interested", color: "bg-red-100 text-red-800 border-red-200" },
+}
+
+// ─── Inline Edit Cell ─────────────────────────────────────────
+function InlineEditCell({
+  value,
+  onSave,
+  placeholder = "Click to add...",
+  type = "text",
+  className = "",
+  readOnly = false,
+}: {
+  value: string
+  onSave: (val: string) => Promise<void>
+  placeholder?: string
+  type?: string
+  className?: string
+  readOnly?: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus()
+  }, [editing])
+
+  useEffect(() => { setDraft(value) }, [value])
+
+  const commit = async () => {
+    if (draft === value) { setEditing(false); return }
+    setSaving(true)
+    try {
+      await onSave(draft.trim())
+      setSaved(true)
+      setTimeout(() => setSaved(false), 1800)
+    } finally {
+      setSaving(false)
+      setEditing(false)
+    }
+  }
+
+  const cancel = () => {
+    setDraft(value)
+    setEditing(false)
+  }
+
+  // Read-only display mode
+  if (readOnly) {
+    return (
+      <div className={`flex items-center gap-1 px-2 py-0.5 ${className}`}>
+        {value ? (
+          <span
+            className="text-xs text-slate-700 block overflow-hidden text-ellipsis whitespace-nowrap"
+            title={value}
+          >
+            {value}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-300">—</span>
+        )}
+      </div>
+    )
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          ref={inputRef}
+          type={type}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); commit() }
+            if (e.key === "Escape") { cancel() }
+          }}
+          className={`flex-1 min-w-[80px] border border-blue-400 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white shadow-sm ${className}`}
+          placeholder={placeholder}
+          disabled={saving}
+        />
+        {/* Green tick — save */}
+        <button
+          onMouseDown={(e) => { e.preventDefault(); commit() }}
+          disabled={saving}
+          className="flex items-center justify-center h-6 w-6 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow transition-colors shrink-0 disabled:opacity-50"
+          title="Save"
+        >
+          {saving ? (
+            <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+          ) : (
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          )}
+        </button>
+        {/* Red X — cancel */}
+        <button
+          onMouseDown={(e) => { e.preventDefault(); cancel() }}
+          className="flex items-center justify-center h-6 w-6 rounded-full bg-slate-200 hover:bg-red-100 hover:text-red-500 text-slate-400 shadow-sm transition-colors shrink-0"
+          title="Cancel"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      onClick={() => setEditing(true)}
+      className={`group flex items-center gap-1 cursor-pointer rounded px-2 py-0.5 hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all min-w-[80px] ${className}`}
+      title="Click to edit"
+    >
+      {saved ? (
+        <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          Saved
+        </span>
+      ) : value ? (
+        <span
+          className="text-xs text-slate-700 block overflow-hidden text-ellipsis whitespace-nowrap"
+          title={value}
+        >
+          {value}
+        </span>
+      ) : (
+        <span className="text-xs text-slate-300 italic">{placeholder}</span>
+      )}
+      {!saved && (
+        <svg className="h-3 w-3 text-slate-300 group-hover:text-blue-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+      )}
+    </div>
+  )
 }
 
 export default function TelecallerDashboard() {
@@ -136,6 +323,8 @@ export default function TelecallerDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [courseFilter, setCourseFilter] = useState<string>("all")
+  const [leadSourceFilter, setLeadSourceFilter] = useState<string[]>([])
+  const [leadTypeFilter, setLeadTypeFilter] = useState<string[]>([])
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [prospects, setProspects] = useState<any[]>([])
@@ -145,6 +334,8 @@ export default function TelecallerDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [savingId, setSavingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editingCell, setEditingCell] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"student_admission" | "college_contact">("student_admission")
 
   const telecallerId = user ? Number(user.id) : 0
 
@@ -187,6 +378,14 @@ export default function TelecallerDashboard() {
             (a: any) => a.prospect_id === p.id
           )
 
+          // Parse JSONB arrays from API
+          const leadSource = Array.isArray(p.lead_source)
+            ? p.lead_source
+            : (typeof p.lead_source === "string" ? JSON.parse(p.lead_source || "[]") : [])
+          const leadType = Array.isArray(p.lead_type)
+            ? p.lead_type
+            : (typeof p.lead_type === "string" ? JSON.parse(p.lead_type || "[]") : [])
+
           return {
             id: String(p.id),
             numericId: p.id,
@@ -197,10 +396,24 @@ export default function TelecallerDashboard() {
             courseInterest: p.course_interest || "Unknown",
             parentName: p.parent_name || "",
             department: p.department || "",
-            status: p.status, // Keep raw DB status
+            status: p.status,
             source: p.sourced_from || "Unknown",
             createdAt: p.created_at,
             assignmentId: assignment?.id || null,
+            lead_source: leadSource,
+            lead_type: leadType,
+            outcome: p.outcome || "New",
+            // New contact/profile fields
+            altPhone: p.alt_phone || "",
+            secondaryEmail: p.secondary_email || "",
+            city: p.city || "",
+            address: p.address || "",
+            postalCode: p.postal_code || "",
+            designation: p.designation || "",
+            is_imported: p.is_imported || false,
+            // Lead sheet data
+            follow_up_date: p.follow_up_date || "",
+            comments: p.comments || "",
             // Enriched from call logs
             lastCallAt: lastLog?.called_at || null,
             lastOutcome: lastLog?.outcome || null,
@@ -227,6 +440,27 @@ export default function TelecallerDashboard() {
     }
   }, [telecallerId, toast])
 
+  // ─── Inline field save ────────────────────────────────────────
+  const handleInlineFieldSave = useCallback(async (
+    prospectNumericId: number,
+    field: string,
+    value: string
+  ) => {
+    try {
+      await prospectsApi.update(prospectNumericId, { [field]: value })
+      setProspects((prev: any[]) =>
+        prev.map((p) =>
+          p.numericId === prospectNumericId
+            ? { ...p, [field === "alt_phone" ? "altPhone" : field === "secondary_email" ? "secondaryEmail" : field === "postal_code" ? "postalCode" : field]: value }
+            : p
+        )
+      )
+      toast({ title: "Saved ✓", description: `${field.replace(/_/g, " ")} updated.` })
+    } catch (err) {
+      toast({ title: "Save failed", description: "Could not update field. Please try again.", variant: "destructive" })
+    }
+  }, [toast])
+
   useEffect(() => {
     fetchData()
   }, [fetchData])
@@ -251,8 +485,28 @@ export default function TelecallerDashboard() {
   }, [assignments])
 
   const telecallerStats = useMemo(() => {
+    // Filter prospects into student admission and college contact
+    const collegeContacts = prospects.filter((p) => 
+      (p.lead_source && p.lead_source.length > 0) || 
+      (p.lead_type && p.lead_type.length > 0)
+    )
+    
+    const studentAdmissionProspects = prospects.filter((p) => 
+      !((p.lead_source && p.lead_source.length > 0) || 
+        (p.lead_type && p.lead_type.length > 0))
+    )
+    
+    // Get IDs for filtering
+    const collegeContactIds = new Set(collegeContacts.map((p) => p.numericId))
+    const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.numericId))
+    
+    // Filter call logs by prospect type
+    const studentAdmissionCallLogs = callLogs.filter((log) => studentAdmissionIds.has(log.prospect_id))
+    const collegeContactCallLogs = callLogs.filter((log) => collegeContactIds.has(log.prospect_id))
+    
+    // Student admission stats
     const latestLogByProspect = new Map<number, CallLog>()
-    callLogs.forEach((log) => {
+    studentAdmissionCallLogs.forEach((log) => {
       const existing = latestLogByProspect.get(log.prospect_id)
       if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
         latestLogByProspect.set(log.prospect_id, log)
@@ -262,22 +516,70 @@ export default function TelecallerDashboard() {
     const callbackCount = Array.from(latestLogByProspect.values()).filter(
       (log) => log.callback_scheduled_at
     ).length
+    
+    const todayStudentLogs = studentAdmissionCallLogs.filter((cl: any) => {
+      const today = new Date().toISOString().split("T")[0]
+      const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+      return logDate === today
+    })
+    
+    const todayStudentAssignmentCount = studentAdmissionProspects.filter((p) => {
+      const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
+      if (!assignment) return false
+      const today = new Date().toISOString().split("T")[0]
+      return assignment.assigned_date === today
+    }).length
+    
+    // College contact specific stats
+    const collegeContactsToday = collegeContacts.filter((p) => {
+      const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
+      if (!assignment) return false
+      const today = new Date().toISOString().split("T")[0]
+      return assignment.assigned_date === today
+    }).length
+    
+    const collegeInterested = collegeContacts.filter((p) => 
+      p.outcome === "Interested" || p.status === "Interested"
+    ).length
+    
+    const collegeCallbacks = collegeContacts.filter((p) => 
+      p.callbackDateTime !== null
+    ).length
+    
+    const collegePending = collegeContacts.filter((p) => 
+      (p.outcome === "New" || p.status === "New" || 
+       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
+      p.totalCalls === 0
+    ).length
+    
+    const collegeCallsMade = collegeContactCallLogs.filter((cl: any) => {
+      const today = new Date().toISOString().split("T")[0]
+      const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+      return logDate === today
+    }).length
 
     return {
-      totalProspects: prospects.length,
-      todaysProspects: todayAssignmentCount,
-      callsMade: todayLogs.length,
+      totalProspects: studentAdmissionProspects.length,
+      todaysProspects: todayStudentAssignmentCount,
+      callsMade: todayStudentLogs.length,
       callbacksDue: callbackCount,
-      admitted: prospects.filter((p) => p.status === "admission_done").length,
-      pending: prospects.filter(
+      admitted: studentAdmissionProspects.filter((p) => p.status === "admission_done").length,
+      pending: studentAdmissionProspects.filter(
         (p) =>
-          p.status === "new" || (p.status === "contacted" && p.totalCalls === 0)
+          p.status === "new" || p.status === "New" || (p.status === "contacted" && p.totalCalls === 0)
       ).length,
-      visitDone: prospects.filter((p) => p.status === "visit_done").length,
+      visitDone: studentAdmissionProspects.filter((p) => p.status === "visit_done").length,
+      // College contact stats
+      collegeContactsToday,
+      collegeInterested,
+      collegeCallbacks,
+      collegePending,
+      collegeCallsMade,
     }
-  }, [prospects, todayAssignmentCount, callLogs, todayLogs])
+  }, [prospects, todayAssignmentCount, callLogs, todayLogs, assignments])
 
-  const statCards = [
+  // Student Admission stat cards
+  const studentAdmissionCards = [
     {
       title: "Total Prospects",
       value: telecallerStats.totalProspects,
@@ -286,7 +588,7 @@ export default function TelecallerDashboard() {
       bgColor: "bg-slate-100",
     },
     {
-      title: "Today’s Prospects",
+      title: "Today's Prospects",
       value: telecallerStats.todaysProspects,
       icon: Phone,
       color: "text-blue-700",
@@ -329,6 +631,47 @@ export default function TelecallerDashboard() {
     },
   ]
 
+  // College Contact stat cards
+  const collegeContactCards = [
+    {
+      title: "Today's Prospects",
+      value: telecallerStats.collegeContactsToday,
+      icon: Building2,
+      color: "text-blue-700",
+      bgColor: "bg-blue-100",
+    },
+    {
+      title: "Calls Made",
+      value: telecallerStats.collegeCallsMade,
+      icon: PhoneCall,
+      color: "text-green-700",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Interested",
+      value: telecallerStats.collegeInterested,
+      icon: CheckCircle2,
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Callbacks",
+      value: telecallerStats.collegeCallbacks,
+      icon: AlertCircle,
+      color: "text-orange-700",
+      bgColor: "bg-orange-100",
+    },
+    {
+      title: "Pending",
+      value: telecallerStats.collegePending,
+      icon: Clock,
+      color: "text-yellow-700",
+      bgColor: "bg-yellow-100",
+    },
+  ]
+
+  const statCards = viewMode === "student_admission" ? studentAdmissionCards : collegeContactCards
+
   // ─── Sort & filter ────────────────────────────────────────────
   const sortedProspects = useMemo(() => {
     return [...prospects].sort((a, b) => {
@@ -339,7 +682,6 @@ export default function TelecallerDashboard() {
         return bCreated - aCreated
       }
 
-      // If createdAt is equal, keep callbacks with scheduled time earlier first.
       if (a.callbackDateTime && !b.callbackDateTime) return -1
       if (!a.callbackDateTime && b.callbackDateTime) return 1
       if (a.callbackDateTime && b.callbackDateTime) {
@@ -352,16 +694,81 @@ export default function TelecallerDashboard() {
 
   const filteredProspects = useMemo(() => {
     return sortedProspects.filter((prospect) => {
+      // Filter by view mode
+      const isCollegeContact = (prospect.lead_source && prospect.lead_source.length > 0) || 
+                               (prospect.lead_type && prospect.lead_type.length > 0)
+      const matchesViewMode = viewMode === "student_admission" ? !isCollegeContact : isCollegeContact
+      
+      if (!matchesViewMode) return false
+      
       const matchesSearch =
         prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         prospect.mobile.includes(searchQuery)
       const matchesStatus =
-        statusFilter === "all" || prospect.status === statusFilter
+        statusFilter === "all" ||
+        prospect.status === statusFilter ||
+        prospect.outcome === statusFilter
       const matchesCourse =
         courseFilter === "all" || prospect.courseInterest === courseFilter
-      return matchesSearch && matchesStatus && matchesCourse
+
+      // Lead Source filter: if any selected, prospect must have at least one matching
+      const matchesLeadSource =
+        leadSourceFilter.length === 0 ||
+        leadSourceFilter.some((ls) => (prospect.lead_source || []).includes(ls))
+
+      // Lead Type filter: if any selected, prospect must have at least one matching
+      const matchesLeadType =
+        leadTypeFilter.length === 0 ||
+        leadTypeFilter.some((lt) => (prospect.lead_type || []).includes(lt))
+
+      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType
     })
-  }, [sortedProspects, searchQuery, statusFilter, courseFilter])
+  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, viewMode])
+
+  // ─── Dynamic column visibility based on data ───────────────────
+  const visibleColumns = useMemo(() => {
+    const columns = [
+      { key: "index", label: "#", hasData: true, alwaysVisible: true },
+      { key: "name", label: "Student Name", hasData: true, alwaysVisible: true },
+      { key: "parentName", label: "Parent Name", hasData: false },
+      { key: "mobile", label: "Mobile", hasData: true, alwaysVisible: true },
+      { key: "altPhone", label: "Alt. Phone", hasData: false },
+      { key: "secondaryEmail", label: "Secondary Email", hasData: false },
+      { key: "city", label: "City", hasData: false },
+      { key: "address", label: "Address", hasData: false },
+      { key: "postalCode", label: "Postal Code", hasData: false },
+      { key: "designation", label: "Designation", hasData: false },
+      { key: "location", label: "Location", hasData: false },
+      { key: "department", label: "Department", hasData: false },
+      { key: "courseInterest", label: "Course", hasData: true, alwaysVisible: true },
+      { key: "lead_source", label: "Lead Source", hasData: false },
+      { key: "lead_type", label: "Lead Type", hasData: false },
+      { key: "status", label: "Status", hasData: true, alwaysVisible: true },
+      { key: "totalCalls", label: "Calls", hasData: true, alwaysVisible: true },
+      { key: "lastCallAt", label: "Last Call", hasData: false },
+      { key: "callbackDateTime", label: "Follow-up Date", hasData: false },
+      { key: "lastReason", label: "Reason / Outcome", hasData: false },
+      { key: "action", label: "Action", hasData: true, alwaysVisible: true },
+    ]
+
+    // Check which columns have data in filtered prospects
+    columns.forEach((col) => {
+      if (col.alwaysVisible) {
+        col.hasData = true
+        return
+      }
+      
+      col.hasData = filteredProspects.some((prospect) => {
+        const value = prospect[col.key as keyof typeof prospect]
+        if (Array.isArray(value)) {
+          return value.length > 0
+        }
+        return value !== null && value !== undefined && value !== "" && value !== "—"
+      })
+    })
+
+    return columns.filter((col) => col.hasData)
+  }, [filteredProspects])
 
   // ─── Handle call outcome ──────────────────────────────────────
   const handleCall = (prospect: any) => {
@@ -381,20 +788,17 @@ export default function TelecallerDashboard() {
   }
 
   const handleOutcomeSubmit = async (
-    outcome: CallOutcome,
+    status: string,
     data: Record<string, unknown>
   ) => {
     if (!selectedProspect || !user) return
 
     setSavingId(Number(selectedProspect.numericId))
     try {
-      const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
-      const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
 
-      // Build callback timestamp if scheduled
       let callbackScheduledAt: string | null = null
-      const callbackOutcomes = ["CallBack", "Interested", "Qualified"]
-      if (callbackOutcomes.includes(outcome) && data.callbackDate) {
+      // Schedule callback whenever a callbackDate is provided (regardless of status)
+      if (data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
@@ -417,8 +821,10 @@ export default function TelecallerDashboard() {
       if (data.courseConfirmed)
         fullNotes += `\n[Course Confirmed] ${data.courseConfirmed}`
 
+      const leadSource = (data.lead_source as string[]) || selectedProspect.lead_source || []
+      const leadType = (data.lead_type as string[]) || selectedProspect.lead_type || []
+
       // 1. Mark ALL previous callback logs for this prospect as notification_shown
-      // so they don't re-trigger after we log a new outcome
       try {
         const previousLogs = await callLogsApi.getByProspect(Number(selectedProspect.numericId))
         const previousCallbacks = previousLogs.filter((log: any) => log.callback_scheduled_at)
@@ -434,8 +840,8 @@ export default function TelecallerDashboard() {
         prospect_id: Number(selectedProspect.numericId),
         telecaller_id: telecallerId,
         assignment_id: selectedProspect.assignmentId,
-        outcome: dbOutcome,
-        status_after_call: statusAfterCall,
+        outcome: status,
+        status_after_call: status,
         reason: (data.reason as string) || null,
         notes: fullNotes.trim() || null,
         course_interest:
@@ -445,18 +851,24 @@ export default function TelecallerDashboard() {
         callback_scheduled_at: callbackScheduledAt,
       })
 
-      // 3. Update prospect status in DB
+      // 3. Update prospect – status + lead_source + lead_type + follow_up_date (if callback set)
       await prospectsApi.update(Number(selectedProspect.numericId), {
-        status: statusAfterCall,
+        status: status,
         course_interest:
           (data.coursePreference as string) ||
           (data.courseConfirmed as string) ||
           undefined,
+        lead_source: leadSource,
+        lead_type: leadType,
+        // Update follow_up_date when a callback is scheduled
+        ...(callbackScheduledAt
+          ? { follow_up_date: (data.callbackDate as string) }
+          : {}),
       })
 
       toast({
         title: "Call logged ✓",
-        description: `${selectedProspect.name} — ${OUTCOME_UI_LABELS[outcome] || outcome} → Status: ${statusConfig[statusAfterCall]?.label || statusAfterCall}`,
+        description: `${selectedProspect.name} → Status: ${statusConfig[status]?.label || status}`,
       })
 
       // 4. Refresh data
@@ -482,8 +894,6 @@ export default function TelecallerDashboard() {
     return <DashboardSkeleton />
   }
 
-  // Error is now handled via banner in the main return
-
   return (
     <div className="space-y-6">
       {error && (
@@ -508,10 +918,37 @@ export default function TelecallerDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground flex items-center gap-2">
-            Welcome back, {user?.name}! You have {telecallerStats.pending} prospects pending today.
+            Welcome back, {user?.name}! You have {viewMode === "student_admission" ? telecallerStats.pending : telecallerStats.collegePending} prospects pending today.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+            <Button
+              onClick={() => setViewMode("student_admission")}
+              variant={viewMode === "student_admission" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-8 text-xs font-medium",
+                viewMode === "student_admission" ? "shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
+              Student Admission
+            </Button>
+            <Button
+              onClick={() => setViewMode("college_contact")}
+              variant={viewMode === "college_contact" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "h-8 text-xs font-medium",
+                viewMode === "college_contact" ? "shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              <Building2 className="h-3.5 w-3.5 mr-1.5" />
+              College Contact
+            </Button>
+          </div>
           <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh
@@ -520,7 +957,10 @@ export default function TelecallerDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+      <div className={cn(
+        "grid gap-4",
+        viewMode === "student_admission" ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-7" : "grid-cols-2 lg:grid-cols-4"
+      )}>
         {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardContent className="p-4">
@@ -541,9 +981,9 @@ export default function TelecallerDashboard() {
       {/* Prospects List */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Today&apos;s Prospects</CardTitle>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>{viewMode === "student_admission" ? "Today's Prospects" : "College Contacts"}</CardTitle>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -553,6 +993,11 @@ export default function TelecallerDashboard() {
                   className="pl-9 w-full sm:w-64"
                 />
               </div>
+            </div>
+
+            {/* Filter Row */}
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-44">
                   <SelectValue placeholder="Status" />
@@ -562,15 +1007,25 @@ export default function TelecallerDashboard() {
                   <SelectItem value="new">New</SelectItem>
                   <SelectItem value="contacted">Contacted</SelectItem>
                   <SelectItem value="warm">Warm</SelectItem>
-                  <SelectItem value="hot">Hot 🔥</SelectItem>
-                  <SelectItem value="visit_scheduled">Visit Scheduled</SelectItem>
-                  <SelectItem value="visit_done">Visit Done / Decision Pending</SelectItem>
-                  <SelectItem value="admission_done">Admission Done ✓</SelectItem>
+                  <SelectItem value="hot">Strong Interest / Ready for Counselling</SelectItem>
+                  <SelectItem value="visit_scheduled">Visit Planned and Confirmed</SelectItem>
+                  <SelectItem value="visit_done">Visit Campus / Decision Awaited</SelectItem>
+                  <SelectItem value="admission_done">Admission Successfully Completed</SelectItem>
                   <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
                   <SelectItem value="cold_no_response">Cold / No Response</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
+                  <SelectItem value="Interested">Interested (Lead)</SelectItem>
+                  <SelectItem value="Interested Followup">Interested Followup</SelectItem>
+                  <SelectItem value="Proposal To Be Sent">Proposal To Be Sent</SelectItem>
+                  <SelectItem value="Proposal Sent">Proposal Sent</SelectItem>
+                  <SelectItem value="Training Date Followup">Training Date Followup</SelectItem>
+                  <SelectItem value="Qualified">Qualified</SelectItem>
+                  <SelectItem value="Ringing / Not Reachable">Ringing / Not Reachable</SelectItem>
+                  <SelectItem value="Not Interested">Not Interested (Lead)</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Course Filter */}
               <Select value={courseFilter} onValueChange={setCourseFilter}>
                 <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Course" />
@@ -585,144 +1040,353 @@ export default function TelecallerDashboard() {
                   <SelectItem value="Unknown">Unknown</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Lead Source Filter */}
+              <MultiSelectFilter
+                options={LEAD_SOURCE_OPTIONS}
+                selected={leadSourceFilter}
+                onChange={setLeadSourceFilter}
+                placeholder="Lead Source"
+              />
+
+              {/* Lead Type Filter */}
+              <MultiSelectFilter
+                options={LEAD_TYPE_OPTIONS}
+                selected={leadTypeFilter}
+                onChange={setLeadTypeFilter}
+                placeholder="Lead Type"
+              />
+
+              {/* Active filter badges */}
+              {leadSourceFilter.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {leadSourceFilter.map((s) => (
+                    <Badge
+                      key={s}
+                      variant="secondary"
+                      className="text-xs cursor-pointer"
+                      onClick={() => setLeadSourceFilter(leadSourceFilter.filter((x) => x !== s))}
+                    >
+                      {s} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {leadTypeFilter.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {leadTypeFilter.map((t) => (
+                    <Badge
+                      key={t}
+                      variant="outline"
+                      className="text-xs cursor-pointer border-primary/30 text-primary"
+                      onClick={() => setLeadTypeFilter(leadTypeFilter.filter((x) => x !== t))}
+                    >
+                      {t} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Parent Name</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Calls</TableHead>
-                  <TableHead>Last Call</TableHead>
-                  <TableHead>Reason / Outcome</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProspects.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={12} className="h-24 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Users className="h-8 w-8" />
-                        <p>No prospects found</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProspects.map((prospect, index) => {
-                    const sc = statusConfig[prospect.status] || {
-                      label: prospect.status,
-                      color: "bg-gray-100 text-gray-800",
-                    }
-                    const isTerminal = [
-                      "cold_not_interested",
-                      "cold_no_response",
-                      "lost",
-                      "admission_done",
-                    ].includes(prospect.status)
-
-                    return (
-                      <TableRow
-                        key={prospect.id}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50 sticky top-0 z-10">
+                    {visibleColumns.map((col) => (
+                      <TableHead
+                        key={col.key}
                         className={cn(
-                          prospect.status === "warm" && "bg-orange-50/50",
-                          prospect.status === "hot" && "bg-red-50/30"
+                          "font-bold text-slate-600 text-xs",
+                          col.key === "index" && "w-10",
+                          col.key === "totalCalls" && "text-center min-w-[60px]",
+                          col.key === "action" && "text-right sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]",
+                          col.key === "name" && "min-w-[160px]",
+                          col.key === "mobile" && "min-w-[130px]",
+                          col.key === "altPhone" && "min-w-[130px]",
+                          col.key === "secondaryEmail" && "min-w-[190px]",
+                          col.key === "city" && "min-w-[110px]",
+                          col.key === "address" && "min-w-[200px]",
+                          col.key === "postalCode" && "min-w-[110px]",
+                          col.key === "designation" && "min-w-[140px]",
+                          col.key === "location" && "min-w-[120px]",
+                          col.key === "department" && "min-w-[140px]",
+                          col.key === "courseInterest" && "min-w-[140px]",
+                          col.key === "lead_source" && "min-w-[160px]",
+                          col.key === "lead_type" && "min-w-[160px]",
+                          col.key === "status" && "min-w-[160px]",
+                          col.key === "lastCallAt" && "min-w-[130px]",
+                          col.key === "callbackDateTime" && "min-w-[130px]",
+                          col.key === "lastReason" && "min-w-[180px]"
                         )}
                       >
-                        <TableCell className="font-medium text-muted-foreground">
-                          {index + 1}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{prospect.name}</span>
-                            {prospect.callbackDateTime && (
-                              <span className="text-[10px] text-orange-600 flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                CB:{" "}
-                                {new Date(
-                                  prospect.callbackDateTime
-                                ).toLocaleString("en-IN", {
-                                  dateStyle: "short",
-                                  timeStyle: "short",
-                                })}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {prospect.parentName || "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {prospect.mobile}
-                        </TableCell>
-                        <TableCell>{prospect.location || "—"}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">{prospect.department}</TableCell>
-                        <TableCell>
-                          <span className="text-xs">{prospect.courseInterest}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn(sc.color)}>
-                            {sc.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="text-sm font-medium">
-                            {prospect.totalCalls}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {prospect.lastCallAt
-                            ? new Date(prospect.lastCallAt).toLocaleString(
-                              "en-IN",
-                              { dateStyle: "short", timeStyle: "short" }
+                        {col.label}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProspects.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                          <Users className="h-8 w-8" />
+                          <p>No prospects found</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredProspects.map((prospect, index) => {
+                      const sc = statusConfig[prospect.status] || {
+                        label: prospect.status,
+                        color: "bg-gray-100 text-gray-800",
+                      }
+
+                      const renderCell = (colKey: string) => {
+                        switch (colKey) {
+                          case "index":
+                            return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10">{index + 1}</TableCell>
+                          case "name":
+                            return (
+                              <TableCell key="name" className="min-w-[160px]">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-slate-800 text-sm">{prospect.name}</span>
+                                  {prospect.callbackDateTime && (
+                                    <span className="text-[10px] text-amber-600 flex items-center gap-1 mt-0.5">
+                                      <Clock className="h-3 w-3" />
+                                      CB: {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
                             )
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {prospect.lastOutcome ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted w-fit">
-                                {DB_OUTCOME_LABELS[prospect.lastOutcome] || prospect.lastOutcome.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                              </span>
-                              {prospect.lastNotes && (
-                                <span className="text-[11px] text-muted-foreground line-clamp-2 italic mt-0.5">
-                                  &quot;{prospect.lastNotes}&quot;
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
+                          case "parentName":
+                            return <TableCell key="parentName" className="text-sm text-slate-600 min-w-[130px]">{prospect.parentName || <span className="text-slate-300">—</span>}</TableCell>
+                          case "mobile":
+                            return (
+                              <TableCell key="mobile" className="min-w-[130px]">
+                                <span className="font-mono text-sm text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{prospect.mobile}</span>
+                              </TableCell>
+                            )
+                          case "altPhone":
+                            return (
+                              <TableCell key="altPhone" className="min-w-[130px] p-1">
+                                <InlineEditCell
+                                  value={prospect.altPhone || ""}
+                                  placeholder="+ alt phone"
+                                  type="tel"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "secondaryEmail":
+                            return (
+                              <TableCell key="secondaryEmail" className="min-w-[190px] p-1">
+                                <InlineEditCell
+                                  value={prospect.secondaryEmail || ""}
+                                  placeholder="+ email"
+                                  type="email"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "secondary_email", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "city":
+                            return (
+                              <TableCell key="city" className="min-w-[110px] p-1">
+                                <InlineEditCell
+                                  value={prospect.city || ""}
+                                  placeholder="+ city"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "city", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "address":
+                            return (
+                              <TableCell key="address" className="min-w-[200px] p-1">
+                                <InlineEditCell
+                                  value={prospect.address || ""}
+                                  placeholder="+ address"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "address", val)}
+                                  className="max-w-[180px]"
+                                />
+                              </TableCell>
+                            )
+                          case "postalCode":
+                            return (
+                              <TableCell key="postalCode" className="min-w-[110px] p-1">
+                                <InlineEditCell
+                                  value={prospect.postalCode || ""}
+                                  placeholder="+ postal"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "postal_code", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "designation":
+                            return (
+                              <TableCell key="designation" className="min-w-[140px] p-1">
+                                <InlineEditCell
+                                  value={prospect.designation || ""}
+                                  placeholder="+ designation"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "designation", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "location":
+                            return <TableCell key="location" className="text-sm text-slate-600 min-w-[120px]">{prospect.location || <span className="text-slate-300">—</span>}</TableCell>
+                          case "department":
+                            return (
+                              <TableCell key="department" className="min-w-[140px]">
+                                <span className="text-xs text-slate-600 block max-w-[130px] truncate" title={prospect.department}>{prospect.department || <span className="text-slate-300">—</span>}</span>
+                              </TableCell>
+                            )
+                          case "courseInterest":
+                            return (
+                              <TableCell key="courseInterest" className="min-w-[140px]">
+                                <span className="text-xs text-slate-700 font-medium">{prospect.courseInterest}</span>
+                              </TableCell>
+                            )
+                          case "lead_source":
+                            return (
+                              <TableCell key="lead_source">
+                                {prospect.lead_source && prospect.lead_source.length > 0 ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {prospect.lead_source.map((s: string) => (
+                                      <Badge key={s} variant="secondary" className="text-[10px] w-fit">
+                                        {s}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                            )
+                          case "lead_type":
+                            return (
+                              <TableCell key="lead_type">
+                                {prospect.lead_type && prospect.lead_type.length > 0 ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {prospect.lead_type.map((t: string) => (
+                                      <Badge key={t} variant="outline" className="text-[10px] w-fit border-primary/30 text-primary">
+                                        {t}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                            )
+                          case "status":
+                            return (
+                              <TableCell key="status">
+                                <Badge variant="outline" className={cn(sc.color)}>
+                                  {sc.label}
+                                </Badge>
+                              </TableCell>
+                            )
+                          case "totalCalls":
+                            return (
+                              <TableCell key="totalCalls" className="text-center">
+                                <span className="text-sm font-medium">{prospect.totalCalls}</span>
+                              </TableCell>
+                            )
+                          case "lastCallAt":
+                            return (
+                              <TableCell key="lastCallAt" className="text-sm text-muted-foreground">
+                                {prospect.lastCallAt
+                                  ? new Date(prospect.lastCallAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })
+                                  : "—"}
+                              </TableCell>
+                            )
+                          case "callbackDateTime":
+                            return (
+                              <TableCell key="callbackDateTime" className="text-sm">
+                                {prospect.callbackDateTime ? (
+                                  <span className="text-amber-600 font-medium whitespace-nowrap" title="Callback Scheduled">
+                                    {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+                                  </span>
+                                ) : prospect.follow_up_date ? (
+                                  <span className="text-slate-600 whitespace-nowrap" title="Spreadsheet Follow-up Date">
+                                    {prospect.follow_up_date}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                            )
+                          case "lastReason":
+                            return (
+                              <TableCell key="lastReason">
+                                {prospect.lastReason || prospect.lastNotes ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {prospect.lastReason && (
+                                      <span className="text-xs text-slate-700">{prospect.lastReason}</span>
+                                    )}
+                                    {prospect.lastNotes && (
+                                      <span className="text-[11px] text-muted-foreground line-clamp-2 italic" title={prospect.lastNotes}>
+                                        &quot;{prospect.lastNotes}&quot;
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : prospect.comments ? (
+                                  <span className="text-xs text-slate-600 line-clamp-2 italic" title={prospect.comments}>
+                                    {prospect.comments}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                            )
+                          case "action":
+                            return (
+                              <TableCell key="action" className="text-right sticky right-0 bg-white shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]">
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                                  onClick={() => handleCall(prospect)}
+                                  disabled={prospect.status === "lost" || savingId !== null}
+                                >
+                                  {savingId === prospect.numericId ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <PhoneCall className="h-4 w-4 mr-1" />
+                                  )}
+                                  Call Now
+                                </Button>
+                              </TableCell>
+                            )
+                          default:
+                            return null
+                        }
+                      }
+
+                      return (
+                        <TableRow
+                          key={prospect.id}
+                          className={cn(
+                            "border-b transition-colors hover:bg-blue-50/30",
+                            index % 2 === 0 ? "bg-white" : "bg-slate-50/50",
+                            prospect.status === "warm" && "bg-amber-50/60 hover:bg-amber-50",
+                            prospect.status === "hot" && "bg-red-50/40 hover:bg-red-50"
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() => handleCall(prospect)}
-                            disabled={prospect.status === "lost" || prospect.status === "admission_done" || savingId !== null}
-                          >
-                            {savingId === prospect.id ? (
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                            ) : (
-                              <PhoneCall className="h-4 w-4 mr-1" />
-                            )}
-                            Call Now
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
+                        >
+                          {visibleColumns.map((col) => renderCell(col.key))}
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
           <div className="mt-4 text-sm text-muted-foreground">
             Showing {filteredProspects.length} of {prospects.length} prospects
@@ -736,6 +1400,7 @@ export default function TelecallerDashboard() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         onSubmit={handleOutcomeSubmit}
+        onLeadModeActivate={() => setViewMode("college_contact")}
       />
     </div>
   )

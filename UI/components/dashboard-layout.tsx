@@ -386,10 +386,10 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                               isHot
                                 ? "border-red-500 bg-red-50"
                                 : isVisit
-                                ? "border-purple-500 bg-purple-50"
-                                : isCold
-                                ? "border-slate-400 bg-slate-50"
-                                : "border-blue-500 bg-blue-50"
+                                  ? "border-purple-500 bg-purple-50"
+                                  : isCold
+                                    ? "border-slate-400 bg-slate-50"
+                                    : "border-blue-500 bg-blue-50"
                             )}
                           >
                             <p className={cn(
@@ -397,22 +397,47 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                               isHot
                                 ? "text-red-900"
                                 : isVisit
-                                ? "text-purple-900"
-                                : isCold
-                                ? "text-slate-900"
-                                : "text-blue-900"
+                                  ? "text-purple-900"
+                                  : isCold
+                                    ? "text-slate-900"
+                                    : "text-blue-900"
                             )}>
-                              📞 {isHot ? "Hot" : isVisit ? "Visit" : isCold ? "Cold" : "Warm"} Callback: {callback.prospect?.name || callback.prospect_name || "Unknown"}
+                              📞 {(() => {
+                                const STATUS_LABELS: Record<string, string> = {
+                                  warm: "Warm",
+                                  hot: "Strong Interest",
+                                  visit_scheduled: "Visit Planned",
+                                  visit_done: "Visit Done",
+                                  contacted: "Contacted",
+                                  cold_no_response: "No Response",
+                                  cold_not_interested: "Not Interested",
+                                  cold: "Cold",
+                                  lost: "Lost",
+                                  "Interested": "Interested",
+                                  "Interested Followup": "Interested Followup",
+                                  "Proposal To Be Sent": "Proposal To Be Sent",
+                                  "Proposal Sent": "Proposal Sent",
+                                  "Training Date Followup": "Training Date Followup",
+                                  "Qualified": "Qualified",
+                                  "Ringing / Not Reachable": "Ringing",
+                                  "Not Interested": "Not Interested",
+                                  "Intro Call Completed": "Intro Call Done",
+                                }
+                                const label = callback.status_after_call
+                                  ? STATUS_LABELS[callback.status_after_call] || callback.status_after_call
+                                  : "Callback"
+                                return `${label} — `
+                              })()} {callback.prospect?.name || callback.prospect_name || "Unknown"}
                             </p>
                             <p className={cn(
                               "text-xs mt-1",
                               isHot
                                 ? "text-red-700"
                                 : isVisit
-                                ? "text-purple-700"
-                                : isCold
-                                ? "text-slate-700"
-                                : "text-blue-700"
+                                  ? "text-purple-700"
+                                  : isCold
+                                    ? "text-slate-700"
+                                    : "text-blue-700"
                             )}>
                               {callback.prospect?.mobile || callback.prospect_phone || "Unknown"}
                             </p>
@@ -422,10 +447,10 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                                 isHot
                                   ? "text-red-700"
                                   : isVisit
-                                  ? "text-purple-700"
-                                  : isCold
-                                  ? "text-slate-700"
-                                  : "text-blue-700"
+                                    ? "text-purple-700"
+                                    : isCold
+                                      ? "text-slate-700"
+                                      : "text-blue-700"
                               )}>
                                 📚 {callback.course_interest}
                               </p>
@@ -435,10 +460,10 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                               isHot
                                 ? "text-red-600"
                                 : isVisit
-                                ? "text-purple-600"
-                                : isCold
-                                ? "text-slate-600"
-                                : "text-blue-600"
+                                  ? "text-purple-600"
+                                  : isCold
+                                    ? "text-slate-600"
+                                    : "text-blue-600"
                             )}>
                               ⏰ {scheduledTime}
                             </p>

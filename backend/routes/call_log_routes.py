@@ -7,10 +7,10 @@ router = APIRouter(prefix="/call-logs", tags=["call-logs"])
 
 
 @router.get("")
-def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None):
+def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None, prospect_type: str = None):
     """Get all call logs."""
     try:
-        call_logs = CallLogService.get_all_call_logs(start_date=start_date, end_date=end_date, telecaller_id=telecaller_id)
+        call_logs = CallLogService.get_all_call_logs(start_date=start_date, end_date=end_date, telecaller_id=telecaller_id, prospect_type=prospect_type)
         return call_logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -45,13 +45,7 @@ def get_call_logs_by_telecaller(telecaller_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def get_pending_callbacks():
-    """Get all pending callbacks that are scheduled."""
-    try:
-        call_logs = CallLogService.get_pending_callbacks()
-        return call_logs
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/callbacks/pending", response_model=List[CallLog])
 def get_pending_callbacks(telecaller_id: int | None = None):
     """Get all pending callbacks that are scheduled."""
