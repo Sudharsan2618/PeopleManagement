@@ -14,6 +14,8 @@ import {
   X,
   Building2,
   GraduationCap,
+  Edit,
+  MessageSquare,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
@@ -45,6 +47,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import {
@@ -336,6 +348,8 @@ export default function TelecallerDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [editingCell, setEditingCell] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"student_admission" | "college_contact">("student_admission")
+  const [editingProspect, setEditingProspect] = useState<any | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const telecallerId = user ? Number(user.id) : 0
 
@@ -748,6 +762,7 @@ export default function TelecallerDashboard() {
       { key: "lastCallAt", label: "Last Call", hasData: false },
       { key: "callbackDateTime", label: "Follow-up Date", hasData: false },
       { key: "lastReason", label: "Reason / Outcome", hasData: false },
+      { key: "comments", label: "Comments", hasData: false },
       { key: "action", label: "Action", hasData: true, alwaysVisible: true },
     ]
 
@@ -774,6 +789,37 @@ export default function TelecallerDashboard() {
   const handleCall = (prospect: any) => {
     setSelectedProspect(prospect)
     setIsModalOpen(true)
+  }
+
+  // ─── Handle edit prospect ─────────────────────────────────────
+  const handleEdit = (prospect: any) => {
+    setEditingProspect(prospect)
+    setIsEditModalOpen(true)
+  }
+
+  // ─── Handle save edit ─────────────────────────────────────────
+  const handleSaveEdit = async () => {
+    if (!editingProspect) return
+    try {
+      await prospectsApi.update(editingProspect.numericId, {
+        name: editingProspect.name,
+        mobile: editingProspect.mobile,
+        email: editingProspect.email,
+        alt_phone: editingProspect.altPhone,
+        secondary_email: editingProspect.secondaryEmail,
+        city: editingProspect.city,
+        address: editingProspect.address,
+        postal_code: editingProspect.postalCode,
+        designation: editingProspect.designation,
+        comments: editingProspect.comments,
+      })
+      toast({ title: "Saved ✓", description: "Prospect details updated." })
+      await fetchData()
+      setIsEditModalOpen(false)
+      setEditingProspect(null)
+    } catch (err) {
+      toast({ title: "Save failed", description: "Could not update prospect. Please try again.", variant: "destructive" })
+    }
   }
 
   const parseCallbackTime = (time: string) => {
@@ -1119,7 +1165,8 @@ export default function TelecallerDashboard() {
                           col.key === "status" && "min-w-[160px]",
                           col.key === "lastCallAt" && "min-w-[130px]",
                           col.key === "callbackDateTime" && "min-w-[130px]",
-                          col.key === "lastReason" && "min-w-[180px]"
+                          col.key === "lastReason" && "min-w-[180px]",
+                          col.key === "comments" && "min-w-[200px]"
                         )}
                       >
                         {col.label}
@@ -1337,31 +1384,51 @@ export default function TelecallerDashboard() {
                                       </span>
                                     )}
                                   </div>
-                                ) : prospect.comments ? (
-                                  <span className="text-xs text-slate-600 line-clamp-2 italic" title={prospect.comments}>
-                                    {prospect.comments}
-                                  </span>
                                 ) : (
                                   <span className="text-muted-foreground text-xs">—</span>
                                 )}
                               </TableCell>
                             )
+                          case "comments":
+                            return (
+                              <TableCell key="comments" className="min-w-[200px] p-1">
+                                <InlineEditCell
+                                  value={prospect.comments || ""}
+                                  placeholder="+ comments"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "comments", val)}
+                                  className="max-w-[180px]"
+                                />
+                              </TableCell>
+                            )
                           case "action":
                             return (
-                              <TableCell key="action" className="text-right sticky right-0 bg-white shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]">
-                                <Button
-                                  size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                                  onClick={() => handleCall(prospect)}
-                                  disabled={prospect.status === "lost" || savingId !== null}
-                                >
-                                  {savingId === prospect.numericId ? (
-                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                  ) : (
-                                    <PhoneCall className="h-4 w-4 mr-1" />
-                                  )}
-                                  Call Now
-                                </Button>
+                              <TableCell key="action" className="text-right sticky right-0 bg-white shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[150px]">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 text-xs"
+                                    onClick={() => handleEdit(prospect)}
+                                    disabled={savingId !== null}
+                                  >
+                                    <Edit className="h-3.5 w-3.5 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-8"
+                                    onClick={() => handleCall(prospect)}
+                                    disabled={prospect.status === "lost" || savingId !== null}
+                                  >
+                                    {savingId === prospect.numericId ? (
+                                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                    ) : (
+                                      <PhoneCall className="h-4 w-4 mr-1" />
+                                    )}
+                                    Call Now
+                                  </Button>
+                                </div>
                               </TableCell>
                             )
                           default:
@@ -1402,6 +1469,120 @@ export default function TelecallerDashboard() {
         onSubmit={handleOutcomeSubmit}
         onLeadModeActivate={() => setViewMode("college_contact")}
       />
+
+      {/* Edit Prospect Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Prospect Details</DialogTitle>
+            <DialogDescription>
+              Update the contact information and comments for {editingProspect?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingProspect?.name || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-mobile">Mobile</Label>
+                <Input
+                  id="edit-mobile"
+                  value={editingProspect?.mobile || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, mobile: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingProspect?.email || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-altPhone">Alt. Phone</Label>
+                <Input
+                  id="edit-altPhone"
+                  value={editingProspect?.altPhone || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, altPhone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-secondaryEmail">Secondary Email</Label>
+                <Input
+                  id="edit-secondaryEmail"
+                  type="email"
+                  value={editingProspect?.secondaryEmail || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, secondaryEmail: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-city">City</Label>
+                <Input
+                  id="edit-city"
+                  value={editingProspect?.city || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, city: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-address">Address</Label>
+              <Input
+                id="edit-address"
+                value={editingProspect?.address || ""}
+                onChange={(e) => setEditingProspect({ ...editingProspect, address: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-postalCode">Postal Code</Label>
+                <Input
+                  id="edit-postalCode"
+                  value={editingProspect?.postalCode || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, postalCode: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-designation">Designation</Label>
+                <Input
+                  id="edit-designation"
+                  value={editingProspect?.designation || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, designation: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-comments">Comments</Label>
+              <Textarea
+                id="edit-comments"
+                value={editingProspect?.comments || ""}
+                onChange={(e) => setEditingProspect({ ...editingProspect, comments: e.target.value })}
+                rows={4}
+                placeholder="Add any notes or comments about this prospect..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
