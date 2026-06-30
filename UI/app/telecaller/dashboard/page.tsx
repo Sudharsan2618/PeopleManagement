@@ -762,6 +762,7 @@ export default function TelecallerDashboard() {
       { key: "lastCallAt", label: "Last Call", hasData: false },
       { key: "callbackDateTime", label: "Follow-up Date", hasData: false },
       { key: "lastReason", label: "Reason / Outcome", hasData: false },
+      { key: "lastNotes", label: "Notes", hasData: false },
       { key: "comments", label: "Comments", hasData: false },
       { key: "action", label: "Action", hasData: true, alwaysVisible: true },
     ]
@@ -1166,6 +1167,7 @@ export default function TelecallerDashboard() {
                           col.key === "lastCallAt" && "min-w-[130px]",
                           col.key === "callbackDateTime" && "min-w-[130px]",
                           col.key === "lastReason" && "min-w-[180px]",
+                          col.key === "lastNotes" && "min-w-[200px]",
                           col.key === "comments" && "min-w-[200px]"
                         )}
                       >
@@ -1373,17 +1375,20 @@ export default function TelecallerDashboard() {
                           case "lastReason":
                             return (
                               <TableCell key="lastReason">
-                                {prospect.lastReason || prospect.lastNotes ? (
-                                  <div className="flex flex-col gap-0.5">
-                                    {prospect.lastReason && (
-                                      <span className="text-xs text-slate-700">{prospect.lastReason}</span>
-                                    )}
-                                    {prospect.lastNotes && (
-                                      <span className="text-[11px] text-muted-foreground line-clamp-2 italic" title={prospect.lastNotes}>
-                                        &quot;{prospect.lastNotes}&quot;
-                                      </span>
-                                    )}
-                                  </div>
+                                {prospect.lastReason ? (
+                                  <span className="text-xs text-slate-700">{prospect.lastReason}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                            )
+                          case "lastNotes":
+                            return (
+                              <TableCell key="lastNotes" className="min-w-[200px]">
+                                {prospect.lastNotes ? (
+                                  <span className="text-xs text-slate-600 line-clamp-2" title={prospect.lastNotes}>
+                                    {prospect.lastNotes}
+                                  </span>
                                 ) : (
                                   <span className="text-muted-foreground text-xs">—</span>
                                 )}
