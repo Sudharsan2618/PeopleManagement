@@ -38,7 +38,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn, formatISTDateTime } from "@/lib/utils"
-import { type UserRole } from "@/lib/mock-data"
+import { type UserRole, mockNotifications } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 import { dashboardApi, callLogsApi } from "@/lib/api-client"
 
@@ -207,6 +207,16 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       return item
     })
   }, [role, counts, pendingCallbacks.length])
+
+  const allowedNotifications = useMemo(() => {
+    return mockNotifications.filter(
+      (n) => n.role === role || n.role === "all"
+    )
+  }, [role])
+
+  const unreadNotificationsCount = useMemo(() => {
+    return allowedNotifications.filter((n) => !n.read).length
+  }, [allowedNotifications])
 
   const handleLogout = () => {
     logout()
@@ -457,8 +467,13 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[9px] rounded-sm bg-destructive text-destructive-foreground flex items-center justify-center font-semibold">
+                      {unreadNotificationsCount}
+                    </span>
+                  )}
                   <span className="sr-only">Notifications</span>
                 </Button>
               </DropdownMenuTrigger>

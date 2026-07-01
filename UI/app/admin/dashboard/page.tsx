@@ -87,6 +87,7 @@ export default function AdminDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [telecallerPerf, setTelecallerPerf] = useState<any[]>([])
+  const [pipeline, setPipeline] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -101,16 +102,18 @@ export default function AdminDashboard() {
       setIsLoading(true)
       setError(null)
 
-      const [statsRes, perfRes, usersRes, reportsRes] =
+      const [statsRes, perfRes, pipelineRes, usersRes, reportsRes] =
         await Promise.all([
           adminApi.getStats(startDate || undefined, endDate || undefined),
           adminApi.getTelecallerPerformance(startDate || undefined, endDate || undefined),
+          adminApi.getProspectPipeline(startDate || undefined, endDate || undefined),
           usersApi.getAll(),
           SpocReportsApi.getAll(),
         ])
 
       setStats(statsRes)
       setTelecallerPerf(perfRes)
+      setPipeline(pipelineRes)
       setUsers(usersRes.map(adaptApiUserToUiUser))
       setReports(reportsRes)
     } catch (err) {
