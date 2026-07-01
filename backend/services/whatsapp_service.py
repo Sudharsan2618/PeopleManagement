@@ -258,6 +258,30 @@ class WhatsAppService:
         from database.connection import execute_query
         return execute_query("SELECT * FROM whatsapp_media_assets ORDER BY created_at DESC")
 
+    @staticmethod
+    def get_unread_count(telecaller_id: int):
+        """Count a caller's conversations whose most recent message is inbound
+        (i.e. the prospect replied and is awaiting a response)."""
+        from database.connection import execute_query
+        row = execute_query(
+            """
+            SELECT COUNT(*) AS count FROM (
+                SELECT p.id,
+                    (SELECT direction FROM whatsapp_messages
+                       WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) AS last_dir
+                FROM prospects p
+                JOIN prospect_assignments pa
+                    ON pa.prospect_id = p.id AND pa.telecaller_id = %s
+                JOIN whatsapp_messages m ON m.prospect_id = p.id
+                GROUP BY p.id
+            ) t
+            WHERE last_dir = 'inbound'
+            """,
+            (telecaller_id,),
+            fetch="one",
+        )
+        return {"count": row["count"] if row else 0}
+
     # ── Quick-send templates (caller-curated) ─────────────────────────────────
     @staticmethod
     def get_quick_send_templates(include_inactive: bool = False):

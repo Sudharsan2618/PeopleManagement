@@ -128,8 +128,8 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         let whatsappUnread = 0
         if (role === "telecaller") {
           try {
-            const convos = await whatsappApi.getConversations(1, 100, Number(user.id))
-            whatsappUnread = (convos || []).filter((c: any) => c.unread).length
+            const res = await whatsappApi.getUnreadCount(Number(user.id))
+            whatsappUnread = res?.count || 0
           } catch {
             // non-fatal — badge just won't show
           }

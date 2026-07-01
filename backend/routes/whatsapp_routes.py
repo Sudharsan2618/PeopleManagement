@@ -133,6 +133,14 @@ def session_status(prospect_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/unread-count")
+def unread_count(telecaller_id: int = Query(...)):
+    """Lightweight count of a caller's conversations awaiting a reply (badge)."""
+    try:
+        return WhatsAppService.get_unread_count(telecaller_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ── Quick-send templates (caller-curated) ─────────────────────────────────────
 @router.get("/quick-send-templates")
 def list_quick_send_templates(include_inactive: bool = Query(False)):

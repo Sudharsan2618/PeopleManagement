@@ -588,6 +588,8 @@ export const whatsappApi = {
     return apiRequest<any[]>(`/whatsapp/conversations?${params.toString()}`)
   },
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
+  getUnreadCount: (telecallerId: number) =>
+    apiRequest<{ count: number }>(`/whatsapp/unread-count?telecaller_id=${telecallerId}`),
   getSessionStatus: (prospectId: number) => apiRequest<{
     prospect_id: number
     window_open: boolean

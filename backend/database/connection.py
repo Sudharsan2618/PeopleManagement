@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+import time
 import psycopg2
 from psycopg2 import pool, OperationalError
 from psycopg2.extras import RealDictCursor
@@ -170,22 +171,42 @@ def close_pool():
         log.info("🛑 PostgreSQL Connection Pool closed")
 
 
-def get_connection():
+def get_connection(max_retries: int = 2, retry_delay: float = 0.5):
     """
     Get a connection from the pool.
-    
+
+    Retries briefly on transient connect failures (e.g. DNS "Name or service
+    not known" or a dropped socket to the remote DB) so a momentary network
+    blip doesn't surface as a request error. Pool-exhaustion is not retried.
+
     IMPORTANT: Always pair with put_connection() in a finally block,
     or better yet use the get_db_cursor() context manager.
     """
     if _pool is None:
         init_pool()
-    try:
-        return _pool.getconn()
-    except pool.PoolError:
-        # Log pool stats for diagnostics
-        if _pool:
-            log.error("❌ Connection pool exhausted! Stats: %s", _pool.stats)
-        raise
+
+    last_err: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            return _pool.getconn()
+        except pool.PoolError:
+            # Pool exhausted — retrying won't help, fail fast.
+            if _pool:
+                log.error("❌ Connection pool exhausted! Stats: %s", _pool.stats)
+            raise
+        except (OperationalError, psycopg2.InterfaceError) as e:
+            # Transient: DNS/network/SSL handshake failure opening a socket.
+            last_err = e
+            log.warning(
+                "⚠️  DB connect failed (attempt %d/%d): %s",
+                attempt + 1, max_retries + 1, e,
+            )
+            if attempt < max_retries:
+                time.sleep(retry_delay)
+                continue
+            raise
+    # Unreachable, but keeps type-checkers happy
+    raise last_err  # type: ignore[misc]
 
 
 def put_connection(conn):
