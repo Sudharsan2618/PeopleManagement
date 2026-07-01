@@ -3,28 +3,25 @@
 import { useState, useEffect, useMemo } from "react"
 import {
   ClipboardList,
-  Search,
   CheckCircle2,
   Clock,
   AlertTriangle,
   Building2,
-  Calendar,
+  Calendar as CalendarIcon,
   Check,
   Loader2,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Bell,
+  GraduationCap,
+  Briefcase,
+  Users,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -37,6 +34,13 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { followUpTasksApi, type FollowUpTask } from "@/lib/api-client"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const statusConfig: Record<
   string,
@@ -62,17 +66,81 @@ const statusConfig: Record<
   },
 }
 
+const categoryConfig: Record<
+  string,
+  { label: string; color: string; bgColor: string; dotColor: string }
+> = {
+  school: {
+    label: "School Outreach",
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+    dotColor: "#dc2626",
+  },
+  coaching_centre: {
+    label: "Coaching Centre Outreach",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
+    dotColor: "#9333ea",
+  },
+  admission_centre: {
+    label: "Admission Centre Partnership",
+    color: "text-amber-600",
+    bgColor: "bg-amber-100",
+    dotColor: "#d97706",
+  },
+  alumni_networking: {
+    label: "Alumni Networking / Referral Networking",
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+    dotColor: "#16a34a",
+  },
+  corporate_outreach: {
+    label: "Corporate Outreach",
+    color: "text-blue-600",
+    bgColor: "bg-blue-100",
+    dotColor: "#2563eb",
+  },
+}
+
+type OutreachType = "school" | "coaching_centre" | "admission_centre" | "alumni_networking" | "corporate_outreach" | "all"
+
+// Helper function to determine category of a task based on explicit category or fallback
+const getTaskCategory = (task: FollowUpTask): OutreachType => {
+  if (task.followup_category && categoryConfig[task.followup_category]) {
+    return task.followup_category as OutreachType
+  }
+
+  const name = (task.institution_name || "").toLowerCase()
+  if (name.includes("school") || name.includes("high school") || name.includes("hs")) {
+    return "school"
+  }
+  if (name.includes("academy") || name.includes("coaching") || name.includes("centre") || name.includes("center") || name.includes("institute")) {
+    return "coaching_centre"
+  }
+  if (name.includes("admission") || name.includes("partner")) {
+    return "admission_centre"
+  }
+  if (name.includes("alumni") || name.includes("graduate") || name.includes("former") || name.includes("referral") || name.includes("network") || name.includes("contact")) {
+    return "alumni_networking"
+  }
+  if (name.includes("corporate") || name.includes("company") || name.includes("business") || name.includes("enterprise")) {
+    return "corporate_outreach"
+  }
+  return "school" // Default fallback
+}
+
 export default function spocFollowupsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [tasks, setTasks] = useState<FollowUpTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [selectedTask, setSelectedTask] = useState<FollowUpTask | null>(null)
+  const [outreachType, setOutreachType] = useState<OutreachType>("all")
   const [resolutionNote, setResolutionNote] = useState("")
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
 
   const spocId = user ? Number(user.id) : 0
 
@@ -105,34 +173,49 @@ export default function spocFollowupsPage() {
     })
   }, [tasks, todayStr])
 
+  // Filter by outreach type using getTaskCategory for consistency
   const filteredTasks = useMemo(() => {
-    return enrichedTasks.filter((t: any) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        (t.institution_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.action_description.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus =
-        statusFilter === "all" || t.displayStatus === statusFilter
-      return matchesSearch && matchesStatus
+    if (outreachType === "all") return enrichedTasks
+    return enrichedTasks.filter((t) => getTaskCategory(t) === outreachType)
+  }, [enrichedTasks, outreachType])
+
+  // Get tasks for selected date - sorted by status
+  const tasksForSelectedDate = useMemo(() => {
+    if (!selectedDate) return []
+    const dateStr = selectedDate.toISOString().split("T")[0]
+    const tasks = filteredTasks.filter((t) => t.follow_up_date === dateStr)
+
+    // Sort: overdue first, then today, then upcoming
+    return tasks.sort((a, b) => {
+      const today = new Date().toISOString().split("T")[0]
+      const aDate = a.follow_up_date || ""
+      const bDate = b.follow_up_date || ""
+
+      const aStatus = a.status === "pending" && aDate < today ? "overdue" : a.status
+      const bStatus = b.status === "pending" && bDate < today ? "overdue" : b.status
+
+      const statusOrder = { overdue: 0, pending: 1, completed: 2 }
+      return statusOrder[aStatus as keyof typeof statusOrder] - statusOrder[bStatus as keyof typeof statusOrder]
     })
-  }, [enrichedTasks, searchQuery, statusFilter])
+  }, [filteredTasks, selectedDate])
 
-  // Sort: overdue first, then pending, then completed
-  const sortedTasks = useMemo(() => {
-    const order: Record<string, number> = { overdue: 0, pending: 1, completed: 2 }
-    return [...filteredTasks].sort(
-      (a: any, b: any) => (order[a.displayStatus] ?? 99) - (order[b.displayStatus] ?? 99)
-    )
+  // Get dates with follow-ups for the calendar - with category information
+  // Use filteredTasks so calendar indicators respect the selected category filter
+  const datesWithFollowUps = useMemo(() => {
+    const dateMap = new Map<string, { categories: Set<string>; count: number }>()
+    filteredTasks.forEach((t) => {
+      if (t.follow_up_date) {
+        const category = getTaskCategory(t)
+        if (!dateMap.has(t.follow_up_date)) {
+          dateMap.set(t.follow_up_date, { categories: new Set(), count: 0 })
+        }
+        const entry = dateMap.get(t.follow_up_date)!
+        entry.categories.add(category)
+        entry.count++
+      }
+    })
+    return dateMap
   }, [filteredTasks])
-
-  const stats = useMemo(() => ({
-    total: tasks.length,
-    pending: tasks.filter((t) => t.status === "pending").length,
-    overdue: tasks.filter(
-      (t) => t.status === "pending" && t.follow_up_date && t.follow_up_date < todayStr
-    ).length,
-    completed: tasks.filter((t) => t.status === "completed").length,
-  }), [tasks, todayStr])
 
   const handleMarkComplete = (task: FollowUpTask) => {
     setSelectedTask(task)
@@ -151,11 +234,33 @@ export default function spocFollowupsPage() {
       toast({ title: "Task marked as complete" })
       setIsCompleteDialogOpen(false)
       setSelectedTask(null)
+      // Refresh data immediately without full page reload
       await fetchData()
     } catch {
       toast({ title: "Failed to update task", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handlePreviousMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  }
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date)
+    if (date) {
+      const dateStr = date.toISOString().split("T")[0]
+      const tasksOnDate = filteredTasks.filter((t) => t.follow_up_date === dateStr)
+      if (tasksOnDate.length > 0) {
+        setSelectedTask(tasksOnDate[0])
+      } else {
+        setSelectedTask(null)
+      }
     }
   }
 
@@ -167,6 +272,8 @@ export default function spocFollowupsPage() {
     )
   }
 
+  const monthName = currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -174,185 +281,429 @@ export default function spocFollowupsPage() {
         <div>
           <h1 className="text-xl font-normal ">My Follow-ups</h1>
           <p className="text-muted-foreground">
-            Follow-up tasks assigned to you from field reports
+            Manage your follow-up schedule
           </p>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="relative">
+                <Bell className="h-4 w-4 mr-2" />
+                Notifications
+                {filteredTasks.filter(t => t.status === "pending").length > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
+                    {filteredTasks.filter(t => t.status === "pending").length}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-96">
+              {filteredTasks.filter(t => t.status === "pending").length > 0 ? (
+                <>
+                  <div className="px-2 py-1.5 text-sm font-semibold border-b">
+                    Pending Follow-ups ({filteredTasks.filter(t => t.status === "pending").length})
+                    {outreachType !== "all" && (
+                      <span className="text-xs font-normal text-muted-foreground ml-2">
+                        - {categoryConfig[outreachType]?.label || "All"}
+                      </span>
+                    )}
+                  </div>
+                  {filteredTasks.filter(t => t.status === "pending").slice(0, 5).map((task) => {
+                    const category = getTaskCategory(task)
+                    return (
+                      <DropdownMenuItem
+                        key={task.id}
+                        className="flex flex-col items-start p-3 cursor-pointer"
+                        onClick={() => {
+                          setSelectedDate(new Date(task.follow_up_date + "T00:00:00"))
+                          setSelectedTask(task)
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full mb-1">
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: categoryConfig[category]?.dotColor }}
+                          />
+                          <span className="font-medium text-xs text-muted-foreground">
+                            {categoryConfig[category]?.label}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 w-full">
+                          <Clock className="h-4 w-4 text-yellow-600" />
+                          <span className="font-medium text-sm">{task.institution_name || "—"}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 ml-6">
+                          {task.action_description}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 ml-6">
+                          Due: {new Date(task.follow_up_date + "T00:00:00").toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </div>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                  {filteredTasks.filter(t => t.status === "pending").length > 5 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground text-center border-t">
+                      +{filteredTasks.filter(t => t.status === "pending").length - 5} more pending follow-ups
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                  No pending follow-ups
+                  {outreachType !== "all" && (
+                    <span className="block text-xs mt-1">
+                      for {categoryConfig[outreachType]?.label}
+                    </span>
+                  )}
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={fetchData} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Outreach Type Tabs */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={outreachType === "all" ? "default" : "outline"}
+          onClick={() => setOutreachType("all")}
+          size="sm"
+        >
+          All
+        </Button>
+        <Button
+          variant={outreachType === "school" ? "default" : "outline"}
+          onClick={() => setOutreachType("school")}
+          size="sm"
+        >
+          School Outreach
+        </Button>
+        <Button
+          variant={outreachType === "coaching_centre" ? "default" : "outline"}
+          onClick={() => setOutreachType("coaching_centre")}
+          size="sm"
+        >
+          Coaching Centre Outreach
+        </Button>
+        <Button
+          variant={outreachType === "admission_centre" ? "default" : "outline"}
+          onClick={() => setOutreachType("admission_centre")}
+          size="sm"
+        >
+          Admission Centre Partnership
+        </Button>
+        <Button
+          variant={outreachType === "alumni_networking" ? "default" : "outline"}
+          onClick={() => setOutreachType("alumni_networking")}
+          size="sm"
+        >
+          Alumni Networking / Referral Networking
+        </Button>
+        <Button
+          variant={outreachType === "corporate_outreach" ? "default" : "outline"}
+          onClick={() => setOutreachType("corporate_outreach")}
+          size="sm"
+        >
+          Corporate Outreach
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
+      {/* Calendar and Details Layout */}
+      <div className="grid gap-6 lg:grid-cols-10">
+        {/* Calendar Section */}
+        <Card className="lg:col-span-7">
+          <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-normal">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Tasks</p>
-              </div>
-              <div className="rounded-lg bg-[#EDF5FF] p-2">
-                <ClipboardList className="h-5 w-5 text-primary" />
+              <CardTitle>Follow-up Calendar</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={handlePreviousMonth}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium min-w-[120px] text-center">
+                  {monthName}
+                </span>
+                <Button variant="ghost" size="icon" onClick={handleNextMonth}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
+          </CardHeader>
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-normal">{stats.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-              </div>
-              <div className="rounded-lg bg-[#FCF4D6] p-2">
-                <Clock className="h-5 w-5 text-warning" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-normal text-destructive">{stats.overdue}</p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
-              </div>
-              <div className="rounded-lg bg-[#FFF1F1] p-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xl font-normal text-success">{stats.completed}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
-              </div>
-              <div className="rounded-lg bg-[#DEFBE6] p-2">
-                <CheckCircle2 className="h-5 w-5 text-success" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDateSelect}
+              month={currentMonth}
+              onMonthChange={setCurrentMonth}
+              className="rounded-md border w-full h-full"
+              classNames={{
+                months: "w-full h-full flex flex-col",
+                month: "w-full h-full flex flex-col",
+                caption: "flex justify-center pt-1 relative items-center mb-4",
+                caption_label: "text-lg font-semibold",
+                nav: "flex items-center gap-2",
+                head_row: "flex",
+                head_cell: "w-full text-sm font-medium text-muted-foreground",
+                row: "flex w-full mt-2",
+                cell: "h-16 w-full p-0 relative text-center text-sm focus-within:relative focus-within:z-20",
+              }}
+              modifiers={{
+                hasFollowUp: (date) => {
+                  const dateStr = date.toISOString().split("T")[0]
+                  return datesWithFollowUps.has(dateStr)
+                },
+              }}
+              modifiersStyles={{
+                hasFollowUp: {
+                  backgroundColor: "rgb(59 130 246 / 0.05)",
+                  fontWeight: "bold",
+                },
+              }}
+              components={{
+                DayButton: ({ day, modifiers, ...props }: any) => {
+                  const dateStr = day.date.toISOString().split("T")[0]
+                  const followUpInfo = datesWithFollowUps.get(dateStr)
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by institution or action..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Follow-ups List */}
-      <div className="space-y-4">
-        {sortedTasks.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
-              <p>No follow-up tasks found</p>
-            </CardContent>
-          </Card>
-        ) : (
-          sortedTasks.map((task: any) => {
-            const config = statusConfig[task.displayStatus] || statusConfig.pending
-            const Icon = config.icon
-
-            return (
-              <Card
-                key={task.id}
-                className={cn(
-                  task.displayStatus === "overdue" && "border-red-200 bg-[#FFF1F1]/30"
-                )}
-              >
-                <CardContent className="p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge
-                          variant="outline"
-                          className={cn(config.bgColor, config.color, "border-0")}
-                        >
-                          <Icon className="h-3 w-3 mr-1" />
-                          {config.label}
-                        </Badge>
-                        {task.follow_up_date && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Due:{" "}
-                            {new Date(task.follow_up_date + "T00:00:00").toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 mb-1">
-                        <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <h3 className="font-semibold truncate">
-                          {task.institution_name || "—"}
-                        </h3>
-                      </div>
-
-                      <p className="text-sm text-muted-foreground ml-6">
-                        {task.action_description}
-                      </p>
-
-                      {task.resolution_note && (
-                        <div className="mt-2 ml-6 p-2 rounded bg-[#DEFBE6] border border-green-100">
-                          <p className="text-xs text-green-700">
-                            <strong>Resolution:</strong> {task.resolution_note}
-                          </p>
+                  return (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "relative h-full w-full flex flex-col items-center justify-center gap-1 text-base",
+                        modifiers.selected && "bg-primary text-primary-foreground",
+                        !modifiers.selected && "hover:bg-accent"
+                      )}
+                      {...props}
+                    >
+                      <span className="text-base font-semibold">{day.date.getDate()}</span>
+                      {followUpInfo && followUpInfo.categories.size > 0 && (
+                        <div className="flex gap-0.5 mt-1">
+                          {Array.from(followUpInfo.categories).slice(0, 3).map((cat: string) => (
+                            <div
+                              key={cat}
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: categoryConfig[cat]?.dotColor }}
+                              title={categoryConfig[cat]?.label}
+                            />
+                          ))}
+                          {followUpInfo.categories.size > 3 && (
+                            <div className="h-2 w-2 rounded-full bg-gray-400" title="+more" />
+                          )}
                         </div>
                       )}
-                    </div>
+                    </Button>
+                  )
+                },
+              }}
+            />
+          </CardContent>
+        </Card>
 
-                    {task.displayStatus !== "completed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0"
-                        onClick={() => handleMarkComplete(task)}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Mark Complete
-                      </Button>
+        {/* Follow-up Details Section */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Follow-up Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedTask ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Category</p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      categoryConfig[getTaskCategory(selectedTask)]?.bgColor,
+                      categoryConfig[getTaskCategory(selectedTask)]?.color,
+                      "border-0"
                     )}
+                  >
+                    {categoryConfig[getTaskCategory(selectedTask)]?.label}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Institution</p>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <p className="font-semibold text-sm">{selectedTask.institution_name || "—"}</p>
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Action Required</p>
+                  {(() => {
+                    const desc = selectedTask.action_description || "";
+                    if (desc.includes("||")) {
+                      const [action, jsonStr] = desc.split("||");
+                      try {
+                        const details = JSON.parse(jsonStr);
+                        return (
+                          <div className="space-y-2">
+                            <p className="text-sm">{action}</p>
+                            <div className="grid grid-cols-2 gap-3 mt-2 bg-slate-50 p-3 rounded-md border text-sm">
+                              {details.contact_name && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Contact Name</span>
+                                  <span className="font-medium">{details.contact_name}</span>
+                                </div>
+                              )}
+                              {details.contact_mobile && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Mobile</span>
+                                  <span className="font-medium">{details.contact_mobile}</span>
+                                </div>
+                              )}
+                              {details.contact_email && (
+                                <div className="col-span-2 sm:col-span-1">
+                                  <span className="text-xs text-muted-foreground block">Email</span>
+                                  <span className="font-medium break-all">{details.contact_email}</span>
+                                </div>
+                              )}
+                              {details.designation && (
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Designation</span>
+                                  <span className="font-medium">{details.designation}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } catch (e) {
+                        return <p className="text-sm">{desc}</p>;
+                      }
+                    }
+                    return <p className="text-sm">{desc}</p>;
+                  })()}
+                </div>
+
+                {selectedTask.follow_up_date && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Follow-up Date</p>
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm">
+                        {new Date(selectedTask.follow_up_date + "T00:00:00").toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Status</p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      statusConfig[(selectedTask.status === "pending" && selectedTask.follow_up_date && selectedTask.follow_up_date < todayStr) ? "overdue" : selectedTask.status]?.bgColor,
+                      statusConfig[(selectedTask.status === "pending" && selectedTask.follow_up_date && selectedTask.follow_up_date < todayStr) ? "overdue" : selectedTask.status]?.color,
+                      "border-0"
+                    )}
+                  >
+                    {statusConfig[(selectedTask.status === "pending" && selectedTask.follow_up_date && selectedTask.follow_up_date < todayStr) ? "overdue" : selectedTask.status]?.label || selectedTask.status}
+                  </Badge>
+                </div>
+
+                {selectedTask.resolution_note && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Resolution</p>
+                    <p className="text-sm text-muted-foreground">{selectedTask.resolution_note}</p>
+                  </div>
+                )}
+
+                {selectedTask.status !== "completed" && (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleMarkComplete(selectedTask)}
+                  >
+                    <Check className="h-4 w-4 mr-2" />
+                    Mark Complete
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
+                <p className="text-sm text-center">
+                  {selectedDate
+                    ? outreachType === "all"
+                      ? "No follow-ups scheduled for this date"
+                      : `No follow-ups scheduled for this date in ${categoryConfig[outreachType]?.label}`
+                    : "Select a date to view follow-ups"}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        Showing {sortedTasks.length} of {tasks.length} tasks
-      </div>
+      {/* Tasks for Selected Date */}
+      {tasksForSelectedDate.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Follow-ups on {selectedDate?.toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })} ({tasksForSelectedDate.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {tasksForSelectedDate.map((task) => {
+                const category = getTaskCategory(task)
+                return (
+                  <div
+                    key={task.id}
+                    className={cn(
+                      "p-3 rounded-lg border cursor-pointer transition-colors",
+                      selectedTask?.id === task.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:bg-muted/50"
+                    )}
+                    onClick={() => setSelectedTask(task)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-2 w-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: categoryConfig[category]?.dotColor }}
+                          title={categoryConfig[category]?.label}
+                        />
+                        <div className="flex flex-col">
+                          <p className="font-medium text-sm">{task.institution_name || "—"}</p>
+                          <p className="text-xs text-muted-foreground">{categoryConfig[category]?.label}</p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          statusConfig[(task.status === "pending" && task.follow_up_date && task.follow_up_date < todayStr) ? "overdue" : task.status]?.bgColor,
+                          statusConfig[(task.status === "pending" && task.follow_up_date && task.follow_up_date < todayStr) ? "overdue" : task.status]?.color,
+                          "border-0"
+                        )}
+                      >
+                        {statusConfig[(task.status === "pending" && task.follow_up_date && task.follow_up_date < todayStr) ? "overdue" : task.status]?.label || task.status}
+                      </Badge>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Complete Dialog */}
       <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>

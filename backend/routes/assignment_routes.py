@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 from typing import List, Optional
 from datetime import date
 from models.schemas import ProspectAssignment, ProspectAssignmentCreate
@@ -63,9 +63,23 @@ def create_assignment(assignment: ProspectAssignmentCreate):
             prospect_id=assignment.prospect_id,
             telecaller_id=assignment.telecaller_id,
             assigned_by=assignment.assigned_by,
-            assigned_date=assignment.assigned_date
+            assigned_date=assignment.assigned_date,
+            dashboard=assignment.dashboard
         )
         return AssignmentService.get_assignment_by_id(assignment_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk-unassign")
+def bulk_unassign_prospects(prospect_ids: List[int] = Body(...)):
+    """Remove assignment rows and clear assignment state for multiple prospects."""
+    if not prospect_ids:
+        raise HTTPException(status_code=400, detail="No prospect IDs provided")
+
+    try:
+        updated_count = AssignmentService.bulk_unassign_prospects(prospect_ids)
+        return {"message": "Assignments cleared successfully", "updated_count": updated_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

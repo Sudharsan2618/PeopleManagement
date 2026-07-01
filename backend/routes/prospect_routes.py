@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from models.schemas import Prospect, ProspectCreate, ProspectUpdate
 from services.prospect_service import ProspectService
@@ -72,7 +72,20 @@ def create_prospect(prospect: ProspectCreate):
             department=prospect.department,
             assigned_to=prospect.assigned_to,
             closing_reason=prospect.closing_reason,
-            tags=prospect.tags
+            tags=prospect.tags,
+            lead_source=prospect.lead_source,
+            lead_type=prospect.lead_type,
+            prospect_type=prospect.prospect_type,
+            alt_phone=prospect.alt_phone,
+            secondary_email=prospect.secondary_email,
+            city=prospect.city,
+            address=prospect.address,
+            postal_code=prospect.postal_code,
+            designation=prospect.designation,
+            company=prospect.company,
+            comments=prospect.comments,
+            follow_up_date=prospect.follow_up_date,
+            is_imported=prospect.is_imported
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -87,20 +100,56 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
         raise HTTPException(status_code=404, detail="Prospect not found")
     
     try:
-        ProspectService.update_prospect(
-            prospect_id=prospect_id,
-            name=prospect.name,
-            email=prospect.email,
-            location=prospect.location,
-            sourced_from=prospect.sourced_from,
-            status=prospect.status,
-            course_interest=prospect.course_interest,
-            parent_name=prospect.parent_name,
-            department=prospect.department,
-            assigned_to=prospect.assigned_to,
-            closing_reason=prospect.closing_reason,
-            tags=prospect.tags
-        )
+        # Build update dict with only non-None values
+        update_kwargs = {"prospect_id": prospect_id}
+        if prospect.name is not None:
+            update_kwargs["name"] = prospect.name
+        if prospect.email is not None:
+            update_kwargs["email"] = prospect.email
+        if prospect.location is not None:
+            update_kwargs["location"] = prospect.location
+        if prospect.sourced_from is not None:
+            update_kwargs["sourced_from"] = prospect.sourced_from
+        if prospect.status is not None:
+            update_kwargs["status"] = prospect.status
+        if prospect.course_interest is not None:
+            update_kwargs["course_interest"] = prospect.course_interest
+        if prospect.parent_name is not None:
+            update_kwargs["parent_name"] = prospect.parent_name
+        if prospect.department is not None:
+            update_kwargs["department"] = prospect.department
+        if prospect.assigned_to is not None:
+            update_kwargs["assigned_to"] = prospect.assigned_to
+        if prospect.closing_reason is not None:
+            update_kwargs["closing_reason"] = prospect.closing_reason
+        if prospect.tags is not None:
+            update_kwargs["tags"] = prospect.tags
+        if prospect.lead_source is not None:
+            update_kwargs["lead_source"] = prospect.lead_source
+        if prospect.lead_type is not None:
+            update_kwargs["lead_type"] = prospect.lead_type
+        if prospect.alt_phone is not None:
+            update_kwargs["alt_phone"] = prospect.alt_phone
+        if prospect.secondary_email is not None:
+            update_kwargs["secondary_email"] = prospect.secondary_email
+        if prospect.city is not None:
+            update_kwargs["city"] = prospect.city
+        if prospect.address is not None:
+            update_kwargs["address"] = prospect.address
+        if prospect.postal_code is not None:
+            update_kwargs["postal_code"] = prospect.postal_code
+        if prospect.designation is not None:
+            update_kwargs["designation"] = prospect.designation
+        if prospect.prospect_type is not None:
+            update_kwargs["prospect_type"] = prospect.prospect_type
+        if prospect.company is not None:
+            update_kwargs["company"] = prospect.company
+        if prospect.comments is not None:
+            update_kwargs["comments"] = prospect.comments
+        if prospect.follow_up_date is not None:
+            update_kwargs["follow_up_date"] = prospect.follow_up_date
+        
+        ProspectService.update_prospect(**update_kwargs)
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -121,11 +170,16 @@ def delete_prospect(prospect_id: int):
 
 
 @router.post("/bulk-import", status_code=201)
-def bulk_import_prospects(data: List[ProspectCreate]):
-    """Bulk import prospects."""
+def bulk_import_prospects(data: List[ProspectCreate], update_existing: bool = Query(False)):
+    """Bulk import prospects.
+    
+    Args:
+        data: List of prospects to import
+        update_existing: If True, update existing records instead of skipping them
+    """
     try:
         prospects_dicts = [p.model_dump() for p in data]
-        count = ProspectService.create_bulk_prospects(prospects_dicts)
-        return {"message": f"Successfully imported {count} prospects", "count": count}
+        result = ProspectService.create_bulk_prospects(prospects_dicts, update_existing=update_existing)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

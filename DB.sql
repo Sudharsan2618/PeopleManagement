@@ -41,6 +41,9 @@ CREATE TABLE prospects (
     assigned_to      INT                 REFERENCES users(id) ON DELETE SET NULL,
     closing_reason   VARCHAR(255),
     tags             JSONB,              -- e.g. ["2024_batch", "scholarship_eligible"]
+    lead_source      JSONB               DEFAULT '[]'::jsonb,
+    lead_type        JSONB               DEFAULT '[]'::jsonb,
+    outcome          VARCHAR(100)        DEFAULT 'New',
     created_by       INT                 REFERENCES users(id) ON DELETE SET NULL,
     created_at       TIMESTAMP           NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMP           NOT NULL DEFAULT NOW()
@@ -85,6 +88,9 @@ CREATE TABLE call_logs (
     notes                   TEXT,
     course_interest         VARCHAR(100),   -- captured or updated during call
     callback_scheduled_at   TIMESTAMP,      -- filled when outcome = 'callback'
+    notification_shown      BOOLEAN         DEFAULT FALSE,  -- callback reminder has been shown
+    notification_dismissed  BOOLEAN         DEFAULT FALSE,  -- user dismissed the callback reminder
+    notification_last_shown_at TIMESTAMP    DEFAULT NULL,   -- last time callback reminder was shown
     called_at               TIMESTAMP       NOT NULL DEFAULT NOW()
 );
 
@@ -252,4 +258,4 @@ CREATE TABLE whatsapp_messages (
 CREATE INDEX idx_wa_messages_prospect    ON whatsapp_messages(prospect_id);
 CREATE INDEX idx_wa_messages_campaign    ON whatsapp_messages(campaign_id);
 CREATE INDEX idx_wa_messages_status      ON whatsapp_messages(status);
-CREATE INDEX idx_wa_messages_meta_id     ON whatsapp_messages(meta_message_id);
+CREATE INDEX idx_wa_messages_meta_id     ON whatsapp_messages(meta_message_id);

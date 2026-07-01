@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { cn, parseISTDate } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
@@ -44,20 +44,20 @@ const OUTCOME_TO_DB: Record<string, string> = {
 const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
   NotAnswered: "cold_no_response",       // No Response
   Busy: "cold_no_response",              // No Response
-  WrongNumber: "cold_not_interested",    // Not Interested
+  WrongNumber: "cold",                   // Cold
   CallBack: "warm",                      // Warm
   NotInterested: "cold_not_interested",  // Not Interested
-  DNC: "cold_not_interested",            // Not Interested
-  LanguageBarrier: "cold_not_interested",// Not Interested
+  DNC: "cold",                           // Cold / DNC
+  LanguageBarrier: "cold",               // Cold
   Interested: "hot",                     // Hot
-  Qualified: "admission_done",           // Admission Done
-  EnrolledElsewhere: "cold_not_interested",   // Already Enrolled → Not Interested
+  Qualified: "visit_scheduled",          // Visit Scheduled
+  EnrolledElsewhere: "visit_done",        // Visit Done → Decision Pending
   ApplicationProcess: "admission_done",   // Application Process → Admission Done
 }
 
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   Plus,
   MoreVertical,
   Maximize2
@@ -117,8 +117,9 @@ export default function CallbacksPage() {
         }
       })
 
+      // Show ALL prospects with a scheduled callback (warm, hot, qualified)
       const callbacks = Array.from(latestLogByProspect.values()).filter(
-        (log) => log.outcome === "callback" && log.callback_scheduled_at
+        (log) => log.callback_scheduled_at
       )
       setCallLogs(callbacks)
     } catch (err) {
@@ -157,7 +158,8 @@ export default function CallbacksPage() {
       const dbOutcome = OUTCOME_TO_DB[outcome] || outcome
       const statusAfterCall = OUTCOME_TO_PROSPECT_STATUS[outcome] || "contacted"
       let callbackScheduledAt: string | null = null
-      if (outcome === "CallBack" && data.callbackDate) {
+      // Schedule callback whenever a callbackDate is provided
+      if (data.callbackDate) {
         const rawTime = (data.callbackTime as string) || "10:00 AM"
         const timeStr = parseCallbackTime(rawTime)
         callbackScheduledAt = `${data.callbackDate}T${timeStr}:00`
@@ -166,7 +168,19 @@ export default function CallbacksPage() {
       if (data.reason) fullNotes += `\n[Reason] ${data.reason}`
       if (data.coursePreference) fullNotes += `\n[Course Preference] ${data.coursePreference}`
       if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
-      
+
+      // Mark any previous callback call logs for this prospect as shown
+      // so they don't appear in notifications after we log a new outcome
+      try {
+        const previousLogs = await callLogsApi.getByProspect(Number(selectedProspect.numericId))
+        const previousCallback = previousLogs.find(log => log.callback_scheduled_at)
+        if (previousCallback) {
+          await callLogsApi.markNotificationShown(previousCallback.id)
+        }
+      } catch (err) {
+        console.error("Failed to mark previous callback as shown:", err)
+      }
+
       await callLogsApi.create({
         prospect_id: Number(selectedProspect.numericId),
         telecaller_id: telecallerId,
@@ -179,11 +193,16 @@ export default function CallbacksPage() {
       await prospectsApi.update(Number(selectedProspect.numericId), {
         status: statusAfterCall,
         course_interest: (data.coursePreference as string) || (data.courseConfirmed as string) || undefined,
+        // Update follow_up_date to callback date if a callback was scheduled
+        ...(callbackScheduledAt
+          ? { follow_up_date: (data.callbackDate as string) }
+          : {}),
       })
       toast({ title: "Call logged ✓", description: `Status updated to ${statusAfterCall}` })
       await fetchData()
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("refreshBadgeCounts"))
+        window.dispatchEvent(new Event("refreshPendingCallbacks"))
       }
     } catch (err) {
       toast({ title: "Error saving call", description: err instanceof Error ? err.message : "Failed", variant: "destructive" })
@@ -208,7 +227,7 @@ export default function CallbacksPage() {
   const getEventsForSlot = (date: Date, hour: number) => {
     return callLogs.filter(log => {
       if (!log.callback_scheduled_at) return false
-      const cbDate = new Date(log.callback_scheduled_at)
+      const cbDate = parseISTDate(log.callback_scheduled_at)
       return (
         cbDate.getDate() === date.getDate() &&
         cbDate.getMonth() === date.getMonth() &&
@@ -318,7 +337,7 @@ export default function CallbacksPage() {
                 {HOURS.map(hour => {
                   const events = getEventsForSlot(date, hour)
                   const isToday = new Date().toDateString() === date.toDateString()
-                  
+
                   return (
                     <div key={hour} className={cn(
                       "h-24 border-b relative transition-colors duration-300",
@@ -326,23 +345,30 @@ export default function CallbacksPage() {
                     )}>
                       {/* Grid Line Visual Aid */}
                       <div className="absolute inset-x-0 top-0 h-px bg-muted/30" />
-                      
+
                       {/* Event Blocks */}
                       <div className="absolute inset-0 p-1 flex flex-col gap-1 z-10">
                         {events.map(event => {
                           const prospect = prospects[event.prospect_id]
                           if (!prospect) return null
-                          
-                          const eventTime = new Date(event.callback_scheduled_at!)
+
+                          const eventTime = parseISTDate(event.callback_scheduled_at!)
                           const minutes = eventTime.getMinutes()
-                          
+
                           return (
                             <button
                               key={event.id}
                               onClick={() => handleCall(prospect)}
                               className={cn(
                                 "absolute left-1.5 right-1.5 p-2.5 rounded-xl border-2 text-left transition-all duration-300 shadow-sm group/event",
-                                "bg-white hover:scale-[1.02] hover:z-20 border-blue-100 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10",
+                                event.status_after_call === "hot"
+                                  ? "bg-red-50 hover:border-red-500 border-red-100 hover:shadow-red-500/10"
+                                  : event.status_after_call === "visit_scheduled" || event.status_after_call === "visit_done"
+                                    ? "bg-purple-50 hover:border-purple-500 border-purple-100 hover:shadow-purple-500/10"
+                                    : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
+                                      ? "bg-slate-50 hover:border-slate-500 border-slate-200 hover:shadow-slate-500/10"
+                                      : "bg-white hover:border-blue-500 border-blue-100 hover:shadow-blue-500/10",
+                                "hover:scale-[1.02] hover:z-20 hover:shadow-xl",
                                 minutes > 0 && "translate-y-2"
                               )}
                               style={{ height: '85%' }}
@@ -361,10 +387,43 @@ export default function CallbacksPage() {
                                     {prospect.name}
                                   </p>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-1.5 mt-auto">
-                                  <Badge className="text-[8px] bg-[#EDF5FF] text-blue-700 border-blue-100 font-black px-1.5 h-3.5 leading-none uppercase">
-                                    Callback
+                                  <Badge className={cn(
+                                    "text-[8px] font-semibold px-1.5 h-3.5 leading-none uppercase border-none rounded-sm",
+                                    event.status_after_call === "hot"
+                                      ? "bg-destructive/15 text-destructive"
+                                      : event.status_after_call === "visit_scheduled" || event.status_after_call === "visit_done"
+                                        ? "bg-primary/15 text-primary"
+                                        : event.status_after_call?.startsWith("cold") || event.status_after_call === "cold_no_response" || event.status_after_call === "cold_not_interested"
+                                          ? "bg-muted text-muted-foreground"
+                                          : "bg-primary/15 text-primary"
+                                  )}>
+                                    {(() => {
+                                      const STATUS_LABELS: Record<string, string> = {
+                                        warm: "Warm",
+                                        hot: "Hot",
+                                        visit_scheduled: "Visit",
+                                        visit_done: "Visit Done",
+                                        contacted: "Contacted",
+                                        cold_no_response: "No Response",
+                                        cold_not_interested: "Not Interested",
+                                        cold: "Cold",
+                                        lost: "Lost",
+                                        "Interested": "Interested",
+                                        "Interested Followup": "Int. Followup",
+                                        "Proposal To Be Sent": "Proposal Pending",
+                                        "Proposal Sent": "Proposal Sent",
+                                        "Training Date Followup": "Training F/U",
+                                        "Qualified": "Qualified",
+                                        "Ringing / Not Reachable": "Ringing",
+                                        "Not Interested": "Not Interested",
+                                        "Intro Call Completed": "Intro Done",
+                                      }
+                                      return event.status_after_call
+                                        ? (STATUS_LABELS[event.status_after_call] || event.status_after_call)
+                                        : "Callback"
+                                    })()}
                                   </Badge>
                                   <span className="text-[9px] text-muted-foreground truncate font-semibold">
                                     {prospect.location || 'Unknown'}

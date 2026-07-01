@@ -7,10 +7,10 @@ router = APIRouter(prefix="/spoc-visits", tags=["spoc-visits"])
 
 
 @router.get("", response_model=List[spocVisitEntry])
-def get_all_visits():
+def get_all_visits(start_date: str = None, end_date: str = None):
     """Get all spoc visit entries."""
     try:
-        visits = spocVisitService.get_all_visits()
+        visits = spocVisitService.get_all_visits(start_date=start_date, end_date=end_date)
         return visits
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

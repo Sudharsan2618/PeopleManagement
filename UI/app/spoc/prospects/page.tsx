@@ -402,6 +402,14 @@ export default function spocProspectsPage() {
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Mobile</TableHead>
+                  <TableHead>Alt Phone</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Secondary Email</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Postal Code</TableHead>
+                  <TableHead>Designation</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Parent Name</TableHead>
                   <TableHead>Department</TableHead>
@@ -441,7 +449,17 @@ export default function spocProspectsPage() {
                         <TableCell className="font-mono text-sm">
                           {prospect.mobile}
                         </TableCell>
-                        <TableCell>{prospect.location}</TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.altPhone || <span className="text-slate-300">—</span>}
+                        </TableCell>
+                        <TableCell>{prospect.email || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.secondaryEmail || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.city || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.address || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.postalCode || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.designation || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.company || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.location || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.parentName}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{prospect.department}</TableCell>
                         <TableCell>

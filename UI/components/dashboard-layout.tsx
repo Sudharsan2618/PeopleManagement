@@ -37,10 +37,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
-import { type UserRole, type Notification } from "@/lib/mock-data"
+import { cn, formatISTDateTime } from "@/lib/utils"
+import { type UserRole } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import { dashboardApi } from "@/lib/api-client"
+import { dashboardApi, callLogsApi } from "@/lib/api-client"
 
 interface NavItem {
   title: string
@@ -48,6 +48,8 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
   badge?: number
 }
+
+const CALLBACK_COUNT_POLL_INTERVAL = 30 * 1000
 
 const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
@@ -58,11 +60,11 @@ const telecallerNav: NavItem[] = [
 
 const spocNav: NavItem[] = [
   { title: "Dashboard", href: "/spoc/dashboard", icon: LayoutDashboard },
+  { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
   { title: "Assign Prospects", href: "/spoc/prospects", icon: Users },
   { title: "Telecaller Stats", href: "/spoc/telecallers", icon: BarChart3 },
   { title: "New Report", href: "/spoc/report/new", icon: FileText },
   { title: "Past Reports", href: "/spoc/reports", icon: FolderOpen },
-  // { title: "My Follow-ups", href: "/spoc/followups", icon: ClipboardList },
 ]
 
 const adminNav: NavItem[] = [
@@ -70,12 +72,10 @@ const adminNav: NavItem[] = [
   { title: "Prospects", href: "/admin/prospects", icon: Users },
   { title: "Assign Prospects", href: "/admin/assign", icon: ClipboardList },
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
-  { title: "spocs", href: "/admin/spocs", icon: MapPin },
-  { title: "Field Reports", href: "/admin/field-reports", icon: FileText },
-  // { title: "Follow-ups", href: "/admin/followups", icon: History },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
   { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
+  { title: "SPOC Reports", href: "/admin/spoc-reports", icon: FileText },
 ]
 
 function getNavItems(role: UserRole): NavItem[] {
@@ -115,8 +115,9 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   const router = useRouter()
   const { logout, user } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [pendingCallbacks, setPendingCallbacks] = useState<any[]>([])
   const [counts, setCounts] = useState({ callbacks: 0, followups: 0 })
-  
+
   useEffect(() => {
     if (!user) return
 
@@ -131,19 +132,73 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
 
     fetchCounts()
 
+    const intervalId = window.setInterval(fetchCounts, CALLBACK_COUNT_POLL_INTERVAL)
     const refreshCounts = () => {
       fetchCounts()
     }
 
     window.addEventListener("refreshBadgeCounts", refreshCounts)
-    return () => window.removeEventListener("refreshBadgeCounts", refreshCounts)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener("refreshBadgeCounts", refreshCounts)
+    }
   }, [user])
 
-  // Enhance nav items with dynamic counts
+  // Pending callbacks for notifications dropdown
+  useEffect(() => {
+    if (!user) return
+
+    const fetchPending = async () => {
+      try {
+        if (role !== "telecaller") {
+          setPendingCallbacks([])
+          return
+        }
+
+        const telecallerId = Number(user.id)
+        // To match the callbacks page, fetch all logs and then compute
+        // the latest log per prospect (callbacks page uses getByTelecaller)
+        const allLogs = await callLogsApi.getByTelecaller(telecallerId)
+        const latestLogByProspect = new Map<number, any>()
+        allLogs.forEach((log: any) => {
+          const pid = log.prospect_id
+          if (pid == null) return
+          const existing = latestLogByProspect.get(pid)
+          if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+            latestLogByProspect.set(pid, log)
+          }
+        })
+
+        const callbacks = Array.from(latestLogByProspect.values()).filter(
+          (log: any) => log.callback_scheduled_at
+        )
+
+        setPendingCallbacks(callbacks || [])
+      } catch (err) {
+        console.error("Failed to fetch pending callbacks:", err)
+      }
+    }
+
+    fetchPending()
+
+    const intervalId = window.setInterval(fetchPending, CALLBACK_COUNT_POLL_INTERVAL)
+    const refreshPending = () => fetchPending()
+
+    window.addEventListener("refreshPendingCallbacks", refreshPending)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener("refreshPendingCallbacks", refreshPending)
+    }
+  }, [user, role])
+
+  // Enhance nav items with dynamic counts; telecallers use pending callbacks
   const navItems = useMemo(() => {
     const baseItems = getNavItems(role)
     return baseItems.map(item => {
       if (item.title === "Callbacks") {
+        if (role === "telecaller") {
+          return { ...item, badge: pendingCallbacks.length > 0 ? pendingCallbacks.length : undefined }
+        }
         return { ...item, badge: counts.callbacks > 0 ? counts.callbacks : undefined }
       }
       if (item.title === "Follow-up Tasks" || item.title === "My Follow-ups") {
@@ -151,24 +206,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       }
       return item
     })
-  }, [role, counts])
-
-  const customNotifications: Notification[] =
-    role === "telecaller" && counts.callbacks > 0
-      ? [
-          {
-            id: "callback-alert",
-            type: "callback",
-            role: "telecaller",
-            message: `${counts.callbacks} scheduled callbacks are due`,
-            createdAt: new Date().toISOString(),
-            read: false,
-          },
-        ]
-      : []
-
-  const allowedNotifications = customNotifications
-  const unreadNotifications = customNotifications.length
+  }, [role, counts, pendingCallbacks.length])
 
   const handleLogout = () => {
     logout()
@@ -294,38 +332,162 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
           <div className="flex-1" />
 
           {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Notifications</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 bg-card border-border">
-              <div className="flex items-center justify-between px-4 py-2 border-b">
-                <h3 className="font-semibold text-sm">Notifications</h3>
-              </div>
-              <ScrollArea className="h-48">
-                {allowedNotifications.length > 0 ? (
-                  <div className="space-y-2 p-3">
-                    {allowedNotifications.map((notification) => (
-                      <div key={notification.id} className="rounded-lg border border-border bg-card p-3 shadow-xs">
-                        <p className="text-sm font-semibold">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                    <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
-                    <p className="text-xs text-muted-foreground">No new notifications</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {role === "telecaller" ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {pendingCallbacks.length > 0 && (
+                    <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[9px] rounded-sm bg-destructive text-destructive-foreground flex items-center justify-center font-semibold">
+                      {pendingCallbacks.length}
+                    </span>
+                  )}
+                  <span className="sr-only">Notifications</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 bg-card border-border shadow-lg">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                  <h3 className="font-semibold text-sm">Callbacks</h3>
+                </div>
+                <ScrollArea className="max-h-[400px] h-auto">
+                  {pendingCallbacks.length > 0 ? (
+                    <div className="space-y-1.5 p-3">
+                      {pendingCallbacks.map((callback) => {
+                        const scheduledTime = callback.callback_scheduled_at
+                          ? formatISTDateTime(callback.callback_scheduled_at, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          })
+                          : "N/A"
+
+                        const isHot = callback.status_after_call === "hot"
+                        const isVisit = callback.status_after_call === "visit_scheduled" || callback.status_after_call === "visit_done"
+                        const isCold = callback.status_after_call?.startsWith("cold")
+                        const isWarm = !isHot && !isVisit && !isCold
+
+                        return (
+                          <button
+                            key={callback.id}
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await callLogsApi.markNotificationShown(callback.id)
+                              } catch (err) {
+                                console.error("Failed to mark notification shown:", err)
+                              }
+                              if (callback.prospect_id) {
+                                router.push(`/telecaller/callbacks?prospect=${callback.prospect_id}`)
+                              }
+                            }}
+                            className={cn(
+                              "border p-2.5 text-left w-full cursor-pointer transition-all rounded-sm flex flex-col gap-0.5",
+                              isHot
+                                ? "border-destructive/20 bg-destructive/10 text-foreground"
+                                : isVisit
+                                  ? "border-purple-500/20 bg-purple-500/10 text-foreground"
+                                  : isCold
+                                    ? "border-border bg-muted text-muted-foreground"
+                                    : "border-primary/20 bg-primary/10 text-foreground"
+                            )}
+                          >
+                            <p className="text-xs font-semibold">
+                              📞 {(() => {
+                                const STATUS_LABELS: Record<string, string> = {
+                                  warm: "Warm",
+                                  hot: "Strong Interest",
+                                  visit_scheduled: "Visit Planned",
+                                  visit_done: "Visit Done",
+                                  contacted: "Contacted",
+                                  cold_no_response: "No Response",
+                                  cold_not_interested: "Not Interested",
+                                  cold: "Cold",
+                                  lost: "Lost",
+                                  "Interested": "Interested",
+                                  "Interested Followup": "Interested Followup",
+                                  "Proposal To Be Sent": "Proposal To Be Sent",
+                                  "Proposal Sent": "Proposal Sent",
+                                  "Training Date Followup": "Training Date Followup",
+                                  "Qualified": "Qualified",
+                                  "Ringing / Not Reachable": "Ringing",
+                                  "Not Interested": "Not Interested",
+                                  "Intro Call Completed": "Intro Call Done",
+                                }
+                                const label = callback.status_after_call
+                                  ? STATUS_LABELS[callback.status_after_call] || callback.status_after_call
+                                  : "Callback"
+                                return `${label} — `
+                              })()} {callback.prospect?.name || callback.prospect_name || "Unknown"}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {callback.prospect?.mobile || callback.prospect_phone || "Unknown"}
+                            </p>
+                            {callback.course_interest && (
+                              <p className="text-[11px] text-muted-foreground">
+                                📚 {callback.course_interest}
+                              </p>
+                            )}
+                            <p className={cn(
+                              "text-[10px] font-semibold mt-0.5",
+                              isHot
+                                ? "text-destructive"
+                                : isVisit
+                                  ? "text-purple-600"
+                                  : isCold
+                                    ? "text-muted-foreground"
+                                    : "text-primary"
+                            )}>
+                              ⏰ {scheduledTime}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                      <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
+                      <p className="text-xs text-muted-foreground">No pending callbacks</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Bell className="h-5 w-5" />
+                  <span className="sr-only">Notifications</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 bg-card border-border shadow-lg">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+                  <h3 className="font-semibold text-sm">Notifications</h3>
+                </div>
+                <ScrollArea className="h-48">
+                  {allowedNotifications.length > 0 ? (
+                    <div className="space-y-1.5 p-3">
+                      {allowedNotifications.map((notification) => (
+                        <div key={notification.id} className="rounded-sm border border-border bg-card p-2.5 shadow-xs">
+                          <p className="text-xs font-semibold">{notification.message}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                      <Bell className="h-8 w-8 text-muted-foreground/20 mb-2" />
+                      <p className="text-xs text-muted-foreground">No new notifications</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </header>
 
         {/* Page Content */}

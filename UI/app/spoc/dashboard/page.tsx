@@ -6,15 +6,11 @@ import {
   Calendar,
   FileText,
   ClipboardList,
-  Phone,
   Plus,
   FolderOpen,
-  CheckCircle2,
-  Clock,
   AlertTriangle,
   UserPlus,
   TrendingUp,
-  Loader2,
   RefreshCw,
   AlertCircle,
 } from "lucide-react"
@@ -32,9 +28,9 @@ const statusConfig: Record<
   string,
   { icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }
 > = {
-  Pending: { icon: Clock, color: "text-warning", bgColor: "bg-[#FCF4D6]" },
-  Completed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-[#DEFBE6]" },
-  Overdue: { icon: AlertTriangle, color: "text-destructive", bgColor: "bg-[#FFF1F1]" },
+  Pending: { icon: Clock, color: "text-warning", bgColor: "bg-warning/10" },
+  Completed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-success/10" },
+  Overdue: { icon: AlertTriangle, color: "text-destructive", bgColor: "bg-destructive/10" },
 }
 
 export default function spocDashboard() {
@@ -196,7 +192,7 @@ export default function spocDashboard() {
             </div>
           </CardContent>
         </Card>
-        {/* <Card>
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-[#FCF4D6] p-2">
@@ -212,16 +208,14 @@ export default function spocDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2">
-                <Phone className="h-5 w-5 text-purple-600" />
+              <div className="rounded-lg bg-red-100 p-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-xl font-normal">{spocStats.telecallerFollowupsRaised}</p>
-                <p className="text-xs text-muted-foreground">TC Follow-ups Raised</p>
-              </div>
+                <p className="text-xl font-normal text-destructive">{spocStats.overdueFollowups}</p>
+                <p className="text-xs text-muted-foreground">Overdue Follow-ups</p>
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
       </div>
 
       {/* Quick Actions */}
@@ -261,7 +255,7 @@ export default function spocDashboard() {
                 </div>
               </Link>
             </Button>
-            {/* <Button asChild variant="outline" className="h-auto py-4 justify-start">
+            <Button asChild variant="outline" className="h-auto py-4 justify-start">
               <Link href="/spoc/followups">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-[#FCF4D6] p-2">
@@ -275,7 +269,7 @@ export default function spocDashboard() {
                   </div>
                 </div>
               </Link>
-            </Button> */}
+            </Button>
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
               <Link href="/spoc/prospects">
                 <div className="flex items-center gap-3">
@@ -310,7 +304,7 @@ export default function spocDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         {/* Recent Reports */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -362,73 +356,6 @@ export default function spocDashboard() {
           </CardContent>
         </Card>
 
-        {/* Pending Follow-ups */}
-        {/* <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base">Pending Follow-ups</CardTitle>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/spoc/followups">View all</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {pendingFollowUps.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <CheckCircle2 className="h-10 w-10 mb-2 opacity-50" />
-                <p className="text-sm">All follow-ups completed!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {pendingFollowUps.slice(0, 4).map((followUp: any) => {
-                  const isOverdue =
-                    followUp.status === "pending" &&
-                    followUp.follow_up_date &&
-                    followUp.follow_up_date < todayStr
-                  const displayStatus = isOverdue ? "Overdue" : "Pending"
-                  const config = statusConfig[displayStatus]
-                  const Icon = config.icon
-
-                  return (
-                    <div
-                      key={followUp.id}
-                      className={cn(
-                        "rounded-lg border p-3",
-                        isOverdue && "border-red-200 bg-[#FFF1F1]/50"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {followUp.institution_name || "—"}
-                          </p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            {followUp.action_description}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(config.bgColor, config.color, "border-0 text-xs")}
-                        >
-                          <Icon className="h-3 w-3 mr-1" />
-                          {displayStatus}
-                        </Badge>
-                      </div>
-                      {followUp.follow_up_date && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Due:{" "}
-                          {new Date(followUp.follow_up_date + "T00:00:00").toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card> */}
       </div>
     </div>
   )

@@ -31,6 +31,19 @@ export interface Prospect {
   created_at: string
   updated_at: string
   tags?: string[]
+  lead_source?: string[]
+  lead_type?: string[]
+  alt_phone?: string
+  secondary_email?: string
+  city?: string
+  address?: string
+  postal_code?: string
+  designation?: string
+  company?: string
+  comments?: string
+  follow_up_date?: string
+  is_imported?: boolean
+  prospect_type?: string
 }
 
 export interface CallLog {
@@ -44,7 +57,12 @@ export interface CallLog {
   notes?: string
   course_interest?: string
   callback_scheduled_at?: string
+  notification_shown: boolean
+  notification_dismissed: boolean
+  notification_last_shown_at?: string
   called_at: string
+  prospect_name?: string
+  prospect_phone?: string
 }
 
 export interface SpocReport {
@@ -103,6 +121,7 @@ export interface FollowUpTask {
   status: string
   resolution_note?: string
   created_at: string
+  followup_category?: string
 }
 
 export interface ProspectAssignment {
@@ -111,18 +130,19 @@ export interface ProspectAssignment {
   telecaller_id: number
   assigned_by: number
   assigned_date: string
+  dashboard?: string
   created_at: string
 }
 
 export interface Course {
-    id: number
-    name: string
-    code: string
-    description?: string
-    duration?: string
-    fees?: number
-    is_active: boolean
-    created_at: string
+  id: number
+  name: string
+  code: string
+  description?: string
+  duration?: string
+  fees?: number
+  is_active: boolean
+  created_at: string
 }
 
 // Adapter functions to convert backend data to UI format
@@ -143,6 +163,20 @@ export function adaptApiUserToUiUser(apiUser: User): any {
 
 export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?: ProspectAssignment[]): any {
   const assignment = assignments?.find(a => a.prospect_id === apiProspect.id)
+  
+  // Parse JSONB arrays from API - they may come as strings or arrays
+  const parseArray = (value: any): string[] => {
+    if (Array.isArray(value)) return value
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value || '[]')
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+  
   return {
     id: String(apiProspect.id),
     name: apiProspect.name,
@@ -154,13 +188,27 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     parentName: apiProspect.parent_name || "",
     department: apiProspect.department || "",
     status: mapBackendStatusToUiStatus(apiProspect.status),
-    assignedTo: assignment ? String(assignment.telecaller_id) : (apiProspect.assigned_to ? String(apiProspect.assigned_to) : undefined),
+    assignedTo: assignment ? String(assignment.telecaller_id) : undefined,
     assignedDate: assignment?.assigned_date,
     source: apiProspect.sourced_from || "Unknown",
     closingReason: apiProspect.closing_reason || "",
-    tags: apiProspect.tags || [],
+    tags: parseArray(apiProspect.tags),
+    lead_source: parseArray(apiProspect.lead_source),
+    lead_type: parseArray(apiProspect.lead_type),
+    dashboard: assignment?.dashboard || apiProspect.prospect_type || "student_admission",
     createdAt: apiProspect.created_at,
     updated_at: apiProspect.updated_at,
+    altPhone: apiProspect.alt_phone || "",
+    secondaryEmail: apiProspect.secondary_email || "",
+    city: apiProspect.city || "",
+    address: apiProspect.address || "",
+    postalCode: apiProspect.postal_code || "",
+    designation: apiProspect.designation || "",
+    company: apiProspect.company || "",
+    comments: apiProspect.comments || "",
+    follow_up_date: apiProspect.follow_up_date || "",
+    is_imported: apiProspect.is_imported || false,
+    prospect_type: apiProspect.prospect_type || "student_admission",
   }
 }
 
@@ -199,20 +247,55 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`
-  
-  const defaultOptions: RequestInit = {
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+  // Add cache-busting timestamp for GET requests
+  const url = new URL(`${API_BASE_URL}${endpoint}`)
+  if (!options.method || options.method === 'GET') {
+    url.searchParams.set('_t', Date.now().toString())
   }
 
-  const response = await fetch(url, { ...defaultOptions, ...options })
+  const headers = new Headers(options.headers)
+  headers.set("Accept", "application/json")
+  headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+  if (options.body != null && !(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json")
+  }
+
+  const defaultOptions: RequestInit = {
+    headers,
+    cache: "no-store",
+  }
+
+  let response: Response
+  try {
+    response = await fetch(url.toString(), { ...defaultOptions, ...options })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Network error fetching ${url}: ${message}`)
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "An error occurred" }))
-    throw new Error(error.detail || "API request failed")
+    const text = await response.text().catch(() => "")
+    let errorMessage = `API request failed: ${response.status} ${response.statusText}`
+    try {
+      const errorJson = JSON.parse(text)
+      if (errorJson.detail) {
+        if (typeof errorJson.detail === 'string') {
+          errorMessage = errorJson.detail
+        } else if (Array.isArray(errorJson.detail)) {
+          errorMessage = errorJson.detail.map((e: any) => `${e.loc?.join('.')} - ${e.msg}`).join(', ')
+        } else {
+          errorMessage = JSON.stringify(errorJson.detail)
+        }
+      } else if (errorJson.message) {
+        errorMessage = errorJson.message
+      }
+    } catch {
+      if (text) {
+        errorMessage = `${errorMessage} - ${text}`
+      }
+    }
+    throw new Error(`${errorMessage} (${url})`)
   }
 
   return response.json()
@@ -271,6 +354,7 @@ export const prospectsApi = {
   getById: (id: number) => apiRequest<Prospect>(`/prospects/${id}`),
   getByStatus: (status: string) => apiRequest<Prospect[]>(`/prospects/status/${status}`),
   getByCreator: (createdBy: number) => apiRequest<Prospect[]>(`/prospects/creator/${createdBy}`),
+  getByAssignee: (assignedTo: number) => apiRequest<Prospect[]>(`/prospects/assignee/${assignedTo}`),
   create: (data: any) => apiRequest<Prospect>("/prospects", {
     method: "POST",
     body: JSON.stringify(data),
@@ -282,10 +366,25 @@ export const prospectsApi = {
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
   }),
-  bulkImport: (data: any[]) => apiRequest<{ message: string, count: number }>("/prospects/bulk-import", {
-    method: "POST",
-    body: JSON.stringify(data),
-  }),
+  bulkImport: (data: any[], updateExisting: boolean = false) => {
+    const query = updateExisting ? "?update_existing=true" : ""
+    return apiRequest<{
+      total: number
+      success: number
+      duplicates: number
+      failed: number
+      details: Array<{
+        row: number
+        name: string
+        mobile: string
+        status: string
+        reason: string
+      }>
+    }>(`/prospects/bulk-import${query}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
 }
 
 // Assignments API
@@ -301,6 +400,10 @@ export const assignmentsApi = {
     method: "POST",
     body: JSON.stringify(data),
   }),
+  bulkUnassign: (prospectIds: number[]) => apiRequest<{ message: string; updated_count: number }>("/assignments/bulk-unassign", {
+    method: "POST",
+    body: JSON.stringify(prospectIds),
+  }),
   delete: (id: number) => apiRequest<{ message: string }>(`/assignments/${id}`, {
     method: "DELETE",
   }),
@@ -308,11 +411,25 @@ export const assignmentsApi = {
 
 // Call Logs API
 export const callLogsApi = {
-  getAll: () => apiRequest<CallLog[]>("/call-logs"),
+  getAll: (startDate?: string, endDate?: string, telecallerId?: number, prospectType?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    if (telecallerId) params.append('telecaller_id', telecallerId.toString())
+    if (prospectType) params.append('prospect_type', prospectType)
+    
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<CallLog[]>(`/call-logs${query}`)
+  },
   getById: (id: number) => apiRequest<CallLog>(`/call-logs/${id}`),
   getByProspect: (prospectId: number) => apiRequest<CallLog[]>(`/call-logs/prospect/${prospectId}`),
   getByTelecaller: (telecallerId: number) => apiRequest<CallLog[]>(`/call-logs/telecaller/${telecallerId}`),
-  getPendingCallbacks: () => apiRequest<CallLog[]>("/call-logs/callbacks/pending"),
+  getPendingCallbacks: (telecallerId?: number) => {
+    const params = new URLSearchParams()
+    if (telecallerId) params.append("telecaller_id", telecallerId.toString())
+    const query = params.toString() ? `?${params.toString()}` : ""
+    return apiRequest<CallLog[]>(`/call-logs/callbacks/pending${query}`)
+  },
   create: (data: any) => apiRequest<CallLog>("/call-logs", {
     method: "POST",
     body: JSON.stringify(data),
@@ -323,6 +440,15 @@ export const callLogsApi = {
   }),
   delete: (id: number) => apiRequest<{ message: string }>(`/call-logs/${id}`, {
     method: "DELETE",
+  }),
+  markNotificationShown: (id: number) => apiRequest<CallLog>(`/call-logs/${id}/mark-notification-shown`, {
+    method: "PATCH",
+  }),
+  markNotificationDismissed: (id: number) => apiRequest<CallLog>(`/call-logs/${id}/mark-notification-dismissed`, {
+    method: "PATCH",
+  }),
+  resetNotification: (id: number) => apiRequest<CallLog>(`/call-logs/${id}/reset-notification`, {
+    method: "PATCH",
   }),
 }
 
@@ -347,7 +473,13 @@ export const SpocReportsApi = {
 
 // spoc Visits API
 export const SpocVisitsApi = {
-  getAll: () => apiRequest<SpocVisitEntry[]>("/spoc-visits"),
+  getAll: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<SpocVisitEntry[]>(`/spoc-visits${query}`)
+  },
   getById: (id: number) => apiRequest<SpocVisitEntry>(`/spoc-visits/${id}`),
   getByReport: (reportId: number) => apiRequest<SpocVisitEntry[]>(`/spoc-visits/report/${reportId}`),
   create: (data: any) => apiRequest<SpocVisitEntry>("/spoc-visits", {
@@ -504,10 +636,11 @@ export const dashboardApi = {
 
 // Admin API
 export const adminApi = {
-  getStats: (startDate?: string, endDate?: string) => {
+  getStats: async (startDate?: string, endDate?: string, prospectType?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.append('start_date', startDate)
     if (endDate) params.append('end_date', endDate)
+    if (prospectType) params.append('prospect_type', prospectType)
     const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<any>(`/admin/stats${query}`)
   },
@@ -525,12 +658,37 @@ export const adminApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<any[]>(`/admin/prospect-pipeline${query}`)
   },
-  getReports: (telecallerId?: number, startDate?: string, endDate?: string) => {
+  getReports: (telecallerId?: number, startDate?: string, endDate?: string, prospectType?: string) => {
     const params = new URLSearchParams()
     if (telecallerId) params.append('telecaller_id', telecallerId.toString())
     if (startDate) params.append('start_date', startDate)
     if (endDate) params.append('end_date', endDate)
+    if (prospectType) params.append('prospect_type', prospectType)
     const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<any>(`/admin/reports${query}`)
   },
+}
+
+// College Contact API
+export const collegeContactApi = {
+  getReports: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams()
+    if (startDate) params.append('start_date', startDate)
+    if (endDate) params.append('end_date', endDate)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<any>(`/college-contact/reports${query}`)
+  },
+  getProspects: (telecallerId?: number, status?: string) => {
+    const params = new URLSearchParams()
+    if (telecallerId) params.append('telecaller_id', telecallerId.toString())
+    if (status) params.append('status', status)
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return apiRequest<any[]>(`/college-contact/prospects${query}`)
+  },
+  uploadAndAssign: (payload: any) => {
+    return apiRequest<{ count: number, assigned: number }>(`/college-contact/prospects/upload-and-assign`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+  }
 }

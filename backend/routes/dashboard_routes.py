@@ -9,18 +9,15 @@ def get_dashboard_stats(user_id: int):
     """Get dynamic counts for sidebar badges and dashboard stats."""
     try:
         # 1. Pending Callbacks (Telecaller)
-        # Definition: Most recent call log for a prospect assigned to this user is 'callback'
-        # and it hasn't been superseded by another call.
+        # Definition: Count all pending scheduled callbacks for the telecaller.
+        # Must have: a scheduled callback timestamp and not dismissed.
+        # This includes warm, hot, and visit_scheduled follow-ups.
         callback_query = """
-            SELECT COUNT(DISTINCT prospect_id) as count
+            SELECT COUNT(*) as count
             FROM call_logs cl
-            WHERE cl.telecaller_id = %s 
-              AND cl.outcome = 'callback'
-              AND NOT EXISTS (
-                  SELECT 1 FROM call_logs cl2 
-                  WHERE cl2.prospect_id = cl.prospect_id 
-                    AND cl2.called_at > cl.called_at
-              )
+            WHERE cl.telecaller_id = %s
+              AND cl.callback_scheduled_at IS NOT NULL
+              AND COALESCE(cl.notification_dismissed, FALSE) = FALSE
         """
         callback_count = execute_query(callback_query, (user_id,), fetch="one")["count"]
 

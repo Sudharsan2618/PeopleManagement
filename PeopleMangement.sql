@@ -229,7 +229,10 @@ CREATE TABLE public.prospects (
     city character varying(150),
     qualification character varying(150),
     current_status character varying(100),
-    degree character varying(150)
+    degree character varying(150),
+    lead_source jsonb DEFAULT '[]'::jsonb,
+    lead_type jsonb DEFAULT '[]'::jsonb,
+    outcome character varying(100) DEFAULT 'New'::character varying
 );
 
 

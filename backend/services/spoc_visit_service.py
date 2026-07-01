@@ -8,15 +8,24 @@ class spocVisitService:
     """Service layer for spoc Visit Entries table with direct SQL queries."""
     
     @staticmethod
-    def get_all_visits() -> List[dict]:
+    def get_all_visits(start_date: str = None, end_date: str = None) -> List[dict]:
         """Get all spoc visit entries."""
         query = """
-            SELECT id, report_id, visit_type, institution_name, contact_name, contact_email,
-                   contact_mobile, next_action, follow_up_role, follow_up_user_id, follow_up_date, created_at
-            FROM spoc_visit_entries
-            ORDER BY created_at DESC
+            SELECT v.id, v.report_id, v.visit_type, v.institution_name, v.contact_name, v.contact_email,
+                   v.contact_mobile, v.next_action, v.follow_up_role, v.follow_up_user_id, v.follow_up_date, v.created_at
+            FROM spoc_visit_entries v
+            LEFT JOIN spoc_reports r ON r.id = v.report_id
+            WHERE 1=1
         """
-        return execute_query(query, fetch="all")
+        params = []
+        if start_date:
+            query += " AND r.report_date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND r.report_date <= %s"
+            params.append(end_date)
+        query += "\n            ORDER BY v.created_at DESC\n        """
+        return execute_query(query, tuple(params) if params else None, fetch="all")
     
     @staticmethod
     def get_visit_by_id(visit_id: int) -> Optional[dict]:

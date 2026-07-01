@@ -24,6 +24,12 @@ import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Check, ChevronsUpDown } from "lucide-react"
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -52,17 +58,16 @@ import { callLogsApi, coursesApi, type CallLog, type Course } from "@/lib/api-cl
 
 // ─── DB outcome → UI label mapping ─────────────────────────────
 const DB_OUTCOME_LABELS: Record<string, string> = {
-  not_answered: "Not Answered",
-  busy: "Busy / Network Issue",
   wrong_number: "Wrong Number",
-  callback: "Call Back Later",
-  not_interested: "Not Interested",
-  dnc: "Do Not Call",
-  language_barrier: "Language Barrier",
-  interested: "Interested",
-  qualified: "Qualified",
-  enrolled_elsewhere: "Already Enrolled",
-  application_process: "Application Process",
+  callback: "Warm",
+  not_interested: "Cold / Not Interested",
+  not_answered: "Cold / No Response",
+  dnc: "Cold / Not Interested",
+  language_barrier: "Cold / No Response",
+  interested: "Strong Interest / Ready for Counselling",
+  qualified: "Visit Planned and Confirmed",
+  visit_done: "Visit Campus / Decision Awaited",
+  application_process: "Admission Successfully Completed",
 }
 
 const DB_OUTCOME_COLORS: Record<string, string> = {
@@ -79,93 +84,204 @@ const DB_OUTCOME_COLORS: Record<string, string> = {
   application_process: "text-primary",
 }
 
-const outcomeOptions: {
-  value: CallOutcome
+// ─── Lead Source & Lead Type options ────────────────────────────
+const LEAD_SOURCE_OPTIONS = [
+  "Sourced Polytechnic College",
+  "Engineering College",
+  "Sourced ITI College",
+  "Sourcing Arts and Science Colleges",
+  "Wedding Photography",
+  "Video Editing",
+  "Solar",
+]
+
+const LEAD_TYPE_OPTIONS = [
+  "Assist",
+  "VAC",
+  "FDP",
+  "ZOHO YCP",
+  "Short Term Course Admission",
+]
+
+const defaultOutcomeOptions = [
+  {
+    value: "warm",
+    label: "Interested",
+    description: "Requires follow-up (interested)",
+    icon: Clock,
+    color: "text-yellow-500",
+  },
+  {
+    value: "cold_no_response",
+    label: "Cold / No Response",
+    description: "Cold outcome - no follow-up needed",
+    icon: PhoneOff,
+    color: "text-orange-500",
+  },
+  {
+    value: "cold_not_interested",
+    label: "Cold / Not Interested",
+    description: "Cold outcome - no follow-up needed",
+    icon: Ban,
+    color: "text-red-500",
+  },
+  {
+    value: "hot",
+    label: "Strong Interest / Ready for Counselling",
+    description: "Ready for counselling/admission discussion (hot)",
+    icon: ThumbsUp,
+    color: "text-green-500",
+  },
+  {
+    value: "visit_scheduled",
+    label: "Visit Planned and Confirmed",
+    description: "Visit Planned and Confirmed",
+    icon: CheckCircle2,
+    color: "text-blue-500",
+  },
+  {
+    value: "visit_done",
+    label: "Visit Campus / Decision Awaited",
+    description: "Visited campus, decision awaited",
+    icon: GraduationCap,
+    color: "text-purple-500",
+  },
+  {
+    value: "admission_done",
+    label: "Admission Successfully Completed",
+    description: "Admission Successfully Completed",
+    icon: BookOpen,
+    color: "text-emerald-600",
+  },
+]
+
+// ─── Outcome options – LEAD MODE (lead source or type selected) ──
+const leadOutcomeOptions: {
+  value: string
   label: string
   description: string
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
   {
-    value: "NotAnswered",
-    label: "Not Answered",
-    description: "Call rang but nobody picked up",
-    icon: PhoneOff,
-    color: "text-warning",
-  },
-  {
-    value: "Busy",
-    label: "Busy / Network Issue",
-    description: "Could not connect",
-    icon: Phone,
-    color: "text-warning",
-  },
-  {
-    value: "WrongNumber",
-    label: "Wrong Number",
-    description: "Number doesn't belong to prospect",
-    icon: XCircle,
-    color: "text-destructive",
-  },
-  {
-    value: "CallBack",
-    label: "Call Back Later",
-    description: "Prospect asked to call at specific time",
+    value: "New",
+    label: "New",
+    description: "Lead is newly added",
     icon: Clock,
     color: "text-primary",
   },
   {
-    value: "NotInterested",
-    label: "Not Interested",
-    description: "Prospect declined",
-    icon: XCircle,
-    color: "text-muted-foreground",
-  },
-  {
-    value: "DNC",
-    label: "Do Not Call",
-    description: "Prospect requested no further contact",
-    icon: Ban,
-    color: "text-destructive",
-  },
-  {
-    value: "LanguageBarrier",
-    label: "Language Barrier",
-    description: "Cannot communicate in available language",
-    icon: Globe,
-    color: "text-warning",
-  },
-  {
     value: "Interested",
-    label: "Interested - Gather Info",
-    description: "Prospect showed interest",
+    label: "Interested",
+    description: "Lead has shown interest",
     icon: ThumbsUp,
     color: "text-success",
   },
   {
-    value: "Qualified",
-    label: "Qualified",
-    description: "Prospect is qualified and scheduled for a visit",
-    icon: CheckCircle2,
-    color: "text-success",
+    value: "Interested Followup",
+    label: "Interested Followup",
+    description: "Interested, requires follow-up",
+    icon: Clock,
+    color: "text-warning",
   },
   {
-    value: "EnrolledElsewhere",
-    label: "Already Enrolled",
-    description: "Joined another institution",
+    value: "Proposal To Be Sent",
+    label: "Proposal To Be Sent",
+    description: "Proposal needs to be sent to lead",
+    icon: BookOpen,
+    color: "text-primary",
+  },
+  {
+    value: "Proposal Sent",
+    label: "Proposal Sent",
+    description: "Proposal has been sent",
+    icon: CheckCircle2,
+    color: "text-primary",
+  },
+  {
+    value: "Training Date Followup",
+    label: "Training Date Followup",
+    description: "Following up on training date",
     icon: GraduationCap,
     color: "text-[#8a3ffc]",
   },
   {
-    value: "ApplicationProcess",
-    label: "Application Process",
-    description: "Prospect is in application processing",
-    icon: BookOpen,
+    value: "Qualified",
+    label: "Qualified",
+    description: "Lead is qualified and ready",
+    icon: CheckCircle2,
+    color: "text-success",
+  },
+  {
+    value: "Ringing / Not Reachable",
+    label: "Ringing / Not Reachable",
+    description: "Could not reach the lead",
+    icon: PhoneOff,
+    color: "text-warning",
+  },
+  {
+    value: "Not Interested",
+    label: "Not Interested",
+    description: "Lead has declined",
+    icon: Ban,
+    color: "text-destructive",
+  },
+]
+
+// ─── Outcome options – EDII MODE (Wedding Photography, Video Editing, Solar) ──
+const ediiOutcomeOptions: {
+  value: string
+  label: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+}[] = [
+  {
+    value: "New",
+    label: "New",
+    description: "Lead is newly added",
+    icon: Clock,
     color: "text-primary",
+  },
+  {
+    value: "Interested",
+    label: "Interested",
+    description: "Lead has shown interest",
+    icon: ThumbsUp,
+    color: "text-success",
+  },
+  {
+    value: "Interested-Followup",
+    label: "Interested-Followup",
+    description: "Interested, requires follow-up",
+    icon: Clock,
+    color: "text-warning",
+  },
+  {
+    value: "Qualified",
+    label: "Qualified",
+    description: "Lead is qualified and ready",
+    icon: CheckCircle2,
+    color: "text-success",
+  },
+  {
+    value: "Ringing / Not Reachable",
+    label: "Ringing / Not Reachable",
+    description: "Could not reach the lead",
+    icon: PhoneOff,
+    color: "text-warning",
+  },
+  {
+    value: "Not Interested",
+    label: "Not Interested",
+    description: "Lead has declined",
+    icon: Ban,
+    color: "text-destructive",
   },
 ]
 
 const notInterestedReasons = [
+  "No response here",
   "Not interested in these courses",
   "Financial constraints",
   "Already decided on another institution",
@@ -174,11 +290,78 @@ const notInterestedReasons = [
   "Other",
 ]
 
+// ─── MultiSelect Component ───────────────────────────────────────
+function MultiSelect({
+  options,
+  selected,
+  onChange,
+  placeholder
+}: {
+  options: string[]
+  selected: string[]
+  onChange: (vals: string[]) => void
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+
+  const toggleOption = (val: string) => {
+    if (selected.includes(val)) {
+      onChange(selected.filter(item => item !== val))
+    } else {
+      onChange([...selected, val])
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-11 border-2 text-left font-normal hover:bg-background"
+        >
+          <span className="truncate text-sm">
+            {selected.length > 0 ? selected.join(", ") : <span className="text-muted-foreground">{placeholder}</span>}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0 bg-background border-2 shadow-md rounded-lg" align="start">
+        <ScrollArea className="h-48 w-full p-1">
+          {options.map((option) => {
+            const isSelected = selected.includes(option)
+            return (
+              <div
+                key={option}
+                onClick={() => toggleOption(option)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer select-none transition-colors",
+                  isSelected ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/50"
+                )}
+              >
+                <div className={cn(
+                  "h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-all",
+                  isSelected ? "bg-primary border-primary text-primary-foreground" : "border-slate-300"
+                )}>
+                  {isSelected && <Check className="h-3 w-3" />}
+                </div>
+                <span>{option}</span>
+              </div>
+            )
+          })}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 interface CallOutcomeModalProps {
   prospect: any | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (outcome: CallOutcome, data: Record<string, unknown>) => void
+  onSubmit: (outcome: string, data: Record<string, unknown>) => void
+  onLeadModeActivate?: () => void
 }
 
 export function CallOutcomeModal({
@@ -186,10 +369,13 @@ export function CallOutcomeModal({
   open,
   onOpenChange,
   onSubmit,
+  onLeadModeActivate,
 }: CallOutcomeModalProps) {
-  const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome | null>(null)
+  const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null)
   const [notes, setNotes] = useState("")
   const [callbackDate, setCallbackDate] = useState("")
+  const [callbackDateError, setCallbackDateError] = useState("")
+  const [callbackTimeError, setCallbackTimeError] = useState("")
   const [callbackHour, setCallbackHour] = useState("10")
   const [callbackMinute, setCallbackMinute] = useState("00")
   const [callbackPeriod, setCallbackPeriod] = useState("AM")
@@ -203,43 +389,120 @@ export function CallOutcomeModal({
   const [courses, setCourses] = useState<Course[]>([])
   const [coursesLoading, setCoursesLoading] = useState(false)
 
+  // Lead Source & Lead Type
+  const [leadSource, setLeadSource] = useState<string[]>([])
+  const [leadType, setLeadType] = useState<string[]>([])
+
   // Real call history from API
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
+  // ─── Determine if we're in "lead mode" or "EDII mode" ────────────────────────
+  const EDII_LEAD_SOURCES = ["Wedding Photography", "Video Editing", "Solar"]
+  const EDII_COURSES = ["Wedding Photography", "Video Editing", "Solar"]
+  const prospectLeadSourcesTop: string[] = Array.isArray((prospect as any)?.lead_source)
+    ? (prospect as any).lead_source
+    : typeof (prospect as any)?.lead_source === "string"
+    ? [(prospect as any).lead_source]
+    : []
+
+  const isEDIIMode =
+    leadSource.some((source: string) =>
+      EDII_LEAD_SOURCES.some((ediiSource) =>
+        source.toLowerCase().includes(ediiSource.toLowerCase())
+      )
+    ) ||
+    prospectLeadSourcesTop.some((source: string) =>
+      EDII_LEAD_SOURCES.some((ediiSource) =>
+        source.toLowerCase().includes(ediiSource.toLowerCase())
+      )
+    ) ||
+    (prospect?.courseInterest && prospect.courseInterest !== "Unknown" &&
+      EDII_COURSES.some((ediiCourse) =>
+        prospect.courseInterest.toLowerCase().includes(ediiCourse.toLowerCase())
+      ))
+  const localLeadMode = leadSource.length > 0 || leadType.length > 0
+
+  // Normalize dashboard names (matches logic used elsewhere)
+  const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "edii" => {
+    if (typeof value !== "string") return "student_admission"
+
+    const normalized = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_")
+
+    if (normalized === "college_contact" || normalized === "college_contacts" || normalized === "college") {
+      return "college_contact"
+    }
+
+    if (normalized === "edii" || normalized === "edii_leads" || normalized.includes("edii")) {
+      return "edii"
+    }
+
+    return "student_admission"
+  }
+
+  const dashboard = normalizeDashboard(prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType)
+  // Show Lead Type only for college_contact dashboard
+  const showLeadType = dashboard === "college_contact"
+
+  // Lead mode is only active for college_contact dashboard
+  const isLeadMode = localLeadMode && dashboard === "college_contact"
+
+  // Choose outcome options by dashboard
+  const currentOutcomeOptions =
+    dashboard === "edii"
+      ? ediiOutcomeOptions
+      : dashboard === "college_contact"
+      ? leadOutcomeOptions
+      : defaultOutcomeOptions
+
+  // Reset outcome selection when mode changes
+  // Keep dependency array shape stable across renders by using a single key
+  const modeKey = `${Number(isLeadMode)}-${Number(isEDIIMode)}-${dashboard || ""}`
+  useEffect(() => {
+    setSelectedOutcome(null)
+  }, [modeKey])
+
+  // Notify parent when lead mode is activated
+  useEffect(() => {
+    if (isLeadMode && onLeadModeActivate) {
+      onLeadModeActivate()
+    }
+  }, [isLeadMode, onLeadModeActivate])
+
   // Fetch real call history when prospect changes
   useEffect(() => {
-    if (prospect && open) {
-      const prospectId = Number(prospect.numericId || prospect.id)
-      if (prospectId) {
-        setHistoryLoading(true)
-        callLogsApi
-          .getByProspect(prospectId)
-          .then((logs) => {
-            setCallHistory(logs)
-          })
-          .catch(() => {
-            setCallHistory([])
-          })
-          .finally(() => {
-            setHistoryLoading(false)
-          })
-      }
+    if (!(prospect && open)) return
+
+    const prospectId = Number(prospect.numericId || prospect.id)
+
+    if (prospectId) {
+      setHistoryLoading(true)
+      callLogsApi
+        .getByProspect(prospectId)
+        .then((logs) => setCallHistory(logs))
+        .catch(() => setCallHistory([]))
+        .finally(() => setHistoryLoading(false))
     }
-    if (open) {
-      setCoursesLoading(true)
-      coursesApi
-        .getAll()
-        .then((data) => setCourses(data))
-        .catch(() => setCourses([]))
-        .finally(() => setCoursesLoading(false))
-    }
+
+    setCoursesLoading(true)
+    coursesApi
+      .getAll()
+      .then((data) => setCourses(data))
+      .catch(() => setCourses([]))
+      .finally(() => setCoursesLoading(false))
+
+    // Pre-populate lead source/type from prospect
+    const parse = (v: any) => (Array.isArray(v) ? v : typeof v === "string" ? [v] : [])
+    setLeadSource(parse((prospect as any).lead_source))
+    setLeadType(parse((prospect as any).lead_type))
   }, [prospect, open])
 
   const resetForm = () => {
     setSelectedOutcome(null)
     setNotes("")
     setCallbackDate("")
+    setCallbackDateError("")
+    setCallbackTimeError("")
     setCallbackHour("10")
     setCallbackMinute("00")
     setCallbackPeriod("AM")
@@ -250,27 +513,75 @@ export function CallOutcomeModal({
     setParentAware("")
     setBestTimeToCall("")
     setInstitutionName("")
+    setLeadSource([])
+    setLeadType([])
+  }
+
+  // For default mode, lead mode & EDII mode – map selectedOutcome to callback-active logic
+  const callbackSectionActive = isEDIIMode
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+    : isLeadMode
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+    : (
+        selectedOutcome === "warm" ||
+        selectedOutcome === "hot" ||
+        selectedOutcome === "visit_scheduled"
+      )
+
+  const isFormValid = () => {
+    if (!selectedOutcome) return false
+    if (callbackSectionActive) {
+      return !!(callbackDate && callbackHour && callbackMinute && callbackPeriod)
+    }
+    return true
   }
 
   const handleSubmit = () => {
     if (!selectedOutcome) return
 
-    const data: Record<string, unknown> = { notes }
+    if (callbackSectionActive) {
+      let hasErrors = false
+      if (!callbackDate || callbackDate.trim() === "") {
+        setCallbackDateError("Follow-up Date is required")
+        hasErrors = true
+      } else {
+        setCallbackDateError("")
+      }
 
-    if (selectedOutcome === "CallBack") {
+      if (!callbackHour || !callbackMinute || !callbackPeriod) {
+        setCallbackTimeError("Follow-up Time is required")
+        hasErrors = true
+      } else {
+        setCallbackTimeError("")
+      }
+
+      if (hasErrors) {
+        return
+      }
+    }
+
+    const data: Record<string, unknown> = {
+      notes,
+      lead_source: leadSource,
+      lead_type: leadType,
+      status: selectedOutcome,
+    }
+
+    if (callbackSectionActive && callbackDate) {
       data.callbackDate = callbackDate
       data.callbackTime = `${callbackHour}:${callbackMinute} ${callbackPeriod}`.trim()
-    } else if (selectedOutcome === "NotInterested" || selectedOutcome === "DNC") {
+    }
+    if (selectedOutcome === "cold_not_interested" || selectedOutcome === "Not Interested") {
       data.reason = reason
-    } else if (selectedOutcome === "Interested") {
+    } else if (selectedOutcome === "warm" || selectedOutcome === "Interested") {
       data.coursePreference = coursePreference
       data.studyMode = studyMode
       data.preferredLocation = preferredLocation
       data.parentAware = parentAware
       data.bestTimeToCall = bestTimeToCall
-    } else if (selectedOutcome === "Qualified") {
+    } else if (selectedOutcome === "visit_scheduled" || selectedOutcome === "Qualified") {
       data.visitDate = callbackDate
-    } else if (selectedOutcome === "EnrolledElsewhere") {
+    } else if (selectedOutcome === "visit_done") {
       data.institutionName = institutionName
     }
 
@@ -294,7 +605,7 @@ export function CallOutcomeModal({
               <Phone className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <span className="text-xl font-semibold">Call Outcome</span>
+              <span className="text-xl font-bold">Call Action</span>
               <SheetDescription className="text-sm font-normal text-muted-foreground">
                 Recording call for <span className="font-semibold text-foreground">{prospect.name}</span>
               </SheetDescription>
@@ -306,300 +617,402 @@ export function CallOutcomeModal({
           {/* Left Panel: Info & History */}
           <div className="w-1/3 border-r bg-muted/5 flex flex-col h-full overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                {/* Prospect Details */}
-                <section>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Prospect Details</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary font-semibold text-xs">
-                        {prospect.name.split(' ').map((n: string) => n[0]).join('')}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{prospect.name}</p>
-                        <p className="text-xs text-muted-foreground">{prospect.mobile}</p>
-                      </div>
+              {/* Prospect Details */}
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Prospect Details</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary font-bold text-xs">
+                      {prospect.name.split(' ').map((n: string) => n[0]).join('')}
                     </div>
-                    <div className="space-y-3 pl-1">
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{prospect.location || "Location not set"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        <Badge variant="outline" className="bg-background">
-                          {prospect.courseInterest || "Interest not captured"}
-                        </Badge>
-                      </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold">{prospect.name}</p>
+                      <p className="text-xs text-muted-foreground">{prospect.mobile}</p>
                     </div>
                   </div>
-                </section>
-
-                {/* Call History */}
-                <section>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                    History ({callHistory.length})
-                  </h3>
-                  {historyLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="space-y-3 pl-1">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{prospect.location || "Location not set"}</span>
                     </div>
-                  ) : callHistory.length > 0 ? (
-                    <div className="space-y-4 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-border">
-                      {callHistory.map((call) => (
-                        <div key={call.id} className="relative pl-8">
-                          <div className={cn(
-                            "absolute left-0 top-1.5 h-5 w-5 rounded-full border-4 border-background shadow-sm",
-                            DB_OUTCOME_COLORS[call.outcome]?.replace('text-', 'bg-') || "bg-muted"
-                          )} />
-                          <div className="bg-background border rounded-lg p-3 shadow-sm">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className={cn(
-                                "text-xs font-semibold",
-                                DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
-                              )}>
-                                {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">
-                                {new Date(call.called_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                            {call.reason && (
-                              <p className="text-xs font-medium text-foreground/80 mb-1">{call.reason}</p>
-                            )}
-                            {call.notes && (
-                              <p className="text-[11px] text-muted-foreground line-clamp-2 italic">&quot;{call.notes}&quot;</p>
-                            )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      <Badge variant="outline" className="bg-background">
+                        {prospect.courseInterest || "Interest not captured"}
+                      </Badge>
+                    </div>
+                    {/* Show existing lead source/type if any */}
+                    {(prospect.lead_source?.length > 0 || prospect.lead_type?.length > 0) && (
+                      <div className="space-y-1">
+                        {prospect.lead_source?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {prospect.lead_source.map((s: string) => (
+                              <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                            ))}
                           </div>
+                        )}
+                        {prospect.lead_type?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {prospect.lead_type.map((t: string) => (
+                              <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary">{t}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Call History */}
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                  History ({callHistory.length})
+                </h3>
+                {historyLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : callHistory.length > 0 ? (
+                  <div className="space-y-4 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-border">
+                    {callHistory.map((call) => (
+                      <div key={call.id} className="relative pl-8">
+                        <div className={cn(
+                          "absolute left-0 top-1.5 h-5 w-5 rounded-full border-4 border-background shadow-sm",
+                          DB_OUTCOME_COLORS[call.outcome]?.replace('text-', 'bg-') || "bg-muted"
+                        )} />
+                        <div className="bg-background border rounded-lg p-3 shadow-sm">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={cn(
+                              "text-xs font-bold",
+                              DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
+                            )}>
+                              {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {new Date(call.called_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          {call.reason && (
+                            <p className="text-xs font-medium text-foreground/80 mb-1">{call.reason}</p>
+                          )}
+                          {call.notes && (
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 italic">&quot;{call.notes}&quot;</p>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
-                      <PhoneOff className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
-                      <p className="text-xs text-muted-foreground">No previous calls recorded</p>
-                    </div>
-                  )}
-                </section>
-              </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
+                    <PhoneOff className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                    <p className="text-xs text-muted-foreground">No previous calls recorded</p>
+                  </div>
+                )}
+              </section>
             </div>
+          </div>
 
           {/* Right Panel: Call Logging Form */}
           <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                {/* Outcome Grid */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* ── Step 1: Lead Information ── */}
+              {(isLeadMode || isEDIIMode) && (
                 <section>
-                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                    <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">1</span>
-                    Select Outcome
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                    <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">1</span>
+                    Lead Information
+                    {isEDIIMode && (
+                      <Badge variant="outline" className="ml-2 text-[9px] bg-emerald-100 text-emerald-600 border-none">
+                        EDII Mode Active
+                      </Badge>
+                    )}
+                    {isLeadMode && !isEDIIMode && (
+                      <Badge variant="outline" className="ml-2 text-[9px] bg-primary/10 text-primary border-none">
+                        Lead Mode Active
+                      </Badge>
+                    )}
                   </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {outcomeOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => setSelectedOutcome(option.value)}
-                        className={cn(
-                          "flex items-start gap-3 rounded-lg border p-3 text-left transition-all hover:border-foreground/50",
-                          selectedOutcome === option.value
-                            ? "border-foreground bg-secondary shadow-xs ring-1 ring-foreground/20"
-                            : "border-border bg-background"
-                        )}
-                      >
-                        <option.icon className={cn("h-5 w-5 shrink-0 mt-0.5", option.color)} />
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{option.label}</p>
-                          <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-                            {option.description}
-                          </p>
+                  <div className="bg-muted/30 rounded-sm p-4 border border-border space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                        Lead Source
+                      </Label>
+                      <MultiSelect
+                        options={LEAD_SOURCE_OPTIONS}
+                        selected={leadSource}
+                        onChange={setLeadSource}
+                        placeholder="Select lead source(s)..."
+                      />
+                      {leadSource.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {leadSource.map(s => (
+                            <Badge key={s} variant="secondary" className="text-[10px] rounded-sm">{s}</Badge>
+                          ))}
                         </div>
-                      </button>
-                    ))}
+                      )}
+                    </div>
+
+                    {showLeadType && (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                          Lead Type
+                        </Label>
+                        <MultiSelect
+                          options={LEAD_TYPE_OPTIONS}
+                          selected={leadType}
+                          onChange={setLeadType}
+                          placeholder="Select lead type(s)..."
+                        />
+                        {leadType.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {leadType.map(t => (
+                              <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary rounded-sm">{t}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {isEDIIMode && (
+                      <p className="text-[11px] text-emerald-600 font-medium bg-emerald-50 rounded-sm p-2 border border-emerald-100">
+                        EDII mode active: Status options have been updated for EDII tracking.
+                      </p>
+                    )}
+                    {isLeadMode && !isEDIIMode && (
+                      <p className="text-[11px] text-primary font-medium bg-primary/5 rounded-sm p-2 border border-primary/10">
+                        Lead mode active: Status options have been updated for lead tracking.
+                      </p>
+                    )}
                   </div>
                 </section>
- 
-                {selectedOutcome && (
-                  <>
-                    <div className="h-px bg-border" />
-                    
-                    {/* Dynamic Fields */}
-                    <section className="animate-in fade-in slide-in-from-top-4 duration-300">
-                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                        <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">2</span>
-                        Outcome Details
-                      </h3>
-                      
-                      <div className="bg-secondary rounded-lg p-4 border border-border space-y-4">
-                        {/* Outcome Specific Fields */}
-                        {(selectedOutcome === "NotAnswered" || selectedOutcome === "Busy" || selectedOutcome === "WrongNumber" || selectedOutcome === "LanguageBarrier") && (
+              )}
+
+              {/* ── Step 2: Select Outcome ── */}
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                  <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
+                    {isLeadMode || isEDIIMode ? 2 : 1}
+                  </span>
+                  Select Status
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {currentOutcomeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSelectedOutcome(option.value)
+                      }}
+                      className={cn(
+                        "flex items-start gap-3 rounded-sm border p-3 text-left transition-all hover:border-primary/50",
+                        selectedOutcome === option.value
+                          ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/20"
+                          : "border-border bg-background"
+                      )}
+                    >
+                      <option.icon className={cn("h-4 w-4 shrink-0 mt-0.5", option.color)} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
+                          {option.description}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {selectedOutcome && (
+                <>
+                  <div className="h-px bg-border" />
+
+                  {/* ── Step 3: Outcome Details ── */}
+                  <section className="animate-in fade-in slide-in-from-top-4 duration-300">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
+                        {isLeadMode || isEDIIMode ? 3 : 2}
+                      </span>
+                      Status Details
+                    </h3>
+
+                    <div className="bg-secondary rounded-sm p-4 border border-border space-y-4">
+                      {/* Status Specific Fields */}
+                      {(selectedOutcome === "cold_not_interested" || selectedOutcome === "Not Interested") && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase text-muted-foreground">Why not interested?</Label>
+                          <Select value={reason} onValueChange={setReason}>
+                            <SelectTrigger className="h-8 bg-background border border-border focus:ring-primary">
+                              <SelectValue placeholder="Select reason" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {notInterestedReasons.map((r) => (
+                                <SelectItem key={r} value={r}>{r}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {reason === "Other" && (
+                            <Input
+                              placeholder="Please specify..."
+                              className="mt-2 h-8"
+                              onChange={(e) => setReason(e.target.value)}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Callback section – only for default mode */}
+                      {callbackSectionActive && (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Follow-up Date *</Label>
+                              <Input
+                                type="date"
+                                className={`h-8 border ${callbackDateError ? "border-destructive focus:ring-destructive" : "border-border"}`}
+                                value={callbackDate}
+                                onChange={(e) => {
+                                  setCallbackDate(e.target.value)
+                                  setCallbackDateError("")
+                                }}
+                                min={new Date().toISOString().split("T")[0]}
+                              />
+                              {callbackDateError && (
+                                <p className="text-xs font-semibold text-destructive">{callbackDateError}</p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Follow-up Time *</Label>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Select value={callbackHour} onValueChange={(value) => {
+                                  setCallbackHour(value)
+                                  setCallbackTimeError("")
+                                }}>
+                                  <SelectTrigger className={`h-8 bg-background border ${callbackTimeError ? "border-destructive" : "border-border"}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({ length: 12 }, (_, idx) => {
+                                      const hour = (idx + 1).toString().padStart(2, "0")
+                                      return <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                                <Select value={callbackMinute} onValueChange={(value) => {
+                                  setCallbackMinute(value)
+                                  setCallbackTimeError("")
+                                }}>
+                                  <SelectTrigger className={`h-8 bg-background border ${callbackTimeError ? "border-destructive" : "border-border"}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map((minute) => (
+                                      <SelectItem key={minute} value={minute}>{minute}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select value={callbackPeriod} onValueChange={(value) => {
+                                  setCallbackPeriod(value)
+                                  setCallbackTimeError("")
+                                }}>
+                                  <SelectTrigger className={`h-8 bg-background border ${callbackTimeError ? "border-destructive" : "border-border"}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="AM">AM</SelectItem>
+                                    <SelectItem value="PM">PM</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {callbackTimeError && (
+                                <p className="text-xs font-semibold text-destructive">{callbackTimeError}</p>
+                              )}
+                            </div>
+                          </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase text-muted-foreground">What happened?</Label>
+                            <Label className="text-xs font-semibold uppercase text-muted-foreground">Context for Call</Label>
                             <Select value={reason} onValueChange={setReason}>
-                              <SelectTrigger className="h-8 bg-background border border-border focus:ring-primary">
-                                <SelectValue placeholder="Select specific reason" />
+                              <SelectTrigger className="h-8 bg-background border border-border">
+                                <SelectValue placeholder="Why schedule a callback?" />
                               </SelectTrigger>
                               <SelectContent>
-                                {selectedOutcome === "NotAnswered" && (
-                                  <>
-                                    <SelectItem value="Call not picked">Call not picked</SelectItem>
-                                    <SelectItem value="Phone switched off">Phone switched off</SelectItem>
-                                    <SelectItem value="Out of coverage">Out of coverage</SelectItem>
-                                  </>
-                                )}
-                                {selectedOutcome === "Busy" && (
-                                  <>
-                                    <SelectItem value="Line busy">Line busy</SelectItem>
-                                    <SelectItem value="Call waiting">Call waiting</SelectItem>
-                                    <SelectItem value="Network issue">Network issue</SelectItem>
-                                  </>
-                                )}
-                                {selectedOutcome === "WrongNumber" && (
-                                  <>
-                                    <SelectItem value="Wrong person">Wrong person</SelectItem>
-                                    <SelectItem value="Number doesn't exist">Number doesn't exist</SelectItem>
-                                  </>
-                                )}
-                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="Asked for callback">Asked for callback</SelectItem>
+                                <SelectItem value="Personal Reason">Personal Reason</SelectItem>
+                                <SelectItem value="Others">Others</SelectItem>
                               </SelectContent>
                             </Select>
-                            {reason === "Other" && (
-                              <Input
-                                placeholder="Please specify..."
-                                className="mt-2 h-11 border-2"
-                                onChange={(e) => setReason(e.target.value)}
-                              />
-                            )}
                           </div>
-                        )}
-
-                        {selectedOutcome === "CallBack" && (
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase text-muted-foreground">Follow-up Date</Label>
-                                <Input
-                                  type="date"
-                                  className="h-11 border-2"
-                                  value={callbackDate}
-                                  onChange={(e) => setCallbackDate(e.target.value)}
-                                  min={new Date().toISOString().split("T")[0]}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-xs font-semibold uppercase text-muted-foreground">Follow-up Time</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <Select value={callbackHour} onValueChange={setCallbackHour}>
-                                    <SelectTrigger className="h-11 bg-background border-2">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 12 }, (_, idx) => {
-                                        const hour = (idx + 1).toString().padStart(2, "0")
-                                        return <SelectItem key={hour} value={hour}>{hour}</SelectItem>
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                  <Select value={callbackMinute} onValueChange={setCallbackMinute}>
-                                    <SelectTrigger className="h-11 bg-background border-2">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {['00', '15', '30', '45'].map((minute) => (
-                                        <SelectItem key={minute} value={minute}>{minute}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Select value={callbackPeriod} onValueChange={setCallbackPeriod}>
-                                    <SelectTrigger className="h-11 bg-background border-2">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="AM">AM</SelectItem>
-                                      <SelectItem value="PM">PM</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Context for Call</Label>
-                              <Select value={reason} onValueChange={setReason}>
-                                <SelectTrigger className="h-11 bg-background border-2">
-                                  <SelectValue placeholder="Why schedule a callback?" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Asked for callback">Asked for callback</SelectItem>
-                                  <SelectItem value="Personal Reason">Personal Reason</SelectItem>
-                                  <SelectItem value="Others">Others</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        )}
-
-                        {selectedOutcome === "Interested" && (
-                          <div className="space-y-6">
-                            <div className="space-y-2">
-                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Course Interest</Label>
-                              <Select value={coursePreference} onValueChange={setCoursePreference}>
-                                <SelectTrigger className="h-11 bg-background border-2">
-                                  <SelectValue placeholder="Select course" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {courses.length > 0 ? (
-                                      courses.map((course) => (
-                                        <SelectItem key={course.id} value={course.code}>
-                                          {course.name} ({course.code})
-                                        </SelectItem>
-                                      ))
-                                    ) : (
-                                      <SelectItem value="" disabled>
-                                        {coursesLoading ? "Loading courses..." : "No courses available"}
-                                      </SelectItem>
-                                    )}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Study Mode</Label>
-                              <RadioGroup value={studyMode} onValueChange={setStudyMode} className="flex gap-6">
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="Online" id="online" />
-                                  <Label htmlFor="online" className="cursor-pointer">Online</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="Offline" id="offline" />
-                                  <Label htmlFor="offline" className="cursor-pointer">Offline</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="Hybrid" id="hybrid" />
-                                  <Label htmlFor="hybrid" className="cursor-pointer">Hybrid</Label>
-                                </div>
-                              </RadioGroup>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Common Notes field */}
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold uppercase text-muted-foreground">Additional Notes</Label>
-                          <Textarea
-                            placeholder="Write anything important about this conversation..."
-                            className="min-h-[120px] border-2 focus-visible:ring-primary"
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                          />
                         </div>
-                      </div>
-                    </section>
-                  </>
-                )}
+                      )}
 
-              </div>
+                      {(selectedOutcome === "warm" || selectedOutcome === "Interested") && !isLeadMode && (
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase text-muted-foreground">Course Interest</Label>
+                            <Select value={coursePreference} onValueChange={setCoursePreference}>
+                              <SelectTrigger className="h-8 bg-background border border-border">
+                                <SelectValue placeholder="Select course" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {courses.length > 0 ? (
+                                  courses.map((course) => {
+                                    const courseValue = course.code?.trim() || `course-${course.id}`
+                                    return (
+                                      <SelectItem key={course.id} value={courseValue}>
+                                        {course.name} ({course.code})
+                                      </SelectItem>
+                                    )
+                                  })
+                                ) : (
+                                  <SelectItem value="no-course" disabled>
+                                    {coursesLoading ? "Loading courses..." : "No courses available"}
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase text-muted-foreground">Study Mode</Label>
+                            <RadioGroup value={studyMode} onValueChange={setStudyMode} className="flex gap-6">
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Online" id="online" />
+                                <Label htmlFor="online" className="cursor-pointer">Online</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Offline" id="offline" />
+                                <Label htmlFor="offline" className="cursor-pointer">Offline</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Hybrid" id="hybrid" />
+                                <Label htmlFor="hybrid" className="cursor-pointer">Hybrid</Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Common Notes field */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold uppercase text-muted-foreground">Additional Notes</Label>
+                        <Textarea
+                          placeholder="Write anything important about this conversation..."
+                          className="min-h-[100px] border border-border focus-visible:ring-primary"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
+
+            </div>
 
             {/* Sticky Footer */}
-            <div className="p-6 border-t bg-muted/10 flex items-center justify-between gap-4">
+            <div className="p-4 border-t bg-muted/10 flex items-center justify-between gap-4">
               <Button
                 variant="ghost"
-                size="lg"
+                size="sm"
+                className="h-8 text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:bg-secondary rounded-sm"
                 onClick={() => {
                   resetForm()
                   onOpenChange(false)
@@ -607,13 +1020,13 @@ export function CallOutcomeModal({
               >
                 Close Without Saving
               </Button>
-              <Button 
-                size="lg" 
-                className="px-12 h-12 text-md font-semibold shadow-lg shadow-primary/20"
-                onClick={handleSubmit} 
-                disabled={!selectedOutcome}
+              <Button
+                size="sm"
+                className="px-8 h-8 text-xs font-semibold uppercase tracking-widest bg-foreground text-background hover:bg-foreground/90 transition-all rounded-sm"
+                onClick={handleSubmit}
+                disabled={!isFormValid()}
               >
-                Save Call Outcome
+                Save Action
               </Button>
             </div>
           </div>

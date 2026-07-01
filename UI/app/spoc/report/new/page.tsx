@@ -10,7 +10,6 @@ import {
   Megaphone,
   Users,
   Briefcase,
-  Share2,
   AlertCircle,
   Plus,
   Trash2,
@@ -62,9 +61,32 @@ import {
 
 interface InstitutionEntry {
   id: string
-  contactDetails: string
+  institutionName: string
+  designation: string
+  contactName: string
+  contactMobile: string
+  contactEmail: string
+  location: string
   nextStep: string
   assignedTo: "Telecaller" | "Me"
+  followUpDate: string
+}
+
+interface AlumniEntry {
+  id: string
+  name: string
+  contactNumber: string
+  email: string
+  followUpDate: string
+}
+
+interface CorporateEntry {
+  id: string
+  companyName: string
+  contactName: string
+  designation: string
+  mobileNumber: string
+  email: string
   followUpDate: string
 }
 
@@ -133,7 +155,6 @@ export default function NewFieldReportPage() {
     branding: false,
     alumni: false,
     corporate: false,
-    referral: false,
     issues: false,
   })
 
@@ -158,18 +179,15 @@ export default function NewFieldReportPage() {
   // Branding
   const [brandingDone, setBrandingDone] = useState<string>("")
   const [brandingNotes, setBrandingNotes] = useState("")
+  const [brandingFollowUpDate, setBrandingFollowUpDate] = useState("")
 
   // Alumni
   const [alumniOutreach, setAlumniOutreach] = useState<string>("")
-  const [alumniNotes, setAlumniNotes] = useState("")
+  const [alumniEntries, setAlumniEntries] = useState<AlumniEntry[]>([])
 
   // Corporate
   const [corporateOutreach, setCorporateOutreach] = useState<string>("")
-  const [corporateDetails, setCorporateDetails] = useState("")
-
-  // Referral
-  const [referralNetwork, setReferralNetwork] = useState<string>("")
-  const [referralNotes, setReferralNotes] = useState("")
+  const [corporateEntries, setCorporateEntries] = useState<CorporateEntry[]>([])
 
   // Issues
   const [challenges, setChallenges] = useState("")
@@ -181,9 +199,32 @@ export default function NewFieldReportPage() {
 
   const createEmptyEntry = (): InstitutionEntry => ({
     id: crypto.randomUUID(),
-    contactDetails: "",
+    institutionName: "",
+    designation: "",
+    contactName: "",
+    contactMobile: "",
+    contactEmail: "",
+    location: "",
     nextStep: "",
     assignedTo: "Me",
+    followUpDate: "",
+  })
+
+  const createEmptyAlumniEntry = (): AlumniEntry => ({
+    id: crypto.randomUUID(),
+    name: "",
+    contactNumber: "",
+    email: "",
+    followUpDate: "",
+  })
+
+  const createEmptyCorporateEntry = (): CorporateEntry => ({
+    id: crypto.randomUUID(),
+    companyName: "",
+    contactName: "",
+    designation: "",
+    mobileNumber: "",
+    email: "",
     followUpDate: "",
   })
 
@@ -278,15 +319,16 @@ export default function NewFieldReportPage() {
       ]
 
       for (const entry of allEntries) {
-        if (!entry.contactDetails.trim()) continue
+        if (!entry.institutionName.trim()) continue
 
         const visitEntry = await SpocVisitsApi.create({
           report_id: reportId,
           visit_type: entry.type,
-          institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
-          contact_name: entry.contactDetails.split("|")[1]?.trim() || null,
-          contact_email: entry.contactDetails.split("|")[2]?.trim() || null,
-          contact_mobile: entry.contactDetails.split("|")[3]?.trim() || null,
+          institution_name: entry.institutionName.trim(),
+          contact_name: entry.contactName.trim() || null,
+          contact_email: entry.contactEmail.trim() || null,
+          contact_mobile: entry.contactMobile.trim() || null,
+          location: entry.location?.trim() || null,
           next_action: entry.nextStep || null,
           follow_up_role: entry.assignedTo === "Telecaller" ? "telecaller" : "self",
           follow_up_date: entry.followUpDate || null,
@@ -298,7 +340,7 @@ export default function NewFieldReportPage() {
             source_entry_id: visitEntry.id,
             assigned_to_role: entry.assignedTo === "Telecaller" ? "telecaller" : "spoc",
             assigned_to_user_id: entry.assignedTo === "Telecaller" ? null : spocId,
-            institution_name: entry.contactDetails.split("|")[0]?.trim() || entry.type,
+            institution_name: entry.institutionName.trim() || entry.type,
             action_description: entry.nextStep || "Follow up on visit",
             follow_up_date: entry.followUpDate,
           })
@@ -308,23 +350,64 @@ export default function NewFieldReportPage() {
       // 5. Create activities
       const activities = [
         { type: "branding", done: brandingDone === "Yes", notes: brandingNotes },
-        { type: "alumni", done: alumniOutreach === "Yes", notes: alumniNotes },
-        { type: "corporate", done: corporateOutreach === "Yes", notes: corporateDetails },
-        { type: "referral", done: referralNetwork === "Yes", notes: referralNotes },
+        { type: "alumni", done: alumniOutreach === "Yes", notes: "" },
+        { type: "corporate", done: corporateOutreach === "Yes", notes: "" },
       ]
 
       for (const act of activities) {
         if (act.done) {
-          await spocActivitiesApi.create({
+          const activity = await spocActivitiesApi.create({
             report_id: reportId,
             activity_type: act.type,
             done: true,
             notes: act.notes || null,
           })
+
+          // Create follow-up tasks for alumni and corporate entries
+          if (act.type === "alumni" && !isDraft) {
+            for (const entry of alumniEntries) {
+              if (entry.followUpDate) {
+                const contactInfo = JSON.stringify({
+                  contact_name: entry.name || "",
+                  contact_mobile: entry.contactNumber || "",
+                  contact_email: entry.email || "",
+                })
+                await followUpTasksApi.create({
+                  source_entry_id: activity.id,
+                  assigned_to_role: "spoc",
+                  assigned_to_user_id: spocId,
+                  institution_name: entry.name || "Alumni Contact",
+                  action_description: `Follow up on alumni networking||${contactInfo}`,
+                  follow_up_date: entry.followUpDate,
+                })
+              }
+            }
+          }
+
+          if (act.type === "corporate" && !isDraft) {
+            for (const entry of corporateEntries) {
+              if (entry.followUpDate) {
+                const contactInfo = JSON.stringify({
+                  contact_name: entry.contactName || "",
+                  contact_mobile: entry.mobileNumber || "",
+                  contact_email: entry.email || "",
+                  designation: entry.designation || "",
+                })
+                await followUpTasksApi.create({
+                  source_entry_id: activity.id,
+                  assigned_to_role: "spoc",
+                  assigned_to_user_id: spocId,
+                  institution_name: entry.companyName || "Corporate Contact",
+                  action_description: `Follow up on corporate outreach||${contactInfo}`,
+                  follow_up_date: entry.followUpDate,
+                })
+              }
+            }
+          }
         }
       }
 
-      // 6. Create escalation if challenges noted
+      // 6. Create escalation if challenges noted (Section I - no follow-ups)
       if (challenges.trim()) {
         await SpocEscalationsApi.create({
           report_id: reportId,
@@ -377,31 +460,100 @@ export default function NewFieldReportPage() {
             </h4>
           </div>
           <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Contact Details</Label>
-              <Textarea
-                placeholder="Name | Contact Name | Email | Mobile"
-                value={entry.contactDetails}
-                onChange={(e) =>
-                  updateEntry(entries, setEntries, entry.id, "contactDetails", e.target.value)
-                }
-                rows={2}
-                className="mt-1"
-              />
+            <div className="grid gap-4 lg:grid-cols-4">
+              <div>
+                <Label className="text-xs">Institution Name</Label>
+                <Input
+                  placeholder="School / Coaching / Admission Centre"
+                  value={entry.institutionName}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "institutionName", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Location</Label>
+                <Input
+                  placeholder="Location of the institution"
+                  value={entry.location}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "location", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Contact Name</Label>
+                <Input
+                  placeholder="Contact Name"
+                  value={entry.contactName}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "contactName", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Designation</Label>
+                <Input
+                  placeholder="Designation"
+                  value={entry.designation}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "designation", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
             </div>
-            <div>
-              <Label className="text-xs">Next Step of Action</Label>
-              <Textarea
-                placeholder="Describe the next action to be taken..."
-                value={entry.nextStep}
-                onChange={(e) =>
-                  updateEntry(entries, setEntries, entry.id, "nextStep", e.target.value)
-                }
-                rows={2}
-                className="mt-1"
-              />
+            <div className="grid gap-4 lg:grid-cols-4">
+              <div>
+                <Label className="text-xs">Email ID</Label>
+                <Input
+                  placeholder="Email ID"
+                  value={entry.contactEmail}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "contactEmail", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Phone Number</Label>
+                <Input
+                  placeholder="Phone Number"
+                  value={entry.contactMobile}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "contactMobile", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Next Step of Action</Label>
+                <Textarea
+                  placeholder="Describe the next action to be taken..."
+                  value={entry.nextStep}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "nextStep", e.target.value)
+                  }
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Follow-up Date</Label>
+                <Input
+                  type="date"
+                  value={entry.followUpDate}
+                  onChange={(e) =>
+                    updateEntry(entries, setEntries, entry.id, "followUpDate", e.target.value)
+                  }
+                  className="mt-1"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label className="text-xs">Assigned To</Label>
                 <Select
@@ -420,21 +572,10 @@ export default function NewFieldReportPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Me">Me (Field Agent)</SelectItem>
+                    <SelectItem value="Me">SPOC</SelectItem>
                     <SelectItem value="Telecaller">Telecaller</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Follow-up Date</Label>
-                <Input
-                  type="date"
-                  value={entry.followUpDate}
-                  onChange={(e) =>
-                    updateEntry(entries, setEntries, entry.id, "followUpDate", e.target.value)
-                  }
-                  className="mt-1"
-                />
               </div>
             </div>
           </div>
@@ -624,9 +765,9 @@ export default function NewFieldReportPage() {
         </div>
       </Section>
 
-      {/* Section F - Alumni Networking */}
+      {/* Section F - Alumni Networking / Referral Networking */}
       <Section
-        title="Section F - Alumni Networking"
+        title="Section F - Alumni Networking / Referral Networking"
         icon={Users}
         isOpen={openSections.alumni}
         onToggle={() => toggleSection("alumni")}
@@ -635,7 +776,7 @@ export default function NewFieldReportPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Have you reached out through alumni network today?</Label>
+            <Label>Have you reached out through alumni or referral network today?</Label>
             <RadioGroup value={alumniOutreach} onValueChange={setAlumniOutreach}>
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
@@ -654,14 +795,93 @@ export default function NewFieldReportPage() {
             </RadioGroup>
           </div>
           {alumniOutreach === "Yes" && (
-            <div className="space-y-2">
-              <Label>Alumni Networking Notes</Label>
-              <Textarea
-                placeholder="Alumni names, leads referred, follow-up needed..."
-                value={alumniNotes}
-                onChange={(e) => setAlumniNotes(e.target.value)}
-                rows={3}
-              />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAlumniEntries([...alumniEntries, createEmptyAlumniEntry()])}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
+                </Button>
+              </div>
+              <div className="space-y-4">
+                {alumniEntries.map((entry, index) => (
+                  <div key={entry.id} className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Contact {index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAlumniEntries(alumniEntries.filter((e) => e.id !== entry.id))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <Label className="text-xs">Name</Label>
+                        <Input
+                          placeholder="Name"
+                          value={entry.name}
+                          onChange={(e) => {
+                            const updated = alumniEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, name: e.target.value } : ent
+                            )
+                            setAlumniEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Contact Number</Label>
+                        <Input
+                          placeholder="Contact Number"
+                          value={entry.contactNumber}
+                          onChange={(e) => {
+                            const updated = alumniEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, contactNumber: e.target.value } : ent
+                            )
+                            setAlumniEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Email ID</Label>
+                        <Input
+                          placeholder="Email ID"
+                          value={entry.email}
+                          onChange={(e) => {
+                            const updated = alumniEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, email: e.target.value } : ent
+                            )
+                            setAlumniEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Follow-up Date</Label>
+                        <Input
+                          type="date"
+                          value={entry.followUpDate}
+                          onChange={(e) => {
+                            const updated = alumniEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, followUpDate: e.target.value } : ent
+                            )
+                            setAlumniEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -697,65 +917,129 @@ export default function NewFieldReportPage() {
             </RadioGroup>
           </div>
           {corporateOutreach === "Yes" && (
-            <div className="space-y-2">
-              <Label>Corporate Company Details</Label>
-              <Textarea
-                placeholder="Company | Contact | Email | Mobile"
-                value={corporateDetails}
-                onChange={(e) => setCorporateDetails(e.target.value)}
-                rows={3}
-              />
-            </div>
-          )}
-        </div>
-      </Section>
-
-      {/* Section H - Referral Networking */}
-      <Section
-        title="Section H - Referral Networking"
-        icon={Share2}
-        isOpen={openSections.referral}
-        onToggle={() => toggleSection("referral")}
-        iconBgColor="bg-pink-100"
-        iconColor="text-pink-600"
-      >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Have you built or expanded your referral network today?</Label>
-            <RadioGroup value={referralNetwork} onValueChange={setReferralNetwork}>
-              <div className="flex gap-4">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Yes" id="referral-yes" />
-                  <Label htmlFor="referral-yes" className="font-normal">
-                    Yes
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="No" id="referral-no" />
-                  <Label htmlFor="referral-no" className="font-normal">
-                    No
-                  </Label>
-                </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCorporateEntries([...corporateEntries, createEmptyCorporateEntry()])}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Company
+                </Button>
               </div>
-            </RadioGroup>
-          </div>
-          {referralNetwork === "Yes" && (
-            <div className="space-y-2">
-              <Label>Referral Networking Notes</Label>
-              <Textarea
-                placeholder="Who referred, student names, courses, follow-up status..."
-                value={referralNotes}
-                onChange={(e) => setReferralNotes(e.target.value)}
-                rows={3}
-              />
+              <div className="space-y-4">
+                {corporateEntries.map((entry, index) => (
+                  <div key={entry.id} className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Company {index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCorporateEntries(corporateEntries.filter((e) => e.id !== entry.id))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      <div>
+                        <Label className="text-xs">Company Name</Label>
+                        <Input
+                          placeholder="Company Name"
+                          value={entry.companyName}
+                          onChange={(e) => {
+                            const updated = corporateEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, companyName: e.target.value } : ent
+                            )
+                            setCorporateEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Contact Name</Label>
+                        <Input
+                          placeholder="Contact Name"
+                          value={entry.contactName}
+                          onChange={(e) => {
+                            const updated = corporateEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, contactName: e.target.value } : ent
+                            )
+                            setCorporateEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Designation</Label>
+                        <Input
+                          placeholder="Designation"
+                          value={entry.designation}
+                          onChange={(e) => {
+                            const updated = corporateEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, designation: e.target.value } : ent
+                            )
+                            setCorporateEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Mobile Number</Label>
+                        <Input
+                          placeholder="Mobile Number"
+                          value={entry.mobileNumber}
+                          onChange={(e) => {
+                            const updated = corporateEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, mobileNumber: e.target.value } : ent
+                            )
+                            setCorporateEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Email ID</Label>
+                        <Input
+                          placeholder="Email ID"
+                          value={entry.email}
+                          onChange={(e) => {
+                            const updated = corporateEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, email: e.target.value } : ent
+                            )
+                            setCorporateEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Follow-up Date</Label>
+                        <Input
+                          type="date"
+                          value={entry.followUpDate}
+                          onChange={(e) => {
+                            const updated = corporateEntries.map((ent) =>
+                              ent.id === entry.id ? { ...ent, followUpDate: e.target.value } : ent
+                            )
+                            setCorporateEntries(updated)
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
       </Section>
 
-      {/* Section I - Issues & Observations */}
+      {/* Section H - Issues & Observations */}
       <Section
-        title="Section I - Issues & Observations"
+        title="Section H - Issues & Observations"
         icon={AlertCircle}
         isOpen={openSections.issues}
         onToggle={() => toggleSection("issues")}

@@ -6,18 +6,13 @@ import {
   Phone,
   CheckCircle2,
   FileText,
-  ClipboardList,
   Calendar,
-  TrendingUp,
   Loader2,
   RefreshCw,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
   XAxis,
@@ -87,11 +82,11 @@ const PIPELINE_COLORS: Record<string, string> = {
   lost: "#6f6f6f",
 }
 
+
 export default function AdminDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [telecallerPerf, setTelecallerPerf] = useState<any[]>([])
-  const [pipeline, setPipeline] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -106,18 +101,16 @@ export default function AdminDashboard() {
       setIsLoading(true)
       setError(null)
 
-      const [statsRes, perfRes, pipelineRes, usersRes, reportsRes] =
+      const [statsRes, perfRes, usersRes, reportsRes] =
         await Promise.all([
           adminApi.getStats(startDate || undefined, endDate || undefined),
           adminApi.getTelecallerPerformance(startDate || undefined, endDate || undefined),
-          adminApi.getProspectPipeline(startDate || undefined, endDate || undefined),
           usersApi.getAll(),
           SpocReportsApi.getAll(),
         ])
 
       setStats(statsRes)
       setTelecallerPerf(perfRes)
-      setPipeline(pipelineRes)
       setUsers(usersRes.map(adaptApiUserToUiUser))
       setReports(reportsRes)
     } catch (err) {
@@ -136,7 +129,7 @@ export default function AdminDashboard() {
     fetchData()
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate])
 
   if (isLoading || !stats) {
@@ -155,6 +148,15 @@ export default function AdminDashboard() {
   const telecallers = users.filter((u: any) => u.role === "telecaller")
   const spocs = users.filter((u: any) => u.role === "spoc")
 
+  const todayStr = new Date().toLocaleDateString("en-CA")
+  const isSingleDayRange = startDate === endDate
+  const isTodayRange = isSingleDayRange && startDate === todayStr
+  const isRange = !isSingleDayRange
+
+  const assignmentTitle = isTodayRange ? "Assignments Today" : isRange ? "Assignments (Range)" : "Assignments"
+  const callsTitle = isTodayRange ? "Calls Today" : isRange ? "Calls (Range)" : "Calls"
+  const reportsTitle = isTodayRange ? "Reports Today" : isRange ? "Reports (Range)" : "Reports"
+
   // ─── Stat cards ─────────────────────────────────────────────
   const statCards = [
     {
@@ -165,32 +167,28 @@ export default function AdminDashboard() {
       bgColor: "bg-primary/5",
     },
     {
-      title: "Assignments Today",
+      title: assignmentTitle,
       value: stats.assignments_today,
       icon: Calendar,
       color: "text-secondary",
       bgColor: "bg-secondary/5",
     },
     {
-      title: "Calls Today",
+      title: callsTitle,
       value: stats.calls_today,
       icon: Phone,
       color: "text-emerald-600",
       bgColor: "bg-emerald-500/10",
     },
     {
-      title: "Qualified (Hot+)",
-      value:
-        (stats.prospect_status_counts?.hot || 0) +
-        (stats.prospect_status_counts?.visit_scheduled || 0) +
-        (stats.prospect_status_counts?.visit_done || 0) +
-        (stats.prospect_status_counts?.admission_done || 0),
+      title: "Hot / Qualified",
+      value: stats.prospect_status_counts?.hot || 0,
       icon: CheckCircle2,
       color: "text-teal-600",
       bgColor: "bg-teal-500/10",
     },
     {
-      title: "Reports Today",
+      title: reportsTitle,
       value: stats.reports_today,
       icon: FileText,
       color: "text-amber-600",
@@ -213,11 +211,12 @@ export default function AdminDashboard() {
     fill: PIPELINE_COLORS[item.status] || "#a8a8a8",
   }))
 
+
   const telecallerChartData = telecallerPerf.map((tc: any) => ({
     name: tc.name.split(" ")[0],
     calls: tc.total_calls,
-    qualified: tc.qualified,
     interested: tc.interested,
+    callbacks: tc.callbacks,
   }))
 
   return (
@@ -235,7 +234,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker onRangeChange={handleRangeChange} />
+          <DateRangePicker onRangeChange={handleRangeChange} defaultStart={startDate} defaultEnd={endDate} />
           <Button onClick={() => fetchData()} variant="outline" size="sm" disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh
@@ -260,154 +259,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Call Outcome — Vertical Bar Chart */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              Call Outcome Distribution
-              {callOutcomeChartData.length > 0 && (
-                <Badge variant="secondary" className="ml-auto text-[10px] font-semibold">
-                  {callOutcomeChartData.reduce((s: number, d: any) => s + d.value, 0)} Total
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {callOutcomeChartData.length > 0 ? (
-              <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[...callOutcomeChartData].sort((a: any, b: any) => b.value - a.value)}
-                    margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 10, fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval={0}
-                      angle={-35}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "10px",
-                        padding: "8px 14px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      }}
-                      formatter={(value: number) => [`${value} calls`, "Count"]}
-                      cursor={false}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[6, 6, 0, 0]}
-                      barSize={28}
-                      label={{
-                        position: "top",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fill: "hsl(var(--muted-foreground))",
-                      }}
-                    >
-                      {[...callOutcomeChartData]
-                        .sort((a: any, b: any) => b.value - a.value)
-                        .map((entry: any, index: number) => (
-                          <Cell key={`bar-${index}`} fill={entry.color} />
-                        ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No call data yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Conversion Funnel — Vertical Bar Chart */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Conversion Funnel
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pipelineChartData.length > 0 ? (
-              <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={pipelineChartData}
-                    margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 10, fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval={0}
-                      angle={-35}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "10px",
-                        padding: "8px 14px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                      }}
-                      formatter={(value: number) => [`${value} prospects`, "Count"]}
-                      cursor={false}
-                    />
-                    <Bar
-                      dataKey="value"
-                      radius={[6, 6, 0, 0]}
-                      barSize={28}
-                      label={{
-                        position: "top",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fill: "hsl(var(--muted-foreground))",
-                      }}
-                    >
-                      {pipelineChartData.map((entry: any, index: number) => (
-                        <Cell key={`funnel-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                No pipeline data yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Telecaller Performance */}
@@ -444,14 +295,14 @@ export default function AdminDashboard() {
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
-                    dataKey="qualified"
-                    name="Qualified"
+                    dataKey="interested"
+                    name="Interested"
                     fill="#24a148"
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
-                    dataKey="interested"
-                    name="Interested"
+                    dataKey="callbacks"
+                    name="Callbacks"
                     fill="#f1c21b"
                     radius={[4, 4, 0, 0]}
                   />
@@ -496,13 +347,13 @@ export default function AdminDashboard() {
                     </div>
                     <div className="text-center">
                       <p className="font-semibold text-lg text-success">
-                        {tc.qualified}
+                        {tc.qualified || 0}
                       </p>
                       <p className="text-muted-foreground">Qualified</p>
                     </div>
                     <div className="text-center">
                       <p className="font-semibold text-lg text-primary">
-                        {tc.interested}
+                        {tc.interested || 0}
                       </p>
                       <p className="text-muted-foreground">Interested</p>
                     </div>

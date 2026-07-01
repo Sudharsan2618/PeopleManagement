@@ -40,10 +40,10 @@ const STATUS_LABELS: Record<string, string> = {
   warm: "Warm",
   hot: "Hot",
   visit_scheduled: "Visit Scheduled",
-  visit_done: "Visit Done",
-  admission_done: "Admitted",
-  cold_no_response: "No Response",
-  cold_not_interested: "Not Interested",
+  visit_done: "Visit Done / Decision Pending",
+  admission_done: "Admission Done ✓",
+  cold_no_response: "Cold / No Response",
+  cold_not_interested: "Cold / Not Interested",
   lost: "Lost",
 }
 
@@ -71,9 +71,16 @@ export default function AssignProspectsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [selectedProspects, setSelectedProspects] = useState<number[]>([])
+  const [selectedDashboard, setSelectedDashboard] = useState<string>("")
   const [selectedTelecaller, setSelectedTelecaller] = useState<string>("")
 
   const adminId = user ? Number(user.id) : 0
+
+  const dashboardOptions = [
+    { value: "student_admission", label: "Student Admission" },
+    { value: "college_contact", label: "College Contact" },
+    { value: "edii", label: "EDII" },
+  ]
 
   const fetchData = async () => {
     try {
@@ -148,6 +155,22 @@ export default function AssignProspectsPage() {
     return counts
   }, [assignments])
 
+  const filteredTelecallers = useMemo(() => {
+    if (!selectedDashboard) return telecallers
+
+    const dashboardTelecallerIds = new Set(
+      assignments
+        .filter((assignment) => assignment.dashboard === selectedDashboard)
+        .map((assignment) => assignment.telecaller_id)
+    )
+
+    if (dashboardTelecallerIds.size > 0) {
+      return telecallers.filter((telecaller) => dashboardTelecallerIds.has(telecaller.id))
+    }
+
+    return telecallers
+  }, [assignments, selectedDashboard, telecallers])
+
   // Selection handlers
   const handleSelectAll = () => {
     if (selectedProspects.length === filteredProspects.length) {
@@ -166,36 +189,49 @@ export default function AssignProspectsPage() {
   // Assign handler
   const handleAssign = async (telecallerId: number) => {
     if (selectedProspects.length === 0) return
+    if (!selectedDashboard) {
+      toast({
+        title: "Dashboard required",
+        description: "Please choose a dashboard before assigning prospects.",
+        variant: "destructive",
+      })
+      return
+    }
 
     setIsAssigning(true)
     const today = new Date().toISOString().split("T")[0]
     let successCount = 0
     let failCount = 0
 
-    for (const prospectId of selectedProspects) {
-      try {
-        await assignmentsApi.create({
-          prospect_id: prospectId,
-          telecaller_id: telecallerId,
-          assigned_by: adminId,
-          assigned_date: today,
-        })
-        successCount++
-      } catch {
-        failCount++
+    try {
+      for (const prospectId of selectedProspects) {
+        try {
+          await assignmentsApi.create({
+            prospect_id: prospectId,
+            telecaller_id: telecallerId,
+            assigned_by: adminId,
+            assigned_date: today,
+            dashboard: selectedDashboard,
+          })
+          successCount++
+        } catch {
+          failCount++
+        }
       }
+
+      toast({
+        title: `Assignment Complete`,
+        description: `${successCount} prospect(s) assigned${failCount > 0 ? `, ${failCount} failed (may already be assigned today)` : ""}`,
+        variant: failCount > 0 ? "destructive" : "default",
+      })
+
+      setSelectedProspects([])
+      setSelectedDashboard("")
+      setSelectedTelecaller("")
+      await fetchData()
+    } finally {
+      setIsAssigning(false)
     }
-
-    toast({
-      title: `Assignment Complete`,
-      description: `${successCount} prospect(s) assigned${failCount > 0 ? `, ${failCount} failed (may already be assigned today)` : ""}`,
-      variant: failCount > 0 ? "destructive" : "default",
-    })
-
-    setSelectedProspects([])
-    setSelectedTelecaller("")
-    await fetchData()
-    setIsAssigning(false)
   }
 
   if (isLoading) {
@@ -245,26 +281,47 @@ export default function AssignProspectsPage() {
                   {selectedProspects.length !== 1 ? "s" : ""} selected
                 </p>
                 <p className="text-sm text-blue-800 mt-0.5">
-                  Choose a telecaller to assign
+                  Choose a dashboard and telecaller to assign
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                {telecallers.map((tc) => (
-                  <Button
-                    key={tc.id}
-                    size="sm"
-                    onClick={() => handleAssign(tc.id)}
-                    disabled={isAssigning}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {isAssigning ? (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 mr-1" />
-                    )}
-                    {tc.name.split(" ")[0]}
-                  </Button>
-                ))}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={selectedDashboard} onValueChange={setSelectedDashboard}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Assign to Dashboard" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dashboardOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedTelecaller} onValueChange={setSelectedTelecaller}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Assign Telecaller" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredTelecallers.map((tc) => (
+                      <SelectItem key={tc.id} value={String(tc.id)}>
+                        {tc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  onClick={() => handleAssign(Number(selectedTelecaller))}
+                  disabled={isAssigning || !selectedDashboard || !selectedTelecaller}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isAssigning ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-1" />
+                  )}
+                  Assign
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -298,6 +355,12 @@ export default function AssignProspectsPage() {
                   <SelectItem value="contacted">Contacted</SelectItem>
                   <SelectItem value="warm">Warm</SelectItem>
                   <SelectItem value="hot">Hot</SelectItem>
+                  <SelectItem value="visit_scheduled">Visit Scheduled</SelectItem>
+                  <SelectItem value="visit_done">Visit Done / Decision Pending</SelectItem>
+                  <SelectItem value="admission_done">Admission Done ✓</SelectItem>
+                  <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
+                  <SelectItem value="cold_no_response">Cold / No Response</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>
               </Select>
             </div>

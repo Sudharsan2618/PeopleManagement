@@ -28,7 +28,7 @@ export default function RootLayout({
     <html lang="en" className={`${ibmPlexSans.variable} bg-background`}>
       <body className="font-sans antialiased">
         <AuthProvider>
-          {children}
+            {children}
           <Toaster />
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

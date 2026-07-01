@@ -108,3 +108,13 @@ def delete_task(task_id: int):
         return {"message": "Task deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    """Delete a task."""
+    existing_task = FollowUpTaskService.get_task_by_id(task_id)
+    if not existing_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    try:
+        FollowUpTaskService.delete_task(task_id)
+        return {"message": "Task deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

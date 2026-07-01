@@ -5,11 +5,13 @@ import psycopg2
 from psycopg2 import pool, OperationalError
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager, asynccontextmanager
+from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from the backend folder so the DB config is correct
+dotenv_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path)
 
 log = logging.getLogger(__name__)
 
@@ -23,10 +25,12 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "course_enrollment"),
     "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", "password"),
-    "connect_timeout": 5,
+    "connect_timeout": 30,
     "sslmode": os.getenv("DB_SSLMODE", "require"),
     "options": "-c timezone=Asia/Kolkata"
 }
+
+log.info("🔧 PostgreSQL config loaded: host=%s db=%s user=%s sslmode=%s", DB_CONFIG["host"], DB_CONFIG["database"], DB_CONFIG["user"], DB_CONFIG["sslmode"])
 
 # ── Pool tuning ───────────────────────────────────────────────────────────────
 # minconn=1 keeps cold-start work small — only one connection opened at init.

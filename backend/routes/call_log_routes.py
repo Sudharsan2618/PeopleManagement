@@ -6,11 +6,11 @@ from services.call_log_service import CallLogService
 router = APIRouter(prefix="/call-logs", tags=["call-logs"])
 
 
-@router.get("", response_model=List[CallLog])
-def get_all_call_logs():
+@router.get("")
+def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None, prospect_type: str = None):
     """Get all call logs."""
     try:
-        call_logs = CallLogService.get_all_call_logs()
+        call_logs = CallLogService.get_all_call_logs(start_date=start_date, end_date=end_date, telecaller_id=telecaller_id, prospect_type=prospect_type)
         return call_logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -45,11 +45,12 @@ def get_call_logs_by_telecaller(telecaller_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 @router.get("/callbacks/pending", response_model=List[CallLog])
-def get_pending_callbacks():
+def get_pending_callbacks(telecaller_id: int | None = None):
     """Get all pending callbacks that are scheduled."""
     try:
-        call_logs = CallLogService.get_pending_callbacks()
+        call_logs = CallLogService.get_pending_callbacks(telecaller_id=telecaller_id)
         return call_logs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -58,6 +59,13 @@ def get_pending_callbacks():
 @router.post("", response_model=CallLog, status_code=201)
 def create_call_log(call_log: CallLogCreate):
     """Create a new call log."""
+    # Validate callback fields
+    if call_log.outcome == "callback" and not call_log.callback_scheduled_at:
+        raise HTTPException(
+            status_code=400, 
+            detail="callback_scheduled_at is required when outcome is 'callback'"
+        )
+    
     try:
         log_id = CallLogService.create_call_log(
             prospect_id=call_log.prospect_id,
@@ -71,6 +79,8 @@ def create_call_log(call_log: CallLogCreate):
             callback_scheduled_at=call_log.callback_scheduled_at
         )
         return CallLogService.get_call_log_by_id(log_id)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -109,3 +119,57 @@ def delete_call_log(log_id: int):
         return {"message": "Call log deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/{log_id}/mark-notification-shown", response_model=CallLog)
+def mark_notification_shown(log_id: int):
+    """Mark callback notification as shown."""
+    existing_log = CallLogService.get_call_log_by_id(log_id)
+    if not existing_log:
+        raise HTTPException(status_code=404, detail="Call log not found")
+    
+    try:
+        from datetime import datetime
+        CallLogService.update_call_log(
+            log_id=log_id,
+            notification_shown=True,
+            notification_last_shown_at=datetime.utcnow()
+        )
+        return CallLogService.get_call_log_by_id(log_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/{log_id}/mark-notification-dismissed", response_model=CallLog)
+def mark_notification_dismissed(log_id: int):
+    """Mark callback notification as dismissed."""
+    existing_log = CallLogService.get_call_log_by_id(log_id)
+    if not existing_log:
+        raise HTTPException(status_code=404, detail="Call log not found")
+    
+    try:
+        CallLogService.update_call_log(
+            log_id=log_id,
+            notification_dismissed=True
+        )
+        return CallLogService.get_call_log_by_id(log_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/{log_id}/reset-notification", response_model=CallLog)
+def reset_notification(log_id: int):
+    """Reset callback notification state to shown=False (for Remind Later/Snooze)."""
+    existing_log = CallLogService.get_call_log_by_id(log_id)
+    if not existing_log:
+        raise HTTPException(status_code=404, detail="Call log not found")
+    
+    try:
+        CallLogService.update_call_log(
+            log_id=log_id,
+            notification_shown=False
+        )
+        return CallLogService.get_call_log_by_id(log_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

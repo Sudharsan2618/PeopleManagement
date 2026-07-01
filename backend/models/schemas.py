@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import date, datetime
 from typing import Optional, List, Any, Dict
 
@@ -68,14 +68,26 @@ class ProspectBase(BaseModel):
     email: Optional[str] = Field(None, max_length=255)
     location: Optional[str] = Field(None, max_length=150)
     sourced_from: Optional[str] = Field(None, max_length=100)
-    status: str = Field(default="new", max_length=50, description="'new' | 'contacted' | 'warm' | 'hot' | 'visit_scheduled' | 'visit_done' | 'admission_done' | 'cold_no_response' | 'cold_not_interested' | 'lost'")
+    status: str = Field(default="new", max_length=100, description="'new' | 'contacted' | 'warm' | 'hot' | 'visit_scheduled' | 'visit_done' | 'admission_done' | 'cold_no_response' | 'cold_not_interested' | 'lost' | 'Interested' | 'Interested Followup' | 'Proposal To Be Sent' | 'Proposal Sent' | 'Training Date Followup' | 'Qualified' | 'Ringing / Not Reachable' | 'Not Interested'")
     course_interest: Optional[str] = Field(None, max_length=100)
     parent_name: Optional[str] = Field(None, max_length=150)
     department: Optional[str] = Field(None, max_length=150)
     assigned_to: Optional[int] = None
     closing_reason: Optional[str] = Field(None, max_length=255)
     tags: Optional[Any] = None
-
+    lead_source: Optional[List[str]] = Field(default=[])
+    lead_type: Optional[List[str]] = Field(default=[])
+    alt_phone: Optional[str] = Field(None, max_length=20)
+    secondary_email: Optional[str] = Field(None, max_length=255)
+    city: Optional[str] = Field(None, max_length=100)
+    address: Optional[str] = None
+    postal_code: Optional[str] = Field(None, max_length=20)
+    designation: Optional[str] = Field(None, max_length=150)
+    prospect_type: Optional[str] = Field(default="student_admission", max_length=50)
+    company: Optional[str] = Field(None, max_length=200)
+    comments: Optional[str] = Field(None, max_length=1000)
+    follow_up_date: Optional[str] = Field(None, max_length=50)
+    is_imported: bool = Field(default=False, description="Whether this prospect was imported from a lead sheet")
 
 class ProspectCreate(ProspectBase):
     created_by: int
@@ -86,14 +98,26 @@ class ProspectUpdate(BaseModel):
     email: Optional[str] = Field(None, max_length=255)
     location: Optional[str] = Field(None, max_length=150)
     sourced_from: Optional[str] = Field(None, max_length=100)
-    status: Optional[str] = Field(None, max_length=50)
+    status: Optional[str] = Field(None, max_length=100)
     course_interest: Optional[str] = Field(None, max_length=100)
     parent_name: Optional[str] = Field(None, max_length=150)
     department: Optional[str] = Field(None, max_length=150)
     assigned_to: Optional[int] = None
     closing_reason: Optional[str] = Field(None, max_length=255)
     tags: Optional[Any] = None
-
+    lead_source: Optional[List[str]] = None
+    lead_type: Optional[List[str]] = None
+    alt_phone: Optional[str] = Field(None, max_length=20)
+    secondary_email: Optional[str] = Field(None, max_length=255)
+    city: Optional[str] = Field(None, max_length=100)
+    address: Optional[str] = None
+    postal_code: Optional[str] = Field(None, max_length=20)
+    designation: Optional[str] = Field(None, max_length=150)
+    prospect_type: Optional[str] = Field(None, max_length=50)
+    company: Optional[str] = Field(None, max_length=200)
+    comments: Optional[str] = Field(None, max_length=1000)
+    follow_up_date: Optional[str] = Field(None, max_length=50)
+    is_imported: Optional[bool] = None
 
 class Prospect(ProspectBase):
     id: int
@@ -115,6 +139,7 @@ class ProspectAssignmentBase(BaseModel):
     telecaller_id: int
     assigned_by: int
     assigned_date: date
+    dashboard: Optional[str] = Field(default="student_admission", max_length=50)
 
 
 class ProspectAssignmentCreate(ProspectAssignmentBase):
@@ -134,21 +159,29 @@ class CallLogBase(BaseModel):
     prospect_id: int
     telecaller_id: int
     assignment_id: Optional[int] = None
-    outcome: str = Field(..., max_length=50, description="'not_answered' | 'busy' | 'wrong_number' | 'callback' | 'not_interested' | 'dnc' | 'language_barrier' | 'interested' | 'qualified' | 'enrolled_elsewhere'")
-    status_after_call: Optional[str] = Field(None, max_length=50)
+    outcome: str = Field(..., max_length=100)
+    status_after_call: Optional[str] = Field(None, max_length=100)
     reason: Optional[str] = Field(None, max_length=255)
     notes: Optional[str] = None
     course_interest: Optional[str] = Field(None, max_length=100)
     callback_scheduled_at: Optional[datetime] = None
+    notification_shown: bool = False
+    notification_dismissed: bool = False
+    notification_last_shown_at: Optional[datetime] = None
 
 
 class CallLogCreate(CallLogBase):
-    pass
+    @field_validator('callback_scheduled_at')
+    @classmethod
+    def validate_callback_time(cls, v, info):
+        if info.data.get('outcome') == 'callback' and not v:
+            raise ValueError('callback_scheduled_at is required when outcome is "callback"')
+        return v
 
 
 class CallLogUpdate(BaseModel):
-    outcome: Optional[str] = Field(None, max_length=50)
-    status_after_call: Optional[str] = Field(None, max_length=50)
+    outcome: Optional[str] = Field(None, max_length=100)
+    status_after_call: Optional[str] = Field(None, max_length=100)
     reason: Optional[str] = Field(None, max_length=255)
     notes: Optional[str] = None
     course_interest: Optional[str] = Field(None, max_length=100)
@@ -158,6 +191,11 @@ class CallLogUpdate(BaseModel):
 class CallLog(CallLogBase):
     id: int
     called_at: datetime
+    prospect_name: Optional[str] = None
+    prospect_phone: Optional[str] = None
+    prospect_course_interest: Optional[str] = None
+    telecaller_name: Optional[str] = None
+    institution_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -313,6 +351,7 @@ class FollowUpTask(FollowUpTaskBase):
     id: int
     resolution_note: Optional[str]
     created_at: datetime
+    followup_category: Optional[str] = None
 
     class Config:
         from_attributes = True
