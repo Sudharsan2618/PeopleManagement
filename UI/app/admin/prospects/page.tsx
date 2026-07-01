@@ -200,10 +200,18 @@ export default function AdminProspectsPage() {
   }
 
   const handleSelectAll = () => {
-    if (selectedProspectIds.length === paginatedProspects.length) {
-      setSelectedProspectIds([])
+    const currentPageIds = paginatedProspects.map(p => p.id)
+    const allCurrentPageSelected = currentPageIds.every(id => selectedProspectIds.includes(id))
+    
+    if (allCurrentPageSelected) {
+      // All items on current page are selected, so deselect them
+      setSelectedProspectIds(prev => prev.filter(id => !currentPageIds.includes(id)))
     } else {
-      setSelectedProspectIds(paginatedProspects.map((p) => p.id))
+      // Not all items on current page are selected, so add them to existing selection
+      setSelectedProspectIds(prev => {
+        const newIds = currentPageIds.filter(id => !prev.includes(id))
+        return [...prev, ...newIds]
+      })
     }
   }
 
@@ -591,7 +599,7 @@ export default function AdminProspectsPage() {
                       className="h-4 w-4 rounded border-gray-300"
                       checked={
                         paginatedProspects.length > 0 &&
-                        selectedProspectIds.length === paginatedProspects.length
+                        paginatedProspects.every(p => selectedProspectIds.includes(p.id))
                       }
                       onChange={handleSelectAll}
                     />
