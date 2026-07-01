@@ -52,15 +52,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-              <GraduationCap className="h-8 w-8 text-primary-foreground" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-foreground text-background">
+              <GraduationCap className="h-6 w-6" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+          <CardTitle className="text-xl font-semibold">Welcome Back</CardTitle>
           <CardDescription>
             Sign in to TATTI CRM
           </CardDescription>

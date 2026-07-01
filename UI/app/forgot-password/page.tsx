@@ -37,15 +37,15 @@ export default function ForgotPasswordPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DEFBE6]">
+                <CheckCircle2 className="h-6 w-6 text-[#0E6027]" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
+            <CardTitle className="text-xl font-semibold">Check Your Email</CardTitle>
             <CardDescription>
               We&apos;ve sent a password reset link to <strong>{email}</strong>. The link will expire in 24 hours.
             </CardDescription>
@@ -70,15 +70,15 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-              <GraduationCap className="h-8 w-8 text-primary-foreground" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-foreground text-background">
+              <GraduationCap className="h-6 w-6 animate-pulse" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Forgot Password?</CardTitle>
+          <CardTitle className="text-xl font-semibold">Forgot Password?</CardTitle>
           <CardDescription>
             Enter your registered email address and we&apos;ll send you a link to reset your password.
           </CardDescription>

@@ -39,17 +39,17 @@ import { followUpTasksApi, type FollowUpTask } from "@/lib/api-client"
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   pending: {
     label: "Pending",
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    color: "bg-[#FCF4D6] text-yellow-800 border-yellow-200",
     icon: Clock,
   },
   completed: {
     label: "Completed",
-    color: "bg-green-100 text-green-800 border-green-200",
+    color: "bg-[#DEFBE6] text-green-800 border-green-200",
     icon: CheckCircle2,
   },
   overdue: {
     label: "Overdue",
-    color: "bg-red-100 text-red-800 border-red-200",
+    color: "bg-[#FFF1F1] text-red-800 border-red-200",
     icon: AlertTriangle,
   },
 }
@@ -170,7 +170,7 @@ export default function FollowUpsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Follow-up Tasks</h1>
+          <h1 className="text-xl font-normal ">Follow-up Tasks</h1>
           <p className="text-muted-foreground flex items-center gap-2">
             {stats.pending} pending, {stats.overdue} overdue
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
@@ -202,33 +202,33 @@ export default function FollowUpsPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg p-2 bg-yellow-100">
-              <Clock className="h-5 w-5 text-yellow-600" />
+            <div className="rounded-lg p-2 bg-[#FCF4D6]">
+              <Clock className="h-5 w-5 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.pending}</p>
+              <p className="text-xl font-normal">{stats.pending}</p>
               <p className="text-xs text-muted-foreground">Pending</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg p-2 bg-red-100">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="rounded-lg p-2 bg-[#FFF1F1]">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.overdue}</p>
+              <p className="text-xl font-normal">{stats.overdue}</p>
               <p className="text-xs text-muted-foreground">Overdue</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="rounded-lg p-2 bg-green-100">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="rounded-lg p-2 bg-[#DEFBE6]">
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.completed}</p>
+              <p className="text-xl font-normal">{stats.completed}</p>
               <p className="text-xs text-muted-foreground">Completed</p>
             </div>
           </CardContent>
@@ -259,7 +259,7 @@ export default function FollowUpsPage() {
                 key={task.id}
                 className={cn(
                   "transition-colors",
-                  task.displayStatus === "overdue" && "border-red-200 bg-red-50/30",
+                  task.displayStatus === "overdue" && "border-red-200 bg-[#FFF1F1]/30",
                   task.displayStatus === "completed" && "opacity-70"
                 )}
               >
@@ -267,7 +267,7 @@ export default function FollowUpsPage() {
                   <div className="flex items-start justify-between">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-2">
-                        <StatusIcon className={cn("h-4 w-4", sc.color.includes("yellow") ? "text-yellow-600" : sc.color.includes("red") ? "text-red-600" : "text-green-600")} />
+                        <StatusIcon className={cn("h-4 w-4", sc.color.includes("yellow") ? "text-warning" : sc.color.includes("red") ? "text-destructive" : "text-success")} />
                         <span className="font-semibold">
                           {task.action_description}
                         </span>
@@ -300,7 +300,7 @@ export default function FollowUpsPage() {
                       </div>
 
                       {task.resolution_note && (
-                        <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1 inline-block">
+                        <p className="text-xs text-green-700 bg-[#DEFBE6] rounded px-2 py-1 inline-block">
                           ✓ {task.resolution_note}
                         </p>
                       )}

@@ -74,7 +74,7 @@ export default function HubsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Hub Management</h1>
+          <h1 className="text-xl font-normal text-foreground">Hub Management</h1>
           <p className="text-muted-foreground">Manage regional hubs and their assignments</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -135,11 +135,11 @@ export default function HubsPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-full bg-[#EDF5FF] flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{mockHubs.length}</div>
+                <div className="text-xl font-normal">{mockHubs.length}</div>
                 <p className="text-xs text-muted-foreground">Total Hubs</p>
               </div>
             </div>
@@ -148,11 +148,11 @@ export default function HubsPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-full bg-[#DEFBE6] flex items-center justify-center">
+                <Users className="h-5 w-5 text-success" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{mockUsers.length}</div>
+                <div className="text-xl font-normal">{mockUsers.length}</div>
                 <p className="text-xs text-muted-foreground">Total Agents</p>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function HubsPage() {
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-normal">
                   {mockUsers.filter(u => u.role === 'telecaller').length}
                 </div>
                 <p className="text-xs text-muted-foreground">Telecallers</p>
@@ -176,11 +176,11 @@ export default function HubsPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-orange-600" />
+              <div className="h-10 w-10 rounded-full bg-[#FCF4D6] flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-normal">
                   {mockUsers.filter(u => u.role === 'spoc').length}
                 </div>
                 <p className="text-xs text-muted-foreground">Field Agents</p>
@@ -251,12 +251,12 @@ export default function HubsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                          <Badge variant="outline" className="bg-[#EDF5FF] text-blue-700">
                             {stats.telecallers}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-green-50 text-green-700">
+                          <Badge variant="outline" className="bg-[#DEFBE6] text-green-700">
                             {stats.spocs}
                           </Badge>
                         </TableCell>
@@ -268,7 +268,7 @@ export default function HubsPage() {
                         </TableCell>
                         <TableCell>
                           {hub.isActive ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <Badge variant="outline" className="bg-[#DEFBE6] text-green-700 border-green-200">
                               Active
                             </Badge>
                           ) : (
@@ -300,7 +300,7 @@ export default function HubsPage() {
                                 Manage Agents
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem className="text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete Hub
                               </DropdownMenuItem>

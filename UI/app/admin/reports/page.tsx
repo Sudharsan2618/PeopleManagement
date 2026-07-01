@@ -334,7 +334,7 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Reports & Analytics</h1>
+          <h1 className="text-xl font-normal text-foreground">Reports & Analytics</h1>
           <p className="text-muted-foreground">Performance metrics and insights</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -360,11 +360,11 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Phone className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 rounded-full bg-[#EDF5FF] flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{summary.totalCalls}</div>
+                    <div className="text-xl font-normal">{summary.totalCalls}</div>
                     <p className="text-xs text-muted-foreground">Total Calls</p>
                   </div>
                 </div>
@@ -373,11 +373,11 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-green-600" />
+                  <div className="h-10 w-10 rounded-full bg-[#DEFBE6] flex items-center justify-center">
+                    <MapPin className="h-5 w-5 text-success" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{summary.totalVisits}</div>
+                    <div className="text-xl font-normal">{summary.totalVisits}</div>
                     <p className="text-xs text-muted-foreground">Field Visits</p>
                   </div>
                 </div>
@@ -390,7 +390,7 @@ export default function ReportsPage() {
                     <Target className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{summary.totalEnrollments}</div>
+                    <div className="text-xl font-normal">{summary.totalEnrollments}</div>
                     <p className="text-xs text-muted-foreground">Enrollments</p>
                   </div>
                 </div>
@@ -399,11 +399,11 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-orange-600" />
+                  <div className="h-10 w-10 rounded-full bg-[#FCF4D6] flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-warning" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold">{conversionRate}%</div>
+                    <div className="text-xl font-normal">{conversionRate}%</div>
                     <p className="text-xs text-muted-foreground">Conversion Rate</p>
                   </div>
                 </div>
@@ -441,9 +441,9 @@ export default function ReportsPage() {
                           borderRadius: '8px'
                         }} 
                       />
-                      <Bar dataKey="calls" fill="#3b82f6" name="Total Calls" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="connected" fill="#10b981" name="Connected" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="converted" fill="#8b5cf6" name="Converted" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="calls" fill="#0f62fe" name="Total Calls" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="connected" fill="#24a148" name="Connected" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="converted" fill="#8a3ffc" name="Converted" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -543,7 +543,7 @@ export default function ReportsPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                              <AvatarFallback className="text-xs bg-[#EDF5FF] text-blue-700">
                                 {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
@@ -602,8 +602,8 @@ export default function ReportsPage() {
                         borderRadius: '8px'
                       }} 
                     />
-                    <Line type="monotone" dataKey="calls" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="connected" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="calls" stroke="#0f62fe" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="connected" stroke="#24a148" strokeWidth={2} dot={{ r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -639,7 +639,7 @@ export default function ReportsPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                              <AvatarFallback className="text-xs bg-[#DEFBE6] text-green-700">
                                 {user.name.split(' ').map((n: string) => n[0]).join('')}
                               </AvatarFallback>
                             </Avatar>
@@ -693,8 +693,8 @@ export default function ReportsPage() {
                         borderRadius: '8px'
                       }} 
                     />
-                    <Bar dataKey="visits" fill="#10b981" name="Total Visits" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="successful" fill="#8b5cf6" name="Successful" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="visits" fill="#24a148" name="Total Visits" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="successful" fill="#8a3ffc" name="Successful" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -707,7 +707,7 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-primary">{summary.totalProspects}</div>
+                  <div className="text-4xl font-normal text-primary">{summary.totalProspects}</div>
                   <p className="text-sm text-muted-foreground mt-1">Total Prospects</p>
                 </div>
               </CardContent>
@@ -715,7 +715,7 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-green-600">
+                  <div className="text-4xl font-normal text-success">
                     {conversionFunnel.find((f: any) => f.stage === 'hot')?.count || 0 + conversionFunnel.find((f: any) => f.stage === 'admission_done')?.count || 0}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">Qualified Leads</p>
@@ -725,7 +725,7 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-purple-600">
+                  <div className="text-4xl font-normal text-purple-600">
                     {summary.totalEnrollments}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">Enrollments</p>

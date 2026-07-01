@@ -84,8 +84,8 @@ function Section({
   isOpen,
   onToggle,
   children,
-  iconBgColor = "bg-blue-100",
-  iconColor = "text-blue-600",
+  iconBgColor = "bg-[#EDF5FF]",
+  iconColor = "text-primary",
 }: SectionProps) {
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
@@ -448,7 +448,7 @@ export default function NewFieldReportPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Daily Field Report</h1>
+          <h1 className="text-xl font-normal ">Daily Field Report</h1>
           <p className="text-muted-foreground">
             Document your field activities for today
           </p>
@@ -509,8 +509,8 @@ export default function NewFieldReportPage() {
         icon={School}
         isOpen={openSections.schools}
         onToggle={() => toggleSection("schools")}
-        iconBgColor="bg-blue-100"
-        iconColor="text-blue-600"
+        iconBgColor="bg-[#EDF5FF]"
+        iconColor="text-primary"
       >
         <div className="space-y-4">
           <div className="space-y-2">
@@ -561,8 +561,8 @@ export default function NewFieldReportPage() {
         icon={Building2}
         isOpen={openSections.admission}
         onToggle={() => toggleSection("admission")}
-        iconBgColor="bg-green-100"
-        iconColor="text-green-600"
+        iconBgColor="bg-[#DEFBE6]"
+        iconColor="text-success"
       >
         <div className="space-y-4">
           <div className="space-y-2">
@@ -587,8 +587,8 @@ export default function NewFieldReportPage() {
         icon={Megaphone}
         isOpen={openSections.branding}
         onToggle={() => toggleSection("branding")}
-        iconBgColor="bg-orange-100"
-        iconColor="text-orange-600"
+        iconBgColor="bg-[#FCF4D6]"
+        iconColor="text-warning"
       >
         <div className="space-y-4">
           <div className="space-y-2">
@@ -759,8 +759,8 @@ export default function NewFieldReportPage() {
         icon={AlertCircle}
         isOpen={openSections.issues}
         onToggle={() => toggleSection("issues")}
-        iconBgColor="bg-red-100"
-        iconColor="text-red-600"
+        iconBgColor="bg-[#FFF1F1]"
+        iconColor="text-destructive"
       >
         <div className="space-y-4">
           <div className="space-y-2">

@@ -50,30 +50,30 @@ import {
 } from "@/components/ui/dialog"
 
 const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
-  not_answered: { label: "Not Answered", color: "bg-orange-100 text-orange-800" },
-  busy: { label: "Busy", color: "bg-yellow-100 text-yellow-800" },
-  wrong_number: { label: "Wrong Number", color: "bg-red-100 text-red-800" },
-  callback: { label: "Callback", color: "bg-blue-100 text-blue-800" },
+  not_answered: { label: "Not Answered", color: "bg-[#FCF4D6] text-orange-800" },
+  busy: { label: "Busy", color: "bg-[#FCF4D6] text-yellow-800" },
+  wrong_number: { label: "Wrong Number", color: "bg-[#FFF1F1] text-red-800" },
+  callback: { label: "Callback", color: "bg-[#EDF5FF] text-blue-800" },
   not_interested: { label: "Not Interested", color: "bg-gray-100 text-gray-800" },
-  dnc: { label: "DNC", color: "bg-red-100 text-red-800" },
+  dnc: { label: "DNC", color: "bg-[#FFF1F1] text-red-800" },
   language_barrier: { label: "Language Barrier", color: "bg-amber-100 text-amber-800" },
-  interested: { label: "Interested", color: "bg-green-100 text-green-800" },
+  interested: { label: "Interested", color: "bg-[#DEFBE6] text-green-800" },
   qualified: { label: "Qualified", color: "bg-emerald-100 text-emerald-800" },
   enrolled_elsewhere: { label: "Enrolled Elsewhere", color: "bg-purple-100 text-purple-800" },
   application_process: { label: "Application Process", color: "bg-teal-100 text-teal-800" },
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  new: { label: "New", color: "bg-blue-100 text-blue-800" },
+  new: { label: "New", color: "bg-[#EDF5FF] text-blue-800" },
   contacted: { label: "Contacted", color: "bg-sky-100 text-sky-800" },
-  warm: { label: "Warm", color: "bg-orange-100 text-orange-800" },
-  hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800" },
+  warm: { label: "Warm", color: "bg-[#FCF4D6] text-orange-800" },
+  hot: { label: "Hot 🔥", color: "bg-[#FFF1F1] text-red-800" },
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800" },
   visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800" },
   admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800" },
   cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800" },
   cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800" },
-  lost: { label: "Lost", color: "bg-red-50 text-red-600" },
+  lost: { label: "Lost", color: "bg-[#FFF1F1] text-destructive" },
 }
 
 const EXCLUDED_STATUSES = new Set(["contacted", "status_update", "lost", "cold_no_response"])
@@ -510,7 +510,7 @@ export default function CallHistoryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Call History</h1>
+          <h1 className="text-xl font-normal ">Call History</h1>
           <p className="text-sm text-muted-foreground">
             {callLogs.length} total calls logged
           </p>
@@ -518,7 +518,7 @@ export default function CallHistoryPage() {
         <div className="flex items-center gap-3">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="font-bold">
+              <Button variant="outline" size="sm" className="font-semibold">
                 <Download className="h-4 w-4 mr-2" /> Export CSV
               </Button>
             </DialogTrigger>
@@ -571,17 +571,17 @@ export default function CallHistoryPage() {
         <div className="flex flex-wrap gap-4">
           <Badge
             variant="outline"
-            className="text-xs px-4 py-2 font-bold bg-blue-50 text-blue-700 border-blue-200 shadow-sm rounded-lg flex items-center gap-2"
+            className="text-xs px-4 py-2 font-semibold bg-[#EDF5FF] text-blue-700 border-blue-200 shadow-sm rounded-lg flex items-center gap-2"
           >
             <span>Total Leads:</span>
-            <span className="text-sm bg-blue-100 px-2 py-0.5 rounded-md">{totalLeads}</span>
+            <span className="text-sm bg-[#EDF5FF] px-2 py-0.5 rounded-md">{totalLeads}</span>
           </Badge>
           <Badge
             variant="outline"
-            className="text-xs px-4 py-2 font-bold bg-yellow-50 text-yellow-700 border-yellow-200 shadow-sm rounded-lg flex items-center gap-2"
+            className="text-xs px-4 py-2 font-semibold bg-[#FCF4D6] text-yellow-700 border-yellow-200 shadow-sm rounded-lg flex items-center gap-2"
           >
             <span>Pending to Call:</span>
-            <span className="text-sm bg-yellow-100 px-2 py-0.5 rounded-md">{pendingLeadsCount}</span>
+            <span className="text-sm bg-[#FCF4D6] px-2 py-0.5 rounded-md">{pendingLeadsCount}</span>
           </Badge>
         </div>
 
@@ -613,7 +613,7 @@ export default function CallHistoryPage() {
       <Card className="border-2 shadow-lg rounded-2xl overflow-hidden">
         <CardHeader className="pb-4 border-b bg-muted/5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg font-bold">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <History className="h-5 w-5 text-primary" /> Call Log
             </CardTitle>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -658,13 +658,13 @@ export default function CallHistoryPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="w-12 text-center font-bold">#</TableHead>
-                  <TableHead className="font-bold">Prospect</TableHead>
-                  <TableHead className="font-bold">Mobile</TableHead>
-                  <TableHead className="font-bold">Outcome</TableHead>
-                  <TableHead className="font-bold">Status After</TableHead>
-                  <TableHead className="font-bold">Notes</TableHead>
-                  <TableHead className="font-bold">Called At</TableHead>
+                  <TableHead className="w-12 text-center font-semibold">#</TableHead>
+                  <TableHead className="font-semibold">Prospect</TableHead>
+                  <TableHead className="font-semibold">Mobile</TableHead>
+                  <TableHead className="font-semibold">Outcome</TableHead>
+                  <TableHead className="font-semibold">Status After</TableHead>
+                  <TableHead className="font-semibold">Notes</TableHead>
+                  <TableHead className="font-semibold">Called At</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -687,7 +687,7 @@ export default function CallHistoryPage() {
                         <TableCell className="text-center text-muted-foreground font-medium">
                           {index + 1}
                         </TableCell>
-                        <TableCell className="font-bold text-slate-900">
+                        <TableCell className="font-semibold text-slate-900">
                           {prospect?.name || `Prospect #${log.prospect_id}`}
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
@@ -696,7 +696,7 @@ export default function CallHistoryPage() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={cn("text-[10px] uppercase font-bold px-2 py-0.5", outcomeConf?.color)}
+                            className={cn("text-[10px] uppercase font-semibold px-2 py-0.5", outcomeConf?.color)}
                           >
                             {outcomeConf?.label || log.outcome}
                           </Badge>
@@ -709,7 +709,7 @@ export default function CallHistoryPage() {
                             {log.notes ? `"${log.notes}"` : "—"}
                           </span>
                         </TableCell>
-                        <TableCell className="text-[11px] font-bold text-muted-foreground/80 whitespace-nowrap">
+                        <TableCell className="text-[11px] font-semibold text-muted-foreground/80 whitespace-nowrap">
                           {new Date(log.called_at).toLocaleString("en-IN", {
                             day: '2-digit',
                             month: 'short',
@@ -725,7 +725,7 @@ export default function CallHistoryPage() {
               </TableBody>
             </Table>
           </div>
-          <div className="p-4 border-t bg-muted/5 text-xs font-bold text-muted-foreground flex justify-between items-center">
+          <div className="p-4 border-t bg-muted/5 text-xs font-semibold text-muted-foreground flex justify-between items-center">
             <span>Showing {filteredLogs.length} of {callLogs.length} entries</span>
             <div className="flex gap-1">
               {/* Pagination could go here if needed */}

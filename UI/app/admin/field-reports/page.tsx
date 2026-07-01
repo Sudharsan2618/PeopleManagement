@@ -112,7 +112,7 @@ export default function AdminFieldReportsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Field Reports</h1>
+          <h1 className="text-xl font-normal ">Field Reports</h1>
           <p className="text-muted-foreground mt-1">
             View and manage field activity reports from spoc team
           </p>
@@ -126,13 +126,13 @@ export default function AdminFieldReportsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{reports.length}</div>
+            <div className="text-xl font-normal">{reports.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Total Reports</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{submittedToday}</div>
+            <div className="text-xl font-normal">{submittedToday}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Submitted Today
             </p>
@@ -140,7 +140,7 @@ export default function AdminFieldReportsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-normal">
               {reports.filter((r: any) => !r.is_draft).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Submitted</p>
@@ -148,7 +148,7 @@ export default function AdminFieldReportsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">
+            <div className="text-xl font-normal text-warning">
               {reports.filter((r: any) => r.is_draft).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Drafts</p>
@@ -201,8 +201,8 @@ export default function AdminFieldReportsPage() {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-start gap-4 flex-1">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                          <FileText className="h-5 w-5 text-blue-600" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EDF5FF]">
+                          <FileText className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-sm">
@@ -223,7 +223,7 @@ export default function AdminFieldReportsPage() {
                             </div>
                             {report.submitted_at && (
                               <div className="flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                <CheckCircle2 className="h-3 w-3 text-success" />
                                 Submitted{" "}
                                 {new Date(report.submitted_at).toLocaleString(
                                   "en-IN",
@@ -238,8 +238,8 @@ export default function AdminFieldReportsPage() {
                         variant="outline"
                         className={cn(
                           report.is_draft
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-green-50 text-green-700"
+                            ? "bg-[#FCF4D6] text-yellow-700"
+                            : "bg-[#DEFBE6] text-green-700"
                         )}
                       >
                         {report.is_draft ? "Draft" : "Submitted"}

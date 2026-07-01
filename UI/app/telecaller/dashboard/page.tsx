@@ -86,16 +86,16 @@ const OUTCOME_TO_PROSPECT_STATUS: Record<string, string> = {
 
 // ─── Status display config ─────────────────────────────────────
 const statusConfig: Record<string, { label: string; color: string }> = {
-  new: { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  new: { label: "New", color: "bg-[#EDF5FF] text-blue-800 border-blue-200" },
   contacted: { label: "Contacted", color: "bg-sky-100 text-sky-800 border-sky-200" },
-  warm: { label: "Warm", color: "bg-orange-100 text-orange-800 border-orange-200" },
-  hot: { label: "Hot 🔥", color: "bg-red-100 text-red-800 border-red-200" },
+  warm: { label: "Warm", color: "bg-[#FCF4D6] text-orange-800 border-orange-200" },
+  hot: { label: "Hot 🔥", color: "bg-[#FFF1F1] text-red-800 border-red-200" },
   visit_scheduled: { label: "Visit Scheduled", color: "bg-purple-100 text-purple-800 border-purple-200" },
   visit_done: { label: "Visit Done", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   admission_done: { label: "Admitted ✓", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   cold_no_response: { label: "No Response", color: "bg-gray-100 text-gray-800 border-gray-200" },
   cold_not_interested: { label: "Not Interested", color: "bg-slate-100 text-slate-800 border-slate-200" },
-  lost: { label: "Lost", color: "bg-red-50 text-red-600 border-red-200" },
+  lost: { label: "Lost", color: "bg-[#FFF1F1] text-destructive border-red-200" },
 }
 
 export default function TelecallerDashboard() {
@@ -226,29 +226,29 @@ export default function TelecallerDashboard() {
       title: "Today's Prospects",
       value: telecallerStats.todaysProspects,
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-primary",
+      bgColor: "bg-[#EDF5FF]",
     },
     {
       title: "Calls Made",
       value: telecallerStats.called,
       icon: Phone,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-success",
+      bgColor: "bg-[#DEFBE6]",
     },
     {
       title: "Pending",
       value: telecallerStats.pending,
       icon: Clock,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-100",
+      color: "text-warning",
+      bgColor: "bg-[#FCF4D6]",
     },
     {
       title: "Callbacks Due",
       value: telecallerStats.callbacksDue,
       icon: AlertCircle,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
+      color: "text-warning",
+      bgColor: "bg-[#FCF4D6]",
     },
     {
       title: "Qualified / Hot",
@@ -419,7 +419,7 @@ export default function TelecallerDashboard() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl font-normal ">Dashboard</h1>
           <p className="text-muted-foreground flex items-center gap-2">
             Welcome back, {user?.name}! You have{" "}
             {telecallerStats.pending} prospects pending today.
@@ -445,7 +445,7 @@ export default function TelecallerDashboard() {
                   <stat.icon className={cn("h-5 w-5", stat.color)} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xl font-normal">{stat.value}</p>
                   <p className="text-xs text-muted-foreground">{stat.title}</p>
                 </div>
               </div>
@@ -548,8 +548,8 @@ export default function TelecallerDashboard() {
                       <TableRow
                         key={prospect.id}
                         className={cn(
-                          prospect.status === "warm" && "bg-orange-50/50",
-                          prospect.status === "hot" && "bg-red-50/30"
+                          prospect.status === "warm" && "bg-[#FCF4D6]/50",
+                          prospect.status === "hot" && "bg-[#FFF1F1]/30"
                         )}
                       >
                         <TableCell className="font-medium text-muted-foreground">
@@ -559,7 +559,7 @@ export default function TelecallerDashboard() {
                           <div className="flex flex-col">
                             <span className="font-medium">{prospect.name}</span>
                             {prospect.callbackDateTime && (
-                              <span className="text-[10px] text-orange-600 flex items-center gap-1">
+                              <span className="text-[10px] text-warning flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 CB:{" "}
                                 {new Date(

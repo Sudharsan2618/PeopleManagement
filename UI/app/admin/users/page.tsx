@@ -59,8 +59,8 @@ import { usersApi, adaptApiUserToUiUser } from "@/lib/api-client"
 
 const roleColors: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800",
-  telecaller: "bg-blue-100 text-blue-800",
-  spoc: "bg-green-100 text-green-800",
+  telecaller: "bg-[#EDF5FF] text-blue-800",
+  spoc: "bg-[#DEFBE6] text-green-800",
 }
 
 const roleIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -148,7 +148,7 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+          <h1 className="text-xl font-normal text-foreground">User Management</h1>
           <p className="text-muted-foreground">Manage system users and their roles</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -215,31 +215,31 @@ export default function UsersPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{userStats.total}</div>
+            <div className="text-xl font-normal">{userStats.total}</div>
             <p className="text-xs text-muted-foreground">Total Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-600">{userStats.active}</div>
+            <div className="text-xl font-normal text-success">{userStats.active}</div>
             <p className="text-xs text-muted-foreground">Active Users</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-purple-600">{userStats.admins}</div>
+            <div className="text-xl font-normal text-purple-600">{userStats.admins}</div>
             <p className="text-xs text-muted-foreground">Admins</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-blue-600">{userStats.telecallers}</div>
+            <div className="text-xl font-normal text-primary">{userStats.telecallers}</div>
             <p className="text-xs text-muted-foreground">Telecallers</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-600">{userStats.spocs}</div>
+            <div className="text-xl font-normal text-success">{userStats.spocs}</div>
             <p className="text-xs text-muted-foreground">Field Agents</p>
           </CardContent>
         </Card>
@@ -332,7 +332,7 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell>
                           {user.isActive ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <Badge variant="outline" className="bg-[#DEFBE6] text-green-700 border-green-200">
                               Active
                             </Badge>
                           ) : (
@@ -379,7 +379,7 @@ export default function UsersPage() {
                                 )}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem className="text-destructive">
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete User
                               </DropdownMenuItem>

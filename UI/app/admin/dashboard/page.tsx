@@ -36,16 +36,16 @@ import { DateRangePicker } from "@/components/ui/date-range-picker"
 
 // ─── Colors for charts ──────────────────────────────────────────
 const OUTCOME_COLORS: Record<string, string> = {
-  qualified: "#10b981",
-  interested: "#3b82f6",
-  callback: "#f59e0b",
-  not_interested: "#6b7280",
-  not_answered: "#ef4444",
-  dnc: "#dc2626",
-  busy: "#eab308",
+  qualified: "#24a148",
+  interested: "#0f62fe",
+  callback: "#f1c21b",
+  not_interested: "#6f6f6f",
+  not_answered: "#da1e28",
+  dnc: "#da1e28",
+  busy: "#f1c21b",
   wrong_number: "#f97316",
-  language_barrier: "#a855f7",
-  enrolled_elsewhere: "#8b5cf6",
+  language_barrier: "#8a3ffc",
+  enrolled_elsewhere: "#8a3ffc",
 }
 
 const OUTCOME_LABELS: Record<string, string> = {
@@ -75,16 +75,16 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const PIPELINE_COLORS: Record<string, string> = {
-  new: "#93c5fd",
-  contacted: "#60a5fa",
-  warm: "#f59e0b",
-  hot: "#ef4444",
-  visit_scheduled: "#a78bfa",
-  visit_done: "#8b5cf6",
-  admission_done: "#10b981",
-  cold_no_response: "#d1d5db",
-  cold_not_interested: "#9ca3af",
-  lost: "#6b7280",
+  new: "#78a9ff",
+  contacted: "#0f62fe",
+  warm: "#f1c21b",
+  hot: "#da1e28",
+  visit_scheduled: "#d4bbff",
+  visit_done: "#8a3ffc",
+  admission_done: "#24a148",
+  cold_no_response: "#a8a8a8",
+  cold_not_interested: "#6f6f6f",
+  lost: "#6f6f6f",
 }
 
 export default function AdminDashboard() {
@@ -203,14 +203,14 @@ export default function AdminDashboard() {
     (item: any) => ({
       name: OUTCOME_LABELS[item.outcome] || item.outcome,
       value: item.count,
-      color: OUTCOME_COLORS[item.outcome] || "#6b7280",
+      color: OUTCOME_COLORS[item.outcome] || "#6f6f6f",
     })
   )
 
   const pipelineChartData = pipeline.map((item: any) => ({
     name: STATUS_LABELS[item.status] || item.status,
     value: item.count,
-    fill: PIPELINE_COLORS[item.status] || "#d1d5db",
+    fill: PIPELINE_COLORS[item.status] || "#a8a8a8",
   }))
 
   const telecallerChartData = telecallerPerf.map((tc: any) => ({
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-xl font-normal ">Admin Dashboard</h1>
           <p className="text-muted-foreground flex items-center gap-2">
             Overview of all operations and key metrics
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" title="Auto-refreshing" />
@@ -253,7 +253,7 @@ export default function AdminDashboard() {
                   <stat.icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                  <p className="text-xl font-normal ">{stat.value}</p>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{stat.title}</p>
                 </div>
               </div>
@@ -440,19 +440,19 @@ export default function AdminDashboard() {
                   <Bar
                     dataKey="calls"
                     name="Total Calls"
-                    fill="#3b82f6"
+                    fill="#0f62fe"
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
                     dataKey="qualified"
                     name="Qualified"
-                    fill="#10b981"
+                    fill="#24a148"
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar
                     dataKey="interested"
                     name="Interested"
-                    fill="#f59e0b"
+                    fill="#f1c21b"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
@@ -491,23 +491,23 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex items-center gap-3 text-xs">
                     <div className="text-center">
-                      <p className="font-bold text-lg">{tc.total_calls}</p>
+                      <p className="font-semibold text-lg">{tc.total_calls}</p>
                       <p className="text-muted-foreground">Calls</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-bold text-lg text-green-600">
+                      <p className="font-semibold text-lg text-success">
                         {tc.qualified}
                       </p>
                       <p className="text-muted-foreground">Qualified</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-bold text-lg text-blue-600">
+                      <p className="font-semibold text-lg text-primary">
                         {tc.interested}
                       </p>
                       <p className="text-muted-foreground">Interested</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-bold text-lg text-yellow-600">
+                      <p className="font-semibold text-lg text-warning">
                         {tc.callbacks}
                       </p>
                       <p className="text-muted-foreground">Callbacks</p>
@@ -586,8 +586,8 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between px-6 py-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100">
-                        <span className="text-sm font-medium text-orange-600">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FCF4D6]">
+                        <span className="text-sm font-medium text-warning">
                           {spoc.name
                             .split(" ")
                             .map((n: string) => n[0])
@@ -606,7 +606,7 @@ export default function AdminDashboard() {
                         <>
                           <Badge
                             variant="outline"
-                            className="bg-green-50 text-green-700 border-0"
+                            className="bg-[#DEFBE6] text-green-700 border-0"
                           >
                             Report Submitted
                           </Badge>
@@ -617,7 +617,7 @@ export default function AdminDashboard() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="bg-yellow-50 text-yellow-700 border-0"
+                          className="bg-[#FCF4D6] text-yellow-700 border-0"
                         >
                           Pending Report
                         </Badge>

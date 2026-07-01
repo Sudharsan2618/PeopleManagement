@@ -102,6 +102,16 @@ export default function WhatsAppAdmin() {
   const [replyText, setReplyText] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Conversations pagination & SSE state
+  const [conversationsPage, setConversationsPage] = useState(1)
+  const [hasMoreConversations, setHasMoreConversations] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const selectedChatRef = useRef<any>(null)
+
+  useEffect(() => {
+    selectedChatRef.current = selectedChat
+  }, [selectedChat])
+
   // Submissions State
   const [submissions, setSubmissions] = useState<any[]>([])
   const [submissionsPagination, setSubmissionsPagination] = useState({
@@ -335,7 +345,7 @@ export default function WhatsAppAdmin() {
         whatsappApi.getFlows(),
         whatsappApi.getCampaigns(1, campaignPagination.pageSize),
         prospectsApi.getAll(),
-        whatsappApi.getConversations(),
+        whatsappApi.getConversations(1, 20),
         whatsappApi.getMediaAssets()
       ])
       setTemplates(tpls)
@@ -349,6 +359,8 @@ export default function WhatsAppAdmin() {
       }))
       setProspects(prospers)
       setConversations(convs)
+      setConversationsPage(1)
+      setHasMoreConversations(convs.length === 20)
       setMediaAssets(assets)
     } catch (err) {
       toast({
@@ -363,21 +375,69 @@ export default function WhatsAppAdmin() {
 
   useEffect(() => {
     fetchData()
-    // Poll for new messages every 10 seconds
-    const interval = setInterval(() => {
-      fetchConversations()
-      if (selectedChat) {
-        fetchMessages(selectedChat.id)
-      }
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [selectedChat])
 
-  const fetchConversations = async () => {
+    // Establish Server-Sent Events (SSE) Connection for real-time messages & chats
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+    const eventSource = new EventSource(`${API_BASE_URL}/whatsapp/stream`)
+
+    eventSource.addEventListener("message", (event: any) => {
+      try {
+        const data = JSON.parse(event.data)
+        // Refresh conversations list (reset to page 1)
+        fetchConversations(1)
+        
+        // Check if currently selected chat matches this incoming message's prospect_id
+        if (selectedChatRef.current && Number(selectedChatRef.current.id) === Number(data.prospect_id)) {
+          fetchMessages(selectedChatRef.current.id)
+        }
+      } catch (e) {
+        console.error("SSE message error:", e)
+      }
+    })
+
+    eventSource.onerror = (err) => {
+      console.warn("SSE connection error, falling back...", err)
+    }
+
+    // Fallback polling for backup (15 seconds interval)
+    const interval = setInterval(() => {
+      fetchConversations(1)
+      if (selectedChatRef.current) {
+        fetchMessages(selectedChatRef.current.id)
+      }
+    }, 15000)
+
+    return () => {
+      eventSource.close()
+      clearInterval(interval)
+    }
+  }, [])
+
+  const fetchConversations = async (page = 1) => {
     try {
-      const convs = await whatsappApi.getConversations()
-      setConversations(convs)
+      const convs = await whatsappApi.getConversations(page, 20)
+      if (page === 1) {
+        setConversations(convs)
+        setConversationsPage(1)
+        setHasMoreConversations(convs.length === 20)
+      } else {
+        setConversations(prev => {
+          const ids = new Set(prev.map(c => c.id))
+          const filtered = convs.filter(c => !ids.has(c.id))
+          return [...prev, ...filtered]
+        })
+        setConversationsPage(page)
+        setHasMoreConversations(convs.length === 20)
+      }
     } catch (err) {}
+  }
+
+  const loadNextPage = async () => {
+    if (loadingMore) return
+    setLoadingMore(true)
+    const nextPage = conversationsPage + 1
+    await fetchConversations(nextPage)
+    setLoadingMore(false)
   }
 
   const fetchMessages = async (prospectId: number) => {
@@ -398,7 +458,7 @@ export default function WhatsAppAdmin() {
       handleSelectChat(conv);
       setActiveTab("inbox");
     } else {
-      whatsappApi.getConversations().then(convs => {
+      whatsappApi.getConversations(1, 100).then(convs => {
         setConversations(convs);
         const found = convs.find(c => Number(c.id) === prospectId);
         if (found) {
@@ -782,11 +842,11 @@ export default function WhatsAppAdmin() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "approved": case "completed": return "bg-green-100 text-green-700 border-green-200"
-      case "rejected": case "failed": return "bg-red-100 text-red-700 border-red-200"
-      case "pending": case "sending": case "sent": return "bg-yellow-100 text-yellow-700 border-yellow-200"
-      case "delivered": return "bg-blue-100 text-blue-700 border-blue-200"
-      case "read": return "bg-green-100 text-green-700 border-green-200"
+      case "approved": case "completed": return "bg-[#DEFBE6] text-green-700 border-green-200"
+      case "rejected": case "failed": return "bg-[#FFF1F1] text-red-700 border-red-200"
+      case "pending": case "sending": case "sent": return "bg-[#FCF4D6] text-yellow-700 border-yellow-200"
+      case "delivered": return "bg-[#EDF5FF] text-blue-700 border-blue-200"
+      case "read": return "bg-[#DEFBE6] text-green-700 border-green-200"
       case "draft": return "bg-slate-100 text-slate-700 border-slate-200"
       default: return "bg-gray-100 text-gray-700 border-gray-200"
     }
@@ -841,7 +901,7 @@ export default function WhatsAppAdmin() {
     if (!fileType) return <File className={cn(size, "text-slate-400")} />
     if (fileType.includes("pdf")) return <FileText className={cn(size, "text-rose-500")} />
     if (fileType.includes("video") || fileType.includes("mp4") || fileType.includes("3gp"))
-      return <Video className={cn(size, "text-blue-500")} />
+      return <Video className={cn(size, "text-primary")} />
     return <Image className={cn(size, "text-emerald-500")} />
   }
 
@@ -863,7 +923,7 @@ export default function WhatsAppAdmin() {
             </div>
           )}
           {header && header.type === "HEADER" && header.format === "TEXT" && (
-            <div className="font-bold text-slate-900 mb-1">{header.text}</div>
+            <div className="font-semibold text-slate-900 mb-1">{header.text}</div>
           )}
           <div className="whitespace-pre-wrap">{body}</div>
           {footer && <div className="text-[11px] text-slate-400 mt-2">{footer}</div>}
@@ -873,7 +933,7 @@ export default function WhatsAppAdmin() {
         {/* Buttons */}
         <div className="mt-2 space-y-1">
           {buttons.map((btn: any, i: number) => (
-            <div key={i} className="bg-white/90 hover:bg-white text-[#008069] font-bold text-center py-2.5 rounded-lg shadow-sm text-[13px] border-t border-slate-100 flex items-center justify-center gap-2">
+            <div key={i} className="bg-white/90 hover:bg-white text-[#008069] font-semibold text-center py-2.5 rounded-lg shadow-sm text-[13px] border-t border-slate-100 flex items-center justify-center gap-2">
               {btn.type === "FLOW" && <Layers className="h-3.5 w-3.5" />}
               {btn.text}
             </div>
@@ -888,19 +948,19 @@ export default function WhatsAppAdmin() {
       {/* Mini Header */}
       <div className="flex items-center justify-between px-6 py-2 bg-white/50 backdrop-blur-sm border-b shrink-0">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 uppercase">WA Automation</h1>
+          <h1 className="text-xl font-semibold  text-slate-900 uppercase">WA Automation</h1>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
             <TabsList className="bg-transparent border-none p-0 h-8 gap-4">
-              <TabsTrigger value="inbox" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Inbox</TabsTrigger>
-              <TabsTrigger value="templates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Templates</TabsTrigger>
-              <TabsTrigger value="campaigns" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Campaigns</TabsTrigger>
-              <TabsTrigger value="flows" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Flows</TabsTrigger>
-              <TabsTrigger value="submissions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-bold uppercase tracking-widest transition-all">Submissions</TabsTrigger>
+              <TabsTrigger value="inbox" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-semibold uppercase tracking-widest transition-all">Inbox</TabsTrigger>
+              <TabsTrigger value="templates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-semibold uppercase tracking-widest transition-all">Templates</TabsTrigger>
+              <TabsTrigger value="campaigns" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-semibold uppercase tracking-widest transition-all">Campaigns</TabsTrigger>
+              <TabsTrigger value="flows" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-semibold uppercase tracking-widest transition-all">Flows</TabsTrigger>
+              <TabsTrigger value="submissions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-emerald-600 data-[state=active]:bg-transparent px-1 h-full text-xs font-semibold uppercase tracking-widest transition-all">Submissions</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
         <div className="flex gap-2">
-          <Button onClick={fetchData} variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest" disabled={isLoading}>
+          <Button onClick={fetchData} variant="ghost" size="sm" className="h-8 text-[10px] font-semibold uppercase tracking-widest" disabled={isLoading}>
             <RefreshCw className={cn("h-3 w-3 mr-1.5", isLoading && "animate-spin")} />
             Sync
           </Button>
@@ -908,7 +968,7 @@ export default function WhatsAppAdmin() {
             onClick={() => setIsMediaLibraryOpen(true)}
             variant="outline" 
             size="sm" 
-            className="h-8 border-slate-200 text-[10px] font-bold uppercase tracking-widest px-3 hover:bg-slate-50"
+            className="h-8 border-slate-200 text-[10px] font-semibold uppercase tracking-widest px-3 hover:bg-slate-50"
           >
             <Upload className="h-3 w-3 mr-1.5" />
             Media Library
@@ -916,7 +976,7 @@ export default function WhatsAppAdmin() {
           <Button 
             onClick={() => setIsCreateCampaignOpen(true)}
             size="sm" 
-            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold uppercase tracking-widest px-4 shadow-sm"
+            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-[10px] font-semibold uppercase tracking-widest px-4 shadow-sm"
           >
             <Plus className="h-3 w-3 mr-1.5" />
             New Campaign
@@ -925,102 +985,95 @@ export default function WhatsAppAdmin() {
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 overflow-hidden p-3 flex gap-3">
-        <div className="h-full w-full relative flex flex-col">
+      <div className="flex-1 overflow-hidden p-3 flex gap-3 h-[calc(100vh-144px)]">
+        <div className="h-full w-full relative flex flex-col min-h-0">
           {activeTab === "inbox" && (
-            <div className="h-full flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="h-full flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-0">
               {/* --- PREMIUM SIDEBAR --- */}
-              <Card className="w-[320px] flex flex-col overflow-hidden border border-slate-200 bg-white shrink-0 rounded-lg shadow-none">
-                <div className="p-6 pb-4">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold tracking-tight text-slate-900">MESSAGES</h2>
-                    <Badge className="bg-[#10b981]/10 text-[#10b981] border-none font-semibold text-[10px] px-2 py-0.5 rounded-sm">
+              <Card className="w-[320px] h-full flex flex-col overflow-hidden border border-border bg-card shrink-0 rounded-lg shadow-xs">
+                <div className="p-4 pb-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">MESSAGES</h2>
+                    <Badge variant="outline" className="bg-success/15 text-success border-none font-semibold text-[10px] px-2 py-0.5 rounded-sm">
                       {conversations.length} ACTIVE
                     </Badge>
                   </div>
                   <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#10b981] transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <Input 
                       placeholder="Search prospects..." 
-                      className="pl-10 h-10 bg-slate-50 border border-slate-200 rounded-md text-xs placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#10b981]/20 transition-all font-sans font-normal" 
+                      className="pl-9 h-8 bg-muted border border-border rounded-sm text-xs placeholder:text-muted-foreground focus-visible:ring-primary/20 transition-all font-sans font-normal" 
                     />
                   </div>
                 </div>
                 
-                <ScrollArea className="flex-1 px-3">
-                  <div className="space-y-1 pb-6">
-                    {conversations.map((conv, i) => (
-                      <div
-                        key={conv.id}
-                        onClick={() => handleSelectChat(conv)}
-                        className={cn(
-                          "p-4 cursor-pointer transition-all duration-150 relative rounded-md group",
-                          selectedChat?.id === conv.id 
-                            ? "bg-[#0f172a] text-white" 
-                            : "hover:bg-slate-50 text-slate-600 border border-transparent hover:border-slate-100"
-                        )}
-                      >
-                        <div className="flex gap-4">
-                          <div className="relative">
-                            <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                              <AvatarFallback className={cn(
-                                "text-white text-xs font-black", 
-                                selectedChat?.id === conv.id ? "bg-emerald-500" : getAvatarColor(i)
-                              )}>
-                                {conv.name[0]?.toUpperCase() || "P"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
-                          </div>
-                          
+                <div 
+                  className="flex-1 overflow-y-auto px-2 pb-6 space-y-0.5"
+                  onScroll={(e) => {
+                    const target = e.currentTarget;
+                    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 20) {
+                      if (hasMoreConversations && !loadingMore) {
+                        loadNextPage();
+                      }
+                    }
+                  }}
+                >
+                  {conversations.map((conv, i) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => handleSelectChat(conv)}
+                      className={cn(
+                        "p-3 cursor-pointer transition-all duration-150 relative rounded-sm group flex gap-3 items-center border-l-[3px]",
+                        selectedChat?.id === conv.id 
+                          ? "bg-primary/10 text-foreground border-sidebar-primary pl-[9px] font-medium" 
+                          : "hover:bg-secondary text-muted-foreground border-transparent pl-3"
+                      )}
+                    >
+                      <div className="relative shrink-0">
+                        <Avatar className="h-9 w-9 border border-border shadow-xs">
+                          <AvatarFallback className="text-muted-foreground text-xs font-semibold bg-muted rounded-sm">
+                            {conv.name[0]?.toUpperCase() || "P"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-success border-2 border-card rounded-full shadow-xs" />
+                      </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
-                              <span className={cn(
-                                "font-black text-sm truncate tracking-tight",
-                                selectedChat?.id === conv.id ? "text-white" : "text-slate-900"
-                              )}>
+                              <span className="font-semibold text-sm truncate text-foreground">
                                 {conv.name}
                               </span>
-                              <span className={cn(
-                                "text-[9px] font-black tracking-widest",
-                                selectedChat?.id === conv.id ? "text-slate-400" : "text-slate-400"
-                              )}>
+                              <span className="text-[9px] font-normal text-muted-foreground tracking-widest">
                                 {conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                               </span>
                             </div>
-                            <p className={cn(
-                              "text-[11px] truncate font-medium leading-none opacity-70",
-                              selectedChat?.id === conv.id ? "text-slate-300" : "text-slate-500"
-                            )}>
+                            <p className="text-[11px] truncate font-normal leading-none text-muted-foreground opacity-80">
                               {conv.last_message || "No messages yet"}
                             </p>
                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+                    </div>
+                  ))}
+                </div>
               </Card>
               
               {/* --- PREMIUM CHAT VIEW --- */}
-              <Card className="flex-1 flex flex-col overflow-hidden border border-slate-200 bg-white relative rounded-lg shadow-none">
+              <Card className="flex-1 h-full flex flex-col overflow-hidden border border-border bg-card relative rounded-lg shadow-xs">
                 {selectedChat ? (
                   <>
-                    <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                    <div className="p-4 border-b border-border flex items-center justify-between bg-secondary">
                       <div className="flex items-center gap-4">
                         <div className="relative">
-                           <Avatar className="h-12 w-12 border border-slate-200">
-                            <AvatarFallback className={cn("text-white text-xs font-semibold rounded-md", getAvatarColor(conversations.findIndex(c => c.id === selectedChat.id)))}>
+                          <Avatar className="h-10 w-10 border border-border">
+                            <AvatarFallback className="text-muted-foreground text-xs font-semibold bg-muted rounded-sm">
                               {selectedChat.name[0]?.toUpperCase() || "P"}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-[#10b981] border-2 border-white rounded-full" />
+                          <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 bg-success border-2 border-card rounded-full shadow-xs" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-base text-slate-900 tracking-tight leading-none">{selectedChat.name}</h3>
+                          <h3 className="font-semibold text-base text-slate-900  leading-none">{selectedChat.name}</h3>
                           <div className="flex items-center gap-2 mt-1.5">
                             <Badge variant="outline" className="bg-[#10b981]/10 text-[#10b981] border-none text-[8px] font-semibold px-2 py-0.5 rounded-sm">ONLINE</Badge>
-                            <span className="text-[10px] text-slate-400 font-bold tracking-tight">+{selectedChat.mobile}</span>
+                            <span className="text-[10px] text-slate-400 font-semibold ">+{selectedChat.mobile}</span>
                           </div>
                         </div>
                       </div>
@@ -1052,108 +1105,122 @@ export default function WhatsAppAdmin() {
                           
                           <div className="space-y-6 pb-4">
                             {messages.map((msg) => {
-                              const isTemplate = msg.body?.toLowerCase().includes("template:");
-                              const getFlowData = (m: any) => {
-                                if (m.payload && m.message_type === "interactive") {
-                                  let payloadObj = typeof m.payload === "string" ? null : m.payload;
-                                  if (typeof m.payload === "string") {
-                                    try { payloadObj = JSON.parse(m.payload); } catch (e) {}
-                                  }
-                                  const interactive = payloadObj?.interactive;
-                                  if (interactive && interactive.type === "nfm_reply" && interactive.nfm_reply) {
-                                    try { return JSON.parse(interactive.nfm_reply.response_json); } catch (e) {}
-                                  }
-                                }
-                                return null;
-                              };
+                               const isTemplate = msg.body?.toLowerCase().includes("template:")
+                               
+                               const getRealTemplateText = (bodyText: string) => {
+                                 const cleanBody = bodyText.replace(/Template:/i, "").trim()
+                                 const templateName = cleanBody.split(" to ")[0].trim()
+                                 const foundTemplate = templates.find(t => t.name === templateName || t.name === cleanBody)
+                                 if (foundTemplate) {
+                                   const bodyComp = foundTemplate.components?.find((c: any) => c.type === "BODY")
+                                   if (bodyComp?.text) {
+                                     let text = bodyComp.text
+                                     if (selectedChat) {
+                                       text = text.replace(/{{1}}/g, selectedChat.name)
+                                     }
+                                     return text
+                                   }
+                                 }
+                                 return cleanBody
+                               }
 
-                              const getDocumentData = (m: any) => {
-                                if (m.payload && m.message_type === "document") {
-                                  let payloadObj = typeof m.payload === "string" ? null : m.payload;
-                                  if (typeof m.payload === "string") {
-                                    try { payloadObj = JSON.parse(m.payload); } catch (e) {}
-                                  }
-                                  return payloadObj?.document;
-                                }
-                                return null;
-                              };
+                               const getFlowData = (m: any) => {
+                                 if (m.payload && m.message_type === "interactive") {
+                                   let payloadObj = typeof m.payload === "string" ? null : m.payload;
+                                   if (typeof m.payload === "string") {
+                                     try { payloadObj = JSON.parse(m.payload); } catch (e) {}
+                                   }
+                                   const interactive = payloadObj?.interactive;
+                                   if (interactive && interactive.type === "nfm_reply" && interactive.nfm_reply) {
+                                     try { return JSON.parse(interactive.nfm_reply.response_json); } catch (e) {}
+                                   }
+                                 }
+                                 return null;
+                               };
 
-                              const flowData = getFlowData(msg);
-                              const docData = getDocumentData(msg);
+                               const getDocumentData = (m: any) => {
+                                 if (m.payload && m.message_type === "document") {
+                                   let payloadObj = typeof m.payload === "string" ? null : m.payload;
+                                   if (typeof m.payload === "string") {
+                                     try { payloadObj = JSON.parse(m.payload); } catch (e) {}
+                                   }
+                                   return payloadObj?.document;
+                                 }
+                                 return null;
+                               };
 
-                              return (
-                                <div
-                                  key={msg.id}
-                                  className={cn(
-                                    "flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300",
-                                    msg.direction === "outbound" ? "items-end" : "items-start"
-                                  )}
-                                >
-                                  <div
-                                    className={cn(
-                                      "max-w-[85%] rounded-lg px-4 py-2.5 text-[13px] relative group border",
-                                      msg.direction === "outbound" 
-                                        ? isTemplate 
-                                          ? "bg-slate-900 border-slate-900 text-white border-l-4 border-l-indigo-500 rounded-tr-none shadow-none" 
-                                          : "bg-[#0f172a] border-[#0f172a] text-white border-l-4 border-l-[#10b981] rounded-tr-none shadow-none"
-                                        : "bg-[#F1F5F9] border-slate-200 text-slate-800 rounded-tl-none shadow-none"
-                                    )}
-                                  >
-                                    {isTemplate ? (
-                                      <div className="space-y-2">
-                                        <div className="flex items-center gap-2 pb-2 border-b border-white/20 mb-2">
-                                          <Zap className="h-3.5 w-3.5 text-emerald-300" />
-                                          <span className="text-[10px] font-black uppercase tracking-widest">Automated Template</span>
-                                        </div>
-                                        <p className="font-bold leading-relaxed">{msg.body.replace(/Template:/i, "").trim()}</p>
-                                        <div className="bg-white/10 p-2 rounded-xl text-[11px] font-medium italic border border-white/10 mt-2">
-                                          Waiting for student interaction...
-                                        </div>
-                                      </div>
+                               const flowData = getFlowData(msg);
+                               const docData = getDocumentData(msg);
+
+                               return (
+                                 <div
+                                   key={msg.id}
+                                   className={cn(
+                                     "flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300",
+                                     msg.direction === "outbound" ? "items-end" : "items-start"
+                                   )}
+                                 >
+                                   <div
+                                     className={cn(
+                                       "max-w-[85%] rounded-lg px-4 py-2.5 text-[13px] relative group border",
+                                       msg.direction === "outbound" 
+                                         ? isTemplate 
+                                           ? "bg-secondary border-border text-foreground rounded-tr-none shadow-none" 
+                                           : "bg-foreground border-border text-background rounded-tr-none shadow-none"
+                                         : "bg-muted border-border text-foreground rounded-tl-none shadow-none"
+                                     )}
+                                   >
+                                     {isTemplate ? (
+                                       <div className="space-y-2">
+                                         <p className="font-medium leading-relaxed">{getRealTemplateText(msg.body)}</p>
+                                         <div className="bg-background p-2 rounded-sm text-[11px] font-normal italic border border-border mt-2">
+                                           Waiting for student interaction...
+                                         </div>
+                                       </div>
                                     ) : flowData ? (
                                       <div className="space-y-3 min-w-[280px]">
-                                        <div className="flex items-center gap-2 pb-2 border-b border-slate-100 mb-2">
-                                          <FileText className="h-4 w-4 text-emerald-600" />
-                                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Form Submission</span>
-                                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none font-bold text-[8px] ml-auto">FLOW</Badge>
+                                        <div className="flex items-center gap-2 pb-2 border-b border-border mb-2">
+                                          <FileText className="h-4 w-4 text-success" />
+                                          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Form Submission</span>
+                                          <Badge variant="outline" className="bg-success/15 text-success border-none font-semibold text-[8px] ml-auto">FLOW</Badge>
                                         </div>
                                         <div className="space-y-2 text-xs">
                                           {flowData.full_name && (
-                                            <div className="flex justify-between border-b border-slate-50 pb-1">
-                                              <span className="text-slate-400 font-bold">Name</span>
-                                              <span className="text-slate-800 font-black">{flowData.full_name}</span>
+                                            <div className="flex justify-between border-b border-border pb-1">
+                                              <span className="text-muted-foreground font-medium">Name</span>
+                                              <span className="text-foreground font-semibold">{flowData.full_name}</span>
                                             </div>
                                           )}
                                           {flowData.email && (
-                                            <div className="flex justify-between border-b border-slate-50 pb-1">
-                                              <span className="text-slate-400 font-bold">Email</span>
-                                              <span className="text-slate-800 font-black">{flowData.email}</span>
+                                            <div className="flex justify-between border-b border-border pb-1">
+                                              <span className="text-muted-foreground font-medium">Email</span>
+                                              <span className="text-foreground font-semibold">{flowData.email}</span>
                                             </div>
                                           )}
                                           {flowData.qualification && (
-                                            <div className="flex justify-between border-b border-slate-50 pb-1">
-                                              <span className="text-slate-400 font-bold">Qualification</span>
-                                              <span className="text-slate-800 font-black uppercase">{flowData.qualification.replace('_', ' ')}</span>
+                                            <div className="flex justify-between border-b border-border pb-1">
+                                              <span className="text-muted-foreground font-medium">Qualification</span>
+                                              <span className="text-foreground font-semibold uppercase">{flowData.qualification.replace('_', ' ')}</span>
                                             </div>
                                           )}
                                           {flowData.degree && (
-                                            <div className="flex justify-between border-b border-slate-50 pb-1">
-                                              <span className="text-slate-400 font-bold">Interested Course</span>
-                                              <span className="text-slate-800 font-black uppercase">{flowData.degree.replace('_', ' ')}</span>
+                                            <div className="flex justify-between border-b border-border pb-1">
+                                              <span className="text-muted-foreground font-medium">Interested Course</span>
+                                              <span className="text-foreground font-semibold uppercase">{flowData.degree.replace('_', ' ')}</span>
                                             </div>
                                           )}
                                           {flowData.current_status && (
-                                            <div className="flex justify-between border-b border-slate-50 pb-1">
-                                              <span className="text-slate-400 font-bold">Current Status</span>
-                                              <span className="text-slate-800 font-black uppercase">{flowData.current_status}</span>
+                                            <div className="flex justify-between border-b border-border pb-1">
+                                              <span className="text-muted-foreground font-medium">Current Status</span>
+                                              <span className="text-foreground font-semibold uppercase">{flowData.current_status}</span>
                                             </div>
                                           )}
                                           {flowData.confirmed && (
                                             <div className="flex justify-between pt-1">
-                                              <span className="text-slate-400 font-bold">Confirmed Interest</span>
-                                              <Badge className={cn(
-                                                "border-none text-[9px] font-black uppercase",
-                                                flowData.confirmed.toLowerCase() === 'yes' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                              <span className="text-muted-foreground font-medium">Confirmed Interest</span>
+                                              <Badge variant="outline" className={cn(
+                                                "border-none text-[9px] font-semibold uppercase",
+                                                flowData.confirmed.toLowerCase() === 'yes' ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
                                               )}>
                                                 {flowData.confirmed}
                                               </Badge>
@@ -1162,27 +1229,27 @@ export default function WhatsAppAdmin() {
                                         </div>
                                       </div>
                                     ) : docData ? (
-                                      <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-100 min-w-[240px]">
-                                        <div className="h-10 w-10 bg-rose-50 rounded-lg flex items-center justify-center text-rose-500">
+                                      <div className="flex items-center gap-3 p-2 bg-muted rounded-sm border border-border min-w-[240px]">
+                                        <div className="h-10 w-10 bg-destructive/15 rounded-sm flex items-center justify-center text-destructive">
                                           <File className="h-5 w-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-black text-slate-800 truncate">{docData.filename || "Document"}</p>
-                                          <p className="text-[9px] text-slate-400 font-bold uppercase">{docData.mime_type || "PDF File"}</p>
+                                          <p className="text-xs font-semibold text-foreground truncate">{docData.filename || "Document"}</p>
+                                          <p className="text-[9px] text-muted-foreground font-medium uppercase">{docData.mime_type || "PDF File"}</p>
                                         </div>
                                         {docData.url && (
                                           <a 
                                             href={docData.url} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-800 transition-colors"
+                                            className="p-2 hover:bg-secondary rounded-sm text-muted-foreground hover:text-foreground transition-colors"
                                           >
                                             <ExternalLink className="h-4 w-4" />
                                           </a>
                                         )}
                                       </div>
                                     ) : (
-                                      <p className="whitespace-pre-wrap leading-relaxed font-bold tracking-tight">{msg.body}</p>
+                                      <p className="whitespace-pre-wrap leading-relaxed font-semibold ">{msg.body}</p>
                                     )}
                                     
                                     <div className={cn(
@@ -1238,7 +1305,7 @@ export default function WhatsAppAdmin() {
                     <div className="h-16 w-16 bg-white rounded-lg border border-slate-200 flex items-center justify-center mb-6">
                       <MessageSquare className="h-8 w-8 text-slate-300" />
                     </div>
-                    <h3 className="text-xl font-semibold text-slate-900 tracking-tight mb-2">No conversation selected</h3>
+                    <h3 className="text-xl font-semibold text-slate-900  mb-2">No conversation selected</h3>
                     <p className="text-slate-500 text-sm max-w-[280px] leading-relaxed">
                       Select a prospect from the left to start high-conversion outreach.
                     </p>
@@ -1251,28 +1318,28 @@ export default function WhatsAppAdmin() {
           {activeTab === "templates" && (
             <Card className="h-full border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
               <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Message Templates</h2>
-                <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest">{templates.length} Total</Badge>
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-900">Message Templates</h2>
+                <Badge variant="outline" className="text-[9px] font-semibold uppercase tracking-widest">{templates.length} Total</Badge>
               </div>
               <ScrollArea className="flex-1 min-h-0">
                 <Table>
                   <TableHeader className="bg-slate-50/30">
                     <TableRow>
-                      <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Name</TableHead>
-                      <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Category</TableHead>
-                      <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Language</TableHead>
-                      <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest">Status</TableHead>
-                      <TableHead className="px-6 text-[9px] font-bold uppercase tracking-widest text-right">Actions</TableHead>
+                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Name</TableHead>
+                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Category</TableHead>
+                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Language</TableHead>
+                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Status</TableHead>
+                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {templates.map((tpl) => (
                       <TableRow key={`${tpl.name}-${tpl.language}`} className="hover:bg-slate-50/50">
-                        <TableCell className="px-6 font-bold text-xs uppercase tracking-tight">{tpl.name}</TableCell>
+                        <TableCell className="px-6 font-semibold text-xs uppercase ">{tpl.name}</TableCell>
                         <TableCell className="px-6 text-[10px] font-medium text-slate-500 uppercase">{tpl.category}</TableCell>
-                        <TableCell className="px-6 text-[10px] font-bold text-slate-700 uppercase">{tpl.language}</TableCell>
+                        <TableCell className="px-6 text-[10px] font-semibold text-slate-700 uppercase">{tpl.language}</TableCell>
                         <TableCell className="px-6">
-                          <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-bold uppercase tracking-tight shadow-sm", getStatusColor(tpl.status))}>
+                          <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-semibold uppercase  shadow-sm", getStatusColor(tpl.status))}>
                             {tpl.status}
                           </Badge>
                         </TableCell>
@@ -1280,7 +1347,7 @@ export default function WhatsAppAdmin() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 text-[10px] font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            className="h-7 text-[10px] font-semibold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                             onClick={() => {
                               setViewingTemplate(tpl);
                               setTemplateDetailOpen(true);
@@ -1410,7 +1477,7 @@ export default function WhatsAppAdmin() {
                     <div className="p-6 border-b border-slate-200 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-4 w-1 bg-[#10b981] rounded-sm" />
-                        <h3 className="font-semibold text-sm text-slate-900 tracking-tight uppercase">Recipient Tracking</h3>
+                        <h3 className="font-semibold text-sm text-slate-900  uppercase">Recipient Tracking</h3>
                       </div>
                       <div className="flex gap-2">
                         {["all", "sent", "delivered", "read", "failed"].map((status) => (
@@ -1452,10 +1519,10 @@ export default function WhatsAppAdmin() {
                                       {msg.prospect_name[0]?.toUpperCase() || "P"}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span className="font-black text-xs text-slate-900 truncate tracking-tight">{msg.prospect_name}</span>
+                                  <span className="font-black text-xs text-slate-900 truncate ">{msg.prospect_name}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-8 py-4 text-[11px] font-bold text-slate-500">
+                              <TableCell className="px-8 py-4 text-[11px] font-semibold text-slate-500">
                                 <span className="flex items-center gap-2"><Phone className="h-3 w-3" /> +{msg.prospect_mobile}</span>
                               </TableCell>
                               <TableCell className="px-8 py-4">
@@ -1476,7 +1543,7 @@ export default function WhatsAppAdmin() {
               ) : (
                 <Card className="h-full border border-slate-200 rounded-lg bg-white overflow-hidden flex flex-col shadow-none">
                   <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/20">
-                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight uppercase">Campaigns</h2>
+                    <h2 className="text-xl font-semibold text-slate-900  uppercase">Campaigns</h2>
                     <Badge className="bg-slate-100 text-slate-500 border-none font-semibold text-[10px] px-3 py-1 rounded-sm uppercase tracking-wider">
                       {campaignPagination.totalItems} TOTAL
                     </Badge>
@@ -1522,14 +1589,14 @@ export default function WhatsAppAdmin() {
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-1.5 group/name cursor-pointer" onClick={() => { setEditingCampaignId(camp.id); setEditingCampaignName(camp.name) }}>
-                                    <p className="font-black text-sm text-slate-900 tracking-tight mb-0.5 uppercase">{camp.name}</p>
+                                    <p className="font-black text-sm text-slate-900  mb-0.5 uppercase">{camp.name}</p>
                                     <Pencil className="h-3 w-3 text-slate-300 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0 mb-0.5" />
                                   </div>
                                 )}
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{camp.template_name}</p>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">{camp.template_name}</p>
                               </div>
                             </TableCell>
-                            <TableCell className="px-8 py-5 text-[11px] font-bold text-slate-500">
+                            <TableCell className="px-8 py-5 text-[11px] font-semibold text-slate-500">
                               {new Date(camp.created_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="px-8 py-5">
@@ -1588,7 +1655,7 @@ export default function WhatsAppAdmin() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-9 px-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl"
+                                  className="h-9 px-3 text-slate-400 hover:text-primary hover:bg-[#EDF5FF] rounded-xl"
                                   title="Duplicate campaign"
                                   onClick={() => handleDuplicateCampaign(camp)}
                                 >
@@ -1597,7 +1664,7 @@ export default function WhatsAppAdmin() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-9 px-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                                  className="h-9 px-3 text-slate-400 hover:text-destructive hover:bg-[#FFF1F1] rounded-xl"
                                   onClick={() => handleDeleteCampaign(camp.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -1674,18 +1741,18 @@ export default function WhatsAppAdmin() {
                 <div className="h-20 w-20 bg-emerald-50 rounded-3xl flex items-center justify-center mb-6 ring-8 ring-emerald-50/50">
                   <Layers className="h-10 w-10 text-emerald-600" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Meta Flows</h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-3 font-bold uppercase tracking-widest leading-loose">
+                <h3 className="text-xl font-semibold text-slate-900 uppercase ">Meta Flows</h3>
+                <p className="text-xs text-slate-500 max-w-sm mt-3 font-semibold uppercase tracking-widest leading-loose">
                   Configure and manage your interactive WhatsApp flows. Connect them to your templates for powerful automated workflows.
                 </p>
                 <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-md">
                    {flows.map(flow => (
                      <Card key={flow.id} className="p-4 border-slate-100 hover:border-emerald-200 transition-all cursor-pointer group">
                         <div className="flex justify-between items-start mb-2">
-                           <Badge className="bg-emerald-100 text-emerald-700 text-[8px] font-bold uppercase">{flow.status}</Badge>
+                           <Badge className="bg-emerald-100 text-emerald-700 text-[8px] font-semibold uppercase">{flow.status}</Badge>
                         </div>
-                        <p className="text-[11px] font-bold uppercase tracking-tight group-hover:text-emerald-600 transition-colors">{flow.name}</p>
-                        <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase">ID: {flow.id}</p>
+                        <p className="text-[11px] font-semibold uppercase  group-hover:text-emerald-600 transition-colors">{flow.name}</p>
+                        <p className="text-[9px] text-slate-400 font-semibold mt-1 uppercase">ID: {flow.id}</p>
                      </Card>
                    ))}
                 </div>
@@ -1696,7 +1763,7 @@ export default function WhatsAppAdmin() {
             <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white border border-slate-200 rounded-lg p-6 overflow-hidden shadow-none">
               <div className="flex justify-between items-center mb-6 shrink-0">
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight text-slate-900">FORM SUBMISSIONS</h2>
+                  <h2 className="text-xl font-semibold  text-slate-900">FORM SUBMISSIONS</h2>
                   <p className="text-xs text-slate-500 mt-1">
                     Structured responses captured from Meta Flows ({submissionsPagination.totalItems} total)
                   </p>
@@ -1773,23 +1840,23 @@ export default function WhatsAppAdmin() {
                                 <span className="text-xs font-black text-slate-900 uppercase">
                                   {flowData.full_name || sub.full_name || sub.prospect_name || "Unknown"}
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-bold mt-0.5">
+                                <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
                                   {sub.prospect_mobile ? `+${sub.prospect_mobile}` : "No number"} • {dateFormatted}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell className="px-6 py-4">
-                              <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">
+                              <span className="text-[11px] font-black text-slate-700 uppercase ">
                                 {degree}
                               </span>
                             </TableCell>
                             <TableCell className="px-6 py-4">
-                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+                              <span className="text-[11px] font-semibold text-slate-500 uppercase ">
                                 {qualification}
                               </span>
                             </TableCell>
                             <TableCell className="px-6 py-4">
-                              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+                              <span className="text-[11px] font-semibold text-slate-500 uppercase ">
                                 {currentStatus}
                               </span>
                             </TableCell>
@@ -1893,8 +1960,8 @@ export default function WhatsAppAdmin() {
       <Sheet open={templateDetailOpen} onOpenChange={setTemplateDetailOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col h-[100dvh] max-h-[100dvh] border-l shadow-2xl overflow-hidden bg-white">
           <SheetHeader className="p-6 border-b bg-white shrink-0">
-            <SheetTitle className="text-xl font-bold uppercase tracking-tight text-slate-900">Template Preview</SheetTitle>
-            <SheetDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+            <SheetTitle className="text-xl font-semibold uppercase  text-slate-900">Template Preview</SheetTitle>
+            <SheetDescription className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest">
               Live look at your WhatsApp message structure
             </SheetDescription>
           </SheetHeader>
@@ -1903,7 +1970,7 @@ export default function WhatsAppAdmin() {
             <div className="w-full max-w-sm">
               <div className="flex items-center gap-2 mb-4 justify-center">
                 <div className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mobile Preview</span>
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Mobile Preview</span>
               </div>
               
               <TemplatePreview template={viewingTemplate} />
@@ -1912,16 +1979,16 @@ export default function WhatsAppAdmin() {
                 <div className="space-y-4">
                    <div className="flex items-center gap-2">
                       <div className="h-6 w-1 bg-emerald-600 rounded-full" />
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900">Template Details</h3>
+                      <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-900">Template Details</h3>
                    </div>
                    <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 bg-white border border-slate-100 rounded-xl">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase mb-1">Category</p>
-                        <p className="text-xs font-bold text-slate-900 uppercase">{viewingTemplate?.category}</p>
+                        <p className="text-[8px] font-semibold text-slate-400 uppercase mb-1">Category</p>
+                        <p className="text-xs font-semibold text-slate-900 uppercase">{viewingTemplate?.category}</p>
                       </div>
                       <div className="p-3 bg-white border border-slate-100 rounded-xl">
-                        <p className="text-[8px] font-bold text-slate-400 uppercase mb-1">Language</p>
-                        <p className="text-xs font-bold text-slate-900 uppercase">{viewingTemplate?.language}</p>
+                        <p className="text-[8px] font-semibold text-slate-400 uppercase mb-1">Language</p>
+                        <p className="text-xs font-semibold text-slate-900 uppercase">{viewingTemplate?.language}</p>
                       </div>
                    </div>
                 </div>
@@ -1929,14 +1996,14 @@ export default function WhatsAppAdmin() {
                 <div className="space-y-4">
                    <div className="flex items-center gap-2">
                       <div className="h-6 w-1 bg-blue-600 rounded-full" />
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900">Components</h3>
+                      <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-900">Components</h3>
                    </div>
                    <div className="space-y-2">
                       {viewingTemplate?.components?.map((comp: any, i: number) => (
                         <div key={i} className="p-3 bg-white border border-slate-100 rounded-xl">
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-[9px] font-bold uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{comp.type}</span>
-                            {comp.format && <span className="text-[8px] font-bold text-slate-400 uppercase">{comp.format}</span>}
+                            <span className="text-[9px] font-semibold uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{comp.type}</span>
+                            {comp.format && <span className="text-[8px] font-semibold text-slate-400 uppercase">{comp.format}</span>}
                           </div>
                           <p className="text-xs text-slate-600 leading-relaxed">{comp.text || (comp.buttons ? `${comp.buttons.length} Buttons` : '-')}</p>
                         </div>
@@ -1948,7 +2015,7 @@ export default function WhatsAppAdmin() {
           </div>
           
           <SheetFooter className="p-4 border-t bg-white shrink-0">
-             <Button variant="outline" className="w-full font-bold uppercase tracking-widest text-[10px] h-11 rounded-xl" onClick={() => setTemplateDetailOpen(false)}>Close Preview</Button>
+             <Button variant="outline" className="w-full font-semibold uppercase tracking-widest text-[10px] h-11 rounded-xl" onClick={() => setTemplateDetailOpen(false)}>Close Preview</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -1957,8 +2024,8 @@ export default function WhatsAppAdmin() {
       <Sheet open={isCreateCampaignOpen} onOpenChange={setIsCreateCampaignOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col h-[100dvh] max-h-[100dvh] border-l shadow-2xl overflow-hidden bg-white">
           <SheetHeader className="p-6 border-b bg-white shrink-0">
-            <SheetTitle className="text-xl font-bold uppercase tracking-tight text-slate-900">Create Campaign</SheetTitle>
-            <SheetDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+            <SheetTitle className="text-xl font-semibold uppercase  text-slate-900">Create Campaign</SheetTitle>
+            <SheetDescription className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest">
               Setup your automated WhatsApp outreach
             </SheetDescription>
           </SheetHeader>
@@ -1969,24 +2036,24 @@ export default function WhatsAppAdmin() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="h-6 w-1 bg-emerald-600 rounded-full" />
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900">Campaign Configuration</h3>
+                  <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-900">Campaign Configuration</h3>
                 </div>
                 
                 <div className="grid gap-4">
                   <div className="grid gap-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Campaign Title</Label>
+                    <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Campaign Title</Label>
                     <Input 
                       placeholder="e.g. June Intake Promotion" 
                       value={newCampaign.name} 
                       onChange={e => setNewCampaign({...newCampaign, name: e.target.value})}
-                      className="border-2 focus:border-emerald-600 h-10 font-bold text-slate-800"
+                      className="border-2 focus:border-emerald-600 h-10 font-semibold text-slate-800"
                     />
                   </div>
                   
                   <div className="grid gap-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Message Template</Label>
+                    <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Message Template</Label>
                     <Select onValueChange={handleTemplateChange}>
-                      <SelectTrigger className="border-2 h-10 font-bold text-slate-800">
+                      <SelectTrigger className="border-2 h-10 font-semibold text-slate-800">
                         <SelectValue placeholder="Select approved template..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -2004,19 +2071,19 @@ export default function WhatsAppAdmin() {
                 <div className="space-y-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-6 w-1 bg-amber-500 rounded-full" />
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900">Template Parameters</h3>
+                    <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-900">Template Parameters</h3>
                   </div>
 
                   {/* Header Params */}
                   {newCampaign.parameters.header.type === "image" && (
                     <div className="grid gap-3 p-3 bg-white rounded-xl border border-slate-100">
                       <div className="flex justify-between items-center">
-                        <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Header Image</Label>
+                        <Label className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">Header Image</Label>
                         <Button
                           variant="link"
                           type="button"
                           onClick={() => setIsCustomHeader(!isCustomHeader)}
-                          className="h-auto p-0 text-[9px] font-bold uppercase tracking-widest text-emerald-600 hover:text-emerald-700"
+                          className="h-auto p-0 text-[9px] font-semibold uppercase tracking-widest text-emerald-600 hover:text-emerald-700"
                         >
                           {isCustomHeader ? "Select from Library" : "Enter Custom URL/ID"}
                         </Button>
@@ -2033,7 +2100,7 @@ export default function WhatsAppAdmin() {
                             }
                           })}
                         >
-                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-bold">
+                          <SelectTrigger className="text-[11px] h-10 bg-slate-50/50 border-slate-200 rounded-xl font-semibold">
                             <SelectValue placeholder="Choose a file from library..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -2073,10 +2140,10 @@ export default function WhatsAppAdmin() {
                   {/* Body Variable Mappings */}
                   {newCampaign.parameters.body_variables.length > 0 && (
                     <div className="space-y-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Body Variables</p>
+                      <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">Body Variables</p>
                       {newCampaign.parameters.body_variables.map((v, i) => (
                         <div key={i} className="flex gap-2 items-center bg-white p-2 rounded-xl border border-slate-100">
-                          <Badge variant="secondary" className="h-6 w-8 justify-center font-bold text-[10px]">{"{{" + (i+1) + "}}"}</Badge>
+                          <Badge variant="secondary" className="h-6 w-8 justify-center font-semibold text-[10px]">{"{{" + (i+1) + "}}"}</Badge>
                           <Select 
                             value={v.type} 
                             onValueChange={val => {
@@ -2086,7 +2153,7 @@ export default function WhatsAppAdmin() {
                               setNewCampaign({ ...newCampaign, parameters: { ...newCampaign.parameters, body_variables: newVars }});
                             }}
                           >
-                            <SelectTrigger className="w-24 h-8 text-[10px] font-bold uppercase">
+                            <SelectTrigger className="w-24 h-8 text-[10px] font-semibold uppercase">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -2104,7 +2171,7 @@ export default function WhatsAppAdmin() {
                                 setNewCampaign({ ...newCampaign, parameters: { ...newCampaign.parameters, body_variables: newVars }});
                               }}
                             >
-                              <SelectTrigger className="flex-1 h-8 text-[10px] font-bold">
+                              <SelectTrigger className="flex-1 h-8 text-[10px] font-semibold">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -2135,14 +2202,14 @@ export default function WhatsAppAdmin() {
                   {/* Flow Config */}
                   {newCampaign.parameters.buttons.some(b => b.type === "flow") && (
                     <div className="space-y-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Flow Configuration</p>
+                      <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">Flow Configuration</p>
                       {newCampaign.parameters.buttons.map((b, i) => b.type === "flow" && (
                         <div key={i} className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
                           <div className="flex items-center gap-2 mb-2">
                              <Layers className="h-3 w-3 text-emerald-600" />
-                             <span className="text-[10px] font-bold uppercase text-emerald-700">Button {i+1}: Meta Flow</span>
+                             <span className="text-[10px] font-semibold uppercase text-emerald-700">Button {i+1}: Meta Flow</span>
                           </div>
-                          <p className="text-[9px] text-slate-500 font-bold uppercase leading-tight">
+                          <p className="text-[9px] text-slate-500 font-semibold uppercase leading-tight">
                             Tokens and session IDs will be automatically generated per recipient.
                           </p>
                         </div>
@@ -2157,14 +2224,14 @@ export default function WhatsAppAdmin() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className="h-7 w-1.5 bg-emerald-600 rounded-full" />
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Auto Response Automation</h3>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-900">Auto Response Automation</h3>
                   </div>
-                  <Badge className="bg-emerald-600 text-white border-none text-[8px] font-bold uppercase tracking-widest px-2">Library Linked</Badge>
+                  <Badge className="bg-emerald-600 text-white border-none text-[8px] font-semibold uppercase tracking-widest px-2">Library Linked</Badge>
                 </div>
 
                 <div className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-emerald-100/50 shadow-sm">
                   <div className="space-y-0.5">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">Enable Auto-Reply</Label>
+                    <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-700">Enable Auto-Reply</Label>
                     <p className="text-[9px] text-slate-400 font-medium">Respond automatically to user replies or flow completions.</p>
                   </div>
                   <Switch 
@@ -2184,15 +2251,15 @@ export default function WhatsAppAdmin() {
                   <div className="grid gap-3 p-4 bg-white rounded-2xl border border-emerald-100/50 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <Zap className="h-3.5 w-3.5 text-emerald-600" />
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">Response for "Interested" (Flow Success)</Label>
+                      <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-700">Response for "Interested" (Flow Success)</Label>
                     </div>
                     
                     <div className="grid gap-4">
                       <div className="grid gap-1.5">
                         <div className="flex items-center justify-between ml-1">
-                          <Label className="text-[9px] font-bold uppercase text-slate-400">Select Media (multi-select)</Label>
+                          <Label className="text-[9px] font-semibold uppercase text-slate-400">Select Media (multi-select)</Label>
                           {newCampaign.response_config.interested.media_ids.length > 0 && (
-                            <Badge className="bg-emerald-100 text-emerald-700 border-none text-[9px] font-bold px-2">
+                            <Badge className="bg-emerald-100 text-emerald-700 border-none text-[9px] font-semibold px-2">
                               {newCampaign.response_config.interested.media_ids.length} selected
                             </Badge>
                           )}
@@ -2204,7 +2271,7 @@ export default function WhatsAppAdmin() {
                             {newCampaign.response_config.interested.media_ids.map(id => {
                               const asset = mediaAssets.find(a => a.media_id === id)
                               return asset ? (
-                                <span key={id} className="inline-flex items-center gap-1.5 bg-white border border-emerald-200 rounded-lg px-2 py-1 text-[10px] font-bold text-emerald-700 shadow-sm">
+                                <span key={id} className="inline-flex items-center gap-1.5 bg-white border border-emerald-200 rounded-lg px-2 py-1 text-[10px] font-semibold text-emerald-700 shadow-sm">
                                   {getMediaIcon(asset.file_type)}
                                   <span className="max-w-[90px] truncate">{asset.nickname}</span>
                                   <button type="button" onClick={() => toggleAutoReplyMedia(id, 'interested')} className="text-emerald-300 hover:text-rose-500 transition-colors">
@@ -2231,7 +2298,7 @@ export default function WhatsAppAdmin() {
                                     {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
                                   </div>
                                   {getMediaIcon(asset.file_type)}
-                                  <span className={cn("text-[11px] font-bold truncate flex-1", isSelected ? "text-emerald-700" : "text-slate-700")}>{asset.nickname}</span>
+                                  <span className={cn("text-[11px] font-semibold truncate flex-1", isSelected ? "text-emerald-700" : "text-slate-700")}>{asset.nickname}</span>
                                   <span className="text-[9px] text-slate-400 font-medium uppercase shrink-0">
                                     {asset.file_type?.includes('video') || asset.file_type?.includes('mp4') ? 'video' : asset.file_type?.includes('pdf') ? 'pdf' : 'image'}
                                   </span>
@@ -2242,14 +2309,14 @@ export default function WhatsAppAdmin() {
                         ) : (
                           <div className="flex flex-col items-center justify-center py-5 border border-dashed border-slate-200 rounded-xl bg-slate-50/30">
                             <Upload className="h-5 w-5 text-slate-300 mb-1.5" />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No media in library</p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">No media in library</p>
                             <p className="text-[9px] text-slate-300 font-medium mt-0.5">Upload via Media Library button above</p>
                           </div>
                         )}
                       </div>
 
                       <div className="grid gap-1.5">
-                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Response Caption</Label>
+                        <Label className="text-[9px] font-semibold uppercase text-slate-400 ml-1">Response Caption</Label>
                         <Textarea
                           placeholder="Write a compelling caption for these files..."
                           value={newCampaign.response_config.interested.caption}
@@ -2270,15 +2337,15 @@ export default function WhatsAppAdmin() {
                   <div className="grid gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex items-center gap-2 mb-1">
                       <MessageCircle className="h-3.5 w-3.5 text-slate-400" />
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-700">Default Response (Any Reply)</Label>
+                      <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-700">Default Response (Any Reply)</Label>
                     </div>
                     
                     <div className="grid gap-4">
                       <div className="grid gap-1.5">
                         <div className="flex items-center justify-between ml-1">
-                          <Label className="text-[9px] font-bold uppercase text-slate-400">Select Media (multi-select)</Label>
+                          <Label className="text-[9px] font-semibold uppercase text-slate-400">Select Media (multi-select)</Label>
                           {newCampaign.response_config.default.media_ids.length > 0 && (
-                            <Badge className="bg-slate-200 text-slate-600 border-none text-[9px] font-bold px-2">
+                            <Badge className="bg-slate-200 text-slate-600 border-none text-[9px] font-semibold px-2">
                               {newCampaign.response_config.default.media_ids.length} selected
                             </Badge>
                           )}
@@ -2290,7 +2357,7 @@ export default function WhatsAppAdmin() {
                             {newCampaign.response_config.default.media_ids.map(id => {
                               const asset = mediaAssets.find(a => a.media_id === id)
                               return asset ? (
-                                <span key={id} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-600 shadow-sm">
+                                <span key={id} className="inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-600 shadow-sm">
                                   {getMediaIcon(asset.file_type)}
                                   <span className="max-w-[90px] truncate">{asset.nickname}</span>
                                   <button type="button" onClick={() => toggleAutoReplyMedia(id, 'default')} className="text-slate-300 hover:text-rose-500 transition-colors">
@@ -2317,7 +2384,7 @@ export default function WhatsAppAdmin() {
                                     {isSelected && <CheckCircle2 className="h-2.5 w-2.5 text-white" />}
                                   </div>
                                   {getMediaIcon(asset.file_type)}
-                                  <span className={cn("text-[11px] font-bold truncate flex-1", isSelected ? "text-slate-900" : "text-slate-700")}>{asset.nickname}</span>
+                                  <span className={cn("text-[11px] font-semibold truncate flex-1", isSelected ? "text-slate-900" : "text-slate-700")}>{asset.nickname}</span>
                                   <span className="text-[9px] text-slate-400 font-medium uppercase shrink-0">
                                     {asset.file_type?.includes('video') || asset.file_type?.includes('mp4') ? 'video' : asset.file_type?.includes('pdf') ? 'pdf' : 'image'}
                                   </span>
@@ -2328,14 +2395,14 @@ export default function WhatsAppAdmin() {
                         ) : (
                           <div className="flex flex-col items-center justify-center py-5 border border-dashed border-slate-200 rounded-xl bg-slate-50/30">
                             <Upload className="h-5 w-5 text-slate-300 mb-1.5" />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No media in library</p>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">No media in library</p>
                             <p className="text-[9px] text-slate-300 font-medium mt-0.5">Upload via Media Library button above</p>
                           </div>
                         )}
                       </div>
 
                       <div className="grid gap-1.5">
-                        <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Response Caption</Label>
+                        <Label className="text-[9px] font-semibold uppercase text-slate-400 ml-1">Response Caption</Label>
                         <Textarea
                           placeholder="Write a message to accompany the files..."
                           value={newCampaign.response_config.default.caption}
@@ -2353,7 +2420,7 @@ export default function WhatsAppAdmin() {
                   </div>
                 </div>
                 
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-2 text-center px-4">
+                <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest leading-relaxed mt-2 text-center px-4">
                   Users responding to this campaign will receive these specific assets instead of the generic prospectus.
                 </p>
               </div>
@@ -2365,16 +2432,16 @@ export default function WhatsAppAdmin() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <div className="h-6 w-1 bg-blue-600 rounded-full" />
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900">Audience Selection</h3>
+                    <h3 className="text-[10px] font-semibold uppercase tracking-widest text-slate-900">Audience Selection</h3>
                   </div>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-bold px-3">
+                  <Badge variant="outline" className="bg-[#EDF5FF] text-blue-700 border-blue-100 font-semibold px-3">
                     {newCampaign.recipient_ids.length} Selected
                   </Badge>
                 </div>
 
                 {/* Tag Grouping Filters */}
                 <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1 block">Group by Tags</Label>
+                  <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-1 block">Group by Tags</Label>
                   <div className="flex flex-wrap gap-2">
                     {allTags.length > 0 ? (
                       allTags.map(tag => (
@@ -2386,7 +2453,7 @@ export default function WhatsAppAdmin() {
                             )
                           }}
                           className={cn(
-                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight transition-all border",
+                            "px-3 py-1 rounded-full text-[10px] font-semibold uppercase  transition-all border",
                             selectedTags.includes(tag) 
                               ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-105" 
                               : "bg-white text-slate-500 border-slate-200 hover:border-emerald-600"
@@ -2426,7 +2493,7 @@ export default function WhatsAppAdmin() {
                 </div>
 
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
                     Showing {filteredProspects.length} prospects
                   </p>
                   <Button 
@@ -2439,7 +2506,7 @@ export default function WhatsAppAdmin() {
                         setNewCampaign({...newCampaign, recipient_ids: filteredProspects.map(p => p.id)})
                       }
                     }}
-                    className="h-auto p-0 text-[10px] font-bold uppercase tracking-widest text-emerald-600"
+                    className="h-auto p-0 text-[10px] font-semibold uppercase tracking-widest text-emerald-600"
                   >
                     {newCampaign.recipient_ids.length === filteredProspects.length ? 'Deselect All' : 'Select All Filtered'}
                   </Button>
@@ -2461,7 +2528,7 @@ export default function WhatsAppAdmin() {
                         max={filteredProspects.length}
                         value={rangeStart}
                         onChange={e => setRangeStart(e.target.value)}
-                        className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                        className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                       />
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
                       <Input 
@@ -2470,7 +2537,7 @@ export default function WhatsAppAdmin() {
                         max={filteredProspects.length}
                         value={rangeEnd}
                         onChange={e => setRangeEnd(e.target.value)}
-                        className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                        className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                       />
                     </div>
                     
@@ -2556,11 +2623,11 @@ export default function WhatsAppAdmin() {
                           <div className="flex items-center gap-2 mb-1">
                             <label 
                               htmlFor={`prospect-${prospect.id}`}
-                              className="font-bold text-sm text-slate-900 cursor-pointer truncate uppercase tracking-tight"
+                              className="font-semibold text-sm text-slate-900 cursor-pointer truncate uppercase "
                             >
                               {prospect.name}
                             </label>
-                            <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-bold uppercase tracking-widest shadow-sm", getStatusColor(prospect.status))}>
+                            <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-semibold uppercase tracking-widest shadow-sm", getStatusColor(prospect.status))}>
                               {prospect.status}
                             </Badge>
                           </div>
@@ -2580,20 +2647,20 @@ export default function WhatsAppAdmin() {
           <SheetFooter className="p-4 border-t bg-slate-50 shrink-0">
             <div className="flex items-center justify-between w-full">
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Total Selection</span>
-                <span className="text-base font-bold text-slate-900">
-                  {newCampaign.recipient_ids.length} <span className="text-[10px] text-slate-500 font-bold uppercase">Prospects</span>
+                <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-400">Total Selection</span>
+                <span className="text-base font-semibold text-slate-900">
+                  {newCampaign.recipient_ids.length} <span className="text-[10px] text-slate-500 font-semibold uppercase">Prospects</span>
                 </span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsCreateCampaignOpen(false)} className="px-4 font-bold uppercase tracking-widest text-[10px] h-10 rounded-xl">
+                <Button variant="outline" size="sm" onClick={() => setIsCreateCampaignOpen(false)} className="px-4 font-semibold uppercase tracking-widest text-[10px] h-10 rounded-xl">
                   Discard
                 </Button>
                 <Button 
                   size="sm" 
                   onClick={handleCreateCampaign} 
                   disabled={isSending || newCampaign.recipient_ids.length === 0}
-                  className="bg-[#1A1F2B] hover:bg-black shadow-lg px-6 font-bold uppercase tracking-widest text-[10px] h-10 rounded-xl transition-all"
+                  className="bg-[#1A1F2B] hover:bg-black shadow-lg px-6 font-semibold uppercase tracking-widest text-[10px] h-10 rounded-xl transition-all"
                 >
                   {isSending ? (
                     <>
@@ -2616,29 +2683,29 @@ export default function WhatsAppAdmin() {
       <Dialog open={isMediaLibraryOpen} onOpenChange={setIsMediaLibraryOpen}>
         <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
           <DialogHeader className="p-6 bg-[#1A1F2B] text-white">
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2">
+            <DialogTitle className="text-xl font-semibold uppercase  flex items-center gap-2">
               <Upload className="h-5 w-5 text-emerald-400" />
               Upload to Media Library
             </DialogTitle>
-            <DialogDescription className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+            <DialogDescription className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest mt-1">
               Upload PDF, image, or video files for use in campaign auto-replies.
             </DialogDescription>
           </DialogHeader>
           
           <div className="p-6 space-y-6 bg-white">
             <div className="grid gap-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">File Nickname</Label>
+              <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">File Nickname</Label>
               <Input 
                 placeholder="e.g. June Brochure 2024" 
                 value={mediaNickname}
                 onChange={e => setMediaNickname(e.target.value)}
-                className="h-11 border-2 focus:border-emerald-600 rounded-xl font-bold"
+                className="h-11 border-2 focus:border-emerald-600 rounded-xl font-semibold"
               />
               <p className="text-[9px] text-slate-400 font-medium ml-1">This name will appear in your campaign dropdowns.</p>
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Select File (PDF, Image, Video)</Label>
+              <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">Select File (PDF, Image, Video)</Label>
               <div className="relative group">
                 <input
                   type="file"
@@ -2660,21 +2727,21 @@ export default function WhatsAppAdmin() {
                     <div className="flex flex-col items-center gap-2">
                       <div className={cn(
                         "h-10 w-10 rounded-full flex items-center justify-center",
-                        mediaFile.type.startsWith("video/") ? "bg-blue-100" : "bg-emerald-100"
+                        mediaFile.type.startsWith("video/") ? "bg-[#EDF5FF]" : "bg-emerald-100"
                       )}>
                         {mediaFile.type.startsWith("video/")
-                          ? <Video className="h-5 w-5 text-blue-600" />
+                          ? <Video className="h-5 w-5 text-primary" />
                           : <CheckCircle2 className="h-6 w-6 text-emerald-600" />
                         }
                       </div>
-                      <span className="text-xs font-bold text-slate-700">{mediaFile.name}</span>
+                      <span className="text-xs font-semibold text-slate-700">{mediaFile.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
                         {mediaFile.type.startsWith("video/") && (
-                          <Badge className="bg-blue-100 text-blue-700 border-none text-[8px] font-bold uppercase">Video</Badge>
+                          <Badge className="bg-[#EDF5FF] text-blue-700 border-none text-[8px] font-semibold uppercase">Video</Badge>
                         )}
                         {mediaFile.size > (mediaFile.type.startsWith("video/") ? 16 * 1024 * 1024 : 5 * 1024 * 1024) && (
-                          <Badge className="bg-rose-100 text-rose-600 border-none text-[8px] font-bold uppercase">Too Large</Badge>
+                          <Badge className="bg-rose-100 text-rose-600 border-none text-[8px] font-semibold uppercase">Too Large</Badge>
                         )}
                       </div>
                     </div>
@@ -2683,15 +2750,15 @@ export default function WhatsAppAdmin() {
                       <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Upload className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
                       </div>
-                      <span className="text-xs font-bold text-slate-500">Click to browse or drag and drop</span>
+                      <span className="text-xs font-semibold text-slate-500">Click to browse or drag and drop</span>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold uppercase">
                           <FileText className="h-3 w-3 text-rose-400" /> PDF
                         </span>
-                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold uppercase">
                           <Image className="h-3 w-3 text-emerald-400" /> Image · max 5MB
                         </span>
-                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-bold uppercase">
+                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold uppercase">
                           <Video className="h-3 w-3 text-blue-400" /> Video · max 16MB
                         </span>
                       </div>
@@ -2704,13 +2771,13 @@ export default function WhatsAppAdmin() {
             <div className="flex gap-3 pt-2">
               <Button 
                 variant="outline" 
-                className="flex-1 h-11 rounded-xl font-bold uppercase tracking-widest text-[10px]"
+                className="flex-1 h-11 rounded-xl font-semibold uppercase tracking-widest text-[10px]"
                 onClick={() => setIsMediaLibraryOpen(false)}
               >
                 Cancel
               </Button>
               <Button 
-                className="flex-[2] h-11 bg-[#1A1F2B] hover:bg-black rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-slate-200"
+                className="flex-[2] h-11 bg-[#1A1F2B] hover:bg-black rounded-xl font-semibold uppercase tracking-widest text-[10px] shadow-lg shadow-slate-200"
                 onClick={handleMediaUpload}
                 disabled={isUploadingMedia || !mediaFile || !mediaNickname}
               >
@@ -2734,11 +2801,11 @@ export default function WhatsAppAdmin() {
       <Dialog open={isAddingRecipients} onOpenChange={setIsAddingRecipients}>
         <DialogContent className="sm:max-w-2xl rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
           <DialogHeader className="p-6 bg-[#1A1F2B] text-white">
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2">
+            <DialogTitle className="text-xl font-semibold uppercase  flex items-center gap-2">
               <UserPlus className="h-5 w-5 text-emerald-400" />
               Inject New Recipients
             </DialogTitle>
-            <DialogDescription className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+            <DialogDescription className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">
               Select students to add to the existing campaign flow.
             </DialogDescription>
           </DialogHeader>
@@ -2751,11 +2818,11 @@ export default function WhatsAppAdmin() {
                   placeholder="Search name or number..." 
                   value={searchProspects} 
                   onChange={e => setSearchProspects(e.target.value)}
-                  className="pl-9 h-11 border-2 rounded-xl text-sm font-bold"
+                  className="pl-9 h-11 border-2 rounded-xl text-sm font-semibold"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 h-11 border-2 rounded-xl text-sm font-bold">
+                <SelectTrigger className="w-40 h-11 border-2 rounded-xl text-sm font-semibold">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2814,7 +2881,7 @@ export default function WhatsAppAdmin() {
                     max={prospectsForInjection.length}
                     value={injectRangeStart}
                     onChange={e => setInjectRangeStart(e.target.value)}
-                    className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                    className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                   />
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
                   <Input 
@@ -2823,7 +2890,7 @@ export default function WhatsAppAdmin() {
                     max={prospectsForInjection.length}
                     value={injectRangeEnd}
                     onChange={e => setInjectRangeEnd(e.target.value)}
-                    className="h-8 text-xs border-2 bg-white text-center font-bold px-1 w-16 rounded-lg"
+                    className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                   />
                 </div>
                 
@@ -2900,8 +2967,8 @@ export default function WhatsAppAdmin() {
                       {newCampaign.recipient_ids.includes(prospect.id) && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-xs uppercase tracking-tight truncate">{prospect.name}</p>
-                      <p className={cn("text-[10px] font-bold opacity-70", newCampaign.recipient_ids.includes(prospect.id) ? "text-white" : "text-slate-400")}>
+                      <p className="font-black text-xs uppercase  truncate">{prospect.name}</p>
+                      <p className={cn("text-[10px] font-semibold opacity-70", newCampaign.recipient_ids.includes(prospect.id) ? "text-white" : "text-slate-400")}>
                         +{prospect.mobile}
                       </p>
                     </div>
@@ -2912,7 +2979,7 @@ export default function WhatsAppAdmin() {
                 ))}
                 {prospectsForInjection.length === 0 && (
                   <div className="p-12 text-center">
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">No new students available to add</p>
+                    <p className="text-slate-400 font-semibold text-[10px] uppercase tracking-widest">No new students available to add</p>
                   </div>
                 )}
               </div>

@@ -95,7 +95,7 @@ export default function TelecallerStatusPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Telecaller Performance</h1>
+            <h1 className="text-xl font-normal ">Telecaller Performance</h1>
             <p className="text-muted-foreground">
               Monitor work status and conversion rates of telecallers
             </p>
@@ -110,7 +110,7 @@ export default function TelecallerStatusPage() {
             <CardTitle className="text-sm font-medium">Total Telecallers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{telecallers.length}</div>
+            <div className="text-xl font-normal">{telecallers.length}</div>
             <p className="text-xs text-muted-foreground">Active in system</p>
           </CardContent>
         </Card>
@@ -119,7 +119,7 @@ export default function TelecallerStatusPage() {
             <CardTitle className="text-sm font-medium">Avg. Conversion</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-xl font-normal text-success">
               {telecallers.length > 0 
                 ? Math.round(telecallers.reduce((acc, tc) => acc + getTelecallerStats(tc.id).conversionRate, 0) / telecallers.length)
                 : 0}%
@@ -132,7 +132,7 @@ export default function TelecallerStatusPage() {
             <CardTitle className="text-sm font-medium">Total Qualified Leads</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-xl font-normal text-primary">
               {callLogs.filter((l: any) => l.outcome === "qualified").length}
             </div>
             <p className="text-xs text-muted-foreground">From all assignments</p>
@@ -187,7 +187,7 @@ export default function TelecallerStatusPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-[#DEFBE6] text-green-700 border-green-200">
                           Active
                         </Badge>
                       </TableCell>
@@ -205,7 +205,7 @@ export default function TelecallerStatusPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-mono">{stats.total}</TableCell>
-                      <TableCell className="text-right font-mono text-green-600">{stats.qualified}</TableCell>
+                      <TableCell className="text-right font-mono text-success">{stats.qualified}</TableCell>
                       <TableCell className="text-right font-medium">
                         <div className="flex items-center justify-end gap-2">
                           <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden hidden sm:block">

@@ -113,7 +113,7 @@ export default function spocsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl font-normal ">
             Field Agents (spocs)
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -138,13 +138,13 @@ export default function spocsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{spocs.length}</div>
+            <div className="text-xl font-normal">{spocs.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Total spocs</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-normal">
               {spocs.filter((s: any) => s.is_active).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Active</p>
@@ -152,13 +152,13 @@ export default function spocsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{reports.length}</div>
+            <div className="text-xl font-normal">{reports.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Total Reports</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-normal">
               {spocs.filter((s: any) => getspocStats(s.id).hasReportToday).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -206,8 +206,8 @@ export default function spocsPage() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
-                        <span className="text-sm font-medium text-orange-600">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FCF4D6]">
+                        <span className="text-sm font-medium text-warning">
                           {spoc.name
                             .split(" ")
                             .map((n: string) => n[0])
@@ -288,9 +288,9 @@ export default function spocsPage() {
                       </div>
                       <div className="font-semibold text-lg">
                         {stats.hasReportToday ? (
-                          <span className="text-green-600">✓ Submitted</span>
+                          <span className="text-success">✓ Submitted</span>
                         ) : (
-                          <span className="text-yellow-600">Pending</span>
+                          <span className="text-warning">Pending</span>
                         )}
                       </div>
                     </div>

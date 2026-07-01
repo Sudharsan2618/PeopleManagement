@@ -450,7 +450,7 @@ export const whatsappApi = {
   getCampaigns: (page: number = 1, pageSize: number = 10) => apiRequest<any>(`/whatsapp/campaigns?page=${page}&page_size=${pageSize}`),
   getCampaignDetails: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`),
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
-  getConversations: () => apiRequest<any[]>("/whatsapp/conversations"),
+  getConversations: (page: number = 1, pageSize: number = 20) => apiRequest<any[]>(`/whatsapp/conversations?page=${page}&page_size=${pageSize}`),
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
   getFlowSubmissions: (page: number = 1, pageSize: number = 20) => apiRequest<any>(`/whatsapp/flow-submissions?page=${page}&page_size=${pageSize}`),
   createCampaign: (data: any) => apiRequest<any>("/whatsapp/campaigns", {

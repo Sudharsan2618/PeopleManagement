@@ -139,7 +139,7 @@ export default function ProspectImportPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Import Prospects</h1>
+          <h1 className="text-xl font-normal">Import Prospects</h1>
           <p className="text-muted-foreground">Upload a CSV file to bulk add prospects</p>
         </div>
       </div>
@@ -214,7 +214,7 @@ export default function ProspectImportPage() {
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
               Import Results
             </CardTitle>
           </CardHeader>
@@ -222,11 +222,11 @@ export default function ProspectImportPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 bg-background rounded-lg border">
                 <p className="text-sm text-muted-foreground">Successfully Imported</p>
-                <p className="text-2xl font-bold text-green-600">{importResults.success}</p>
+                <p className="text-xl font-normal text-success">{importResults.success}</p>
               </div>
               <div className="p-3 bg-background rounded-lg border">
                 <p className="text-sm text-muted-foreground">Failed/Duplicates</p>
-                <p className="text-2xl font-bold text-red-600">{importResults.failed}</p>
+                <p className="text-xl font-normal text-destructive">{importResults.failed}</p>
               </div>
             </div>
             {importResults.errors.length > 0 && (

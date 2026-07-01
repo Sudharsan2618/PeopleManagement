@@ -149,11 +149,12 @@ async def handle_webhook(request: Request):
         return {"status": "error", "message": str(e)}
 
 @router.get("/conversations")
-def get_conversations():
+def get_conversations(page: int = Query(1), page_size: int = Query(20)):
     """Get list of prospects with recent WhatsApp activity."""
     try:
         from database.connection import get_db_connection
         from psycopg2.extras import RealDictCursor
+        offset = (page - 1) * page_size
         with get_db_connection() as conn:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             try:
@@ -174,13 +175,65 @@ def get_conversations():
                     WHERE m.id IS NOT NULL
                     GROUP BY p.id, p.name, p.mobile
                     ORDER BY last_message_at DESC NULLS LAST
-                """)
+                    LIMIT %s OFFSET %s
+                """, (page_size, offset))
                 results = cur.fetchall()
                 return results
             finally:
                 cur.close()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stream")
+async def sse_stream(request: Request):
+    """Server-Sent Events endpoint to stream real-time message updates."""
+    from database.connection import get_db_connection
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    import json
+
+    async def event_generator():
+        last_checked_id = 0
+        
+        # Get the initial latest message ID
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT MAX(id) FROM whatsapp_messages")
+                    val = cur.fetchone()[0]
+                    if val is not None:
+                        last_checked_id = val
+        except Exception:
+            pass
+
+        while True:
+            # Check if client disconnected
+            if await request.is_disconnected():
+                break
+
+            # Poll for new messages
+            try:
+                with get_db_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT id, prospect_id, direction, body, created_at FROM whatsapp_messages WHERE id > %s ORDER BY id ASC", (last_checked_id,))
+                        rows = cur.fetchall()
+                        for row in rows:
+                            msg_id, prospect_id, direction, body, created_at = row
+                            last_checked_id = max(last_checked_id, msg_id)
+                            data = json.dumps({
+                                "id": msg_id,
+                                "prospect_id": prospect_id,
+                                "direction": direction,
+                                "body": body or "",
+                                "created_at": str(created_at)
+                            })
+                            yield f"event: message\ndata: {data}\n\n"
+            except Exception as e:
+                print(f"SSE Database error: {e}")
+                
+            await asyncio.sleep(2) # check database every 2 seconds
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @router.get("/messages/{prospect_id}")
 def get_messages(prospect_id: int):

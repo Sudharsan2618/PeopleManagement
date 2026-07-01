@@ -32,9 +32,9 @@ const statusConfig: Record<
   string,
   { icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }
 > = {
-  Pending: { icon: Clock, color: "text-yellow-600", bgColor: "bg-yellow-100" },
-  Completed: { icon: CheckCircle2, color: "text-green-600", bgColor: "bg-green-100" },
-  Overdue: { icon: AlertTriangle, color: "text-red-600", bgColor: "bg-red-100" },
+  Pending: { icon: Clock, color: "text-warning", bgColor: "bg-[#FCF4D6]" },
+  Completed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-[#DEFBE6]" },
+  Overdue: { icon: AlertTriangle, color: "text-destructive", bgColor: "bg-[#FFF1F1]" },
 }
 
 export default function spocDashboard() {
@@ -142,7 +142,7 @@ export default function spocDashboard() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl font-normal ">Dashboard</h1>
           <p className="text-muted-foreground flex items-center gap-2">
             {today}
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
@@ -168,11 +168,11 @@ export default function spocDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
+              <div className="rounded-lg bg-[#EDF5FF] p-2">
+                <Calendar className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-xl font-normal">
                   {new Date().toLocaleDateString("en-IN", {
                     day: "2-digit",
                     month: "short",
@@ -186,11 +186,11 @@ export default function spocDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2">
-                <FileText className="h-5 w-5 text-green-600" />
+              <div className="rounded-lg bg-[#DEFBE6] p-2">
+                <FileText className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spocStats.reportsSubmitted}</p>
+                <p className="text-xl font-normal">{spocStats.reportsSubmitted}</p>
                 <p className="text-xs text-muted-foreground">Reports Submitted</p>
               </div>
             </div>
@@ -199,11 +199,11 @@ export default function spocDashboard() {
         {/* <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-orange-100 p-2">
-                <ClipboardList className="h-5 w-5 text-orange-600" />
+              <div className="rounded-lg bg-[#FCF4D6] p-2">
+                <ClipboardList className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spocStats.pendingFollowups}</p>
+                <p className="text-xl font-normal">{spocStats.pendingFollowups}</p>
                 <p className="text-xs text-muted-foreground">Pending Follow-ups</p>
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function spocDashboard() {
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{spocStats.telecallerFollowupsRaised}</p>
+                <p className="text-xl font-normal">{spocStats.telecallerFollowupsRaised}</p>
                 <p className="text-xs text-muted-foreground">TC Follow-ups Raised</p>
               </div>
             </div>
@@ -249,8 +249,8 @@ export default function spocDashboard() {
             <Button asChild variant="outline" className="h-auto py-4 justify-start">
               <Link href="/spoc/reports">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-blue-100 p-2">
-                    <FolderOpen className="h-5 w-5 text-blue-600" />
+                  <div className="rounded-lg bg-[#EDF5FF] p-2">
+                    <FolderOpen className="h-5 w-5 text-primary" />
                   </div>
                   <div className="text-left">
                     <p className="font-medium">Past Reports</p>
@@ -264,8 +264,8 @@ export default function spocDashboard() {
             {/* <Button asChild variant="outline" className="h-auto py-4 justify-start">
               <Link href="/spoc/followups">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-orange-100 p-2">
-                    <ClipboardList className="h-5 w-5 text-orange-600" />
+                  <div className="rounded-lg bg-[#FCF4D6] p-2">
+                    <ClipboardList className="h-5 w-5 text-warning" />
                   </div>
                   <div className="text-left">
                     <p className="font-medium">My Follow-ups</p>
@@ -348,8 +348,8 @@ export default function spocDashboard() {
                         variant="outline"
                         className={cn(
                           report.is_draft
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-green-50 text-green-700"
+                            ? "bg-[#FCF4D6] text-yellow-700"
+                            : "bg-[#DEFBE6] text-green-700"
                         )}
                       >
                         {report.is_draft ? "Draft" : "Submitted"}
@@ -392,7 +392,7 @@ export default function spocDashboard() {
                       key={followUp.id}
                       className={cn(
                         "rounded-lg border p-3",
-                        isOverdue && "border-red-200 bg-red-50/50"
+                        isOverdue && "border-red-200 bg-[#FFF1F1]/50"
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">

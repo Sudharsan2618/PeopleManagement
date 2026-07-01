@@ -69,12 +69,12 @@ import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 
 const statusColors: Record<ProspectStatus, string> = {
-  Pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  InProgress: "bg-blue-100 text-blue-800 border-blue-200",
-  Callback: "bg-orange-100 text-orange-800 border-orange-200",
-  Qualified: "bg-green-100 text-green-800 border-green-200",
+  Pending: "bg-[#FCF4D6] text-yellow-800 border-yellow-200",
+  InProgress: "bg-[#EDF5FF] text-blue-800 border-blue-200",
+  Callback: "bg-[#FCF4D6] text-orange-800 border-orange-200",
+  Qualified: "bg-[#DEFBE6] text-green-800 border-green-200",
   NotInterested: "bg-gray-100 text-gray-800 border-gray-200",
-  DNC: "bg-red-100 text-red-800 border-red-200",
+  DNC: "bg-[#FFF1F1] text-red-800 border-red-200",
   Enrolled: "bg-emerald-100 text-emerald-800 border-emerald-200",
   Archived: "bg-slate-100 text-slate-800 border-slate-200",
 }
@@ -263,7 +263,7 @@ export default function AdminProspectsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Prospect Management</h1>
+          <h1 className="text-xl font-normal ">Prospect Management</h1>
           <p className="text-muted-foreground">
             View and manage all prospects in the database
           </p>
@@ -305,7 +305,7 @@ export default function AdminProspectsPage() {
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold tracking-tight">{stats.total.toLocaleString()}</p>
+                <p className="text-xl font-normal ">{stats.total.toLocaleString()}</p>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Total Prospects</p>
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function AdminProspectsPage() {
                 <UserCog className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold tracking-tight">{stats.assigned.toLocaleString()}</p>
+                <p className="text-xl font-normal ">{stats.assigned.toLocaleString()}</p>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Assigned</p>
               </div>
             </div>
@@ -331,7 +331,7 @@ export default function AdminProspectsPage() {
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold tracking-tight">{stats.qualified}</p>
+                <p className="text-xl font-normal ">{stats.qualified}</p>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Qualified</p>
               </div>
             </div>
@@ -344,7 +344,7 @@ export default function AdminProspectsPage() {
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold tracking-tight">{stats.pending}</p>
+                <p className="text-xl font-normal ">{stats.pending}</p>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">Pending</p>
               </div>
             </div>

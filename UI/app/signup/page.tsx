@@ -84,15 +84,15 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-              <GraduationCap className="h-8 w-8 text-primary-foreground" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-foreground text-background">
+              <GraduationCap className="h-6 w-6" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
+          <CardTitle className="text-xl font-semibold">Create your account</CardTitle>
           <CardDescription>Register to access TATTI CRM</CardDescription>
         </CardHeader>
 
@@ -159,7 +159,7 @@ export default function SignupPage() {
                   id="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value as "telecaller" | "spoc")}
-                  className="w-full rounded-md border border-input px-3 py-2 bg-background"
+                  className="w-full rounded-sm border border-input px-3 py-1.5 bg-muted text-sm text-foreground focus-visible:border-primary focus-visible:ring-primary/50 focus-visible:ring-[3px] outline-none"
                 >
                   <option value="telecaller">Telecaller</option>
                   <option value="spoc">SPOC</option>

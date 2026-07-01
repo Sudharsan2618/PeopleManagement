@@ -121,7 +121,7 @@ export default function SpocReportsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Past Reports</h1>
+          <h1 className="text-xl font-normal ">Past Reports</h1>
           <p className="text-muted-foreground">
             View all your submitted field reports
           </p>
@@ -188,7 +188,7 @@ export default function SpocReportsPage() {
                         })}
                       </span>
                       {report.is_draft && (
-                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-0">
+                        <Badge variant="outline" className="bg-[#FCF4D6] text-yellow-800 border-0">
                           Draft
                         </Badge>
                       )}
@@ -263,8 +263,8 @@ export default function SpocReportsPage() {
                         className={cn(
                           "ml-2",
                           selectedReport.is_draft
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-green-50 text-green-700"
+                            ? "bg-[#FCF4D6] text-yellow-700"
+                            : "bg-[#DEFBE6] text-green-700"
                         )}
                       >
                         {selectedReport.is_draft ? "Draft" : "Submitted"}
@@ -320,7 +320,7 @@ export default function SpocReportsPage() {
                               {visit.follow_up_role && (
                                 <Badge
                                   variant="outline"
-                                  className="mt-1 text-xs bg-blue-50 text-blue-700"
+                                  className="mt-1 text-xs bg-[#EDF5FF] text-blue-700"
                                 >
                                   Follow-up: {visit.follow_up_role}
                                 </Badge>
@@ -363,7 +363,7 @@ export default function SpocReportsPage() {
                           </h3>
                           <div className="space-y-2">
                             {reportDetails.escalations.map((esc: any) => (
-                              <div key={esc.id} className="rounded-lg border border-red-200 bg-red-50/30 p-3">
+                              <div key={esc.id} className="rounded-lg border border-red-200 bg-[#FFF1F1]/30 p-3">
                                 <p className="text-sm font-medium">{esc.description}</p>
                                 {esc.observations && (
                                   <p className="text-xs text-muted-foreground mt-1">

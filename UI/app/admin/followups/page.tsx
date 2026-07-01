@@ -104,7 +104,7 @@ export default function AdminFollowupsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl font-normal ">
             Follow-ups Management
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -120,13 +120,13 @@ export default function AdminFollowupsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-xl font-normal">{stats.total}</div>
             <p className="text-xs text-muted-foreground mt-1">Total Follow-ups</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-xl font-normal text-warning">
               {stats.pending}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Pending</p>
@@ -134,7 +134,7 @@ export default function AdminFollowupsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-xl font-normal text-destructive">
               {stats.overdue}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Overdue</p>
@@ -142,7 +142,7 @@ export default function AdminFollowupsPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-xl font-normal text-success">
               {stats.completed}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Completed</p>
@@ -202,7 +202,7 @@ export default function AdminFollowupsPage() {
                     key={task.id}
                     className={cn(
                       "p-4 border rounded-lg transition-colors",
-                      isOverdue && "border-red-200 bg-red-50/30",
+                      isOverdue && "border-red-200 bg-[#FFF1F1]/30",
                       isCompleted && "opacity-70"
                     )}
                   >
@@ -212,12 +212,12 @@ export default function AdminFollowupsPage() {
                           className={cn(
                             "flex h-10 w-10 items-center justify-center rounded-full",
                             task.assigned_to_role === "telecaller"
-                              ? "bg-blue-100"
+                              ? "bg-[#EDF5FF]"
                               : "bg-purple-100"
                           )}
                         >
                           {task.assigned_to_role === "telecaller" ? (
-                            <Phone className="h-5 w-5 text-blue-600" />
+                            <Phone className="h-5 w-5 text-primary" />
                           ) : (
                             <MapPin className="h-5 w-5 text-purple-600" />
                           )}
@@ -250,7 +250,7 @@ export default function AdminFollowupsPage() {
                             )}
                           </div>
                           {task.resolution_note && (
-                            <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1 mt-2 inline-block">
+                            <p className="text-xs text-green-700 bg-[#DEFBE6] rounded px-2 py-1 mt-2 inline-block">
                               ✓ {task.resolution_note}
                             </p>
                           )}
@@ -262,7 +262,7 @@ export default function AdminFollowupsPage() {
                           className={cn(
                             "text-xs",
                             task.assigned_to_role === "telecaller"
-                              ? "bg-blue-50 text-blue-700"
+                              ? "bg-[#EDF5FF] text-blue-700"
                               : "bg-purple-50 text-purple-700"
                           )}
                         >
@@ -273,10 +273,10 @@ export default function AdminFollowupsPage() {
                           className={cn(
                             "text-xs",
                             isOverdue
-                              ? "bg-red-50 text-red-700"
+                              ? "bg-[#FFF1F1] text-red-700"
                               : isCompleted
-                                ? "bg-green-50 text-green-700"
-                                : "bg-yellow-50 text-yellow-700"
+                                ? "bg-[#DEFBE6] text-green-700"
+                                : "bg-[#FCF4D6] text-yellow-700"
                           )}
                         >
                           {isOverdue ? (

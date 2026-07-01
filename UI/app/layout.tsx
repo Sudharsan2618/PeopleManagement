@@ -1,11 +1,15 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { IBM_Plex_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const ibmPlexSans = IBM_Plex_Sans({ 
+  subsets: ["latin"], 
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-ibm-plex" 
+})
 
 export const metadata: Metadata = {
   title: 'TATTI CRM',
@@ -21,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} bg-background`}>
+    <html lang="en" className={`${ibmPlexSans.variable} bg-background`}>
       <body className="font-sans antialiased">
         <AuthProvider>
           {children}

@@ -66,17 +66,17 @@ const DB_OUTCOME_LABELS: Record<string, string> = {
 }
 
 const DB_OUTCOME_COLORS: Record<string, string> = {
-  not_answered: "text-orange-500",
-  busy: "text-yellow-500",
-  wrong_number: "text-red-500",
-  callback: "text-blue-500",
-  not_interested: "text-gray-500",
-  dnc: "text-red-600",
-  language_barrier: "text-amber-500",
-  interested: "text-green-500",
-  qualified: "text-emerald-600",
-  enrolled_elsewhere: "text-purple-500",
-  application_process: "text-teal-600",
+  not_answered: "text-warning",
+  busy: "text-warning",
+  wrong_number: "text-destructive",
+  callback: "text-primary",
+  not_interested: "text-muted-foreground",
+  dnc: "text-destructive",
+  language_barrier: "text-warning",
+  interested: "text-success",
+  qualified: "text-success",
+  enrolled_elsewhere: "text-[#8a3ffc]",
+  application_process: "text-primary",
 }
 
 const outcomeOptions: {
@@ -91,77 +91,77 @@ const outcomeOptions: {
     label: "Not Answered",
     description: "Call rang but nobody picked up",
     icon: PhoneOff,
-    color: "text-orange-500",
+    color: "text-warning",
   },
   {
     value: "Busy",
     label: "Busy / Network Issue",
     description: "Could not connect",
     icon: Phone,
-    color: "text-yellow-500",
+    color: "text-warning",
   },
   {
     value: "WrongNumber",
     label: "Wrong Number",
     description: "Number doesn't belong to prospect",
     icon: XCircle,
-    color: "text-red-500",
+    color: "text-destructive",
   },
   {
     value: "CallBack",
     label: "Call Back Later",
     description: "Prospect asked to call at specific time",
     icon: Clock,
-    color: "text-blue-500",
+    color: "text-primary",
   },
   {
     value: "NotInterested",
     label: "Not Interested",
     description: "Prospect declined",
     icon: XCircle,
-    color: "text-gray-500",
+    color: "text-muted-foreground",
   },
   {
     value: "DNC",
     label: "Do Not Call",
     description: "Prospect requested no further contact",
     icon: Ban,
-    color: "text-red-600",
+    color: "text-destructive",
   },
   {
     value: "LanguageBarrier",
     label: "Language Barrier",
     description: "Cannot communicate in available language",
     icon: Globe,
-    color: "text-amber-500",
+    color: "text-warning",
   },
   {
     value: "Interested",
     label: "Interested - Gather Info",
     description: "Prospect showed interest",
     icon: ThumbsUp,
-    color: "text-green-500",
+    color: "text-success",
   },
   {
     value: "Qualified",
     label: "Qualified",
     description: "Prospect is qualified and scheduled for a visit",
     icon: CheckCircle2,
-    color: "text-emerald-600",
+    color: "text-success",
   },
   {
     value: "EnrolledElsewhere",
     label: "Already Enrolled",
     description: "Joined another institution",
     icon: GraduationCap,
-    color: "text-purple-500",
+    color: "text-[#8a3ffc]",
   },
   {
     value: "ApplicationProcess",
     label: "Application Process",
     description: "Prospect is in application processing",
     icon: BookOpen,
-    color: "text-teal-600",
+    color: "text-primary",
   },
 ]
 
@@ -294,7 +294,7 @@ export function CallOutcomeModal({
               <Phone className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <span className="text-xl font-bold">Call Outcome</span>
+              <span className="text-xl font-semibold">Call Outcome</span>
               <SheetDescription className="text-sm font-normal text-muted-foreground">
                 Recording call for <span className="font-semibold text-foreground">{prospect.name}</span>
               </SheetDescription>
@@ -308,10 +308,10 @@ export function CallOutcomeModal({
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
                 {/* Prospect Details */}
                 <section>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Prospect Details</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Prospect Details</h3>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary font-bold text-xs">
+                      <div className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary font-semibold text-xs">
                         {prospect.name.split(' ').map((n: string) => n[0]).join('')}
                       </div>
                       <div className="flex-1">
@@ -336,7 +336,7 @@ export function CallOutcomeModal({
 
                 {/* Call History */}
                 <section>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                     History ({callHistory.length})
                   </h3>
                   {historyLoading ? (
@@ -354,7 +354,7 @@ export function CallOutcomeModal({
                           <div className="bg-background border rounded-lg p-3 shadow-sm">
                             <div className="flex items-center justify-between mb-1">
                               <span className={cn(
-                                "text-xs font-bold",
+                                "text-xs font-semibold",
                                 DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
                               )}>
                                 {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
@@ -388,7 +388,7 @@ export function CallOutcomeModal({
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 {/* Outcome Grid */}
                 <section>
-                  <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
                     <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">1</span>
                     Select Outcome
                   </h3>
@@ -398,15 +398,15 @@ export function CallOutcomeModal({
                         key={option.value}
                         onClick={() => setSelectedOutcome(option.value)}
                         className={cn(
-                          "flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all hover:border-primary/50",
+                          "flex items-start gap-3 rounded-lg border p-3 text-left transition-all hover:border-foreground/50",
                           selectedOutcome === option.value
-                            ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
-                            : "border-muted bg-muted/10"
+                            ? "border-foreground bg-secondary shadow-xs ring-1 ring-foreground/20"
+                            : "border-border bg-background"
                         )}
                       >
-                        <option.icon className={cn("h-6 w-6 shrink-0", option.color)} />
+                        <option.icon className={cn("h-5 w-5 shrink-0 mt-0.5", option.color)} />
                         <div className="min-w-0">
-                          <p className="text-sm font-bold">{option.label}</p>
+                          <p className="text-sm font-semibold">{option.label}</p>
                           <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
                             {option.description}
                           </p>
@@ -415,25 +415,25 @@ export function CallOutcomeModal({
                     ))}
                   </div>
                 </section>
-
+ 
                 {selectedOutcome && (
                   <>
                     <div className="h-px bg-border" />
                     
                     {/* Dynamic Fields */}
                     <section className="animate-in fade-in slide-in-from-top-4 duration-300">
-                      <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
+                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
                         <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">2</span>
                         Outcome Details
                       </h3>
                       
-                      <div className="bg-muted/30 rounded-xl p-6 border space-y-6">
+                      <div className="bg-secondary rounded-lg p-4 border border-border space-y-4">
                         {/* Outcome Specific Fields */}
                         {(selectedOutcome === "NotAnswered" || selectedOutcome === "Busy" || selectedOutcome === "WrongNumber" || selectedOutcome === "LanguageBarrier") && (
                           <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">What happened?</Label>
+                            <Label className="text-xs font-semibold uppercase text-muted-foreground">What happened?</Label>
                             <Select value={reason} onValueChange={setReason}>
-                              <SelectTrigger className="h-11 bg-background border-2 focus:ring-primary">
+                              <SelectTrigger className="h-8 bg-background border border-border focus:ring-primary">
                                 <SelectValue placeholder="Select specific reason" />
                               </SelectTrigger>
                               <SelectContent>
@@ -474,7 +474,7 @@ export function CallOutcomeModal({
                           <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Date</Label>
+                                <Label className="text-xs font-semibold uppercase text-muted-foreground">Follow-up Date</Label>
                                 <Input
                                   type="date"
                                   className="h-11 border-2"
@@ -484,7 +484,7 @@ export function CallOutcomeModal({
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase text-muted-foreground">Follow-up Time</Label>
+                                <Label className="text-xs font-semibold uppercase text-muted-foreground">Follow-up Time</Label>
                                 <div className="grid grid-cols-3 gap-2">
                                   <Select value={callbackHour} onValueChange={setCallbackHour}>
                                     <SelectTrigger className="h-11 bg-background border-2">
@@ -520,7 +520,7 @@ export function CallOutcomeModal({
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Context for Call</Label>
+                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Context for Call</Label>
                               <Select value={reason} onValueChange={setReason}>
                                 <SelectTrigger className="h-11 bg-background border-2">
                                   <SelectValue placeholder="Why schedule a callback?" />
@@ -538,7 +538,7 @@ export function CallOutcomeModal({
                         {selectedOutcome === "Interested" && (
                           <div className="space-y-6">
                             <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Course Interest</Label>
+                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Course Interest</Label>
                               <Select value={coursePreference} onValueChange={setCoursePreference}>
                                 <SelectTrigger className="h-11 bg-background border-2">
                                   <SelectValue placeholder="Select course" />
@@ -559,7 +559,7 @@ export function CallOutcomeModal({
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-xs font-bold uppercase text-muted-foreground">Study Mode</Label>
+                              <Label className="text-xs font-semibold uppercase text-muted-foreground">Study Mode</Label>
                               <RadioGroup value={studyMode} onValueChange={setStudyMode} className="flex gap-6">
                                 <div className="flex items-center space-x-2">
                                   <RadioGroupItem value="Online" id="online" />
@@ -580,7 +580,7 @@ export function CallOutcomeModal({
 
                         {/* Common Notes field */}
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase text-muted-foreground">Additional Notes</Label>
+                          <Label className="text-xs font-semibold uppercase text-muted-foreground">Additional Notes</Label>
                           <Textarea
                             placeholder="Write anything important about this conversation..."
                             className="min-h-[120px] border-2 focus-visible:ring-primary"
@@ -609,7 +609,7 @@ export function CallOutcomeModal({
               </Button>
               <Button 
                 size="lg" 
-                className="px-12 h-12 text-md font-bold shadow-lg shadow-primary/20"
+                className="px-12 h-12 text-md font-semibold shadow-lg shadow-primary/20"
                 onClick={handleSubmit} 
                 disabled={!selectedOutcome}
               >

@@ -48,14 +48,14 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800",
+  new: "bg-[#EDF5FF] text-blue-800",
   contacted: "bg-sky-100 text-sky-800",
-  warm: "bg-orange-100 text-orange-800",
-  hot: "bg-red-100 text-red-800",
+  warm: "bg-[#FCF4D6] text-orange-800",
+  hot: "bg-[#FFF1F1] text-red-800",
   visit_scheduled: "bg-purple-100 text-purple-800",
   cold_no_response: "bg-gray-100 text-gray-800",
   cold_not_interested: "bg-slate-100 text-slate-800",
-  lost: "bg-red-50 text-red-600",
+  lost: "bg-[#FFF1F1] text-destructive",
 }
 
 export default function AssignProspectsPage() {
@@ -221,7 +221,7 @@ export default function AssignProspectsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl font-normal ">
             Assign Prospects
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -236,7 +236,7 @@ export default function AssignProspectsPage() {
 
       {/* Assignment Action Bar */}
       {selectedProspects.length > 0 && (
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-[#EDF5FF] border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
@@ -334,7 +334,7 @@ export default function AssignProspectsPage() {
                     key={prospect.id}
                     className={cn(
                       "grid grid-cols-12 gap-4 px-4 py-3 hover:bg-muted/50 rounded-lg items-center",
-                      selectedProspects.includes(prospect.id) && "bg-blue-50/50"
+                      selectedProspects.includes(prospect.id) && "bg-[#EDF5FF]/50"
                     )}
                   >
                     <div className="col-span-1">
@@ -373,7 +373,7 @@ export default function AssignProspectsPage() {
                     <div className="col-span-3">
                       {assignment ? (
                         <div className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                           <span className="text-sm text-green-700 font-medium">
                             {assignment.telecallerName}
                           </span>
@@ -384,7 +384,7 @@ export default function AssignProspectsPage() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="bg-yellow-50 text-yellow-700"
+                          className="bg-[#FCF4D6] text-yellow-700"
                         >
                           Unassigned
                         </Badge>
@@ -424,8 +424,8 @@ export default function AssignProspectsPage() {
                     variant="outline"
                     className={
                       tc.is_active
-                        ? "bg-green-50 text-green-700"
-                        : "bg-red-50 text-red-700"
+                        ? "bg-[#DEFBE6] text-green-700"
+                        : "bg-[#FFF1F1] text-red-700"
                     }
                   >
                     {tc.is_active ? "Active" : "Inactive"}

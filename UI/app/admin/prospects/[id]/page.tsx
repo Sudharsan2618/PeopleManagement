@@ -27,12 +27,12 @@ import {
 import { mockProspects, mockCallLogs, mockFieldReports, mockCourses, mockUsers } from "@/lib/mock-data"
 
 const statusColors: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800",
-  contacted: "bg-yellow-100 text-yellow-800",
-  interested: "bg-green-100 text-green-800",
-  not_interested: "bg-red-100 text-red-800",
+  new: "bg-[#EDF5FF] text-blue-800",
+  contacted: "bg-[#FCF4D6] text-yellow-800",
+  interested: "bg-[#DEFBE6] text-green-800",
+  not_interested: "bg-[#FFF1F1] text-red-800",
   enrolled: "bg-purple-100 text-purple-800",
-  callback_scheduled: "bg-orange-100 text-orange-800",
+  callback_scheduled: "bg-[#FCF4D6] text-orange-800",
   field_visit_required: "bg-cyan-100 text-cyan-800",
 }
 
@@ -81,7 +81,7 @@ export default function ProspectDetailPage() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{prospect.name}</h1>
+              <h1 className="text-xl font-normal text-foreground">{prospect.name}</h1>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
                 <span>{prospect.mobile}</span>
@@ -278,9 +278,9 @@ export default function ProspectDetailPage() {
                       <div key={call.id} className="flex items-start gap-4 p-4 border rounded-lg">
                         <div className="flex-shrink-0">
                           <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            call.outcome.toLowerCase() === 'interested' ? 'bg-green-100 text-green-600' :
-                            (call.outcome.toLowerCase() === 'notinterested' || call.outcome.toLowerCase() === 'not_interested') ? 'bg-red-100 text-red-600' :
-                            (call.outcome.toLowerCase() === 'callback' || call.outcome.toLowerCase() === 'callback_scheduled') ? 'bg-orange-100 text-orange-600' :
+                            call.outcome.toLowerCase() === 'interested' ? 'bg-[#DEFBE6] text-success' :
+                            (call.outcome.toLowerCase() === 'notinterested' || call.outcome.toLowerCase() === 'not_interested') ? 'bg-[#FFF1F1] text-destructive' :
+                            (call.outcome.toLowerCase() === 'callback' || call.outcome.toLowerCase() === 'callback_scheduled') ? 'bg-[#FCF4D6] text-warning' :
                             'bg-gray-100 text-gray-600'
                           }`}>
                             <Phone className="h-5 w-5" />
@@ -384,8 +384,8 @@ export default function ProspectDetailPage() {
                     ].sort((a, b) => b.date.getTime() - a.date.getTime()).map((activity, index) => (
                       <div key={index} className="relative">
                         <div className={`absolute -left-10 h-6 w-6 rounded-full flex items-center justify-center ${
-                          activity.type === 'call' ? 'bg-blue-100 text-blue-600' :
-                          activity.type === 'visit' ? 'bg-green-100 text-green-600' :
+                          activity.type === 'call' ? 'bg-[#EDF5FF] text-primary' :
+                          activity.type === 'visit' ? 'bg-[#DEFBE6] text-success' :
                           'bg-gray-100 text-gray-600'
                         }`}>
                           {activity.type === 'call' ? <Phone className="h-3 w-3" /> :

@@ -176,20 +176,20 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   }
 
   const Sidebar = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className={cn("flex flex-col h-full bg-[#0f172a] text-slate-100", mobile ? "pt-4" : "")}>
+    <div className={cn("flex flex-col h-full bg-sidebar text-foreground border-r border-sidebar-border", mobile ? "pt-4" : "")}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800">
-        <div className="flex h-9 w-9 items-center justify-center rounded bg-[#10b981] text-white">
-          <GraduationCap className="h-5 w-5" />
+      <div className="flex items-center gap-3 px-4 py-3.5 border-b border-sidebar-border">
+        <div className="flex h-8 w-8 items-center justify-center rounded bg-foreground text-background">
+          <GraduationCap className="h-4 w-4" />
         </div>
         <div>
-          <h1 className="font-semibold text-sm text-white tracking-tight">CEMS</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{getRoleLabel(role)}</p>
+          <h1 className="font-semibold text-sm text-foreground ">TATTI CRM</h1>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider mt-0.5">{getRoleLabel(role)}</p>
         </div>
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 py-4">
+      <ScrollArea className="flex-1 py-3">
         <nav className="space-y-0.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -199,10 +199,10 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 href={item.href}
                 onClick={() => mobile && setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 py-2.5 text-sm transition-all duration-150 border-l-[3px]",
+                  "flex items-center gap-3 py-2 text-sm transition-all duration-150 border-l-[3px]",
                   isActive
-                    ? "bg-slate-800 text-white border-[#10b981] pl-[9px] font-semibold"
-                    : "text-slate-400 border-transparent pl-3 hover:bg-slate-800/40 hover:text-slate-200"
+                    ? "bg-sidebar-accent text-foreground border-sidebar-primary pl-[9px] font-semibold"
+                    : "text-muted-foreground border-transparent pl-3 hover:bg-sidebar-accent/50 hover:text-foreground"
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -211,10 +211,10 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                   <Badge
                     variant="outline"
                     className={cn(
-                      "h-5 min-w-5 px-1.5 text-[10px] font-bold border-none",
+                      "h-4.5 min-w-4.5 px-1.5 text-[10px] font-semibold border-none",
                       isActive
-                        ? "bg-[#10b981] text-white"
-                        : "bg-slate-800 text-[#10b981]"
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                        : "bg-sidebar-accent text-sidebar-foreground"
                     )}
                   >
                     {item.badge}
@@ -227,12 +227,12 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       </ScrollArea>
 
       {/* User Section */}
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-sidebar-border p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="w-full justify-start gap-3 px-3 hover:bg-slate-800/60 hover:text-white text-slate-300">
-              <Avatar className="h-8 w-8 rounded border border-slate-700">
-                <AvatarFallback className="bg-[#10b981]/25 text-[#10b981] text-xs font-bold rounded">
+            <Button variant="ghost" className="w-full justify-start gap-3 px-2.5 hover:bg-sidebar-accent hover:text-foreground text-foreground">
+              <Avatar className="h-7 w-7 rounded border border-sidebar-border">
+                <AvatarFallback className="bg-sidebar-accent text-foreground text-xs font-semibold rounded">
                   {userName
                     .split(" ")
                     .map((n) => n[0])
@@ -241,23 +241,23 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-white truncate">{userName}</p>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-wide mt-0.5">{getRoleLabel(role)}</p>
+                <p className="text-sm font-medium text-foreground truncate">{userName}</p>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide mt-0.5">{getRoleLabel(role)}</p>
               </div>
-              <ChevronDown className="h-4 w-4 text-slate-400" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-slate-900 border-slate-800 text-slate-200">
-            <DropdownMenuItem className="hover:bg-slate-800 focus:bg-slate-800 focus:text-white">
-              <UserCircle className="mr-2 h-4 w-4 text-slate-400" />
+          <DropdownMenuContent align="end" className="w-56 bg-card border-border text-foreground">
+            <DropdownMenuItem className="hover:bg-secondary focus:bg-secondary focus:text-foreground">
+              <UserCircle className="mr-2 h-4 w-4 text-muted-foreground" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-slate-800 focus:bg-slate-800 focus:text-white">
-              <Settings className="mr-2 h-4 w-4 text-slate-400" />
+            <DropdownMenuItem className="hover:bg-secondary focus:bg-secondary focus:text-foreground">
+              <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-slate-800" />
-            <DropdownMenuItem onClick={handleLogout} className="text-rose-400 hover:bg-rose-950 focus:bg-rose-950 focus:text-rose-200">
+            <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive hover:bg-destructive/10 focus:bg-destructive/10 focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
@@ -268,16 +268,16 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   )
 
   return (
-    <div className="flex h-screen bg-[#f7f9fb]">
+    <div className="flex h-screen bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-[260px] lg:flex-col border-r border-slate-200 bg-[#0f172a] shrink-0">
+      <aside className="hidden lg:flex lg:w-[240px] lg:flex-col border-r border-sidebar-border bg-sidebar shrink-0">
         <Sidebar />
       </aside>
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:px-6">
+        <header className="flex h-12 items-center gap-4 border-b bg-card px-4 lg:px-6">
           {/* Mobile Menu */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -286,7 +286,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
+            <SheetContent side="left" className="w-60 p-0">
               <Sidebar mobile />
             </SheetContent>
           </Sheet>
@@ -301,7 +301,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 <span className="sr-only">Notifications</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuContent align="end" className="w-80 bg-card border-border">
               <div className="flex items-center justify-between px-4 py-2 border-b">
                 <h3 className="font-semibold text-sm">Notifications</h3>
               </div>
@@ -309,7 +309,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
                 {allowedNotifications.length > 0 ? (
                   <div className="space-y-2 p-3">
                     {allowedNotifications.map((notification) => (
-                      <div key={notification.id} className="rounded-xl border border-muted/20 bg-background p-3">
+                      <div key={notification.id} className="rounded-lg border border-border bg-card p-3 shadow-xs">
                         <p className="text-sm font-semibold">{notification.message}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Date(notification.createdAt).toLocaleString()}
@@ -329,7 +329,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 lg:p-6 bg-background">{children}</main>
       </div>
     </div>
   )

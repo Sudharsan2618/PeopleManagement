@@ -136,7 +136,7 @@ export default function AdminTelecallersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Telecallers Management</h1>
+          <h1 className="text-xl font-normal ">Telecallers Management</h1>
           <p className="text-muted-foreground flex items-center gap-2 mt-1">
             Manage and monitor your telecalling team
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse ml-1" title="Auto-refreshing" />
@@ -163,7 +163,7 @@ export default function AdminTelecallersPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{telecallers.length}</div>
+            <div className="text-xl font-normal">{telecallers.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Total Telecallers
             </p>
@@ -171,7 +171,7 @@ export default function AdminTelecallersPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-normal">
               {telecallers.filter((t: any) => t.is_active).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Active</p>
@@ -179,13 +179,13 @@ export default function AdminTelecallersPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{totalCalls}</div>
+            <div className="text-xl font-normal">{totalCalls}</div>
             <p className="text-xs text-muted-foreground mt-1">Total Calls</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{avgConversion}%</div>
+            <div className="text-xl font-normal">{avgConversion}%</div>
             <p className="text-xs text-muted-foreground mt-1">
               Avg Conversion
             </p>
@@ -325,7 +325,7 @@ export default function AdminTelecallersPage() {
                       <div className="text-xs text-muted-foreground">
                         Qualified
                       </div>
-                      <div className="font-semibold text-lg text-green-600">
+                      <div className="font-semibold text-lg text-success">
                         {stats.qualified}
                       </div>
                     </div>
@@ -333,7 +333,7 @@ export default function AdminTelecallersPage() {
                       <div className="text-xs text-muted-foreground">
                         Interested
                       </div>
-                      <div className="font-semibold text-lg text-blue-600">
+                      <div className="font-semibold text-lg text-primary">
                         {stats.interested}
                       </div>
                     </div>

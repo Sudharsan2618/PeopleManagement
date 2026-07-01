@@ -48,12 +48,12 @@ import {
 import { mockProspects, mockUsers, mockHubs } from "@/lib/mock-data"
 
 const statusColors: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800",
-  contacted: "bg-yellow-100 text-yellow-800",
-  interested: "bg-green-100 text-green-800",
-  not_interested: "bg-red-100 text-red-800",
+  new: "bg-[#EDF5FF] text-blue-800",
+  contacted: "bg-[#FCF4D6] text-yellow-800",
+  interested: "bg-[#DEFBE6] text-green-800",
+  not_interested: "bg-[#FFF1F1] text-red-800",
   enrolled: "bg-purple-100 text-purple-800",
-  callback_scheduled: "bg-orange-100 text-orange-800",
+  callback_scheduled: "bg-[#FCF4D6] text-orange-800",
   field_visit_required: "bg-cyan-100 text-cyan-800",
 }
 
@@ -118,7 +118,7 @@ export default function AssignmentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Prospect Assignments</h1>
+          <h1 className="text-xl font-normal text-foreground">Prospect Assignments</h1>
           <p className="text-muted-foreground">Assign prospects to telecallers and field agents</p>
         </div>
         <div className="flex gap-2">
@@ -141,11 +141,11 @@ export default function AssignmentsPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-full bg-[#EDF5FF] flex items-center justify-center">
+                <Users className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{mockProspects.length}</div>
+                <div className="text-xl font-normal">{mockProspects.length}</div>
                 <p className="text-xs text-muted-foreground">Total Prospects</p>
               </div>
             </div>
@@ -154,11 +154,11 @@ export default function AssignmentsPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
+              <div className="h-10 w-10 rounded-full bg-[#FCF4D6] flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{unassignedProspects.length}</div>
+                <div className="text-xl font-normal">{unassignedProspects.length}</div>
                 <p className="text-xs text-muted-foreground">Unassigned</p>
               </div>
             </div>
@@ -167,11 +167,11 @@ export default function AssignmentsPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-full bg-[#DEFBE6] flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-success" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{assignedProspects.length}</div>
+                <div className="text-xl font-normal">{assignedProspects.length}</div>
                 <p className="text-xs text-muted-foreground">Assigned</p>
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function AssignmentsPage() {
                 <Phone className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{telecallers.length + spocs.length}</div>
+                <div className="text-xl font-normal">{telecallers.length + spocs.length}</div>
                 <p className="text-xs text-muted-foreground">Active Agents</p>
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function AssignmentsPage() {
                           <div key={user.id} className="p-3 border rounded-lg">
                             <div className="flex items-center gap-3 mb-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+                                <AvatarFallback className="text-xs bg-[#EDF5FF] text-blue-700">
                                   {user.name.split(' ').map(n => n[0]).join('')}
                                 </AvatarFallback>
                               </Avatar>
@@ -380,7 +380,7 @@ export default function AssignmentsPage() {
                           <div key={user.id} className="p-3 border rounded-lg">
                             <div className="flex items-center gap-3 mb-2">
                               <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                                <AvatarFallback className="text-xs bg-[#DEFBE6] text-green-700">
                                   {user.name.split(' ').map(n => n[0]).join('')}
                                 </AvatarFallback>
                               </Avatar>

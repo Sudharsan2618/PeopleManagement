@@ -45,20 +45,20 @@ const statusConfig: Record<
   pending: {
     label: "Pending",
     icon: Clock,
-    color: "text-yellow-600",
-    bgColor: "bg-yellow-100",
+    color: "text-warning",
+    bgColor: "bg-[#FCF4D6]",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle2,
-    color: "text-green-600",
-    bgColor: "bg-green-100",
+    color: "text-success",
+    bgColor: "bg-[#DEFBE6]",
   },
   overdue: {
     label: "Overdue",
     icon: AlertTriangle,
-    color: "text-red-600",
-    bgColor: "bg-red-100",
+    color: "text-destructive",
+    bgColor: "bg-[#FFF1F1]",
   },
 }
 
@@ -172,7 +172,7 @@ export default function spocFollowupsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Follow-ups</h1>
+          <h1 className="text-xl font-normal ">My Follow-ups</h1>
           <p className="text-muted-foreground">
             Follow-up tasks assigned to you from field reports
           </p>
@@ -188,11 +188,11 @@ export default function spocFollowupsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xl font-normal">{stats.total}</p>
                 <p className="text-xs text-muted-foreground">Total Tasks</p>
               </div>
-              <div className="rounded-lg bg-blue-100 p-2">
-                <ClipboardList className="h-5 w-5 text-blue-600" />
+              <div className="rounded-lg bg-[#EDF5FF] p-2">
+                <ClipboardList className="h-5 w-5 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -201,11 +201,11 @@ export default function spocFollowupsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
+                <p className="text-xl font-normal">{stats.pending}</p>
                 <p className="text-xs text-muted-foreground">Pending</p>
               </div>
-              <div className="rounded-lg bg-yellow-100 p-2">
-                <Clock className="h-5 w-5 text-yellow-600" />
+              <div className="rounded-lg bg-[#FCF4D6] p-2">
+                <Clock className="h-5 w-5 text-warning" />
               </div>
             </div>
           </CardContent>
@@ -214,11 +214,11 @@ export default function spocFollowupsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+                <p className="text-xl font-normal text-destructive">{stats.overdue}</p>
                 <p className="text-xs text-muted-foreground">Overdue</p>
               </div>
-              <div className="rounded-lg bg-red-100 p-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div className="rounded-lg bg-[#FFF1F1] p-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
             </div>
           </CardContent>
@@ -227,11 +227,11 @@ export default function spocFollowupsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                <p className="text-xl font-normal text-success">{stats.completed}</p>
                 <p className="text-xs text-muted-foreground">Completed</p>
               </div>
-              <div className="rounded-lg bg-green-100 p-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="rounded-lg bg-[#DEFBE6] p-2">
+                <CheckCircle2 className="h-5 w-5 text-success" />
               </div>
             </div>
           </CardContent>
@@ -284,7 +284,7 @@ export default function spocFollowupsPage() {
               <Card
                 key={task.id}
                 className={cn(
-                  task.displayStatus === "overdue" && "border-red-200 bg-red-50/30"
+                  task.displayStatus === "overdue" && "border-red-200 bg-[#FFF1F1]/30"
                 )}
               >
                 <CardContent className="p-4">
@@ -323,7 +323,7 @@ export default function spocFollowupsPage() {
                       </p>
 
                       {task.resolution_note && (
-                        <div className="mt-2 ml-6 p-2 rounded bg-green-50 border border-green-100">
+                        <div className="mt-2 ml-6 p-2 rounded bg-[#DEFBE6] border border-green-100">
                           <p className="text-xs text-green-700">
                             <strong>Resolution:</strong> {task.resolution_note}
                           </p>

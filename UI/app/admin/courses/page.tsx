@@ -147,7 +147,7 @@ export default function CoursesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Course Management</h1>
+          <h1 className="text-xl font-normal text-foreground">Course Management</h1>
           <p className="text-muted-foreground">Manage courses and track enrollments</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -243,11 +243,11 @@ export default function CoursesPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-full bg-[#EDF5FF] flex items-center justify-center">
+                <BookOpen className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{courses.length}</div>
+                <div className="text-xl font-normal">{courses.length}</div>
                 <p className="text-xs text-muted-foreground">Total Courses</p>
               </div>
             </div>
@@ -256,11 +256,11 @@ export default function CoursesPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-full bg-[#DEFBE6] flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-success" />
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-normal">
                   {courses.filter(c => c.isActive).length}
                 </div>
                 <p className="text-xs text-muted-foreground">Active Courses</p>
@@ -275,7 +275,7 @@ export default function CoursesPage() {
                 <Users className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-normal">
                   {prospects.filter(p => p.course_interest).length}
                 </div>
                 <p className="text-xs text-muted-foreground">Interested Prospects</p>
@@ -286,11 +286,11 @@ export default function CoursesPage() {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <IndianRupee className="h-5 w-5 text-orange-600" />
+              <div className="h-10 w-10 rounded-full bg-[#FCF4D6] flex items-center justify-center">
+                <IndianRupee className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <div className="text-2xl font-bold">
+                <div className="text-xl font-normal">
                   {courses.length > 0 ? Math.round(courses.reduce((acc, c) => acc + (c.fees || 0), 0) / courses.length / 1000) : 0}K
                 </div>
                 <p className="text-xs text-muted-foreground">Avg. Course Fee</p>
@@ -371,18 +371,18 @@ export default function CoursesPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                          <Badge variant="outline" className="bg-[#EDF5FF] text-blue-700">
                             {stats.totalInterested}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-green-50 text-green-700">
+                          <Badge variant="outline" className="bg-[#DEFBE6] text-green-700">
                             {stats.enrolled}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           {course.isActive ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <Badge variant="outline" className="bg-[#DEFBE6] text-green-700 border-green-200">
                               Active
                             </Badge>
                           ) : (
@@ -426,7 +426,7 @@ export default function CoursesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
-                                className="text-red-600"
+                                className="text-destructive"
                                 onClick={() => handleDelete(course.id)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -465,7 +465,7 @@ export default function CoursesPage() {
             </div>
             <div className="grid gap-1">
               <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Status</span>
-              <Badge variant="outline" className={selectedCourse?.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200"}>
+              <Badge variant="outline" className={selectedCourse?.isActive ? "bg-[#DEFBE6] text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200"}>
                 {selectedCourse?.isActive ? "Active" : "Inactive"}
               </Badge>
             </div>

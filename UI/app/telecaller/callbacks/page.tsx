@@ -232,7 +232,7 @@ export default function CallbacksPage() {
       {/* Premium Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-background/50 backdrop-blur-sm sticky top-0 z-20 pb-4 border-b">
         <div>
-          <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black  bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
             Schedule
           </h1>
           <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
@@ -242,7 +242,7 @@ export default function CallbacksPage() {
         </div>
 
         <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-2xl border shadow-sm">
-          <Button variant="ghost" size="sm" onClick={goToToday} className="font-bold hover:bg-background">
+          <Button variant="ghost" size="sm" onClick={goToToday} className="font-semibold hover:bg-background">
             Today
           </Button>
           <div className="flex items-center gap-1 px-2 border-l">
@@ -253,17 +253,17 @@ export default function CallbacksPage() {
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
-          <span className="text-sm font-bold px-3 min-w-[140px] text-center">
+          <span className="text-sm font-semibold px-3 min-w-[140px] text-center">
             {weekDates[0].getDate()} - {weekDates[6].getDate()} {weekDates[6].toLocaleDateString('en-IN', { month: 'short' })}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button onClick={fetchData} variant="outline" size="sm" className="rounded-xl border-2 font-bold shadow-sm">
+          <Button onClick={fetchData} variant="outline" size="sm" className="rounded-xl border-2 font-semibold shadow-sm">
             <RefreshCw className={cn("h-4 w-4 mr-2", isSaving && "animate-spin")} />
             Sync
           </Button>
-          <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1.5 rounded-xl font-bold">
+          <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-1.5 rounded-xl font-semibold">
             {callLogs.length} Callbacks
           </Badge>
         </div>
@@ -350,23 +350,23 @@ export default function CallbacksPage() {
                               <div className="flex flex-col h-full justify-between">
                                 <div className="space-y-0.5">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-tight">
+                                    <span className="text-[10px] font-black text-primary uppercase ">
                                       {eventTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
                                     </span>
-                                    <div className="h-5 w-5 rounded-full bg-blue-50 flex items-center justify-center">
-                                      <PhoneCall className="h-2.5 w-2.5 text-blue-500" />
+                                    <div className="h-5 w-5 rounded-full bg-[#EDF5FF] flex items-center justify-center">
+                                      <PhoneCall className="h-2.5 w-2.5 text-primary" />
                                     </div>
                                   </div>
-                                  <p className="text-[11px] font-black text-slate-900 truncate uppercase tracking-tight">
+                                  <p className="text-[11px] font-black text-slate-900 truncate uppercase ">
                                     {prospect.name}
                                   </p>
                                 </div>
                                 
                                 <div className="flex items-center gap-1.5 mt-auto">
-                                  <Badge className="text-[8px] bg-blue-50 text-blue-700 border-blue-100 font-black px-1.5 h-3.5 leading-none uppercase">
+                                  <Badge className="text-[8px] bg-[#EDF5FF] text-blue-700 border-blue-100 font-black px-1.5 h-3.5 leading-none uppercase">
                                     Callback
                                   </Badge>
-                                  <span className="text-[9px] text-muted-foreground truncate font-bold">
+                                  <span className="text-[9px] text-muted-foreground truncate font-semibold">
                                     {prospect.location || 'Unknown'}
                                   </span>
                                 </div>
@@ -376,7 +376,7 @@ export default function CallbacksPage() {
                               <div className="absolute inset-0 bg-blue-600 text-white opacity-0 group-hover/event:opacity-100 transition-opacity rounded-xl p-2 flex flex-col justify-center items-center text-center gap-1">
                                 <Maximize2 className="h-4 w-4 mb-1" />
                                 <p className="font-black text-[10px] uppercase tracking-wider">Start Call</p>
-                                <p className="text-[9px] opacity-80 font-bold tabular-nums">{prospect.mobile}</p>
+                                <p className="text-[9px] opacity-80 font-semibold tabular-nums">{prospect.mobile}</p>
                               </div>
                             </button>
                           )
