@@ -221,10 +221,15 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             table = alias if alias and alias.strip() else 'prospects'
             if prospect_type == 'college_contact':
                 # Filter by lead_source or lead_type arrays (same logic as Telecaller Dashboard)
-                return f" AND ({table}.lead_source IS NOT NULL AND jsonb_array_length({table}.lead_source) > 0 OR {table}.lead_type IS NOT NULL AND jsonb_array_length({table}.lead_type) > 0) "
-            else:
+                return f" AND {table}.prospect_type IS DISTINCT FROM 'edii' AND ({table}.lead_source IS NOT NULL AND jsonb_array_length({table}.lead_source) > 0 OR {table}.lead_type IS NOT NULL AND jsonb_array_length({table}.lead_type) > 0) "
+            if prospect_type == 'edii':
+                return f" AND {table}.prospect_type = 'edii' "
+            if prospect_type == 'student_admission':
                 # Student admission: filter by NOT having lead_source or lead_type
-                return f" AND NOT ({table}.lead_source IS NOT NULL AND jsonb_array_length({table}.lead_source) > 0 OR {table}.lead_type IS NOT NULL AND jsonb_array_length({table}.lead_type) > 0) "
+                return f" AND {table}.prospect_type IS DISTINCT FROM 'edii' AND NOT ({table}.lead_source IS NOT NULL AND jsonb_array_length({table}.lead_source) > 0 OR {table}.lead_type IS NOT NULL AND jsonb_array_length({table}.lead_type) > 0) "
+            # Fallback: filter by explicit prospect_type value
+            p_list.append(prospect_type)
+            return f" AND {table}.prospect_type = %s "
         return ""
 
     # 1. Call Analytics (dynamic date range)
@@ -288,12 +293,12 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         pt_join = " JOIN prospects p ON p.id = cl.prospect_id "
         pt_filter = _pt_clause("p", params)
 
-    if prospect_type == 'college_contact':
+    if prospect_type in ('college_contact', 'edii'):
         cat_select = """
             CASE
                 WHEN cl.status_after_call = 'new' OR cl.status_after_call = 'New' THEN 'New'
                 WHEN cl.status_after_call = 'Interested' THEN 'Interested'
-                WHEN cl.status_after_call = 'Interested Followup' THEN 'Interested Followup'
+                WHEN cl.status_after_call IN ('Interested Followup', 'Interested-Followup') THEN 'Interested Followup'
                 WHEN cl.status_after_call = 'Proposal To Be Sent' THEN 'Proposal To Be Sent'
                 WHEN cl.status_after_call = 'Proposal Sent' THEN 'Proposal Sent'
                 WHEN cl.status_after_call = 'Training Date Followup' THEN 'Training Date Followup'
@@ -406,6 +411,9 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'Qualified') as "qualifiedCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'Not Interested') as "notInterestedCCCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') as enrollments,
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'Interested') as "ediiInterestedCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('Interested Followup', 'Interested-Followup')) as "ediiInterestedFollowupCount",
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'Qualified') as "ediiQualifiedCount",
             CASE 
                 WHEN COUNT(cl.id) > 0 THEN ROUND(100.0 * COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') / COUNT(cl.id))
                 ELSE 0
@@ -459,14 +467,14 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
     call_summary = execute_query(f"""
         SELECT
             COUNT(*) AS "totalCalls",
-            COUNT(*) FILTER (WHERE cl.outcome != 'not_answered') AS "answeredCalls",
-            COUNT(*) FILTER (WHERE cl.outcome = 'not_answered') AS "missedCalls",
-            COUNT(*) FILTER (WHERE cl.outcome = 'interested') AS interested,
-            COUNT(*) FILTER (WHERE cl.outcome = 'qualified') AS qualified,
-            COUNT(*) FILTER (WHERE cl.outcome = 'not_interested') AS "notInterested",
-            COUNT(*) FILTER (WHERE cl.outcome = 'busy') AS busy,
-            COUNT(*) FILTER (WHERE cl.outcome = 'wrong_number') AS "wrongNumbers",
-            COUNT(*) FILTER (WHERE cl.outcome = 'dnc') AS dnc,
+            COUNT(*) FILTER (WHERE cl.status_after_call NOT IN ('cold', 'cold_no_response', 'lost', 'Ringing / Not Reachable') AND cl.status_after_call IS NOT NULL) AS "answeredCalls",
+            COUNT(*) FILTER (WHERE cl.status_after_call IN ('cold', 'cold_no_response', 'lost', 'Ringing / Not Reachable')) AS "missedCalls",
+            COUNT(*) FILTER (WHERE cl.status_after_call = 'Interested') AS interested,
+            COUNT(*) FILTER (WHERE cl.status_after_call = 'Qualified') AS qualified,
+            COUNT(*) FILTER (WHERE cl.status_after_call IN ('Not Interested', 'cold_not_interested')) AS "notInterested",
+            0 AS busy,
+            0 AS "wrongNumbers",
+            0 AS dnc,
             COUNT(DISTINCT CASE WHEN cl.callback_scheduled_at IS NOT NULL THEN cl.prospect_id END) AS callbacks
         FROM call_logs cl
         {pt_join}

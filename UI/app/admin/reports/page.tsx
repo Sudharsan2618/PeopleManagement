@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -64,6 +64,15 @@ const CC_OUTCOME_COLORS: Record<string, string> = {
   'Ringing / Not Reachable': '#64748b',
   'Not Interested': '#ef4444'
 }
+const EDII_OUTCOME_ORDER = ["New", "Interested", "Interested-Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
+const EDII_OUTCOME_COLORS: Record<string, string> = {
+  'New': '#3b82f6',
+  'Interested': '#8b5cf6',
+  'Interested-Followup': '#a855f7',
+  'Qualified': '#10b981',
+  'Ringing / Not Reachable': '#64748b',
+  'Not Interested': '#ef4444'
+}
 
 const CALL_HISTORY_STATUS_LABELS: Record<string, string> = {
   cold: 'Cold / No Response',
@@ -105,7 +114,7 @@ const formatCallOutcome = (outcome?: string) => {
 }
 
 export default function ReportsPage() {
-  const [activeTabType, setActiveTabType] = useState<"student_admission" | "college_contact">("student_admission")
+  const [activeTabType, setActiveTabType] = useState<"student_admission" | "college_contact" | "edii">("student_admission")
   const [reportType, setReportType] = useState("overview")
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
@@ -170,135 +179,70 @@ export default function ReportsPage() {
     const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
     const formatNotes = (text: string) => { const n = normalizeText(text); return n ? doc.splitTextToSize(n, 160) : '-' }
 
-    // ─── Use already-fetched consistent data from state ───────────────────────────
-    // Fetch fresh data for both modules to ensure PDF has complete data
+    // ─── Fetch data for all 3 modules directly from backend (same as dashboard) ─
+    const [saReports, ccReports, ediiReports] = await Promise.all([
+      adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'student_admission').catch(() => null),
+      adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'college_contact').catch(() => null),
+      adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'edii').catch(() => null),
+    ])
+
+    // Build outcome distributions from backend data
+    const buildOutcomeDist = (reports: any, outcomeOrder: string[], normalize?: (s: string) => string) => {
+      const raw: any[] = reports?.outcomeDistribution || []
+      return outcomeOrder.map(name => {
+        const found = raw.find((d: any) => {
+          const n = normalize ? normalize(d.name) : d.name
+          return n === name || d.name === name
+        })
+        return { name, value: found?.value ?? 0 }
+      })
+    }
+
+    const saData = {
+      summary: saReports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
+      outcomeDistribution: buildOutcomeDist(saReports, SA_OUTCOME_ORDER),
+      telecallerPerformance: saReports?.telecallerPerformance || [],
+    }
+
+    const ccData = {
+      summary: ccReports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
+      outcomeDistribution: buildOutcomeDist(ccReports, CC_OUTCOME_ORDER),
+      telecallerPerformance: ccReports?.telecallerPerformance || [],
+    }
+
+    const ediiData = {
+      summary: ediiReports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
+      outcomeDistribution: buildOutcomeDist(ediiReports, EDII_OUTCOME_ORDER, (s) => s === 'Interested Followup' ? 'Interested-Followup' : s),
+      telecallerPerformance: ediiReports?.telecallerPerformance || [],
+    }
+
+    // Build call logs per module from the already-fetched allCallLogs
     const [allProspects, allCallLogs] = await Promise.all([
       prospectsApi.getAll(),
       callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined).catch(() => [] as any[])
     ])
-    
-    // Filter prospects by module type using same logic as Telecaller Dashboard
-    const collegeContacts = allProspects.filter((p: any) => 
-      (p.lead_source && p.lead_source.length > 0) || 
-      (p.lead_type && p.lead_type.length > 0)
+
+    const ediiProspects = allProspects.filter((p: any) =>
+      p.prospect_type === 'edii'
     )
-    
-    const studentAdmissionProspects = allProspects.filter((p: any) => 
-      !((p.lead_source && p.lead_source.length > 0) || 
+    const collegeContacts = allProspects.filter((p: any) =>
+      p.prospect_type !== 'edii' &&
+      ((p.lead_source && p.lead_source.length > 0) ||
+       (p.lead_type && p.lead_type.length > 0))
+    )
+    const studentAdmissionProspects = allProspects.filter((p: any) =>
+      p.prospect_type !== 'edii' &&
+      !((p.lead_source && p.lead_source.length > 0) ||
         (p.lead_type && p.lead_type.length > 0))
     )
-    
-    // Filter call logs by prospect type using same logic
-    const collegeContactIds = new Set(collegeContacts.map((p) => p.id))
-    const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.id))
-    
-    const collegeContactCallLogs = allCallLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
-    const studentAdmissionCallLogs = allCallLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
-    
-    // Calculate outcome distribution for both modules
-    const calculateOutcomeDistribution = (logs: any[], isCollegeContact: boolean) => {
-      const distribution: Record<string, number> = {}
-      
-      if (isCollegeContact) {
-        const ccOutcomes = ['New', 'Interested', 'Interested Followup', 'Proposal To Be Sent', 'Proposal Sent', 'Training Date Followup', 'Qualified', 'Ringing / Not Reachable', 'Not Interested']
-        ccOutcomes.forEach(outcome => distribution[outcome] = 0)
-        
-        logs.forEach((log: any) => {
-          const outcome = log.status_after_call || log.outcome || 'New'
-          if (distribution.hasOwnProperty(outcome)) {
-            distribution[outcome]++
-          }
-        })
-      } else {
-        const saOutcomes = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
-        saOutcomes.forEach(outcome => distribution[outcome] = 0)
-        
-        logs.forEach((log: any) => {
-          const status = log.status_after_call
-          let outcome = 'Cold / No Response'
-          if (status === 'visit_done') outcome = 'Visit Done / Decision Pending'
-          else if (status === 'admission_done') outcome = 'Admission Done ✓'
-          else if (status === 'visit_scheduled') outcome = 'Visit Scheduled'
-          else if (status === 'hot') outcome = 'Hot'
-          else if (status === 'warm' || status === 'contacted') outcome = 'Warm'
-          else if (status === 'cold_not_interested' || status === 'Not Interested') outcome = 'Cold / Not Interested'
-          
-          if (distribution.hasOwnProperty(outcome)) {
-            distribution[outcome]++
-          }
-        })
-      }
-      
-      return Object.entries(distribution).map(([name, value]) => ({ name, value }))
-    }
-    
-    // Calculate summary stats matching telecaller dashboard logic
-    const calculateSummary = (prospects: any[], logs: any[], isCollegeContact: boolean) => {
-      // Use all logs filtered by date range from backend, not just today
-      const totalCalls = logs.length
-      
-      // Filter prospects by date range (created_at or assigned_date within range)
-      const dateFilteredProspects = prospects.filter((p: any) => {
-        const prospectDate = new Date(p.created_at || p.assigned_date)
-        const start = startDate ? new Date(startDate) : new Date('1970-01-01')
-        const end = endDate ? new Date(endDate) : new Date()
-        end.setHours(23, 59, 59, 999)
-        return prospectDate >= start && prospectDate <= end
-      })
-      
-      // Calculate total calls per prospect for pending logic (using all logs, not just today)
-      const prospectCallCounts = new Map<number, number>()
-      logs.forEach((log: any) => {
-        const current = prospectCallCounts.get(log.prospect_id) || 0
-        prospectCallCounts.set(log.prospect_id, current + 1)
-      })
-      
-      // Match telecaller dashboard pending logic (on date-filtered prospects)
-      const pendingCalls = dateFilteredProspects.filter((p: any) => {
-        const totalCallsForProspect = prospectCallCounts.get(p.id) || 0
-        if (isCollegeContact) {
-          return (p.outcome === 'New' || p.status === 'New' || 
-                  (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === 'New'))) &&
-                  totalCallsForProspect === 0
-        } else {
-          return p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)
-        }
-      }).length
-      
-      // Match telecaller dashboard callback logic: count unique prospects with callbacks (using all logs)
-      const callbackProspectIds = new Set<number>()
-      logs.forEach((log: any) => {
-        if (log.callback_scheduled_at) {
-          callbackProspectIds.add(log.prospect_id)
-        }
-      })
-      const callbacks = callbackProspectIds.size
-      
-      return {
-        totalCalls,
-        totalPendingCalls: pendingCalls,
-        callbacks,
-        totalEnrollments: dateFilteredProspects.filter((p: any) => p.status === 'admission_done').length,
-        totalProspects: dateFilteredProspects.length
-      }
-    }
-    
-    const saOutcomeDistribution = calculateOutcomeDistribution(studentAdmissionCallLogs, false)
-    const ccOutcomeDistribution = calculateOutcomeDistribution(collegeContactCallLogs, true)
-    
-    const saData = {
-      summary: calculateSummary(studentAdmissionProspects, studentAdmissionCallLogs, false),
-      outcomeDistribution: saOutcomeDistribution
-    }
-    
-    const ccData = {
-      summary: calculateSummary(collegeContacts, collegeContactCallLogs, true),
-      outcomeDistribution: ccOutcomeDistribution
-    }
-    
-    const saLogs = studentAdmissionCallLogs
-    const ccLogs = collegeContactCallLogs
 
+    const ediiIds = new Set(ediiProspects.map((p: any) => p.id))
+    const collegeContactIds = new Set(collegeContacts.map((p: any) => p.id))
+    const studentAdmissionIds = new Set(studentAdmissionProspects.map((p: any) => p.id))
+
+    const saLogs = allCallLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
+    const ccLogs = allCallLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
+    const ediiLogs = allCallLogs.filter((log: any) => ediiIds.has(log.prospect_id))
 
     // ─── Section meta info embedded in section banners ─────────────────────────
 
@@ -354,19 +298,26 @@ export default function ReportsPage() {
     // helper: telecaller performance table
     const drawTelecallerTable = (
       perfData: any[],
-      isSA: boolean,
+      module: "sa" | "cc" | "edii",
       startY: number,
       headColor: [number, number, number]
     ) => {
       if (!perfData?.length) return startY
       const saHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Cold NR', 'Cold NI', 'Warm', 'Hot', 'Visit Sch.', 'Dec. Pend.', 'Admitted']
       const ccHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Ringing NR', 'Not Interest.', 'Interested', 'Proposal Sent', 'Training F/U', 'Qualified']
+      const ediiHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Ringing NR', 'Not Interest.', 'Interested', 'Interested F/U', 'Qualified']
+      
       const saRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.warmCount ?? 0, t.hotCount ?? 0, t.visitScheduledCount ?? 0, t.decisionPendingCount ?? 0, t.admittedCount ?? 0]
       const ccRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.warmCount ?? 0, t.proposalSentCount ?? 0, t.hotCount ?? 0, t.qualifiedCount ?? 0]
+      const ediiRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.ediiInterestedCount ?? 0, t.ediiInterestedFollowupCount ?? 0, t.ediiQualifiedCount ?? 0]
+      
+      const head = module === "sa" ? saHead : module === "edii" ? ediiHead : ccHead
+      const body = perfData.map(module === "sa" ? saRow : module === "edii" ? ediiRow : ccRow)
+      
       autoTable(doc, {
         startY,
-        head: [isSA ? saHead : ccHead],
-        body: perfData.map(isSA ? saRow : ccRow),
+        head: [head],
+        body,
         styles: { fontSize: 7.5, cellPadding: 4 },
         headStyles: { fillColor: headColor, textColor: 255 },
         theme: 'striped',
@@ -422,7 +373,6 @@ export default function ReportsPage() {
 
     // KPI row
     const saKpis = [
-      { label: 'Total Prospects', value: saData?.summary?.totalProspects ?? 0 },
       { label: 'Total Calls', value: saData?.summary?.totalCalls ?? 0 },
       { label: 'Warm', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Warm')?.value ?? 0 },
       { label: 'Hot', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Hot')?.value ?? 0 },
@@ -479,7 +429,7 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Telecaller Performance', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    y = drawTelecallerTable(saData?.telecallerPerformance || [], true, y, [37, 99, 235])
+    y = drawTelecallerTable(saData?.telecallerPerformance || [], "sa", y, [37, 99, 235])
 
     y = ensurePage(y, 60)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
@@ -497,7 +447,6 @@ export default function ReportsPage() {
 
     // KPI row
     const ccKpis = [
-      { label: 'Total Prospects', value: ccData?.summary?.totalProspects ?? 0 },
       { label: 'Total Calls', value: ccData?.summary?.totalCalls ?? 0 },
       { label: 'Proposal Sent', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Proposal Sent')?.value ?? 0 },
       { label: 'Qualified', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
@@ -556,13 +505,66 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Telecaller Performance', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    y = drawTelecallerTable(ccData?.telecallerPerformance || [], false, y, [124, 58, 237])
+    y = drawTelecallerTable(ccData?.telecallerPerformance || [], "cc", y, [124, 58, 237])
 
     y = ensurePage(y, 60)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Detailed Call Logs — College Contact', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
     y = drawCallLogsTable(ccLogs || [], false, y, [124, 58, 237])
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SECTION 3 — EDII CONTACT
+    // ═══════════════════════════════════════════════════════════════════════════
+    doc.addPage()
+    y = margin
+
+    y = drawSectionBanner("SECTION 3 — EDII CONTACT", `${ediiData?.summary?.totalCalls ?? 0} total calls`, [6, 182, 212], y)
+
+    // KPI row
+    const ediiKpis = [
+      { label: 'Total Calls', value: ediiData?.summary?.totalCalls ?? 0 },
+      { label: 'Interested', value: (ediiData?.outcomeDistribution || []).find((d: any) => d.name === 'Interested')?.value ?? 0 },
+      { label: 'Qualified', value: (ediiData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
+      { label: 'Not Interested', value: (ediiData?.outcomeDistribution || []).find((d: any) => d.name === 'Not Interested')?.value ?? 0 },
+    ]
+    autoTable(doc, {
+      startY: y,
+      theme: 'plain',
+      head: [ediiKpis.map(k => k.label)],
+      body: [ediiKpis.map(k => k.value)],
+      headStyles: { fillColor: [207, 250, 254], textColor: [8, 145, 178], fontSize: 8 },
+      bodyStyles: { fontSize: 14, fontStyle: 'bold', halign: 'center' },
+    })
+    y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
+
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Outcome Distribution', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    
+    // We don't have a specific chart for EDII in the PDF export yet, so we just show the table
+    y = ensurePage(y, 80)
+    y = drawOutcomeTable([
+      { label: 'New', color: [219, 234, 254] },
+      { label: 'Interested', color: [237, 233, 254] },
+      { label: 'Interested-Followup', color: [243, 232, 255] },
+      { label: 'Qualified', color: [209, 250, 229] },
+      { label: 'Ringing / Not Reachable', color: [241, 245, 249] },
+      { label: 'Not Interested', color: [254, 226, 226] },
+    ], ediiData?.outcomeDistribution || [], ediiData?.summary?.totalCalls || 0, y, [6, 182, 212])
+
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Telecaller Performance', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    y = drawTelecallerTable(ediiData?.telecallerPerformance || [], "edii", y, [6, 182, 212])
+
+    y = ensurePage(y, 60)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Detailed Call Logs — EDII Contact', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    y = drawCallLogsTable(ediiLogs || [], false, y, [6, 182, 212])
 
     // ─── Footer on every page ──────────────────────────────────────────────────
     const pageCount = doc.getNumberOfPages()
@@ -593,30 +595,38 @@ export default function ReportsPage() {
         ])
         
         // Filter prospects by module type using same logic as Telecaller Dashboard
+        const ediiProspects = prospects.filter((p: any) => 
+          p.prospect_type === 'edii' || p.dashboard === 'edii'
+        )
+
         const collegeContacts = prospects.filter((p: any) => 
-          (p.lead_source && p.lead_source.length > 0) || 
-          (p.lead_type && p.lead_type.length > 0)
+          !(p.prospect_type === 'edii' || p.dashboard === 'edii') &&
+          ((p.lead_source && p.lead_source.length > 0) || 
+           (p.lead_type && p.lead_type.length > 0))
         )
         
         const studentAdmissionProspects = prospects.filter((p: any) => 
+          !(p.prospect_type === 'edii' || p.dashboard === 'edii') &&
           !((p.lead_source && p.lead_source.length > 0) || 
             (p.lead_type && p.lead_type.length > 0))
         )
-        
+
         // Filter call logs by prospect type using same logic
         const collegeContactIds = new Set(collegeContacts.map((p) => p.id))
         const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.id))
+        const ediiIds = new Set(ediiProspects.map((p) => p.id))
         
         const collegeContactCallLogs = callLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
         const studentAdmissionCallLogs = callLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
+        const ediiCallLogs = callLogs.filter((log: any) => ediiIds.has(log.prospect_id))
         
         // Calculate outcome distribution from call logs (filtered by module)
-        const calculateOutcomeDistribution = (logs: any[], isCollegeContact: boolean) => {
+        const calculateOutcomeDistribution = (logs: any[], module: "sa" | "cc" | "edii") => {
           const distribution: Record<string, number> = {}
           
-          if (isCollegeContact) {
+          if (module === "cc") {
             // College Contact outcomes
-            const ccOutcomes = ['New', 'Interested', 'Interested Followup', 'Proposal To Be Sent', 'Proposal Sent', 'Training Date Followup', 'Qualified', 'Ringing / Not Reachable', 'Not Interested']
+            const ccOutcomes = CC_OUTCOME_ORDER
             ccOutcomes.forEach(outcome => distribution[outcome] = 0)
             
             logs.forEach((log: any) => {
@@ -625,9 +635,21 @@ export default function ReportsPage() {
                 distribution[outcome]++
               }
             })
+          } else if (module === "edii") {
+            // EDII outcomes
+            const ediiOutcomes = EDII_OUTCOME_ORDER
+            ediiOutcomes.forEach(outcome => distribution[outcome] = 0)
+            
+            logs.forEach((log: any) => {
+              let outcome = log.status_after_call || log.outcome || 'New'
+              if (outcome === 'Interested Followup') outcome = 'Interested-Followup'
+              if (distribution.hasOwnProperty(outcome)) {
+                distribution[outcome]++
+              }
+            })
           } else {
             // Student Admission outcomes
-            const saOutcomes = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
+            const saOutcomes = SA_OUTCOME_ORDER
             saOutcomes.forEach(outcome => distribution[outcome] = 0)
             
             logs.forEach((log: any) => {
@@ -650,7 +672,7 @@ export default function ReportsPage() {
         }
         
         // Calculate summary stats from filtered data
-        const calculateSummary = (prospects: any[], logs: any[], isCollegeContact: boolean) => {
+        const calculateSummary = (prospects: any[], logs: any[], module: "sa" | "cc" | "edii") => {
           // Use all logs filtered by date range from backend, not just today
           const totalCalls = logs.length
           
@@ -673,8 +695,8 @@ export default function ReportsPage() {
           // Match telecaller dashboard pending logic (on date-filtered prospects)
           const pendingCalls = dateFilteredProspects.filter((p: any) => {
             const totalCallsForProspect = prospectCallCounts.get(p.id) || 0
-            if (isCollegeContact) {
-              // College contact: outcome='New' or no calls
+            if (module === "cc" || module === "edii") {
+              // College contact/edii: outcome='New' or no calls
               return (p.outcome === 'New' || p.status === 'New' || 
                       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === 'New'))) &&
                       totalCallsForProspect === 0
@@ -702,6 +724,18 @@ export default function ReportsPage() {
         }
         
         // Build consistent data object - use backend's summary and outcome distribution which are already correctly filtered
+        const filteredProspects = activeTabType === 'college_contact'
+          ? collegeContacts
+          : activeTabType === 'edii'
+            ? ediiProspects
+            : studentAdmissionProspects
+
+        const filteredCallLogs = activeTabType === 'college_contact'
+          ? collegeContactCallLogs
+          : activeTabType === 'edii'
+            ? ediiCallLogs
+            : studentAdmissionCallLogs
+
         const consistentData = {
           ...reports,
           // Use backend's outcome distribution instead of recalculating - backend already handles date range and prospect type filtering
@@ -714,10 +748,12 @@ export default function ReportsPage() {
             totalEnrollments: 0
           },
           // Store filtered prospects for visit done tab
-          visitDoneProspects: studentAdmissionProspects.filter((p: any) => p.status === 'visit_done'),
+          visitDoneProspects: activeTabType === 'student_admission'
+            ? studentAdmissionProspects.filter((p: any) => p.status === 'visit_done')
+            : [],
           // Store all filtered data for consistency
-          filteredProspects: activeTabType === 'college_contact' ? collegeContacts : studentAdmissionProspects,
-          filteredCallLogs: activeTabType === 'college_contact' ? collegeContactCallLogs : studentAdmissionCallLogs
+          filteredProspects,
+          filteredCallLogs
         }
         
         setData(consistentData)
@@ -769,10 +805,18 @@ export default function ReportsPage() {
 
   const categoryCounts: Record<string, number> = {}
     ; (outcomeDistribution || []).forEach((item: any) => {
-      categoryCounts[item.name] = item.value
+      const rawName = item.name
+      // Store under the original name
+      categoryCounts[rawName] = (categoryCounts[rawName] || 0) + item.value
+      // Also store normalised variants so both CC and EDII charts resolve correctly
+      if (rawName === 'Interested-Followup') {
+        categoryCounts['Interested Followup'] = (categoryCounts['Interested Followup'] || 0) + item.value
+      } else if (rawName === 'Interested Followup') {
+        categoryCounts['Interested-Followup'] = (categoryCounts['Interested-Followup'] || 0) + item.value
+      }
     })
 
-  const statusChartData = (activeTabType === "student_admission" ? SA_OUTCOME_ORDER : CC_OUTCOME_ORDER).map((name) => ({
+  const statusChartData = ((activeTabType === "student_admission" ? SA_OUTCOME_ORDER : activeTabType === 'edii' ? EDII_OUTCOME_ORDER : CC_OUTCOME_ORDER) as string[]).map((name) => ({
     name,
     value: categoryCounts[name] || 0,
   }))
@@ -797,6 +841,10 @@ export default function ReportsPage() {
         <Button variant={activeTabType === "college_contact" ? "default" : "outline"} onClick={() => setActiveTabType("college_contact")}
           className={activeTabType === "college_contact" ? "bg-violet-600 hover:bg-violet-700 flex-1" : "flex-1"}>
           College Contact
+        </Button>
+        <Button variant={activeTabType === "edii" ? "default" : "outline"} onClick={() => setActiveTabType("edii")}
+          className={activeTabType === "edii" ? "bg-cyan-600 hover:bg-cyan-700 flex-1" : "flex-1"}>
+          EDII
         </Button>
       </div>
 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -829,6 +877,13 @@ export default function ReportsPage() {
                 <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-indigo-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Visit Done / Decision Pending'] || 0}</div><p className="text-xs text-muted-foreground">Visit Done / Decision Pending</p></div></div></CardContent></Card>
                 <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-emerald-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Admission Done ✓'] || 0}</div><p className="text-xs text-muted-foreground">Admission Done</p></div></div></CardContent></Card>
                 <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-orange-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Warm'] || 0}</div><p className="text-xs text-muted-foreground">Warm</p></div></div></CardContent></Card>
+              </>
+            ) : activeTabType === 'edii' ? (
+              <>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-green-600" /></div><div><div className="text-2xl font-bold">{summary.totalCalls}</div><p className="text-xs text-muted-foreground">Calls Made</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-blue-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Interested'] || 0}</div><p className="text-xs text-muted-foreground">Interested</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-emerald-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Qualified'] || 0}</div><p className="text-xs text-muted-foreground">Qualified</p></div></div></CardContent></Card>
+                <Card><CardContent className="pt-4"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center"><PhoneCall className="h-5 w-5 text-red-600" /></div><div><div className="text-2xl font-bold">{categoryCounts['Not Interested'] || 0}</div><p className="text-xs text-muted-foreground">Not Interested</p></div></div></CardContent></Card>
               </>
             ) : (
               <>
@@ -1011,7 +1066,7 @@ export default function ReportsPage() {
                         }}
                       >
                         {statusChartData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={(activeTabType === "student_admission" ? SA_OUTCOME_COLORS : CC_OUTCOME_COLORS)[entry.name] || '#999'} />
+                          <Cell key={`cell-${index}`} fill={(activeTabType === "student_admission" ? SA_OUTCOME_COLORS : activeTabType === "edii" ? EDII_OUTCOME_COLORS : CC_OUTCOME_COLORS)[entry.name] || '#999'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -1047,6 +1102,14 @@ export default function ReportsPage() {
                           <TableHead className="text-center">Visit Sched.</TableHead>
                           <TableHead className="text-center">Decision Pend.</TableHead>
                           <TableHead className="text-center">Admitted</TableHead>
+                        </>
+                      ) : activeTabType === 'edii' ? (
+                        <>
+                          <TableHead className="text-center">Ringing / NR</TableHead>
+                          <TableHead className="text-center">Not Interested</TableHead>
+                          <TableHead className="text-center">Interested</TableHead>
+                          <TableHead className="text-center">Interested F/U</TableHead>
+                          <TableHead className="text-center">Qualified</TableHead>
                         </>
                       ) : (
                         <>
@@ -1091,6 +1154,14 @@ export default function ReportsPage() {
                               <TableCell className="text-center"><Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200">{user.visitScheduledCount ?? 0}</Badge></TableCell>
                               <TableCell className="text-center"><Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">{user.decisionPendingCount ?? 0}</Badge></TableCell>
                               <TableCell className="text-center"><Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">{user.admittedCount ?? 0}</Badge></TableCell>
+                            </>
+                          ) : activeTabType === 'edii' ? (
+                            <>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">{user.coldNRCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{user.coldNICount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">{user.ediiInterestedCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{user.ediiInterestedFollowupCount ?? 0}</Badge></TableCell>
+                              <TableCell className="text-center"><Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">{user.ediiQualifiedCount ?? 0}</Badge></TableCell>
                             </>
                           ) : (
                             <>

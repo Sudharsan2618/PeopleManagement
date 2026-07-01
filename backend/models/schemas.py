@@ -139,6 +139,7 @@ class ProspectAssignmentBase(BaseModel):
     telecaller_id: int
     assigned_by: int
     assigned_date: date
+    dashboard: Optional[str] = Field(default="student_admission", max_length=50)
 
 
 class ProspectAssignmentCreate(ProspectAssignmentBase):

@@ -89,6 +89,9 @@ const LEAD_SOURCE_OPTIONS = [
   "Engineering College",
   "Sourced ITI College",
   "Sourcing Arts and Science Colleges",
+  "Wedding Photography",
+  "Video Editing",
+  "Solar",
 ]
 
 const LEAD_TYPE_OPTIONS = [
@@ -200,6 +203,58 @@ const leadOutcomeOptions: {
     description: "Following up on training date",
     icon: GraduationCap,
     color: "text-purple-500",
+  },
+  {
+    value: "Qualified",
+    label: "Qualified",
+    description: "Lead is qualified and ready",
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+  },
+  {
+    value: "Ringing / Not Reachable",
+    label: "Ringing / Not Reachable",
+    description: "Could not reach the lead",
+    icon: PhoneOff,
+    color: "text-orange-500",
+  },
+  {
+    value: "Not Interested",
+    label: "Not Interested",
+    description: "Lead has declined",
+    icon: Ban,
+    color: "text-red-500",
+  },
+]
+
+// ─── Outcome options – EDII MODE (Wedding Photography, Video Editing, Solar) ──
+const ediiOutcomeOptions: {
+  value: string
+  label: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+}[] = [
+  {
+    value: "New",
+    label: "New",
+    description: "Lead is newly added",
+    icon: Clock,
+    color: "text-blue-500",
+  },
+  {
+    value: "Interested",
+    label: "Interested",
+    description: "Lead has shown interest",
+    icon: ThumbsUp,
+    color: "text-green-500",
+  },
+  {
+    value: "Interested-Followup",
+    label: "Interested-Followup",
+    description: "Interested, requires follow-up",
+    icon: Clock,
+    color: "text-yellow-500",
   },
   {
     value: "Qualified",
@@ -341,14 +396,70 @@ export function CallOutcomeModal({
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
-  // ─── Determine if we're in "lead mode" ────────────────────────
-  const isLeadMode = leadSource.length > 0 || leadType.length > 0
-  const currentOutcomeOptions = isLeadMode ? leadOutcomeOptions : defaultOutcomeOptions
+  // ─── Determine if we're in "lead mode" or "EDII mode" ────────────────────────
+  const EDII_LEAD_SOURCES = ["Wedding Photography", "Video Editing", "Solar"]
+  const EDII_COURSES = ["Wedding Photography", "Video Editing", "Solar"]
+  const prospectLeadSourcesTop: string[] = Array.isArray((prospect as any)?.lead_source)
+    ? (prospect as any).lead_source
+    : typeof (prospect as any)?.lead_source === "string"
+    ? [(prospect as any).lead_source]
+    : []
+
+  const isEDIIMode =
+    leadSource.some((source: string) =>
+      EDII_LEAD_SOURCES.some((ediiSource) =>
+        source.toLowerCase().includes(ediiSource.toLowerCase())
+      )
+    ) ||
+    prospectLeadSourcesTop.some((source: string) =>
+      EDII_LEAD_SOURCES.some((ediiSource) =>
+        source.toLowerCase().includes(ediiSource.toLowerCase())
+      )
+    ) ||
+    (prospect?.courseInterest && prospect.courseInterest !== "Unknown" &&
+      EDII_COURSES.some((ediiCourse) =>
+        prospect.courseInterest.toLowerCase().includes(ediiCourse.toLowerCase())
+      ))
+  const localLeadMode = leadSource.length > 0 || leadType.length > 0
+
+  // Normalize dashboard names (matches logic used elsewhere)
+  const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "edii" => {
+    if (typeof value !== "string") return "student_admission"
+
+    const normalized = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_")
+
+    if (normalized === "college_contact" || normalized === "college_contacts" || normalized === "college") {
+      return "college_contact"
+    }
+
+    if (normalized === "edii" || normalized === "edii_leads" || normalized.includes("edii")) {
+      return "edii"
+    }
+
+    return "student_admission"
+  }
+
+  const dashboard = normalizeDashboard(prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType)
+  // Show Lead Type only for college_contact dashboard
+  const showLeadType = dashboard === "college_contact"
+
+  // Lead mode is only active for college_contact dashboard
+  const isLeadMode = localLeadMode && dashboard === "college_contact"
+
+  // Choose outcome options by dashboard
+  const currentOutcomeOptions =
+    dashboard === "edii"
+      ? ediiOutcomeOptions
+      : dashboard === "college_contact"
+      ? leadOutcomeOptions
+      : defaultOutcomeOptions
 
   // Reset outcome selection when mode changes
+  // Keep dependency array shape stable across renders by using a single key
+  const modeKey = `${Number(isLeadMode)}-${Number(isEDIIMode)}-${dashboard || ""}`
   useEffect(() => {
     setSelectedOutcome(null)
-  }, [isLeadMode])
+  }, [modeKey])
 
   // Notify parent when lead mode is activated
   useEffect(() => {
@@ -359,37 +470,30 @@ export function CallOutcomeModal({
 
   // Fetch real call history when prospect changes
   useEffect(() => {
-    if (prospect && open) {
-      const prospectId = Number(prospect.numericId || prospect.id)
-      if (prospectId) {
-        setHistoryLoading(true)
-        callLogsApi
-          .getByProspect(prospectId)
-          .then((logs) => {
-            setCallHistory(logs)
-          })
-          .catch(() => {
-            setCallHistory([])
-          })
-          .finally(() => {
-            setHistoryLoading(false)
-          })
-      }
-    }
-    if (open) {
-      setCoursesLoading(true)
-      coursesApi
-        .getAll()
-        .then((data) => setCourses(data))
-        .catch(() => setCourses([]))
-        .finally(() => setCoursesLoading(false))
+    if (!(prospect && open)) return
 
-      // Pre-populate lead source/type from prospect
-      if (prospect) {
-        setLeadSource(prospect.lead_source || [])
-        setLeadType(prospect.lead_type || [])
-      }
+    const prospectId = Number(prospect.numericId || prospect.id)
+
+    if (prospectId) {
+      setHistoryLoading(true)
+      callLogsApi
+        .getByProspect(prospectId)
+        .then((logs) => setCallHistory(logs))
+        .catch(() => setCallHistory([]))
+        .finally(() => setHistoryLoading(false))
     }
+
+    setCoursesLoading(true)
+    coursesApi
+      .getAll()
+      .then((data) => setCourses(data))
+      .catch(() => setCourses([]))
+      .finally(() => setCoursesLoading(false))
+
+    // Pre-populate lead source/type from prospect
+    const parse = (v: any) => (Array.isArray(v) ? v : typeof v === "string" ? [v] : [])
+    setLeadSource(parse((prospect as any).lead_source))
+    setLeadType(parse((prospect as any).lead_type))
   }, [prospect, open])
 
   const resetForm = () => {
@@ -412,8 +516,10 @@ export function CallOutcomeModal({
     setLeadType([])
   }
 
-  // For default mode & lead mode – map selectedOutcome to callback-active logic
-  const callbackSectionActive = isLeadMode
+  // For default mode, lead mode & EDII mode – map selectedOutcome to callback-active logic
+  const callbackSectionActive = isEDIIMode
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+    : isLeadMode
     ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
     : (
         selectedOutcome === "warm" ||
@@ -615,7 +721,12 @@ export function CallOutcomeModal({
                 <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
                   <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">1</span>
                   Lead Information
-                  {isLeadMode && (
+                  {isEDIIMode && (
+                    <Badge className="ml-2 text-xs bg-emerald-10 text-emerald-600 border border-emerald-30">
+                      EDII Mode Active
+                    </Badge>
+                  )}
+                  {isLeadMode && !isEDIIMode && (
                     <Badge className="ml-2 text-xs bg-primary/10 text-primary border border-primary/30">
                       Lead Mode Active
                     </Badge>
@@ -641,26 +752,33 @@ export function CallOutcomeModal({
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase text-muted-foreground">
-                      Lead Type
-                    </Label>
-                    <MultiSelect
-                      options={LEAD_TYPE_OPTIONS}
-                      selected={leadType}
-                      onChange={setLeadType}
-                      placeholder="Select lead type(s)..."
-                    />
-                    {leadType.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {leadType.map(t => (
-                          <Badge key={t} variant="outline" className="text-xs border-primary/30 text-primary">{t}</Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {showLeadType && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Lead Type
+                      </Label>
+                      <MultiSelect
+                        options={LEAD_TYPE_OPTIONS}
+                        selected={leadType}
+                        onChange={setLeadType}
+                        placeholder="Select lead type(s)..."
+                      />
+                      {leadType.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {leadType.map(t => (
+                            <Badge key={t} variant="outline" className="text-xs border-primary/30 text-primary">{t}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  {isLeadMode && (
+                  {isEDIIMode && (
+                    <p className="text-xs text-emerald-600 font-medium bg-emerald-5 rounded-lg p-2 border border-emerald-20">
+                      EDII mode active: Status options have been updated for EDII tracking.
+                    </p>
+                  )}
+                  {isLeadMode && !isEDIIMode && (
                     <p className="text-xs text-primary font-medium bg-primary/5 rounded-lg p-2 border border-primary/20">
                       Lead mode active: Status options have been updated for lead tracking.
                     </p>

@@ -4,6 +4,9 @@ from database.connection import execute_query, execute_insert, execute_update_de
 from utils.timezone_utils import get_ist_now
 from utils.phone_utils import clean_phone_number
 
+# Sentinel value to distinguish between "not provided" and "explicitly None"
+_UNSET = object()
+
 
 class ProspectService:
     """Service layer for Prospects table with direct SQL queries."""
@@ -17,7 +20,7 @@ class ProspectService:
                    lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported
             FROM prospects
-            ORDER BY created_at DESC
+            ORDER BY updated_at DESC
         """
         return execute_query(query, fetch="all")
     
@@ -129,92 +132,92 @@ class ProspectService:
         ))
     
     @staticmethod
-    def update_prospect(prospect_id: int, name: Optional[str] = None, email: Optional[str] = None,
-                        location: Optional[str] = None, sourced_from: Optional[str] = None,
-                        status: Optional[str] = None, course_interest: Optional[str] = None,
-                        parent_name: Optional[str] = None, department: Optional[str] = None,
-                        assigned_to: Optional[int] = None, closing_reason: Optional[str] = None,
-                        tags: Optional[any] = None, lead_source: Optional[List[str]] = None,
-                        lead_type: Optional[List[str]] = None,
-                        alt_phone: Optional[str] = None, secondary_email: Optional[str] = None,
-                        city: Optional[str] = None, address: Optional[str] = None,
-                        postal_code: Optional[str] = None, designation: Optional[str] = None,
-                        prospect_type: Optional[str] = None, company: Optional[str] = None,
-                        comments: Optional[str] = None, follow_up_date: Optional[str] = None) -> int:
+    def update_prospect(prospect_id: int, name: Optional[str] = _UNSET, email: Optional[str] = _UNSET,
+                        location: Optional[str] = _UNSET, sourced_from: Optional[str] = _UNSET,
+                        status: Optional[str] = _UNSET, course_interest: Optional[str] = _UNSET,
+                        parent_name: Optional[str] = _UNSET, department: Optional[str] = _UNSET,
+                        assigned_to: Optional[int] = _UNSET, closing_reason: Optional[str] = _UNSET,
+                        tags: Optional[any] = _UNSET, lead_source: Optional[List[str]] = _UNSET,
+                        lead_type: Optional[List[str]] = _UNSET,
+                        alt_phone: Optional[str] = _UNSET, secondary_email: Optional[str] = _UNSET,
+                        city: Optional[str] = _UNSET, address: Optional[str] = _UNSET,
+                        postal_code: Optional[str] = _UNSET, designation: Optional[str] = _UNSET,
+                        prospect_type: Optional[str] = _UNSET, company: Optional[str] = _UNSET,
+                        comments: Optional[str] = _UNSET, follow_up_date: Optional[str] = _UNSET) -> int:
         """Update prospect details."""
         updates = []
         params = []
         
-        if name is not None:
+        if name is not _UNSET:
             updates.append("name = %s")
             params.append(name)
-        if email is not None:
+        if email is not _UNSET:
             updates.append("email = %s")
             params.append(email)
-        if location is not None:
+        if location is not _UNSET:
             updates.append("location = %s")
             params.append(location)
-        if sourced_from is not None:
+        if sourced_from is not _UNSET:
             updates.append("sourced_from = %s")
             params.append(sourced_from)
-        if status is not None:
+        if status is not _UNSET:
             updates.append("status = %s")
             params.append(status)
-        if course_interest is not None:
+        if course_interest is not _UNSET:
             updates.append("course_interest = %s")
             params.append(course_interest)
-        if parent_name is not None:
+        if parent_name is not _UNSET:
             updates.append("parent_name = %s")
             params.append(parent_name)
-        if department is not None:
+        if department is not _UNSET:
             updates.append("department = %s")
             params.append(department)
-        if assigned_to is not None:
+        if assigned_to is not _UNSET:
             updates.append("assigned_to = %s")
             params.append(assigned_to)
-        if closing_reason is not None:
+        if closing_reason is not _UNSET:
             updates.append("closing_reason = %s")
             params.append(closing_reason)
-        if tags is not None:
+        if tags is not _UNSET:
             updates.append("tags = %s")
             import json
             params.append(json.dumps(tags))
-        if lead_source is not None:
+        if lead_source is not _UNSET:
             updates.append("lead_source = %s")
             import json
             params.append(json.dumps(lead_source))
-        if lead_type is not None:
+        if lead_type is not _UNSET:
             updates.append("lead_type = %s")
             import json
             params.append(json.dumps(lead_type))
-        if alt_phone is not None:
+        if alt_phone is not _UNSET:
             updates.append("alt_phone = %s")
             params.append(alt_phone)
-        if secondary_email is not None:
+        if secondary_email is not _UNSET:
             updates.append("secondary_email = %s")
             params.append(secondary_email)
-        if city is not None:
+        if city is not _UNSET:
             updates.append("city = %s")
             params.append(city)
-        if address is not None:
+        if address is not _UNSET:
             updates.append("address = %s")
             params.append(address)
-        if postal_code is not None:
+        if postal_code is not _UNSET:
             updates.append("postal_code = %s")
             params.append(postal_code)
-        if designation is not None:
+        if designation is not _UNSET:
             updates.append("designation = %s")
             params.append(designation)
-        if prospect_type is not None:
+        if prospect_type is not _UNSET:
             updates.append("prospect_type = %s")
             params.append(prospect_type)
-        if company is not None:
+        if company is not _UNSET:
             updates.append("company = %s")
             params.append(company)
-        if comments is not None:
+        if comments is not _UNSET:
             updates.append("comments = %s")
             params.append(comments)
-        if follow_up_date is not None:
+        if follow_up_date is not _UNSET:
             updates.append("follow_up_date = %s")
             params.append(follow_up_date)
         
@@ -238,8 +241,13 @@ class ProspectService:
         return execute_update_delete(query, (prospect_id,))
 
     @staticmethod
-    def create_bulk_prospects(prospects: List[dict]) -> dict:
-        """Create multiple prospects at once with detailed logging for each record."""
+    def create_bulk_prospects(prospects: List[dict], update_existing: bool = False) -> dict:
+        """Create multiple prospects at once with detailed logging for each record.
+        
+        Args:
+            prospects: List of prospect dictionaries
+            update_existing: If True, update existing records instead of skipping them
+        """
         if not prospects:
             return {
                 "total": 0,
@@ -261,6 +269,7 @@ class ProspectService:
             row_number = index + 1
             mobile = clean_phone_number(prospect.get("mobile", ""))
             name = prospect.get("name", "Unknown")
+            lead_id = prospect.get("lead_id")
             
             # Validate required fields
             if not mobile:
@@ -285,20 +294,96 @@ class ProspectService:
                 })
                 continue
             
-            # Check if mobile already exists in database
-            check_query = "SELECT id FROM prospects WHERE mobile = %s"
-            existing = execute_query(check_query, (mobile,), fetch="one")
+            # Check for duplicates - first by lead_id if provided, then by mobile
+            existing = None
+            if lead_id:
+                # Check if lead_id already exists (need to check a separate table or add lead_id column)
+                # For now, we'll check by mobile since lead_id might not be in the schema yet
+                check_query = "SELECT id FROM prospects WHERE mobile = %s"
+                existing = execute_query(check_query, (mobile,), fetch="one")
+            else:
+                # Check if mobile already exists in database
+                check_query = "SELECT id FROM prospects WHERE mobile = %s"
+                existing = execute_query(check_query, (mobile,), fetch="one")
             
             if existing:
-                results["duplicates"] += 1
-                results["details"].append({
-                    "row": row_number,
-                    "name": name,
-                    "mobile": mobile,
-                    "status": "Skipped",
-                    "reason": "Duplicate Mobile Number: Prospect already exists in database"
-                })
-                continue
+                if update_existing:
+                    # Update existing prospect instead of skipping
+                    try:
+                        # Build update dict with only non-None values
+                        update_kwargs = {"prospect_id": existing['id']}
+                        if prospect.get("name") is not None:
+                            update_kwargs["name"] = prospect.get("name")
+                        if prospect.get("email") is not None:
+                            update_kwargs["email"] = prospect.get("email")
+                        if prospect.get("location") is not None:
+                            update_kwargs["location"] = prospect.get("location")
+                        if prospect.get("sourced_from") is not None:
+                            update_kwargs["sourced_from"] = prospect.get("sourced_from")
+                        if prospect.get("status") is not None:
+                            update_kwargs["status"] = prospect.get("status")
+                        if prospect.get("course_interest") is not None:
+                            update_kwargs["course_interest"] = prospect.get("course_interest")
+                        if prospect.get("parent_name") is not None:
+                            update_kwargs["parent_name"] = prospect.get("parent_name")
+                        if prospect.get("department") is not None:
+                            update_kwargs["department"] = prospect.get("department")
+                        if prospect.get("tags") is not None:
+                            update_kwargs["tags"] = prospect.get("tags")
+                        if prospect.get("lead_source") is not None:
+                            update_kwargs["lead_source"] = prospect.get("lead_source")
+                        if prospect.get("lead_type") is not None:
+                            update_kwargs["lead_type"] = prospect.get("lead_type")
+                        if prospect.get("alt_phone") is not None:
+                            update_kwargs["alt_phone"] = prospect.get("alt_phone")
+                        if prospect.get("secondary_email") is not None:
+                            update_kwargs["secondary_email"] = prospect.get("secondary_email")
+                        if prospect.get("city") is not None:
+                            update_kwargs["city"] = prospect.get("city")
+                        if prospect.get("address") is not None:
+                            update_kwargs["address"] = prospect.get("address")
+                        if prospect.get("postal_code") is not None:
+                            update_kwargs["postal_code"] = prospect.get("postal_code")
+                        if prospect.get("designation") is not None:
+                            update_kwargs["designation"] = prospect.get("designation")
+                        if prospect.get("company") is not None:
+                            update_kwargs["company"] = prospect.get("company")
+                        if prospect.get("comments") is not None:
+                            update_kwargs["comments"] = prospect.get("comments")
+                        if prospect.get("follow_up_date") is not None:
+                            update_kwargs["follow_up_date"] = prospect.get("follow_up_date")
+                        
+                        ProspectService.update_prospect(**update_kwargs)
+                        
+                        results["success"] += 1
+                        results["details"].append({
+                            "row": row_number,
+                            "name": name,
+                            "mobile": mobile,
+                            "status": "Updated",
+                            "reason": f"Successfully updated existing prospect (ID: {existing['id']})"
+                        })
+                        continue
+                    except Exception as e:
+                        results["failed"] += 1
+                        results["details"].append({
+                            "row": row_number,
+                            "name": name,
+                            "mobile": mobile,
+                            "status": "Failed",
+                            "reason": f"Update Failed: {str(e)}"
+                        })
+                        continue
+                else:
+                    results["duplicates"] += 1
+                    results["details"].append({
+                        "row": row_number,
+                        "name": name,
+                        "mobile": mobile,
+                        "status": "Skipped",
+                        "reason": f"Duplicate: Prospect already exists in database (ID: {existing['id']})"
+                    })
+                    continue
             
             # Insert the prospect
             try:

@@ -130,6 +130,7 @@ export interface ProspectAssignment {
   telecaller_id: number
   assigned_by: number
   assigned_date: string
+  dashboard?: string
   created_at: string
 }
 
@@ -187,13 +188,14 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     parentName: apiProspect.parent_name || "",
     department: apiProspect.department || "",
     status: mapBackendStatusToUiStatus(apiProspect.status),
-    assignedTo: assignment ? String(assignment.telecaller_id) : (apiProspect.assigned_to ? String(apiProspect.assigned_to) : undefined),
+    assignedTo: assignment ? String(assignment.telecaller_id) : undefined,
     assignedDate: assignment?.assigned_date,
     source: apiProspect.sourced_from || "Unknown",
     closingReason: apiProspect.closing_reason || "",
     tags: parseArray(apiProspect.tags),
     lead_source: parseArray(apiProspect.lead_source),
     lead_type: parseArray(apiProspect.lead_type),
+    dashboard: assignment?.dashboard || apiProspect.prospect_type || "student_admission",
     createdAt: apiProspect.created_at,
     updated_at: apiProspect.updated_at,
     altPhone: apiProspect.alt_phone || "",
@@ -245,10 +247,15 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`
+  // Add cache-busting timestamp for GET requests
+  const url = new URL(`${API_BASE_URL}${endpoint}`)
+  if (!options.method || options.method === 'GET') {
+    url.searchParams.set('_t', Date.now().toString())
+  }
 
   const headers = new Headers(options.headers)
   headers.set("Accept", "application/json")
+  headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
 
   if (options.body != null && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
@@ -256,11 +263,12 @@ async function apiRequest<T>(
 
   const defaultOptions: RequestInit = {
     headers,
+    cache: "no-store",
   }
 
   let response: Response
   try {
-    response = await fetch(url, { ...defaultOptions, ...options })
+    response = await fetch(url.toString(), { ...defaultOptions, ...options })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     throw new Error(`Network error fetching ${url}: ${message}`)
@@ -358,22 +366,25 @@ export const prospectsApi = {
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
   }),
-  bulkImport: (data: any[]) => apiRequest<{
-    total: number
-    success: number
-    duplicates: number
-    failed: number
-    details: Array<{
-      row: number
-      name: string
-      mobile: string
-      status: string
-      reason: string
-    }>
-  }>("/prospects/bulk-import", {
-    method: "POST",
-    body: JSON.stringify(data),
-  }),
+  bulkImport: (data: any[], updateExisting: boolean = false) => {
+    const query = updateExisting ? "?update_existing=true" : ""
+    return apiRequest<{
+      total: number
+      success: number
+      duplicates: number
+      failed: number
+      details: Array<{
+        row: number
+        name: string
+        mobile: string
+        status: string
+        reason: string
+      }>
+    }>(`/prospects/bulk-import${query}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
 }
 
 // Assignments API
@@ -388,6 +399,10 @@ export const assignmentsApi = {
   create: (data: any) => apiRequest<ProspectAssignment>("/assignments", {
     method: "POST",
     body: JSON.stringify(data),
+  }),
+  bulkUnassign: (prospectIds: number[]) => apiRequest<{ message: string; updated_count: number }>("/assignments/bulk-unassign", {
+    method: "POST",
+    body: JSON.stringify(prospectIds),
   }),
   delete: (id: number) => apiRequest<{ message: string }>(`/assignments/${id}`, {
     method: "DELETE",

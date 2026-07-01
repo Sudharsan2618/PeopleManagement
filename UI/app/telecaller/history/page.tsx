@@ -82,6 +82,7 @@ const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
   "Ringing / Not Reachable": { label: "Ringing / Not Reachable", color: "bg-orange-100 text-orange-800 border-orange-200" },
   "Not Interested": { label: "Not Interested (Lead)", color: "bg-red-100 text-red-800 border-red-200" },
   "College Contact": { label: "College Contact", color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
+  "Interested-Followup": { label: "Interested-Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -100,6 +101,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 const SCHOOL_STATUS_KEYS = ["cold_no_response", "cold_not_interested", "warm", "hot", "visit_scheduled", "decision_pending", "admission_done"]
 const COLLEGE_STATUS_KEYS = ["New", "Interested", "Interested Followup", "Proposal To Be Sent", "Proposal Sent", "Training Date Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
+const EDII_STATUS_KEYS = ["New", "Interested", "Interested-Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
 
 const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = {
   cold: { label: "Cold (Other)", color: "bg-slate-100 text-slate-600 border-slate-200" },
@@ -120,6 +122,26 @@ const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = 
   "Qualified": { label: "Qualified", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   "Ringing / Not Reachable": { label: "Ringing / Not Reachable", color: "bg-orange-100 text-orange-800 border-orange-200" },
   "Not Interested": { label: "Not Interested", color: "bg-red-100 text-red-800 border-red-200" },
+  "Interested-Followup": { label: "Interested Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+}
+
+const hasLeadInfo = (p: Prospect) => {
+  const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+    (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
+  const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+    (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
+  return sourceArray.length > 0 || typeArray.length > 0
+}
+
+const isEDII = (p: Prospect) => {
+  const EDII_KEYWORDS = ["wedding photography", "video editing", "solar"]
+  const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+    (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
+  const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+    (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
+  const hasEDIIKeyword = (arr: string[]) => arr.some(item => EDII_KEYWORDS.some(k => item.toLowerCase().includes(k)))
+  const courseInterestMatch = p.course_interest ? EDII_KEYWORDS.some(k => p.course_interest!.toLowerCase().includes(k)) : false
+  return hasEDIIKeyword(sourceArray) || hasEDIIKeyword(typeArray) || courseInterestMatch || (p as any).prospect_type === "edii" || (p as any).dashboard === "edii" || (p as any).dashboard === "edii_leads"
 }
 
 export default function CallHistoryPage() {
@@ -134,12 +156,12 @@ export default function CallHistoryPage() {
   const [outcomeFilter, setOutcomeFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
   const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0])
-  const [contactMode, setContactMode] = useState<"school" | "college">("school")
+  const [contactMode, setContactMode] = useState<"school" | "college" | "edii">("school")
 
   // Export states
   const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0])
   const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0])
-  const [exportContactMode, setExportContactMode] = useState<"school" | "college">("school")
+  const [exportContactMode, setExportContactMode] = useState<"school" | "college" | "edii">("school")
   const [isExporting, setIsExporting] = useState(false)
   const [isPdfExporting, setIsPdfExporting] = useState(false)
 
@@ -205,8 +227,10 @@ export default function CallHistoryPage() {
         
         if (exportContactMode === "college") {
           return collegeOutcomes.includes(log.outcome)
+        } else if (exportContactMode === "edii") {
+          return EDII_STATUS_KEYS.includes(log.outcome)
         } else {
-          return !collegeOutcomes.includes(log.outcome)
+          return !collegeOutcomes.includes(log.outcome) && !EDII_STATUS_KEYS.includes(log.outcome)
         }
       })
 
@@ -509,29 +533,27 @@ export default function CallHistoryPage() {
       "College Contact"
     ];
 
-    // Helper to check if lead_source or lead_type has values
-    const hasLeadInfo = (p: Prospect) => {
-      const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
-        (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
-      const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
-        (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
-      return sourceArray.length > 0 || typeArray.length > 0
-    }
-
     if (contactMode === "college") {
       modeAssignments = assignments.filter((a) => {
         const p = prospects[a.prospect_id]
         if (!p) return false;
-        return hasLeadInfo(p)
+        return hasLeadInfo(p) && !isEDII(p)
       })
-      modeCallLogs = callLogs.filter(log => collegeOutcomes.includes(log.outcome))
+      modeCallLogs = callLogs.filter(log => collegeOutcomes.includes(log.outcome) && !EDII_STATUS_KEYS.includes(log.outcome))
+    } else if (contactMode === "edii") {
+      modeAssignments = assignments.filter((a) => {
+        const p = prospects[a.prospect_id]
+        if (!p) return false;
+        return isEDII(p)
+      })
+      modeCallLogs = callLogs.filter(log => EDII_STATUS_KEYS.includes(log.outcome))
     } else {
       modeAssignments = assignments.filter((a) => {
         const p = prospects[a.prospect_id]
         if (!p) return false;
-        return !hasLeadInfo(p)
+        return !hasLeadInfo(p) && !isEDII(p)
       })
-      modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome))
+      modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !EDII_STATUS_KEYS.includes(log.outcome))
     }
     return { filteredAssignments: modeAssignments, filteredCallLogsForStats: modeCallLogs }
   }, [assignments, callLogs, prospects, contactMode])
@@ -601,8 +623,8 @@ export default function CallHistoryPage() {
   const pendingLeadsCount = useMemo(() => {
     const assignedProspectIds = new Set(filteredAssignments.map((a) => a.prospect_id))
     
-    if (contactMode === "college") {
-      // For college contact: pending if no calls OR last outcome is "New"
+    if (contactMode === "college" || contactMode === "edii") {
+      // For college/edii contact: pending if no calls OR last outcome is "New"
       return Object.values(prospects).filter((p) => {
         if (!assignedProspectIds.has(p.id)) return false
         const prospectCalls = filteredCallLogsForStats.filter((log) => log.prospect_id === p.id)
@@ -631,6 +653,29 @@ export default function CallHistoryPage() {
         "Proposal To Be Sent": 0,
         "Proposal Sent": 0,
         "Training Date Followup": 0,
+        "Qualified": 0,
+        "Ringing / Not Reachable": 0,
+        "Not Interested": 0,
+      }
+
+      filteredCallLogsForStats.forEach((log) => {
+        if (summaryDate) {
+          const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+          if (logDateStr !== summaryDate) return
+        }
+
+        if (counts.hasOwnProperty(log.outcome)) {
+          counts[log.outcome] += 1
+        }
+      })
+
+      return counts
+    } else if (contactMode === "edii") {
+      // EDII contact outcomes
+      const counts: Record<string, number> = {
+        "New": 0,
+        "Interested": 0,
+        "Interested-Followup": 0,
         "Qualified": 0,
         "Ringing / Not Reachable": 0,
         "Not Interested": 0,
@@ -775,6 +820,14 @@ export default function CallHistoryPage() {
           >
             College Contact
           </Button>
+          <Button
+            variant={contactMode === "edii" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setContactMode("edii")}
+            className="font-bold rounded-md"
+          >
+            EDII Contact
+          </Button>
         </div>
         <div className="flex items-center gap-3">
           <Dialog>
@@ -877,11 +930,20 @@ export default function CallHistoryPage() {
               {assignments.filter((a) => {
                 const p = prospects[a.prospect_id]
                 if (!p) return false
-                const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
-                  (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
-                const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
-                  (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
-                return sourceArray.length > 0 || typeArray.length > 0
+                return hasLeadInfo(p) && !isEDII(p)
+              }).length}
+            </span>
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-xs px-4 py-2 font-bold bg-cyan-50 text-cyan-700 border-cyan-200 shadow-sm rounded-lg flex items-center gap-2"
+          >
+            <span>EDII Contact:</span>
+            <span className="text-sm bg-cyan-100 px-2 py-0.5 rounded-md">
+              {assignments.filter((a) => {
+                const p = prospects[a.prospect_id]
+                if (!p) return false
+                return isEDII(p)
               }).length}
             </span>
           </Badge>
@@ -911,10 +973,11 @@ export default function CallHistoryPage() {
 
         {/* Status Breakdown - limited to requested categories */}
         <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
-          {(contactMode === "college" ? COLLEGE_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
+          {(contactMode === "college" ? COLLEGE_STATUS_KEYS : contactMode === "edii" ? EDII_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
             const count = statusCounts[status]
             const config = STATUS_SUMMARY_CONFIG[status]
             if (!summaryDate && count === 0) return null; // hide zeros only for all-time
+            if (!config) return null; // fallback
             return (
               <Badge
                 key={status}

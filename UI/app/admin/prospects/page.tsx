@@ -92,9 +92,16 @@ export default function AdminProspectsPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [selectedProspectIds, setSelectedProspectIds] = useState<number[]>([])
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [targetDashboard, setTargetDashboard] = useState<string>("")
   const [targetTelecallerId, setTargetTelecallerId] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const dashboardOptions = [
+    { value: "student_admission", label: "Student Admission" },
+    { value: "college_contact", label: "College Contact" },
+    { value: "edii", label: "EDII" },
+  ]
   const [isProspectDialogOpen, setIsProspectDialogOpen] = useState(false)
   const [editingProspect, setEditingProspect] = useState<any | null>(null)
   const [prospectFormData, setProspectFormData] = useState({
@@ -201,7 +208,12 @@ export default function AdminProspectsPage() {
   }
 
   const handleBulkAssign = async () => {
-    if (!targetTelecallerId || selectedProspectIds.length === 0) return
+    if (!targetDashboard || !targetTelecallerId || selectedProspectIds.length === 0) {
+      if (!targetDashboard) {
+        alert("Please select a dashboard before assigning prospects.")
+      }
+      return
+    }
 
     try {
       setIsAssigning(true)
@@ -218,6 +230,7 @@ export default function AdminProspectsPage() {
             telecaller_id: parseInt(targetTelecallerId),
             assigned_by: assignedBy,
             assigned_date: today,
+            dashboard: targetDashboard,
           })
         )
       )
@@ -238,6 +251,46 @@ export default function AdminProspectsPage() {
       setTargetTelecallerId("")
     } catch (err) {
       alert("Failed to assign prospects: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
+  const handleBulkUnassign = async () => {
+    if (selectedProspectIds.length === 0) return
+
+    if (!confirm(`Are you sure you want to unassign ${selectedProspectIds.length} selected prospect(s)?`)) {
+      return
+    }
+
+    try {
+      setIsAssigning(true)
+      await assignmentsApi.bulkUnassign(selectedProspectIds)
+
+      // Wait a moment for backend to process
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      const [apiProspects, apiAssignments] = await Promise.all([
+        prospectsApi.getAll(),
+        assignmentsApi.getAll(),
+      ])
+      const uiProspects = apiProspects.map((p: any) =>
+        adaptApiProspectToUiProspect(p, apiAssignments)
+      )
+      setProspects(uiProspects)
+      setAssignments(apiAssignments)
+
+      setSelectedProspectIds([])
+      toast({
+        title: "Unassigned",
+        description: `Successfully unassigned ${selectedProspectIds.length} prospect(s).`,
+      })
+    } catch (err) {
+      toast({
+        title: "Unassign Failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      })
     } finally {
       setIsAssigning(false)
     }
@@ -503,6 +556,13 @@ export default function AdminProspectsPage() {
                     <UserPlus className="h-4 w-4 mr-2" />
                     Assign ({selectedProspectIds.length})
                   </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleBulkUnassign}
+                    disabled={isAssigning}
+                  >
+                    Unassign ({selectedProspectIds.length})
+                  </Button>
                   <Button 
                     variant="destructive"
                     onClick={handleBulkDelete}
@@ -551,6 +611,7 @@ export default function AdminProspectsPage() {
                   <TableHead>Parent Name</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Course</TableHead>
+                  <TableHead>Dashboard</TableHead>
                   <TableHead>Lead Source</TableHead>
                   <TableHead>Lead Type</TableHead>
                   <TableHead>Tags</TableHead>
@@ -565,7 +626,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={23} className="h-24 text-center">
+                    <TableCell colSpan={26} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -606,6 +667,9 @@ export default function AdminProspectsPage() {
                         <TableCell>{prospect.parentName || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{prospect.department || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.courseInterest || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="capitalize">
+                          {prospect.dashboard?.replace(/_/g, " ") || prospect.prospect_type?.replace(/_/g, " ") || "Student Admission"}
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[150px]">
                             {Array.isArray(prospect.lead_source) && prospect.lead_source.length > 0 ? (
@@ -902,6 +966,21 @@ export default function AdminProspectsPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium">Select Dashboard</label>
+              <Select value={targetDashboard} onValueChange={setTargetDashboard}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a dashboard..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {dashboardOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Select Telecaller</label>
               <Select value={targetTelecallerId} onValueChange={setTargetTelecallerId}>
                 <SelectTrigger>
@@ -927,7 +1006,7 @@ export default function AdminProspectsPage() {
             </Button>
             <Button
               onClick={handleBulkAssign}
-              disabled={!targetTelecallerId || isAssigning}
+              disabled={!targetDashboard || !targetTelecallerId || isAssigning}
             >
               {isAssigning ? "Assigning..." : "Confirm Assignment"}
             </Button>

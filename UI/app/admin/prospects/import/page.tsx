@@ -25,6 +25,7 @@ export default function ProspectImportPage() {
   const { toast } = useToast()
   const [file, setFile] = useState<File | null>(null)
   const [defaultTags, setDefaultTags] = useState("")
+  const [updateExisting, setUpdateExisting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [importResults, setImportResults] = useState<{
     total: number
@@ -77,15 +78,16 @@ export default function ProspectImportPage() {
         })
 
         // Find best matches for required and optional fields
-        const name = normalizedRow.name || normalizedRow["student name"] || normalizedRow.student || normalizedRow.lastname || normalizedRow.company || ""
+        const name = normalizedRow.name || normalizedRow["student name"] || normalizedRow.student || normalizedRow.lastname || normalizedRow["last name"] || normalizedRow.company || ""
         const mobile = normalizedRow.mobile || normalizedRow.number || normalizedRow.phone || normalizedRow["mobile number"] || normalizedRow.mobilephone || ""
         const parentName = normalizedRow.parent_name || normalizedRow.father_name || normalizedRow.father || normalizedRow.parent || ""
         const department = normalizedRow.department || normalizedRow.group || normalizedRow["department__c"] || ""
         const location = normalizedRow.location || normalizedRow.city || ""
-        const source = normalizedRow.source || normalizedRow.sourced_from || normalizedRow.lead_source || normalizedRow.leadsource || ""
+        const source = normalizedRow.source || normalizedRow.sourced_from || normalizedRow.lead_source || normalizedRow["lead source"] || normalizedRow.leadsource || ""
         const course = normalizedRow.course || normalizedRow.course_interest || normalizedRow["proposed_for__c"] || ""
         const leadType = normalizedRow.lead_type || normalizedRow["lead type"] || normalizedRow["lead_type__c"] || ""
-        const rawStatus = normalizedRow.status || "new"
+        const leadId = normalizedRow.lead_id || normalizedRow["lead id"] || normalizedRow["leadid"] || ""
+        const rawStatus = normalizedRow.status || normalizedRow["lead status"] || normalizedRow["leadstatus"] || "new"
         const address = normalizedRow.address || normalizedRow["address.street"] || ""
         const company = normalizedRow.company || normalizedRow.organization || ""
         const designation = normalizedRow.designation || normalizedRow.job_title || normalizedRow["designation__c"] || ""
@@ -118,6 +120,7 @@ export default function ProspectImportPage() {
           course_interest: String(course).trim().substring(0, 100) || null,
           lead_source: source ? [String(source).trim().substring(0, 100)] : [],
           lead_type: leadType ? [String(leadType).trim().substring(0, 100)] : [],
+          lead_id: leadId ? String(leadId).trim().substring(0, 100) : null,
           city: String(location).trim().substring(0, 100) || null,
           address: String(address).trim() || null,
           postal_code: String(postalCode).trim().substring(0, 20) || null,
@@ -142,7 +145,7 @@ export default function ProspectImportPage() {
 
       let result = { total: 0, success: 0, duplicates: 0, failed: 0, details: [] as any[] }
       if (mappedProspects.length > 0) {
-        result = await prospectsApi.bulkImport(mappedProspects)
+        result = await prospectsApi.bulkImport(mappedProspects, updateExisting)
       }
       
       result.total += frontendFailures.length
@@ -167,7 +170,7 @@ export default function ProspectImportPage() {
   }
 
   const downloadTemplate = () => {
-    const csvContent = "name,mobile,email,parent_name,department,location,source,course,lead_type,address,postal_code,company,designation,alt_phone,secondary_email,comments,follow_up_date\nJohn Doe,9876543210,john@example.com,Suresh B,Science,Mumbai,Website,ADSE,Assist,123 Main St,400001,ABC Corp,Manager,9876543211,john2@example.com,Interested in course,2024-07-15"
+    const csvContent = "name,mobile,email,parent_name,department,location,source,course,lead_type,lead_id,status,address,postal_code,company,designation,alt_phone,secondary_email,comments,follow_up_date\nJohn Doe,9876543210,john@example.com,Suresh B,Science,Mumbai,Website,ADSE,Assist,LEAD001,new,123 Main St,400001,ABC Corp,Manager,9876543211,john2@example.com,Interested in course,2024-07-15"
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -195,7 +198,7 @@ export default function ProspectImportPage() {
           <CardTitle>Upload File</CardTitle>
           <CardDescription>
             Support for Excel (.xlsx, .xls) and CSV. Required columns: name, mobile.
-            Optional: parent_name, department, location, source, course, lead_type, address, company, designation, alt_phone, secondary_email, comments, follow_up_date.
+            Optional: parent_name, department, location, source, course, lead_type, lead_id, status, address, company, designation, alt_phone, secondary_email, comments, follow_up_date.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -210,6 +213,23 @@ export default function ProspectImportPage() {
             />
             <p className="text-[10px] text-muted-foreground">These tags will be added to all prospects in this import.</p>
           </div>
+
+          {/* Update Existing Toggle */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="update-existing"
+              checked={updateExisting}
+              onChange={(e) => setUpdateExisting(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="update-existing" className="text-sm font-medium">
+              Update existing prospects
+            </label>
+          </div>
+          <p className="text-[10px] text-muted-foreground ml-7">
+            If enabled, prospects with duplicate mobile numbers will be updated instead of being skipped.
+          </p>
 
           <div className="border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center gap-4 bg-muted/30">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">

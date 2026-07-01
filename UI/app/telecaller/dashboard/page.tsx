@@ -79,6 +79,9 @@ const LEAD_SOURCE_OPTIONS = [
   "Engineering College",
   "Sourced ITI College",
   "Sourcing Arts and Science Colleges",
+  "Wedding Photography",
+  "Video Editing",
+  "Solar",
 ]
 
 const LEAD_TYPE_OPTIONS = [
@@ -171,6 +174,50 @@ function MultiSelectFilter({
   )
 }
 
+// ─── Course search filter (single-select with search) ─────────────
+function CourseSearchFilter({
+  courses,
+  selected,
+  onChange,
+}: {
+  courses: Course[]
+  selected: string
+  onChange: (val: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+
+  const filtered = courses
+    .filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
+    .slice(0, 30)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full sm:w-auto h-10 text-sm">
+          {selected && selected !== "all" ? selected : "Filter by course"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-2 bg-background border shadow-md rounded-lg" align="start">
+        <div className="p-2">
+          <Input placeholder="Search courses..." value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+        <ScrollArea className="h-40 p-1">
+          {filtered.map(c => (
+            <div key={c.id} onClick={() => { onChange(c.name); setOpen(false) }} className="px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 rounded">
+              {c.name}
+            </div>
+          ))}
+          {filtered.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">No courses</div>}
+        </ScrollArea>
+        <div className="border-t p-2 flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => { onChange("all"); setQuery(""); setOpen(false) }}>Clear</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 // ─── Status display config ─────────────────────────────────────
 const statusConfig: Record<string, { label: string; color: string }> = {
   new: { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
@@ -188,6 +235,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   "New": { label: "New", color: "bg-blue-100 text-blue-800 border-blue-200" },
   "Interested": { label: "Interested", color: "bg-amber-100 text-amber-800 border-amber-200" },
   "Interested Followup": { label: "Interested Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  "Interested-Followup": { label: "Interested-Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
   "Proposal To Be Sent": { label: "Proposal To Be Sent", color: "bg-sky-100 text-sky-800 border-sky-200" },
   "Proposal Sent": { label: "Proposal Sent", color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
   "Training Date Followup": { label: "Training Date Followup", color: "bg-purple-100 text-purple-800 border-purple-200" },
@@ -329,6 +377,27 @@ function InlineEditCell({
   )
 }
 
+const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "edii" => {
+  if (typeof value !== "string") return "student_admission"
+
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_")
+
+  if (normalized === "college_contact" || normalized === "college_contacts" || normalized === "college") {
+    return "college_contact"
+  }
+
+  if (normalized === "edii" || normalized === "edii_leads") {
+    return "edii"
+  }
+
+  return "student_admission"
+}
+
+const getProspectDashboard = (prospect: any, assignment: any) => {
+  const dashboardValue = assignment?.dashboard || prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType
+  return normalizeDashboard(dashboardValue)
+}
+
 export default function TelecallerDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -337,6 +406,9 @@ export default function TelecallerDashboard() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [leadSourceFilter, setLeadSourceFilter] = useState<string[]>([])
   const [leadTypeFilter, setLeadTypeFilter] = useState<string[]>([])
+  const [courseOptions, setCourseOptions] = useState<string[]>([])
+  const [leadSourceOptions, setLeadSourceOptions] = useState<string[]>(LEAD_SOURCE_OPTIONS)
+  const [leadTypeOptionsState, setLeadTypeOptionsState] = useState<string[]>(LEAD_TYPE_OPTIONS)
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [prospects, setProspects] = useState<any[]>([])
@@ -347,7 +419,7 @@ export default function TelecallerDashboard() {
   const [savingId, setSavingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editingCell, setEditingCell] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<"student_admission" | "college_contact">("student_admission")
+  const [viewMode, setViewMode] = useState<"student_admission" | "college_contact" | "edii">("student_admission")
   const [editingProspect, setEditingProspect] = useState<any | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
@@ -370,6 +442,30 @@ export default function TelecallerDashboard() {
       setAssignments(apiAssignments)
       setCourses(apiCourses)
       setCallLogs(apiCallLogs)
+
+      // Build dynamic course options from API courses + prospect.course_interest values
+      const prospectCourseSet = new Set<string>()
+      apiProspects.forEach((p: any) => {
+        if (p.course_interest && p.course_interest !== "Unknown") prospectCourseSet.add(p.course_interest)
+      })
+      const courseNames = apiCourses.map((c: any) => c.name)
+      const mergedCourses = Array.from(new Set([...courseNames, ...Array.from(prospectCourseSet)])).sort()
+      setCourseOptions(mergedCourses)
+
+      // Build dynamic lead source/type options from prospects
+      const prospectLeadSourceSet = new Set<string>()
+      const prospectLeadTypeSet = new Set<string>()
+      apiProspects.forEach((p: any) => {
+        const ls = p.lead_source
+        if (Array.isArray(ls)) ls.forEach((v: string) => v && prospectLeadSourceSet.add(v))
+        else if (typeof ls === 'string' && ls) prospectLeadSourceSet.add(ls)
+
+        const lt = p.lead_type
+        if (Array.isArray(lt)) lt.forEach((v: string) => v && prospectLeadTypeSet.add(v))
+        else if (typeof lt === 'string' && lt) prospectLeadTypeSet.add(lt)
+      })
+      setLeadSourceOptions(Array.from(new Set([...LEAD_SOURCE_OPTIONS, ...Array.from(prospectLeadSourceSet)])).sort())
+      setLeadTypeOptionsState(Array.from(new Set([...LEAD_TYPE_OPTIONS, ...Array.from(prospectLeadTypeSet)])).sort())
 
       // Build prospect list from today's assignments
       const assignedProspectIds = new Set(
@@ -414,6 +510,7 @@ export default function TelecallerDashboard() {
             source: p.sourced_from || "Unknown",
             createdAt: p.created_at,
             assignmentId: assignment?.id || null,
+            dashboard: getProspectDashboard(p, assignment),
             lead_source: leadSource,
             lead_type: leadType,
             outcome: p.outcome || "New",
@@ -499,24 +596,17 @@ export default function TelecallerDashboard() {
   }, [assignments])
 
   const telecallerStats = useMemo(() => {
-    // Filter prospects into student admission and college contact
-    const collegeContacts = prospects.filter((p) => 
-      (p.lead_source && p.lead_source.length > 0) || 
-      (p.lead_type && p.lead_type.length > 0)
-    )
-    
-    const studentAdmissionProspects = prospects.filter((p) => 
-      !((p.lead_source && p.lead_source.length > 0) || 
-        (p.lead_type && p.lead_type.length > 0))
-    )
-    
-    // Get IDs for filtering
+    const studentAdmissionProspects = prospects.filter((p) => p.dashboard === "student_admission")
+    const collegeContacts = prospects.filter((p) => p.dashboard === "college_contact")
+    const ediiProspects = prospects.filter((p) => p.dashboard === "edii")
+
     const collegeContactIds = new Set(collegeContacts.map((p) => p.numericId))
     const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.numericId))
-    
-    // Filter call logs by prospect type
+    const ediiIds = new Set(ediiProspects.map((p) => p.numericId))
+
     const studentAdmissionCallLogs = callLogs.filter((log) => studentAdmissionIds.has(log.prospect_id))
     const collegeContactCallLogs = callLogs.filter((log) => collegeContactIds.has(log.prospect_id))
+    const ediiCallLogs = callLogs.filter((log) => ediiIds.has(log.prospect_id))
     
     // Student admission stats
     const latestLogByProspect = new Map<number, CallLog>()
@@ -571,6 +661,34 @@ export default function TelecallerDashboard() {
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
       return logDate === today
     }).length
+    
+    // EDII specific stats
+    const ediiToday = ediiProspects.filter((p) => {
+      const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
+      if (!assignment) return false
+      const today = new Date().toISOString().split("T")[0]
+      return assignment.assigned_date === today
+    }).length
+    
+    const ediiInterested = ediiProspects.filter((p) => 
+      p.outcome === "Interested" || p.status === "Interested"
+    ).length
+    
+    const ediiCallbacks = ediiProspects.filter((p) => 
+      p.callbackDateTime !== null
+    ).length
+    
+    const ediiPending = ediiProspects.filter((p) => 
+      (p.outcome === "New" || p.status === "New" || 
+       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
+      p.totalCalls === 0
+    ).length
+    
+    const ediiCallsMade = ediiCallLogs.filter((cl: any) => {
+      const today = new Date().toISOString().split("T")[0]
+      const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+      return logDate === today
+    }).length
 
     return {
       totalProspects: studentAdmissionProspects.length,
@@ -589,6 +707,12 @@ export default function TelecallerDashboard() {
       collegeCallbacks,
       collegePending,
       collegeCallsMade,
+      // EDII stats
+      ediiToday,
+      ediiInterested,
+      ediiCallbacks,
+      ediiPending,
+      ediiCallsMade,
     }
   }, [prospects, todayAssignmentCount, callLogs, todayLogs, assignments])
 
@@ -684,7 +808,46 @@ export default function TelecallerDashboard() {
     },
   ]
 
-  const statCards = viewMode === "student_admission" ? studentAdmissionCards : collegeContactCards
+  // EDII stat cards
+  const ediiCards = [
+    {
+      title: "Today's Prospects",
+      value: telecallerStats.ediiToday,
+      icon: Building2,
+      color: "text-blue-700",
+      bgColor: "bg-blue-100",
+    },
+    {
+      title: "Calls Made",
+      value: telecallerStats.ediiCallsMade,
+      icon: PhoneCall,
+      color: "text-green-700",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Interested",
+      value: telecallerStats.ediiInterested,
+      icon: CheckCircle2,
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100",
+    },
+    {
+      title: "Callbacks",
+      value: telecallerStats.ediiCallbacks,
+      icon: AlertCircle,
+      color: "text-orange-700",
+      bgColor: "bg-orange-100",
+    },
+    {
+      title: "Pending",
+      value: telecallerStats.ediiPending,
+      icon: Clock,
+      color: "text-yellow-700",
+      bgColor: "bg-yellow-100",
+    },
+  ]
+
+  const statCards = viewMode === "student_admission" ? studentAdmissionCards : viewMode === "college_contact" ? collegeContactCards : ediiCards
 
   // ─── Sort & filter ────────────────────────────────────────────
   const sortedProspects = useMemo(() => {
@@ -708,11 +871,12 @@ export default function TelecallerDashboard() {
 
   const filteredProspects = useMemo(() => {
     return sortedProspects.filter((prospect) => {
-      // Filter by view mode
-      const isCollegeContact = (prospect.lead_source && prospect.lead_source.length > 0) || 
-                               (prospect.lead_type && prospect.lead_type.length > 0)
-      const matchesViewMode = viewMode === "student_admission" ? !isCollegeContact : isCollegeContact
-      
+      const dashboard = prospect.dashboard || "student_admission"
+      const matchesViewMode =
+        (viewMode === "student_admission" && dashboard === "student_admission") ||
+        (viewMode === "college_contact" && dashboard === "college_contact") ||
+        (viewMode === "edii" && dashboard === "edii")
+
       if (!matchesViewMode) return false
       
       const matchesSearch =
@@ -965,7 +1129,7 @@ export default function TelecallerDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground flex items-center gap-2">
-            Welcome back, {user?.name}! You have {viewMode === "student_admission" ? telecallerStats.pending : telecallerStats.collegePending} prospects pending today.
+            Welcome back, {user?.name}! You have {viewMode === "student_admission" ? telecallerStats.pending : viewMode === "college_contact" ? telecallerStats.collegePending : telecallerStats.ediiPending} prospects pending today.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -983,6 +1147,20 @@ export default function TelecallerDashboard() {
               <GraduationCap className="h-3.5 w-3.5 mr-1.5" />
               Student Admission
             </Button>
+            {true && (
+              <Button
+                onClick={() => setViewMode("edii")}
+                variant={viewMode === "edii" ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-8 text-xs font-medium",
+                  viewMode === "edii" ? "shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                EDII
+              </Button>
+            )}
             <Button
               onClick={() => setViewMode("college_contact")}
               variant={viewMode === "college_contact" ? "default" : "ghost"}
@@ -996,10 +1174,13 @@ export default function TelecallerDashboard() {
               College Contact
             </Button>
           </div>
-          <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
-            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <CourseSearchFilter courses={courses} selected={courseFilter} onChange={(v) => setCourseFilter(v)} />
+            <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1030,7 +1211,7 @@ export default function TelecallerDashboard() {
         <CardHeader className="pb-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{viewMode === "student_admission" ? "Today's Prospects" : "College Contacts"}</CardTitle>
+              <CardTitle>{viewMode === "student_admission" ? "Today's Prospects" : viewMode === "edii" ? "EDII Prospects" : "College Contacts"}</CardTitle>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -1051,24 +1232,41 @@ export default function TelecallerDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="new">New</SelectItem>
-                  <SelectItem value="contacted">Contacted</SelectItem>
-                  <SelectItem value="warm">Warm</SelectItem>
-                  <SelectItem value="hot">Strong Interest / Ready for Counselling</SelectItem>
-                  <SelectItem value="visit_scheduled">Visit Planned and Confirmed</SelectItem>
-                  <SelectItem value="visit_done">Visit Campus / Decision Awaited</SelectItem>
-                  <SelectItem value="admission_done">Admission Successfully Completed</SelectItem>
-                  <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
-                  <SelectItem value="cold_no_response">Cold / No Response</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="Interested">Interested (Lead)</SelectItem>
-                  <SelectItem value="Interested Followup">Interested Followup</SelectItem>
-                  <SelectItem value="Proposal To Be Sent">Proposal To Be Sent</SelectItem>
-                  <SelectItem value="Proposal Sent">Proposal Sent</SelectItem>
-                  <SelectItem value="Training Date Followup">Training Date Followup</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="Ringing / Not Reachable">Ringing / Not Reachable</SelectItem>
-                  <SelectItem value="Not Interested">Not Interested (Lead)</SelectItem>
+                  {viewMode === "edii" ? (
+                    <>
+                      <SelectItem value="New">New</SelectItem>
+                      <SelectItem value="Interested">Interested</SelectItem>
+                      <SelectItem value="Interested-Followup">Interested-Followup</SelectItem>
+                      <SelectItem value="Qualified">Qualified</SelectItem>
+                      <SelectItem value="Ringing / Not Reachable">Ringing / Not Reachable</SelectItem>
+                      <SelectItem value="Not Interested">Not Interested</SelectItem>
+                    </>
+                  ) : viewMode === "college_contact" ? (
+                    <>
+                      <SelectItem value="New">New</SelectItem>
+                      <SelectItem value="Interested">Interested</SelectItem>
+                      <SelectItem value="Interested Followup">Interested Followup</SelectItem>
+                      <SelectItem value="Proposal To Be Sent">Proposal To Be Sent</SelectItem>
+                      <SelectItem value="Proposal Sent">Proposal Sent</SelectItem>
+                      <SelectItem value="Training Date Followup">Training Date Followup</SelectItem>
+                      <SelectItem value="Qualified">Qualified</SelectItem>
+                      <SelectItem value="Ringing / Not Reachable">Ringing / Not Reachable</SelectItem>
+                      <SelectItem value="Not Interested">Not Interested</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="warm">Warm</SelectItem>
+                      <SelectItem value="hot">Strong Interest / Ready for Counselling</SelectItem>
+                      <SelectItem value="visit_scheduled">Visit Planned and Confirmed</SelectItem>
+                      <SelectItem value="visit_done">Visit Campus / Decision Awaited</SelectItem>
+                      <SelectItem value="admission_done">Admission Successfully Completed</SelectItem>
+                      <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
+                      <SelectItem value="cold_no_response">Cold / No Response</SelectItem>
+                      <SelectItem value="lost">Lost</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
 
@@ -1079,9 +1277,9 @@ export default function TelecallerDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {courses.map((course) => (
-                    <SelectItem key={course.id} value={course.code}>
-                      {course.name}
+                  {courseOptions.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
                     </SelectItem>
                   ))}
                   <SelectItem value="Unknown">Unknown</SelectItem>
@@ -1090,7 +1288,7 @@ export default function TelecallerDashboard() {
 
               {/* Lead Source Filter */}
               <MultiSelectFilter
-                options={LEAD_SOURCE_OPTIONS}
+                options={leadSourceOptions}
                 selected={leadSourceFilter}
                 onChange={setLeadSourceFilter}
                 placeholder="Lead Source"
@@ -1098,7 +1296,7 @@ export default function TelecallerDashboard() {
 
               {/* Lead Type Filter */}
               <MultiSelectFilter
-                options={LEAD_TYPE_OPTIONS}
+                options={leadTypeOptionsState}
                 selected={leadTypeFilter}
                 onChange={setLeadTypeFilter}
                 placeholder="Lead Type"
