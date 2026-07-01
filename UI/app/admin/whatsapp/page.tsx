@@ -77,6 +77,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { whatsappApi, prospectsApi } from "@/lib/api-client"
+import { QuickSendManager } from "@/components/admin/quick-send-manager"
 import { cn } from "@/lib/utils"
 import {
   Table,
@@ -1316,12 +1317,13 @@ export default function WhatsAppAdmin() {
           )}
 
           {activeTab === "templates" && (
-            <Card className="h-full border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
+            <div className="h-full overflow-y-auto space-y-4 pb-4">
+            <Card className="border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
               <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
                 <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-900">Message Templates</h2>
                 <Badge variant="outline" className="text-[9px] font-semibold uppercase tracking-widest">{templates.length} Total</Badge>
               </div>
-              <ScrollArea className="flex-1 min-h-0">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-slate-50/30">
                     <TableRow>
@@ -1361,8 +1363,10 @@ export default function WhatsAppAdmin() {
                     ))}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
             </Card>
+            <QuickSendManager templates={templates} mediaAssets={mediaAssets} />
+            </div>
           )}
 
           {activeTab === "campaigns" && (

@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  GraduationCap,
   LayoutDashboard,
   Phone,
   Calendar,
@@ -40,7 +40,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn, formatISTDateTime } from "@/lib/utils"
 import { type UserRole, mockNotifications } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import { dashboardApi, callLogsApi } from "@/lib/api-client"
+import { dashboardApi, callLogsApi, whatsappApi } from "@/lib/api-client"
 
 interface NavItem {
   title: string
@@ -54,6 +54,7 @@ const CALLBACK_COUNT_POLL_INTERVAL = 30 * 1000
 const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
   { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar },
+  { title: "Messages", href: "/telecaller/messages", icon: MessageSquare },
   { title: "Call History", href: "/telecaller/history", icon: History },
   // { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList },
 ]
@@ -116,7 +117,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   const { logout, user } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [pendingCallbacks, setPendingCallbacks] = useState<any[]>([])
-  const [counts, setCounts] = useState({ callbacks: 0, followups: 0 })
+  const [counts, setCounts] = useState({ callbacks: 0, followups: 0, whatsappUnread: 0 })
 
   useEffect(() => {
     if (!user) return
@@ -124,7 +125,16 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     const fetchCounts = async () => {
       try {
         const stats = await dashboardApi.getStats(Number(user.id))
-        setCounts(stats)
+        let whatsappUnread = 0
+        if (role === "telecaller") {
+          try {
+            const convos = await whatsappApi.getConversations(1, 100, Number(user.id))
+            whatsappUnread = (convos || []).filter((c: any) => c.unread).length
+          } catch {
+            // non-fatal — badge just won't show
+          }
+        }
+        setCounts({ ...stats, whatsappUnread })
       } catch (err) {
         console.error("Failed to fetch badge counts:", err)
       }
@@ -204,6 +214,9 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       if (item.title === "Follow-up Tasks" || item.title === "My Follow-ups") {
         return { ...item, badge: counts.followups > 0 ? counts.followups : undefined }
       }
+      if (item.title === "Messages") {
+        return { ...item, badge: counts.whatsappUnread > 0 ? counts.whatsappUnread : undefined }
+      }
       return item
     })
   }, [role, counts, pendingCallbacks.length])
@@ -227,8 +240,14 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
     <div className={cn("flex flex-col h-full bg-sidebar text-foreground border-r border-sidebar-border", mobile ? "pt-4" : "")}>
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b border-sidebar-border">
-        <div className="flex h-8 w-8 items-center justify-center rounded bg-foreground text-background">
-          <GraduationCap className="h-4 w-4" />
+        <div className="flex h-8 w-8 items-center justify-center rounded bg-white overflow-hidden">
+          <Image
+            src="/tatti-logo.png"
+            alt="TATTI logo"
+            width={32}
+            height={32}
+            className="h-full w-full object-contain"
+          />
         </div>
         <div>
           <h1 className="font-semibold text-sm text-foreground ">TATTI CRM</h1>

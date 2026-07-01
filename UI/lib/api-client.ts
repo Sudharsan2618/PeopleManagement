@@ -582,8 +582,19 @@ export const whatsappApi = {
   getCampaigns: (page: number = 1, pageSize: number = 10) => apiRequest<any>(`/whatsapp/campaigns?page=${page}&page_size=${pageSize}`),
   getCampaignDetails: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`),
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
-  getConversations: (page: number = 1, pageSize: number = 20) => apiRequest<any[]>(`/whatsapp/conversations?page=${page}&page_size=${pageSize}`),
+  getConversations: (page: number = 1, pageSize: number = 20, telecallerId?: number) => {
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
+    if (telecallerId != null) params.append("telecaller_id", String(telecallerId))
+    return apiRequest<any[]>(`/whatsapp/conversations?${params.toString()}`)
+  },
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
+  getSessionStatus: (prospectId: number) => apiRequest<{
+    prospect_id: number
+    window_open: boolean
+    last_inbound_at: string | null
+    expires_at: string | null
+    message_count: number
+  }>(`/whatsapp/session-status/${prospectId}`),
   getFlowSubmissions: (page: number = 1, pageSize: number = 20) => apiRequest<any>(`/whatsapp/flow-submissions?page=${page}&page_size=${pageSize}`),
   createCampaign: (data: any) => apiRequest<any>("/whatsapp/campaigns", {
     method: "POST",
@@ -592,13 +603,32 @@ export const whatsappApi = {
   startCampaign: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/start`, {
     method: "POST",
   }),
-  sendTextMessage: (data: { to: string, text: string }) => apiRequest<any>("/whatsapp/send-text", {
+  sendTextMessage: (data: { to: string, text: string, prospect_id?: number }) => apiRequest<any>("/whatsapp/send-text", {
     method: "POST",
     body: JSON.stringify(data),
   }),
-  sendTemplateMessage: (data: { to: string, template_name: string, language_code?: string, components?: any[] }) => apiRequest<any>("/whatsapp/send-template", {
+  sendTemplateMessage: (data: { to: string, template_name: string, language_code?: string, components?: any[], prospect_id?: number }) => apiRequest<any>("/whatsapp/send-template", {
     method: "POST",
     body: JSON.stringify(data),
+  }),
+  // Curated quick-send templates (caller-safe)
+  getQuickSendTemplates: (includeInactive: boolean = false) =>
+    apiRequest<any[]>(`/whatsapp/quick-send-templates${includeInactive ? "?include_inactive=true" : ""}`),
+  sendQuickTemplate: (prospect_id: number, quick_template_id: number) =>
+    apiRequest<any>("/whatsapp/send-quick-template", {
+      method: "POST",
+      body: JSON.stringify({ prospect_id, quick_template_id }),
+    }),
+  createQuickSendTemplate: (data: any) => apiRequest<any>("/whatsapp/quick-send-templates", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+  updateQuickSendTemplate: (id: number, data: any) => apiRequest<any>(`/whatsapp/quick-send-templates/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  }),
+  deleteQuickSendTemplate: (id: number) => apiRequest<any>(`/whatsapp/quick-send-templates/${id}`, {
+    method: "DELETE",
   }),
   getMediaAssets: () => apiRequest<any[]>("/whatsapp/media"),
   uploadMedia: (formData: FormData) => {
