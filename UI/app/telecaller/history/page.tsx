@@ -883,6 +883,14 @@ export default function CallHistoryPage() {
                     >
                       College
                     </Button>
+                    <Button
+                      variant={exportContactMode === "edii" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setExportContactMode("edii")}
+                      className="flex-1 font-bold rounded-md text-xs"
+                    >
+                      EDII
+                    </Button>
                   </div>
                 </div>
               </div>
