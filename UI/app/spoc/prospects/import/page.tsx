@@ -88,6 +88,7 @@ export default function spocProspectImportPage() {
         const source = normalizedRow.source || normalizedRow.sourced_from || normalizedRow.lead_source || normalizedRow.leadsource || "SPOC Import"
         const course = normalizedRow.course || normalizedRow.course_interest || normalizedRow["proposed_for__c"] || ""
         const leadType = normalizedRow.lead_type || normalizedRow["lead type"] || normalizedRow["lead_type__c"] || ""
+        const leadId = normalizedRow.lead_id || normalizedRow["lead id"] || normalizedRow["leadid"] || ""
         const rawStatus = normalizedRow.status || "new"
         const address = normalizedRow.address || normalizedRow["address.street"] || ""
         const company = normalizedRow.company || normalizedRow.organization || ""
@@ -121,6 +122,7 @@ export default function spocProspectImportPage() {
           course_interest: String(course).trim().substring(0, 100) || null,
           lead_source: source ? [String(source).trim().substring(0, 100)] : [],
           lead_type: leadType ? [String(leadType).trim().substring(0, 100)] : [],
+          lead_id: leadId ? String(leadId).trim().substring(0, 100) : null,
           city: String(location).trim().substring(0, 100) || null,
           address: String(address).trim() || null,
           postal_code: String(postalCode).trim().substring(0, 20) || null,

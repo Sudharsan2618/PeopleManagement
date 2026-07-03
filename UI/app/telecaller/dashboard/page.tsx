@@ -514,6 +514,7 @@ export default function TelecallerDashboard() {
             lead_source: leadSource,
             lead_type: leadType,
             outcome: p.outcome || "New",
+            lead_id: p.lead_id || "",
             // New contact/profile fields
             altPhone: p.alt_phone || "",
             secondaryEmail: p.secondary_email || "",
@@ -881,7 +882,8 @@ export default function TelecallerDashboard() {
       
       const matchesSearch =
         prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prospect.mobile.includes(searchQuery)
+        prospect.mobile.includes(searchQuery) ||
+        (prospect.lead_id && prospect.lead_id.toLowerCase().includes(searchQuery.toLowerCase()))
       const matchesStatus =
         statusFilter === "all" ||
         prospect.status === statusFilter ||
@@ -907,6 +909,7 @@ export default function TelecallerDashboard() {
   const visibleColumns = useMemo(() => {
     const columns = [
       { key: "index", label: "#", hasData: true, alwaysVisible: true },
+      { key: "lead_id", label: "Lead ID", hasData: true, alwaysVisible: true },
       { key: "name", label: "Student Name", hasData: true, alwaysVisible: true },
       { key: "parentName", label: "Parent Name", hasData: false },
       { key: "mobile", label: "Mobile", hasData: true, alwaysVisible: true },
@@ -1215,7 +1218,7 @@ export default function TelecallerDashboard() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or mobile..."
+                  placeholder="Search by name, mobile, or lead ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 w-full sm:w-64"
@@ -1346,6 +1349,7 @@ export default function TelecallerDashboard() {
                         className={cn(
                           "font-semibold text-slate-600 text-xs",
                           col.key === "index" && "w-10",
+                          col.key === "lead_id" && "min-w-[100px]",
                           col.key === "totalCalls" && "text-center min-w-[60px]",
                           col.key === "action" && "text-right sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]",
                           col.key === "name" && "min-w-[160px]",
@@ -1395,6 +1399,10 @@ export default function TelecallerDashboard() {
                         switch (colKey) {
                           case "index":
                             return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10">{index + 1}</TableCell>
+                          case "lead_id":
+                            return <TableCell key="lead_id" className="min-w-[100px]">
+                              <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">{prospect.lead_id || "—"}</span>
+                            </TableCell>
                           case "name":
                             return (
                               <TableCell key="name" className="min-w-[160px]">

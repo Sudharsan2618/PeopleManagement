@@ -88,6 +88,7 @@ class ProspectBase(BaseModel):
     comments: Optional[str] = Field(None, max_length=1000)
     follow_up_date: Optional[str] = Field(None, max_length=50)
     is_imported: bool = Field(default=False, description="Whether this prospect was imported from a lead sheet")
+    lead_id: Optional[str] = Field(None, max_length=100)
 
 class ProspectCreate(ProspectBase):
     created_by: int
@@ -118,6 +119,7 @@ class ProspectUpdate(BaseModel):
     comments: Optional[str] = Field(None, max_length=1000)
     follow_up_date: Optional[str] = Field(None, max_length=50)
     is_imported: Optional[bool] = None
+    lead_id: Optional[str] = Field(None, max_length=100)
 
 class Prospect(ProspectBase):
     id: int

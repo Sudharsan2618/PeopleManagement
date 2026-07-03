@@ -334,14 +334,15 @@ export default function ReportsPage() {
         r.telecaller_name || '-',
         r.prospect_name || '-',
         r.prospect_phone || '-',
+        r.prospect_lead_id || r.lead_id || '-',
         isSA ? (r.course_interest || r.prospect_course_interest || '-') : (r.institution_name || '-'),
         formatCallHistoryStatus(r.status_after_call),
         r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleDateString() : '-',
         formatNotes(r.notes || ''),
       ])
       const head = isSA
-        ? ['Date', 'Time', 'Telecaller', 'Student', 'Phone', 'Course', 'Status', 'Callback', 'Notes']
-        : ['Date', 'Time', 'Telecaller', 'Contact', 'Phone', 'Institution', 'Status', 'Callback', 'Notes']
+        ? ['Date', 'Time', 'Telecaller', 'Student', 'Phone', 'Lead ID', 'Course', 'Status', 'Callback', 'Notes']
+        : ['Date', 'Time', 'Telecaller', 'Contact', 'Phone', 'Lead ID', 'Institution', 'Status', 'Callback', 'Notes']
       autoTable(doc, {
         startY,
         head: [head],
@@ -349,8 +350,8 @@ export default function ReportsPage() {
         styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', valign: 'top' },
         columnStyles: {
           0: { cellWidth: 42 }, 1: { cellWidth: 32 }, 2: { cellWidth: 70 },
-          3: { cellWidth: 80 }, 4: { cellWidth: 60 }, 5: { cellWidth: 65 },
-          6: { cellWidth: 70 }, 7: { cellWidth: 55 }, 8: { cellWidth: 150 },
+          3: { cellWidth: 80 }, 4: { cellWidth: 60 }, 5: { cellWidth: 55 },
+          6: { cellWidth: 65 }, 7: { cellWidth: 70 }, 8: { cellWidth: 55 }, 9: { cellWidth: 150 },
         },
         tableWidth: 'auto',
         headStyles: { fillColor: headColor, textColor: 255 },

@@ -1049,7 +1049,9 @@ export default function CallHistoryPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="w-12 text-center font-semibold">#</TableHead>
+                  <TableHead className="font-semibold">Lead ID</TableHead>
                   <TableHead className="font-semibold">Prospect</TableHead>
+                  <TableHead className="font-semibold">Course</TableHead>
                   <TableHead className="font-semibold">Mobile</TableHead>
                   <TableHead className="font-semibold">Outcome</TableHead>
                   <TableHead className="font-semibold">Status After</TableHead>
@@ -1060,7 +1062,7 @@ export default function CallHistoryPage() {
               <TableBody>
                 {filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-40 text-center">
+                    <TableCell colSpan={9} className="h-40 text-center">
                       <div className="flex flex-col items-center gap-3 text-muted-foreground">
                         <History className="h-10 w-10 opacity-20" />
                         <p className="font-medium">No call logs found matching filters</p>
@@ -1077,8 +1079,14 @@ export default function CallHistoryPage() {
                         <TableCell className="text-center text-muted-foreground font-medium">
                           {index + 1}
                         </TableCell>
+                        <TableCell className="font-mono text-xs text-slate-600">
+                          {prospect?.lead_id || "—"}
+                        </TableCell>
                         <TableCell className="font-semibold text-slate-900">
                           {prospect?.name || `Prospect #${log.prospect_id}`}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {prospect?.course_interest || "—"}
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {prospect?.mobile || "—"}
