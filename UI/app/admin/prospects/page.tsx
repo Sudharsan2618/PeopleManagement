@@ -123,6 +123,7 @@ export default function AdminProspectsPage() {
     company: "",
     comments: "",
     follow_up_date: "",
+    lead_id: "",
   })
   const [prospects, setProspects] = useState<any[]>([])
   const [assignments, setAssignments] = useState<any[]>([])
@@ -314,10 +315,18 @@ export default function AdminProspectsPage() {
     try {
       setIsDeleting(true)
       
+      let successCount = 0
+      let failedIds: number[] = []
+      
       await Promise.all(
-        selectedProspectIds.map((prospectId) =>
-          prospectsApi.delete(prospectId)
-        )
+        selectedProspectIds.map(async (prospectId) => {
+          try {
+            await prospectsApi.delete(Number(prospectId))
+            successCount++
+          } catch (err) {
+            failedIds.push(Number(prospectId))
+          }
+        })
       )
 
       // Refresh data
@@ -332,10 +341,19 @@ export default function AdminProspectsPage() {
       setAssignments(apiAssignments)
       
       setSelectedProspectIds([])
-      toast({
-        title: "Success",
-        description: `Successfully deleted ${selectedProspectIds.length} prospects.`,
-      })
+      
+      if (failedIds.length > 0) {
+        toast({
+          title: "Partial Success",
+          description: `Deleted ${successCount} prospects. ${failedIds.length} prospects not found or already deleted.`,
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Success",
+          description: `Successfully deleted ${successCount} prospects.`,
+        })
+      }
     } catch (err) {
       toast({
         title: "Delete Failed",
@@ -410,6 +428,7 @@ export default function AdminProspectsPage() {
               company: "",
               comments: "",
               follow_up_date: "",
+              lead_id: "",
             })
             setIsProspectDialogOpen(true)
           }}>
@@ -606,6 +625,7 @@ export default function AdminProspectsPage() {
                   </TableHead>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Lead ID</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Alt Phone</TableHead>
                   <TableHead>Email</TableHead>
@@ -634,7 +654,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={26} className="h-24 text-center">
+                    <TableCell colSpan={27} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -658,6 +678,9 @@ export default function AdminProspectsPage() {
                           {prospect.id}
                         </TableCell>
                         <TableCell className="font-medium">{prospect.name}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+                          {prospect.lead_id || <span className="text-slate-300">—</span>}
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {prospect.mobile}
                         </TableCell>
@@ -763,7 +786,7 @@ export default function AdminProspectsPage() {
                                   email: prospect.email || "",
                                   location: prospect.location || "",
                                   sourced_from: prospect.source || "",
-                                  status: prospect.status.toLowerCase(), // This might need mapping
+                                  status: prospect.status,
                                   course_interest: prospect.courseInterest || "",
                                   parent_name: prospect.parentName || "",
                                   department: prospect.department || "",
@@ -776,6 +799,7 @@ export default function AdminProspectsPage() {
                                   company: prospect.company || "",
                                   comments: prospect.comments || "",
                                   follow_up_date: prospect.follow_up_date || "",
+                                  lead_id: prospect.lead_id || "",
                                 })
                                 setIsProspectDialogOpen(true)
                               }}>
@@ -1039,6 +1063,16 @@ export default function AdminProspectsPage() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_lead_id" className="text-right">Lead ID</Label>
+              <Input
+                id="p_lead_id"
+                value={prospectFormData.lead_id}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, lead_id: e.target.value })}
+                className="col-span-3"
+                placeholder="e.g. LEAD-001"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="p_parent" className="text-right">Parent Name</Label>
               <Input
                 id="p_parent"
@@ -1085,19 +1119,21 @@ export default function AdminProspectsPage() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="p_course" className="text-right">Course</Label>
-              <Select 
-                value={prospectFormData.course_interest} 
-                onValueChange={(v) => setProspectFormData({ ...prospectFormData, course_interest: v })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select Course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map(c => (
-                    <SelectItem key={c.id} value={c.code}>{c.code}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="p_course"
+                value={prospectFormData.course_interest}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, course_interest: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_status" className="text-right">Status</Label>
+              <Input
+                id="p_status"
+                value={prospectFormData.status}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, status: e.target.value })}
+                className="col-span-3"
+              />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="p_source" className="text-right">Source</Label>

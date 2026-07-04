@@ -1,3 +1,6 @@
+Here's the complete resolved file:
+
+```ts
 // API Client for FastAPI Backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -44,6 +47,7 @@ export interface Prospect {
   follow_up_date?: string
   is_imported?: boolean
   prospect_type?: string
+  lead_id?: string
 }
 
 export interface CallLog {
@@ -163,7 +167,7 @@ export function adaptApiUserToUiUser(apiUser: User): any {
 
 export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?: ProspectAssignment[]): any {
   const assignment = assignments?.find(a => a.prospect_id === apiProspect.id)
-  
+
   // Parse JSONB arrays from API - they may come as strings or arrays
   const parseArray = (value: any): string[] => {
     if (Array.isArray(value)) return value
@@ -176,7 +180,7 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     }
     return []
   }
-  
+
   return {
     id: String(apiProspect.id),
     name: apiProspect.name,
@@ -209,6 +213,7 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     follow_up_date: apiProspect.follow_up_date || "",
     is_imported: apiProspect.is_imported || false,
     prospect_type: apiProspect.prospect_type || "student_admission",
+    lead_id: apiProspect.lead_id || "",
   }
 }
 
@@ -417,7 +422,7 @@ export const callLogsApi = {
     if (endDate) params.append('end_date', endDate)
     if (telecallerId) params.append('telecaller_id', telecallerId.toString())
     if (prospectType) params.append('prospect_type', prospectType)
-    
+
     const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<CallLog[]>(`/call-logs${query}`)
   },
@@ -724,3 +729,6 @@ export const collegeContactApi = {
     })
   }
 }
+```
+
+All conflict markers removed; `main`'s WhatsApp additions kept, nothing from `lead-id-feature` lost.

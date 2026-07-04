@@ -18,7 +18,8 @@ class ProspectService:
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported
+                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
+                   lead_id
             FROM prospects
             ORDER BY updated_at DESC
         """
@@ -31,7 +32,8 @@ class ProspectService:
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported
+                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
+                   lead_id
             FROM prospects
             WHERE id = %s
         """
@@ -44,7 +46,8 @@ class ProspectService:
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported
+                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
+                   lead_id
             FROM prospects
             WHERE status = %s
             ORDER BY created_at DESC
@@ -58,7 +61,8 @@ class ProspectService:
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported
+                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
+                   lead_id
             FROM prospects
             WHERE created_by = %s
             ORDER BY created_at DESC
@@ -72,7 +76,8 @@ class ProspectService:
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported
+                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
+                   lead_id
             FROM prospects
             WHERE assigned_to = %s
             ORDER BY created_at DESC
@@ -86,7 +91,8 @@ class ProspectService:
             SELECT DISTINCT p.id, p.name, p.mobile, p.email, p.location, p.sourced_from, p.status, 
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
                    p.lead_source, p.lead_type, p.alt_phone, p.secondary_email, p.city, p.address, p.postal_code, p.designation,
-                   p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported
+                   p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
+                   p.lead_id
             FROM prospects p
             INNER JOIN prospect_assignments a ON p.id = a.prospect_id
             WHERE a.telecaller_id = %s
@@ -106,15 +112,16 @@ class ProspectService:
                         city: Optional[str] = None, address: Optional[str] = None,
                         postal_code: Optional[str] = None, designation: Optional[str] = None,
                         company: Optional[str] = None, comments: Optional[str] = None,
-                        follow_up_date: Optional[str] = None, is_imported: bool = False) -> int:
+                        follow_up_date: Optional[str] = None, is_imported: bool = False,
+                        lead_id: Optional[str] = None) -> int:
         """Create a new prospect."""
         query = """
             INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
                                  created_by, parent_name, department, assigned_to, closing_reason, tags,
                                  lead_source, lead_type, prospect_type, created_at, updated_at,
                                  alt_phone, secondary_email, city, address, postal_code, designation,
-                                 company, comments, follow_up_date, is_imported)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 company, comments, follow_up_date, is_imported, lead_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
@@ -128,7 +135,7 @@ class ProspectService:
             prospect_type,
             ist_now, ist_now,
             alt_phone, secondary_email, city, address, postal_code, designation,
-            company, comments, follow_up_date, is_imported
+            company, comments, follow_up_date, is_imported, lead_id
         ))
     
     @staticmethod
@@ -143,7 +150,8 @@ class ProspectService:
                         city: Optional[str] = _UNSET, address: Optional[str] = _UNSET,
                         postal_code: Optional[str] = _UNSET, designation: Optional[str] = _UNSET,
                         prospect_type: Optional[str] = _UNSET, company: Optional[str] = _UNSET,
-                        comments: Optional[str] = _UNSET, follow_up_date: Optional[str] = _UNSET) -> int:
+                        comments: Optional[str] = _UNSET, follow_up_date: Optional[str] = _UNSET,
+                        lead_id: Optional[str] = _UNSET) -> int:
         """Update prospect details."""
         updates = []
         params = []
@@ -220,6 +228,9 @@ class ProspectService:
         if follow_up_date is not _UNSET:
             updates.append("follow_up_date = %s")
             params.append(follow_up_date)
+        if lead_id is not _UNSET:
+            updates.append("lead_id = %s")
+            params.append(lead_id)
         
         if not updates:
             return 0
@@ -297,12 +308,11 @@ class ProspectService:
             # Check for duplicates - first by lead_id if provided, then by mobile
             existing = None
             if lead_id:
-                # Check if lead_id already exists (need to check a separate table or add lead_id column)
-                # For now, we'll check by mobile since lead_id might not be in the schema yet
-                check_query = "SELECT id FROM prospects WHERE mobile = %s"
-                existing = execute_query(check_query, (mobile,), fetch="one")
-            else:
-                # Check if mobile already exists in database
+                # Check if lead_id already exists in the database
+                check_query = "SELECT id FROM prospects WHERE lead_id = %s"
+                existing = execute_query(check_query, (lead_id,), fetch="one")
+            if not existing:
+                # Fall back to mobile number check
                 check_query = "SELECT id FROM prospects WHERE mobile = %s"
                 existing = execute_query(check_query, (mobile,), fetch="one")
             
@@ -352,6 +362,8 @@ class ProspectService:
                             update_kwargs["comments"] = prospect.get("comments")
                         if prospect.get("follow_up_date") is not None:
                             update_kwargs["follow_up_date"] = prospect.get("follow_up_date")
+                        if prospect.get("lead_id") is not None:
+                            update_kwargs["lead_id"] = prospect.get("lead_id")
                         
                         ProspectService.update_prospect(**update_kwargs)
                         
@@ -413,7 +425,8 @@ class ProspectService:
                     company=prospect.get("company"),
                     comments=prospect.get("comments"),
                     follow_up_date=prospect.get("follow_up_date"),
-                    is_imported=prospect.get("is_imported", True)
+                    is_imported=prospect.get("is_imported", True),
+                    lead_id=prospect.get("lead_id")
                 )
                 
                 results["success"] += 1
