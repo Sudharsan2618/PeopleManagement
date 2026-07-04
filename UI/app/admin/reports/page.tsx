@@ -407,7 +407,7 @@ export default function ReportsPage() {
     doc.setFont('helvetica', 'normal')
     
     // Add Outcome Distribution Chart for Student Admission
-    const outcomeChart = await getSvgImageDataUrl('chart-outcome')
+    const outcomeChart = await getSvgImageDataUrl('chart-outcome-sa')
     if (outcomeChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -481,7 +481,7 @@ export default function ReportsPage() {
     doc.setFont('helvetica', 'normal')
     
     // Add Outcome Distribution Chart for College Contact
-    const ccOutcomeChart = await getSvgImageDataUrl('chart-outcome')
+    const ccOutcomeChart = await getSvgImageDataUrl('chart-outcome-cc')
     if (ccOutcomeChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -1165,7 +1165,7 @@ export default function ReportsPage() {
                 <CardDescription>Call outcomes breakdown</CardDescription>
               </CardHeader>
               <CardContent>
-                <div id="chart-outcome" className="h-[300px]">
+                <div id="chart-outcome-sa" className="h-[300px]" style={{ display: activeTabType === 'student_admission' ? 'block' : 'none' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={statusChartData}
@@ -1211,7 +1211,111 @@ export default function ReportsPage() {
                         }}
                       >
                         {statusChartData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={(activeTabType === "student_admission" ? SA_OUTCOME_COLORS : activeTabType === "edii" ? EDII_OUTCOME_COLORS : CC_OUTCOME_COLORS)[entry.name] || '#999'} />
+                          <Cell key={`cell-${index}`} fill={SA_OUTCOME_COLORS[entry.name] || '#999'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div id="chart-outcome-cc" className="h-[300px]" style={{ display: activeTabType === 'college_contact' ? 'block' : 'none' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={statusChartData}
+                      margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 10, fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        angle={-35}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '10px',
+                          padding: '8px 14px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        }}
+                        formatter={(value: number) => [`${value} calls`, "Count"]}
+                        cursor={false}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[6, 6, 0, 0]}
+                        barSize={28}
+                        label={{
+                          position: "top",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          fill: "hsl(var(--foreground))",
+                          formatter: (value: number) => value > 0 ? value : ''
+                        }}
+                      >
+                        {statusChartData.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={CC_OUTCOME_COLORS[entry.name] || '#999'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div id="chart-outcome-edii" className="h-[300px]" style={{ display: activeTabType === 'edii' ? 'block' : 'none' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={statusChartData}
+                      margin={{ top: 20, right: 10, left: -10, bottom: 40 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 10, fontWeight: 500 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        angle={-35}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '10px',
+                          padding: '8px 14px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        }}
+                        formatter={(value: number) => [`${value} calls`, "Count"]}
+                        cursor={false}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[6, 6, 0, 0]}
+                        barSize={28}
+                        label={{
+                          position: "top",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          fill: "hsl(var(--foreground))",
+                          formatter: (value: number) => value > 0 ? value : ''
+                        }}
+                      >
+                        {statusChartData.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={EDII_OUTCOME_COLORS[entry.name] || '#999'} />
                         ))}
                       </Bar>
                     </BarChart>
