@@ -1,6 +1,3 @@
-Here's the complete resolved file:
-
-```ts
 // API Client for FastAPI Backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -729,6 +726,3 @@ export const collegeContactApi = {
     })
   }
 }
-```
-
-All conflict markers removed; `main`'s WhatsApp additions kept, nothing from `lead-id-feature` lost.
