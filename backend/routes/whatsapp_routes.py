@@ -104,22 +104,84 @@ def send_template(
     to: str = Body(..., embed=True),
     template_name: str = Body(..., embed=True),
     language_code: str = Body("en_US", embed=True),
-    components: Optional[List] = Body(None, embed=True)
+    components: Optional[List] = Body(None, embed=True),
+    prospect_id: Optional[int] = Body(None, embed=True)
 ):
-    """Send a WhatsApp template message."""
+    """Send a WhatsApp template message. Pass prospect_id to log it to the thread."""
     try:
-        return WhatsAppService.send_template_message(to, template_name, language_code, components)
+        return WhatsAppService.send_template_message(to, template_name, language_code, components, prospect_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/send-text")
 def send_text(
     to: str = Body(..., embed=True),
-    text: str = Body(..., embed=True)
+    text: str = Body(..., embed=True),
+    prospect_id: Optional[int] = Body(None, embed=True)
 ):
-    """Send a plain text WhatsApp message."""
+    """Send a plain text WhatsApp message (only valid inside the 24h window)."""
     try:
-        return WhatsAppService.send_text_message(to, text)
+        return WhatsAppService.send_text_message(to, text, prospect_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/session-status/{prospect_id}")
+def session_status(prospect_id: int):
+    """Return the 24-hour customer-service-window status for a prospect."""
+    try:
+        return WhatsAppService.get_session_status(prospect_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/unread-count")
+def unread_count(telecaller_id: int = Query(...)):
+    """Lightweight count of a caller's conversations awaiting a reply (badge)."""
+    try:
+        return WhatsAppService.get_unread_count(telecaller_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ── Quick-send templates (caller-curated) ─────────────────────────────────────
+@router.get("/quick-send-templates")
+def list_quick_send_templates(include_inactive: bool = Query(False)):
+    """List curated quick-send templates. Callers get active ones only."""
+    try:
+        return WhatsAppService.get_quick_send_templates(include_inactive)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/send-quick-template")
+def send_quick_template(
+    prospect_id: int = Body(..., embed=True),
+    quick_template_id: int = Body(..., embed=True)
+):
+    """Resolve a curated quick-send template against the prospect and send it."""
+    try:
+        return WhatsAppService.send_quick_template(prospect_id, quick_template_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/quick-send-templates")
+def create_quick_send_template(payload: dict = Body(...)):
+    """Admin: create a curated quick-send template."""
+    try:
+        return WhatsAppService.create_quick_send_template(payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/quick-send-templates/{quick_template_id}")
+def update_quick_send_template(quick_template_id: int, payload: dict = Body(...)):
+    """Admin: update a curated quick-send template."""
+    try:
+        return WhatsAppService.update_quick_send_template(quick_template_id, payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/quick-send-templates/{quick_template_id}")
+def delete_quick_send_template(quick_template_id: int):
+    """Admin: delete a curated quick-send template."""
+    try:
+        return WhatsAppService.delete_quick_send_template(quick_template_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -149,35 +211,58 @@ async def handle_webhook(request: Request):
         return {"status": "error", "message": str(e)}
 
 @router.get("/conversations")
-def get_conversations(page: int = Query(1), page_size: int = Query(20)):
-    """Get list of prospects with recent WhatsApp activity."""
+def get_conversations(page: int = Query(1), page_size: int = Query(20),
+                      telecaller_id: Optional[int] = Query(None)):
+    """Get prospects with WhatsApp activity.
+
+    Pass telecaller_id to restrict to that caller's assigned prospects.
+    Each row carries last_direction (for the unread signal — a conversation is
+    unread when its most recent message is inbound) and window_open (24h CSW)."""
     try:
         from database.connection import get_db_connection
         from psycopg2.extras import RealDictCursor
         offset = (page - 1) * page_size
+        scope_join = ""
+        params = []
+        if telecaller_id is not None:
+            scope_join = "JOIN prospect_assignments pa ON pa.prospect_id = p.id AND pa.telecaller_id = %s"
+            params.append(telecaller_id)
+        params.extend([page_size, offset])
         with get_db_connection() as conn:
             cur = conn.cursor(cursor_factory=RealDictCursor)
             try:
-                cur.execute("""
-                    SELECT p.id, p.name, p.mobile, 
+                cur.execute(f"""
+                    SELECT p.id, p.name, p.mobile,
                            MAX(m.created_at) as last_message_at,
-                           (SELECT 
-                                CASE 
+                           MAX(m.created_at) FILTER (WHERE m.direction = 'inbound') as last_inbound_at,
+                           (SELECT direction FROM whatsapp_messages
+                              WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_direction,
+                           (SELECT
+                                CASE
                                     WHEN body = '' AND message_type = 'interactive' THEN 'Form Submitted'
                                     WHEN body = '' AND message_type = 'document' THEN 'Sent Document'
                                     WHEN body = '' AND message_type = 'image' THEN 'Sent Image'
+                                    WHEN (body IS NULL OR body = '') AND message_type = 'template' THEN 'Sent Template'
                                     WHEN body IS NULL OR body = '' THEN 'Message'
-                                    ELSE body 
+                                    ELSE body
                                 END
                             FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
                     FROM prospects p
-                    LEFT JOIN whatsapp_messages m ON p.id = m.prospect_id
-                    WHERE m.id IS NOT NULL
+                    JOIN whatsapp_messages m ON p.id = m.prospect_id
+                    {scope_join}
                     GROUP BY p.id, p.name, p.mobile
                     ORDER BY last_message_at DESC NULLS LAST
                     LIMIT %s OFFSET %s
-                """, (page_size, offset))
+                """, tuple(params))
                 results = cur.fetchall()
+                # Derive window_open + unread flags without a second round-trip
+                from datetime import timedelta
+                from utils.timezone_utils import get_ist_now
+                now_naive = get_ist_now().replace(tzinfo=None)
+                for r in results:
+                    li = r.get("last_inbound_at")
+                    r["window_open"] = bool(li and now_naive < li + timedelta(hours=24))
+                    r["unread"] = r.get("last_direction") == "inbound"
                 return results
             finally:
                 cur.close()

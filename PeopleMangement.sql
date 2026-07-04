@@ -602,6 +602,41 @@ CREATE TABLE public.whatsapp_media_assets (
 ALTER TABLE public.whatsapp_media_assets OWNER TO admin;
 
 --
+-- Name: whatsapp_quick_send_templates; Type: TABLE; Schema: public; Owner: admin
+-- Curated, caller-safe templates surfaced in the telecaller send drawer when the
+-- 24-hour customer-service window is closed. variable_mapping resolves body/header
+-- placeholders from prospect fields server-side (same format as campaign params).
+--
+
+CREATE TABLE public.whatsapp_quick_send_templates (
+    id integer NOT NULL,
+    template_name character varying(150) NOT NULL,
+    language_code character varying(20) DEFAULT 'en_US'::character varying NOT NULL,
+    label character varying(150) NOT NULL,
+    description text,
+    variable_mapping jsonb DEFAULT '{}'::jsonb NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.whatsapp_quick_send_templates OWNER TO admin;
+
+CREATE SEQUENCE public.whatsapp_quick_send_templates_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.whatsapp_quick_send_templates_id_seq OWNER TO admin;
+ALTER SEQUENCE public.whatsapp_quick_send_templates_id_seq OWNED BY public.whatsapp_quick_send_templates.id;
+ALTER TABLE ONLY public.whatsapp_quick_send_templates ALTER COLUMN id SET DEFAULT nextval('public.whatsapp_quick_send_templates_id_seq'::regclass);
+ALTER TABLE ONLY public.whatsapp_quick_send_templates ADD CONSTRAINT whatsapp_quick_send_templates_pkey PRIMARY KEY (id);
+
+--
 -- TOC entry 241 (class 1259 OID 39567)
 -- Name: whatsapp_media_assets_id_seq; Type: SEQUENCE; Schema: public; Owner: admin
 --

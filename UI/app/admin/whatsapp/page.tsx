@@ -77,6 +77,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { whatsappApi, prospectsApi } from "@/lib/api-client"
+import { QuickSendManager } from "@/components/admin/quick-send-manager"
 import { cn } from "@/lib/utils"
 import {
   Table,
@@ -101,6 +102,10 @@ export default function WhatsAppAdmin() {
   const [messages, setMessages] = useState<any[]>([])
   const [replyText, setReplyText] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Inbox session window + template send
+  const [sessionStatus, setSessionStatus] = useState<any | null>(null)
+  const [inboxTemplateKey, setInboxTemplateKey] = useState("")
+  const [isSendingInboxTemplate, setIsSendingInboxTemplate] = useState(false)
 
   // Conversations pagination & SSE state
   const [conversationsPage, setConversationsPage] = useState(1)
@@ -447,9 +452,66 @@ export default function WhatsAppAdmin() {
     } catch (err) {}
   }
 
+  const fetchSessionStatus = async (prospectId: number) => {
+    try {
+      const status = await whatsappApi.getSessionStatus(prospectId)
+      setSessionStatus(status)
+    } catch (err) {
+      setSessionStatus(null)
+    }
+  }
+
   const handleSelectChat = (conv: any) => {
     setSelectedChat(conv)
+    setInboxTemplateKey("")
+    setSessionStatus(null)
     fetchMessages(conv.id)
+    if (conv?.id) fetchSessionStatus(conv.id)
+  }
+
+  const inboxWindowLabel = (expiresAt: string | null) => {
+    if (!expiresAt) return ""
+    const ms = new Date(expiresAt).getTime() - Date.now()
+    if (ms <= 0) return "expired"
+    const hours = Math.floor(ms / 3600000)
+    const mins = Math.floor((ms % 3600000) / 60000)
+    return hours > 0 ? `expires in ${hours}h ${mins}m` : `expires in ${mins}m`
+  }
+
+  const handleSendInboxTemplate = async () => {
+    if (!selectedChat || !inboxTemplateKey) return
+    const [name, lang] = inboxTemplateKey.split("|")
+    const tpl = templates.find(t => t.name === name && t.language === lang)
+    if (!tpl) return
+    setIsSendingInboxTemplate(true)
+    try {
+      // Best-effort component fill: {{1}} -> prospect name, remaining vars -> blank
+      const bodyComp = tpl.components?.find((c: any) => c.type === "BODY")
+      const varCount = bodyComp ? detectVariables(bodyComp.text) : 0
+      let components: any[] | undefined = undefined
+      if (varCount > 0) {
+        const params = Array.from({ length: varCount }).map((_, i) => ({
+          type: "text",
+          text: i === 0 ? (selectedChat.name || " ") : " ",
+        }))
+        components = [{ type: "body", parameters: params }]
+      }
+      await whatsappApi.sendTemplateMessage({
+        to: selectedChat.mobile,
+        template_name: name,
+        language_code: lang,
+        components,
+        prospect_id: Number(selectedChat.id),
+      })
+      setInboxTemplateKey("")
+      fetchMessages(selectedChat.id)
+      fetchSessionStatus(selectedChat.id)
+      toast({ title: "Template sent" })
+    } catch (err) {
+      toast({ title: "Failed to send template", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
+    } finally {
+      setIsSendingInboxTemplate(false)
+    }
   }
 
   const handleViewInInbox = (prospectId: number) => {
@@ -486,10 +548,12 @@ export default function WhatsAppAdmin() {
       setIsSending(true)
       await whatsappApi.sendTextMessage({
         to: selectedChat.mobile,
-        text: replyText
+        text: replyText,
+        prospect_id: Number(selectedChat.id),
       })
       setReplyText("")
       fetchMessages(selectedChat.id)
+      fetchSessionStatus(selectedChat.id)
       toast({ title: "Message sent" })
     } catch (err) {
       toast({ title: "Failed to send", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
@@ -1072,19 +1136,25 @@ export default function WhatsAppAdmin() {
                         <div>
                           <h3 className="font-semibold text-base text-slate-900  leading-none">{selectedChat.name}</h3>
                           <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="outline" className="bg-[#10b981]/10 text-[#10b981] border-none text-[8px] font-semibold px-2 py-0.5 rounded-sm">ONLINE</Badge>
                             <span className="text-[10px] text-slate-400 font-semibold ">+{selectedChat.mobile}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
-                          <Phone className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
-                          <Video className="h-5 w-5" />
-                        </Button>
-                        <Separator orientation="vertical" className="h-6 mx-2" />
+                        {sessionStatus && (
+                          sessionStatus.window_open ? (
+                            <Badge variant="green" className="gap-1">
+                              <MessageCircle className="h-3 w-3" />
+                              Window open · {inboxWindowLabel(sessionStatus.expires_at)}
+                            </Badge>
+                          ) : (
+                            <Badge variant="amber" className="gap-1">
+                              <ShieldCheck className="h-3 w-3" />
+                              Outside 24h window — template only
+                            </Badge>
+                          )
+                        )}
+                        <Separator orientation="vertical" className="h-6 mx-1" />
                         <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md">
                           <MoreVertical className="h-5 w-5" />
                         </Button>
@@ -1272,7 +1342,34 @@ export default function WhatsAppAdmin() {
                       </ScrollArea>
                     </div>
                     
-                    <div className="p-6 bg-white border-t border-slate-200">
+                    <div className="p-6 bg-white border-t border-slate-200 space-y-3">
+                      {/* Send a template (works even outside the 24h window) */}
+                      <div className="flex items-center gap-2">
+                        <Select value={inboxTemplateKey} onValueChange={setInboxTemplateKey}>
+                          <SelectTrigger className="h-9 text-sm flex-1">
+                            <SelectValue placeholder="Select a template to send…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.filter(t => t.status === "APPROVED").map(t => (
+                              <SelectItem key={`${t.name}-${t.language}`} value={`${t.name}|${t.language}`}>
+                                {t.name} ({t.language})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={handleSendInboxTemplate}
+                          disabled={!inboxTemplateKey || isSendingInboxTemplate}
+                          className="h-9 shrink-0"
+                        >
+                          {isSendingInboxTemplate ? (
+                            <RefreshCw className="h-4 w-4 animate-spin mr-1.5" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-1.5" />
+                          )}
+                          Send template
+                        </Button>
+                      </div>
                       <div className="flex items-center gap-3 bg-slate-50 rounded-md p-1.5 border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-[#10b981]/25 transition-all duration-150">
                         <div className="flex gap-1">
                             <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-all">
@@ -1316,12 +1413,13 @@ export default function WhatsAppAdmin() {
           )}
 
           {activeTab === "templates" && (
-            <Card className="h-full border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
+            <div className="h-full overflow-y-auto space-y-4 pb-4">
+            <Card className="border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
               <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
                 <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-900">Message Templates</h2>
                 <Badge variant="outline" className="text-[9px] font-semibold uppercase tracking-widest">{templates.length} Total</Badge>
               </div>
-              <ScrollArea className="flex-1 min-h-0">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-slate-50/30">
                     <TableRow>
@@ -1361,8 +1459,10 @@ export default function WhatsAppAdmin() {
                     ))}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
             </Card>
+            <QuickSendManager templates={templates} mediaAssets={mediaAssets} />
+            </div>
           )}
 
           {activeTab === "campaigns" && (
