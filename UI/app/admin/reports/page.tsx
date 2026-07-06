@@ -125,6 +125,12 @@ export default function ReportsPage() {
   })
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().split("T")[0])
   const [visitDoneProspects, setVisitDoneProspects] = useState<any[]>([])
+  const [pdfSaStatusData, setPdfSaStatusData] = useState<any[] | null>(null)
+  const [pdfCcStatusData, setPdfCcStatusData] = useState<any[] | null>(null)
+  const [pdfEdiiStatusData, setPdfEdiiStatusData] = useState<any[] | null>(null)
+  const [pdfSaActivityData, setPdfSaActivityData] = useState<any[] | null>(null)
+  const [pdfCcActivityData, setPdfCcActivityData] = useState<any[] | null>(null)
+  const [pdfEdiiActivityData, setPdfEdiiActivityData] = useState<any[] | null>(null)
 
   const handleRangeChange = (start: string, end: string) => {
     setStartDate(start)
@@ -215,6 +221,32 @@ export default function ReportsPage() {
       outcomeDistribution: buildOutcomeDist(ediiReports, EDII_OUTCOME_ORDER, (s) => s === 'Interested Followup' ? 'Interested-Followup' : s),
       telecallerPerformance: ediiReports?.telecallerPerformance || [],
     }
+
+    // Prepare offscreen PDF chart datasets and wait for render
+    const buildStatus = (outcomeArr: any[], order: string[]) => order.map((name) => ({ name, value: (outcomeArr || []).find((d: any) => d.name === name)?.value ?? 0 }))
+    setPdfSaStatusData(buildStatus(saData.outcomeDistribution, SA_OUTCOME_ORDER))
+    setPdfCcStatusData(buildStatus(ccData.outcomeDistribution, CC_OUTCOME_ORDER))
+    setPdfEdiiStatusData(buildStatus(ediiData.outcomeDistribution, EDII_OUTCOME_ORDER))
+
+    // Prepare activity datasets for offscreen PDF charts
+    setPdfSaActivityData([
+      { name: 'Total Calls', value: saData.summary.totalCalls || 0 },
+      { name: 'Pending Calls', value: saData.summary.totalPendingCalls || 0 },
+      { name: 'Scheduled Callbacks', value: saData.callbacks || 0 }
+    ])
+    setPdfCcActivityData([
+      { name: 'Total Calls', value: ccData.summary.totalCalls || 0 },
+      { name: 'Pending Calls', value: ccData.summary.totalPendingCalls || 0 },
+      { name: 'Scheduled Callbacks', value: ccData.callbacks || 0 }
+    ])
+    setPdfEdiiActivityData([
+      { name: 'Total Calls', value: ediiData.summary.totalCalls || 0 },
+      { name: 'Pending Calls', value: ediiData.summary.totalPendingCalls || 0 },
+      { name: 'Scheduled Callbacks', value: ediiData.callbacks || 0 }
+    ])
+
+    // allow React to paint the hidden SVGs
+    await new Promise((r) => setTimeout(r, 120))
 
     // Build call logs per module from the already-fetched allCallLogs
     const [allProspects, allCallLogs] = await Promise.all([
@@ -393,7 +425,7 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Call Activity Chart', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    const callActivityChart = await getSvgImageDataUrl('chart-call-activity')
+    const callActivityChart = await getSvgImageDataUrl('pdf-sa-chart-activity')
     if (callActivityChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -406,8 +438,8 @@ export default function ReportsPage() {
     doc.text('Outcome Distribution', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
     
-    // Add Outcome Distribution Chart for Student Admission
-    const outcomeChart = await getSvgImageDataUrl('chart-outcome-sa')
+    // Add Outcome Distribution Chart for Student Admission (use offscreen PDF chart)
+    const outcomeChart = await getSvgImageDataUrl('pdf-sa-chart-outcome')
     if (outcomeChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -467,7 +499,7 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Call Activity Chart', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    const ccCallActivityChart = await getSvgImageDataUrl('chart-call-activity')
+    const ccCallActivityChart = await getSvgImageDataUrl('pdf-cc-chart-activity')
     if (ccCallActivityChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -480,8 +512,8 @@ export default function ReportsPage() {
     doc.text('Outcome Distribution', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
     
-    // Add Outcome Distribution Chart for College Contact
-    const ccOutcomeChart = await getSvgImageDataUrl('chart-outcome-cc')
+    // Add Outcome Distribution Chart for College Contact (use offscreen PDF chart)
+    const ccOutcomeChart = await getSvgImageDataUrl('pdf-cc-chart-outcome')
     if (ccOutcomeChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -832,6 +864,42 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6 overflow-x-auto">
+      {/* Hidden offscreen charts used only for PDF export. Rendered from fetched report data so
+          each module's chart is accurate regardless of the currently active tab. */}
+      <div style={{ position: 'fixed', top: 0, left: 0, width: 800, height: 300, opacity: 0, pointerEvents: 'none', zIndex: -50 }}>
+        {pdfSaStatusData && (
+          <ResponsiveContainer id="pdf-sa-chart-outcome" width="100%" height="100%">
+            <BarChart data={pdfSaStatusData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={false}/><YAxis/><Bar dataKey="value" fill="#8b5cf6"/></BarChart>
+          </ResponsiveContainer>
+        )}
+        {pdfSaActivityData && (
+          <ResponsiveContainer id="pdf-sa-chart-activity" width="100%" height="100%">
+            <BarChart data={pdfSaActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#3b82f6"/></BarChart>
+          </ResponsiveContainer>
+        )}
+
+        {pdfCcStatusData && (
+          <ResponsiveContainer id="pdf-cc-chart-outcome" width="100%" height="100%">
+            <BarChart data={pdfCcStatusData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={false}/><YAxis/><Bar dataKey="value" fill="#3b82f6"/></BarChart>
+          </ResponsiveContainer>
+        )}
+        {pdfCcActivityData && (
+          <ResponsiveContainer id="pdf-cc-chart-activity" width="100%" height="100%">
+            <BarChart data={pdfCcActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#8b5cf6"/></BarChart>
+          </ResponsiveContainer>
+        )}
+
+        {pdfEdiiStatusData && (
+          <ResponsiveContainer id="pdf-edii-chart-outcome" width="100%" height="100%">
+            <BarChart data={pdfEdiiStatusData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={false}/><YAxis/><Bar dataKey="value" fill="#06b6d4"/></BarChart>
+          </ResponsiveContainer>
+        )}
+        {pdfEdiiActivityData && (
+          <ResponsiveContainer id="pdf-edii-chart-activity" width="100%" height="100%">
+            <BarChart data={pdfEdiiActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#06b6d4"/></BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
       {/* Header */}
       
       <div className="flex gap-2">

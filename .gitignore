@@ -77,3 +77,8 @@ next.user-config.*
 # Database
 *.sqlite3
 *.db
+
+kadai/
+research/
+# Firecrawl scratch
+.firecrawl/

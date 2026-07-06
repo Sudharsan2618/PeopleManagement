@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kadai-frontend",
+      "cwd": "kadai/frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3010"],
+      "port": 3010
+    }
+  ]
+}

@@ -47,6 +47,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import { WhatsAppDrawer } from "@/components/whatsapp-drawer"
 import {
   Dialog,
   DialogContent,
@@ -411,6 +412,8 @@ export default function TelecallerDashboard() {
   const [leadTypeOptionsState, setLeadTypeOptionsState] = useState<string[]>(LEAD_TYPE_OPTIONS)
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [whatsappProspect, setWhatsappProspect] = useState<any | null>(null)
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false)
   const [prospects, setProspects] = useState<any[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [callLogs, setCallLogs] = useState<CallLog[]>([])
@@ -957,6 +960,16 @@ export default function TelecallerDashboard() {
   const handleCall = (prospect: any) => {
     setSelectedProspect(prospect)
     setIsModalOpen(true)
+  }
+
+  // ─── Handle WhatsApp send-and-go ──────────────────────────────
+  const handleWhatsApp = (prospect: any) => {
+    setWhatsappProspect({
+      id: prospect.numericId,
+      name: prospect.name,
+      mobile: prospect.mobile,
+    })
+    setIsWhatsAppOpen(true)
   }
 
   // ─── Handle edit prospect ─────────────────────────────────────
@@ -1628,6 +1641,17 @@ export default function TelecallerDashboard() {
                                   </Button>
                                   <Button
                                     size="sm"
+                                    variant="outline"
+                                    className="h-8 text-xs"
+                                    onClick={() => handleWhatsApp(prospect)}
+                                    disabled={savingId !== null}
+                                    aria-label="Send WhatsApp"
+                                  >
+                                    <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                                    WhatsApp
+                                  </Button>
+                                  <Button
+                                    size="sm"
                                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-8"
                                     onClick={() => handleCall(prospect)}
                                     disabled={prospect.status === "lost" || savingId !== null}
@@ -1679,6 +1703,18 @@ export default function TelecallerDashboard() {
         onOpenChange={setIsModalOpen}
         onSubmit={handleOutcomeSubmit}
         onLeadModeActivate={() => setViewMode("college_contact")}
+      />
+
+      {/* WhatsApp Send-and-Go Drawer */}
+      <WhatsAppDrawer
+        prospect={whatsappProspect}
+        open={isWhatsAppOpen}
+        onOpenChange={setIsWhatsAppOpen}
+        onSent={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("refreshBadgeCounts"))
+          }
+        }}
       />
 
       {/* Edit Prospect Modal */}
