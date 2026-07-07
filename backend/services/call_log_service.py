@@ -28,9 +28,12 @@ class CallLogService:
                 cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
+                p.lead_id AS prospect_lead_id,
+                p.lead_id AS lead_id,
+                p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -73,9 +76,12 @@ class CallLogService:
                 cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
+                p.lead_id AS prospect_lead_id,
+                p.lead_id AS lead_id,
+                p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -104,9 +110,12 @@ class CallLogService:
                 cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
+                p.lead_id AS prospect_lead_id,
+                p.lead_id AS lead_id,
+                p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -136,9 +145,12 @@ class CallLogService:
                 cl.notification_last_shown_at,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
+                p.lead_id AS prospect_lead_id,
+                p.lead_id AS lead_id,
+                p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id

@@ -34,7 +34,8 @@ import {
   Line,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  LabelList,
 } from "recharts"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -118,6 +119,7 @@ export default function ReportsPage() {
   const [reportType, setReportType] = useState("overview")
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any>(null)
+  const [moduleSummaries, setModuleSummaries] = useState<any>({ sa: null, cc: null, edii: null })
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [selectedTelecallerId, setSelectedTelecallerId] = useState<number | null>(null)
   const [startDate, setStartDate] = useState<string>(() => {
@@ -131,6 +133,7 @@ export default function ReportsPage() {
   const [pdfSaActivityData, setPdfSaActivityData] = useState<any[] | null>(null)
   const [pdfCcActivityData, setPdfCcActivityData] = useState<any[] | null>(null)
   const [pdfEdiiActivityData, setPdfEdiiActivityData] = useState<any[] | null>(null)
+  
 
   const handleRangeChange = (start: string, end: string) => {
     setStartDate(start)
@@ -245,6 +248,8 @@ export default function ReportsPage() {
       { name: 'Scheduled Callbacks', value: ediiData.callbacks || 0 }
     ])
 
+    // Module comparison removed from PDF as requested
+
     // allow React to paint the hidden SVGs
     await new Promise((r) => setTimeout(r, 120))
 
@@ -358,7 +363,7 @@ export default function ReportsPage() {
     }
 
     // helper: call logs table
-    const drawCallLogsTable = (logs: any[], isSA: boolean, startY: number, headColor: [number, number, number]) => {
+    const drawCallLogsTable = (logs: any[], isSA: boolean, startY: number, headColor: [number, number, number], isEDII: boolean = false) => {
       if (!logs?.length) return startY
       const rows = logs.map((r: any) => [
         r.called_at ? new Date(r.called_at).toLocaleDateString() : '-',
@@ -367,14 +372,17 @@ export default function ReportsPage() {
         r.prospect_name || '-',
         r.prospect_phone || '-',
         r.prospect_lead_id || r.lead_id || '-',
-        isSA ? (r.course_interest || r.prospect_course_interest || '-') : (r.institution_name || '-'),
+        // For EDII/College contact rows prefer showing course interest when available
+        isSA ? (r.course_interest || r.prospect_course_interest || '-') : (r.course_interest || r.prospect_course_interest || r.institution_name || '-'),
         formatCallHistoryStatus(r.status_after_call),
         r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleDateString() : '-',
         formatNotes(r.notes || ''),
       ])
       const head = isSA
         ? ['Date', 'Time', 'Telecaller', 'Student', 'Phone', 'Lead ID', 'Course', 'Status', 'Callback', 'Notes']
-        : ['Date', 'Time', 'Telecaller', 'Contact', 'Phone', 'Lead ID', 'Institution', 'Status', 'Callback', 'Notes']
+        : isEDII
+          ? ['Date', 'Time', 'Telecaller', 'Contact', 'Phone', 'Lead ID', 'Course', 'Status', 'Callback', 'Notes']
+          : ['Date', 'Time', 'Telecaller', 'Contact', 'Phone', 'Lead ID', 'Institution', 'Status', 'Callback', 'Notes']
       autoTable(doc, {
         startY,
         head: [head],
@@ -401,6 +409,8 @@ export default function ReportsPage() {
     // SECTION 1 — STUDENT ADMISSION
     // ═══════════════════════════════════════════════════════════════════════════
     let y = margin
+
+    // Module comparison removed from PDF — skip inserting chart
 
     y = drawSectionBanner("SECTION 1 — STUDENT ADMISSION", `${saData?.summary?.totalCalls ?? 0} total calls`, [37, 99, 235], y)
 
@@ -571,12 +581,32 @@ export default function ReportsPage() {
     })
     y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
 
+    // Add Call Activity Chart for EDII
+    y = ensurePage(y, 80)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.text('Call Activity Chart', margin, y); y += 10
+    doc.setFont('helvetica', 'normal')
+    const ediiCallActivityChart = await getSvgImageDataUrl('pdf-edii-chart-activity')
+    if (ediiCallActivityChart) {
+      const chartWidth = usableWidth * 0.6
+      const chartHeight = 200
+      doc.addImage(ediiCallActivityChart, 'PNG', margin, y, chartWidth, chartHeight)
+      y += chartHeight + 15
+    }
+
+    // Add Outcome Distribution Chart for EDII
     y = ensurePage(y, 80)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Outcome Distribution', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    
-    // We don't have a specific chart for EDII in the PDF export yet, so we just show the table
+    const ediiOutcomeChart = await getSvgImageDataUrl('pdf-edii-chart-outcome')
+    if (ediiOutcomeChart) {
+      const chartWidth = usableWidth * 0.6
+      const chartHeight = 200
+      doc.addImage(ediiOutcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
+      y += chartHeight + 15
+    }
+
     y = ensurePage(y, 80)
     y = drawOutcomeTable([
       { label: 'New', color: [219, 234, 254] },
@@ -597,7 +627,7 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Detailed Call Logs — EDII Contact', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    y = drawCallLogsTable(ediiLogs || [], false, y, [6, 182, 212])
+    y = drawCallLogsTable(ediiLogs || [], false, y, [6, 182, 212], true)
 
     // ─── Footer on every page ──────────────────────────────────────────────────
     const pageCount = doc.getNumberOfPages()
@@ -621,10 +651,13 @@ export default function ReportsPage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [reports, prospects, callLogs] = await Promise.all([
+        const [reports, prospects, callLogs, saReports, ccReports, ediiReports] = await Promise.all([
           adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, activeTabType),
           prospectsApi.getAll(),
-          callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined, activeTabType)
+          callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined, activeTabType),
+          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'student_admission').catch(() => null),
+          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'college_contact').catch(() => null),
+          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'edii').catch(() => null),
         ])
         
         // Filter prospects by module type using same logic as Telecaller Dashboard
@@ -792,6 +825,11 @@ export default function ReportsPage() {
         setData(consistentData)
         setVisitDoneProspects(studentAdmissionProspects.filter((p: any) => p.status === 'visit_done'))
         setErrorMessage(null)
+        setModuleSummaries({
+          sa: saReports?.summary || { totalCalls: 0 },
+          cc: ccReports?.summary || { totalCalls: 0 },
+          edii: ediiReports?.summary || { totalCalls: 0 },
+        })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         console.error("Failed to fetch reports:", message)
@@ -862,6 +900,12 @@ export default function ReportsPage() {
   const totalCalls = summary.totalCalls || 0
   const callStatsMax = Math.max(totalCalls, totalPendingCalls, scheduledCallbacks, 1)
 
+  const moduleCompareData = [
+    { name: 'Student', value: moduleSummaries.sa?.totalCalls || 0 },
+    { name: 'College', value: moduleSummaries.cc?.totalCalls || 0 },
+    { name: 'EDII', value: moduleSummaries.edii?.totalCalls || 0 },
+  ]
+
   return (
     <div className="space-y-6 overflow-x-auto">
       {/* Hidden offscreen charts used only for PDF export. Rendered from fetched report data so
@@ -869,7 +913,12 @@ export default function ReportsPage() {
       <div style={{ position: 'fixed', top: 0, left: 0, width: 800, height: 300, opacity: 0, pointerEvents: 'none', zIndex: -50 }}>
         {pdfSaStatusData && (
           <ResponsiveContainer id="pdf-sa-chart-outcome" width="100%" height="100%">
-            <BarChart data={pdfSaStatusData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={false}/><YAxis/><Bar dataKey="value" fill="#8b5cf6"/></BarChart>
+            <BarChart data={pdfSaStatusData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3"/>
+              <XAxis dataKey="name" interval={0} tick={{ fontSize: 10 }} angle={-35} textAnchor="end" height={60} />
+              <YAxis/>
+              <Bar dataKey="value" fill="#8b5cf6"><LabelList dataKey="value" position="top"/></Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
         {pdfSaActivityData && (
@@ -880,7 +929,12 @@ export default function ReportsPage() {
 
         {pdfCcStatusData && (
           <ResponsiveContainer id="pdf-cc-chart-outcome" width="100%" height="100%">
-            <BarChart data={pdfCcStatusData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={false}/><YAxis/><Bar dataKey="value" fill="#3b82f6"/></BarChart>
+            <BarChart data={pdfCcStatusData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3"/>
+              <XAxis dataKey="name" interval={0} tick={{ fontSize: 10 }} angle={-35} textAnchor="end" height={60} />
+              <YAxis/>
+              <Bar dataKey="value" fill="#3b82f6"><LabelList dataKey="value" position="top"/></Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
         {pdfCcActivityData && (
@@ -891,7 +945,12 @@ export default function ReportsPage() {
 
         {pdfEdiiStatusData && (
           <ResponsiveContainer id="pdf-edii-chart-outcome" width="100%" height="100%">
-            <BarChart data={pdfEdiiStatusData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={false}/><YAxis/><Bar dataKey="value" fill="#06b6d4"/></BarChart>
+            <BarChart data={pdfEdiiStatusData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3"/>
+              <XAxis dataKey="name" interval={0} tick={{ fontSize: 10 }} angle={-35} textAnchor="end" height={60} />
+              <YAxis/>
+              <Bar dataKey="value" fill="#06b6d4"><LabelList dataKey="value" position="top"/></Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
         {pdfEdiiActivityData && (
@@ -899,6 +958,7 @@ export default function ReportsPage() {
             <BarChart data={pdfEdiiActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#06b6d4"/></BarChart>
           </ResponsiveContainer>
         )}
+        
       </div>
       {/* Header */}
       
@@ -1110,6 +1170,7 @@ export default function ReportsPage() {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Module comparison is shown in exported PDF only */}
             <Card>
               <CardHeader>
                 <CardTitle>Call Activity</CardTitle>
