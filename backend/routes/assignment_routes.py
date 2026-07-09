@@ -1,7 +1,12 @@
 from fastapi import APIRouter, Body, HTTPException, Query
 from typing import List, Optional
 from datetime import date
-from models.schemas import ProspectAssignment, ProspectAssignmentCreate
+from models.schemas import (
+    ProspectAssignment,
+    ProspectAssignmentCreate,
+    BulkAssignmentCreate,
+    TelecallerAssignmentCount,
+)
 from services.assignment_service import AssignmentService
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
@@ -9,10 +14,38 @@ router = APIRouter(prefix="/assignments", tags=["assignments"])
 
 @router.get("", response_model=List[ProspectAssignment])
 def get_all_assignments():
-    """Get all prospect assignments."""
+    """Get all prospect assignments. (Legacy full-table fetch.)"""
     try:
         assignments = AssignmentService.get_all_assignments()
         return assignments
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/telecaller-counts", response_model=List[TelecallerAssignmentCount])
+def get_telecaller_assignment_counts():
+    """Assignment counts per telecaller (one grouped query). Declared before
+    /{assignment_id} so the literal path wins."""
+    try:
+        return AssignmentService.get_telecaller_assignment_counts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bulk", status_code=201)
+def bulk_create_assignments(payload: BulkAssignmentCreate):
+    """Assign many prospects to one telecaller in a single transaction."""
+    if not payload.prospect_ids:
+        raise HTTPException(status_code=400, detail="No prospect IDs provided")
+    try:
+        assigned_count = AssignmentService.create_bulk_assignments(
+            prospect_ids=payload.prospect_ids,
+            telecaller_id=payload.telecaller_id,
+            assigned_by=payload.assigned_by,
+            assigned_date=payload.assigned_date,
+            dashboard=payload.dashboard,
+        )
+        return {"message": "Assignments created successfully", "assigned_count": assigned_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

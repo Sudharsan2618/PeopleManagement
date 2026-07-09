@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import {
   Users,
@@ -64,7 +64,7 @@ import {
   type ProspectStatus,
   mockCourses,
 } from "@/lib/mock-data"
-import { prospectsApi, assignmentsApi, usersApi, coursesApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser } from "@/lib/api-client"
+import { prospectsApi, assignmentsApi, usersApi, coursesApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser, type ProspectListItem } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 
@@ -80,6 +80,17 @@ const statusColors: Record<ProspectStatus, string> = {
 }
 
 const ITEMS_PER_PAGE = 15
+
+// Reverse of the backend→UI status map: a UI status filter expands to the
+// backend statuses it covers, so the server can filter by exact status.
+const UI_STATUS_TO_BACKEND: Record<string, string[]> = {
+  Pending: ["new"],
+  InProgress: ["contacted", "visit_done"],
+  Callback: ["warm", "visit_scheduled"],
+  Qualified: ["hot"],
+  NotInterested: ["cold_not_interested"],
+  DNC: ["cold_no_response"],
+}
 
 export default function AdminProspectsPage() {
   const { toast } = useToast()
@@ -125,69 +136,123 @@ export default function AdminProspectsPage() {
     follow_up_date: "",
     lead_id: "",
   })
-  const [prospects, setProspects] = useState<any[]>([])
-  const [assignments, setAssignments] = useState<any[]>([])
+  const [prospects, setProspects] = useState<any[]>([]) // adapted current page
+  const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState({ total: 0, assigned: 0, qualified: 0, pending: 0 })
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isFetching, setIsFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Debounce search → the API only fires 350ms after typing stops.
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true)
-        const [apiProspects, apiAssignments, apiUsers, apiCourses] = await Promise.all([
-          prospectsApi.getAll(),
-          assignmentsApi.getAll(),
-          usersApi.getByRole("telecaller"),
-          coursesApi.getAll(),
-        ])
-        
-        const uiProspects = apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments))
-        const uiTelecallers = apiUsers.map(adaptApiUserToUiUser)
-        
-        setProspects(uiProspects)
-        setAssignments(apiAssignments)
-        setTelecallers(uiTelecallers)
-        setCourses(apiCourses)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch data")
-        toast({
-          title: "Error fetching prospects",
-          description: err instanceof Error ? err.message : "Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
+  // Map the current UI filters → server query params.
+  const buildParams = useCallback(() => {
+    const p: any = { page: currentPage, pageSize: ITEMS_PER_PAGE }
+    if (debouncedSearch) p.search = debouncedSearch
+    if (statusFilter !== "all") {
+      const mapped = UI_STATUS_TO_BACKEND[statusFilter]
+      p.status = mapped ? mapped.join(",") : statusFilter
     }
-    fetchData()
+    if (assignedFilter === "unassigned") p.assignment = "unassigned"
+    else if (assignedFilter !== "all") p.assignedTo = Number(assignedFilter)
+    if (courseFilter !== "all") p.courseInterest = courseFilter
+    return p
+  }, [currentPage, debouncedSearch, statusFilter, assignedFilter, courseFilter])
+
+  // Convert a server list row into the UI shape the table expects, synthesizing
+  // the single-element assignment array the adapter needs from the joined cols.
+  const adaptRow = (row: ProspectListItem) => {
+    const synthetic =
+      row.assigned_to != null
+        ? [{
+            prospect_id: row.id,
+            telecaller_id: row.assigned_to,
+            assigned_date: row.assignment_date,
+            dashboard: row.assignment_dashboard,
+          }]
+        : []
+    return adaptApiProspectToUiProspect(row as any, synthetic as any)
+  }
+
+  // Guards against out-of-order responses overwriting fresher data.
+  const requestSeq = useRef(0)
+  const fetchProspects = useCallback(async () => {
+    const seq = ++requestSeq.current
+    const res = await prospectsApi.list(buildParams())
+    if (seq !== requestSeq.current) return
+    setProspects(res.items.map(adaptRow))
+    setTotal(res.total)
+  }, [buildParams])
+
+  const fetchStats = useCallback(async () => {
+    setStats(await prospectsApi.getStats())
   }, [])
 
-  // Filter prospects
-  const filteredProspects = useMemo(() => {
-    return prospects.filter((prospect) => {
-      const matchesSearch =
-        prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prospect.mobile.includes(searchQuery) ||
-        prospect.location.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === "all" || prospect.status === statusFilter
-      const matchesAssigned =
-        assignedFilter === "all" ||
-        (assignedFilter === "unassigned" && !prospect.assignedTo) ||
-        prospect.assignedTo === assignedFilter
-      const matchesCourse =
-        courseFilter === "all" || prospect.courseInterest === courseFilter
-      return matchesSearch && matchesStatus && matchesAssigned && matchesCourse
-    }).sort((a, b) => Number(b.id) - Number(a.id))
-  }, [searchQuery, statusFilter, assignedFilter, courseFilter, prospects])
+  const fetchReference = useCallback(async () => {
+    const [apiUsers, apiCourses] = await Promise.all([
+      usersApi.getByRole("telecaller"),
+      coursesApi.getAll(),
+    ])
+    setTelecallers(apiUsers.map(adaptApiUserToUiUser))
+    setCourses(apiCourses)
+  }, [])
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProspects.length / ITEMS_PER_PAGE)
-  const paginatedProspects = filteredProspects.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  )
+  const refreshAfterMutation = useCallback(async () => {
+    await Promise.all([fetchProspects(), fetchStats()])
+  }, [fetchProspects, fetchStats])
+
+  // Initial load: reference data + first page + stats.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setIsLoading(true)
+        await Promise.all([fetchReference(), fetchProspects(), fetchStats()])
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to fetch data")
+          toast({
+            title: "Error fetching prospects",
+            description: err instanceof Error ? err.message : "Please try again.",
+            variant: "destructive",
+          })
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Refetch the page whenever paging/search/filters change (after first paint).
+  const didMount = useRef(false)
+  useEffect(() => {
+    if (!didMount.current) { didMount.current = true; return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setIsFetching(true)
+        await fetchProspects()
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to fetch data")
+      } finally {
+        if (!cancelled) setIsFetching(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [fetchProspects])
+
+  // Pagination is server-driven now.
+  const paginatedProspects = prospects
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE))
 
   const handleViewDetails = (prospect: any) => {
     setSelectedProspect(prospect)
@@ -227,34 +292,19 @@ export default function AdminProspectsPage() {
     try {
       setIsAssigning(true)
       const today = new Date().toISOString().split("T")[0]
-      
-      // In a real app, assigned_by would come from the current user's session
-      // For now using ID 1 (Admin) or 3 (spoc) depending on context
-      const assignedBy = 1 
 
-      await Promise.all(
-        selectedProspectIds.map((prospectId) =>
-          assignmentsApi.create({
-            prospect_id: prospectId,
-            telecaller_id: parseInt(targetTelecallerId),
-            assigned_by: assignedBy,
-            assigned_date: today,
-            dashboard: targetDashboard,
-          })
-        )
-      )
+      // One transactional bulk request instead of N sequential POSTs.
+      // assigned_by would come from the session in a real app; using 1 (Admin).
+      await assignmentsApi.bulkAssign({
+        prospect_ids: selectedProspectIds,
+        telecaller_id: parseInt(targetTelecallerId),
+        assigned_by: 1,
+        assigned_date: today,
+        dashboard: targetDashboard,
+      })
 
-      // Refresh data
-      const [apiProspects, apiAssignments] = await Promise.all([
-        prospectsApi.getAll(),
-        assignmentsApi.getAll(),
-      ])
-      const uiProspects = apiProspects.map((p: any) =>
-        adaptApiProspectToUiProspect(p, apiAssignments)
-      )
-      setProspects(uiProspects)
-      setAssignments(apiAssignments)
-      
+      await refreshAfterMutation()
+
       setSelectedProspectIds([])
       setIsAssignDialogOpen(false)
       setTargetTelecallerId("")
@@ -275,19 +325,7 @@ export default function AdminProspectsPage() {
     try {
       setIsAssigning(true)
       await assignmentsApi.bulkUnassign(selectedProspectIds)
-
-      // Wait a moment for backend to process
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      const [apiProspects, apiAssignments] = await Promise.all([
-        prospectsApi.getAll(),
-        assignmentsApi.getAll(),
-      ])
-      const uiProspects = apiProspects.map((p: any) =>
-        adaptApiProspectToUiProspect(p, apiAssignments)
-      )
-      setProspects(uiProspects)
-      setAssignments(apiAssignments)
+      await refreshAfterMutation()
 
       setSelectedProspectIds([])
       toast({
@@ -307,17 +345,17 @@ export default function AdminProspectsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedProspectIds.length === 0) return
-    
+
     if (!confirm(`Are you sure you want to delete ${selectedProspectIds.length} prospects? This action cannot be undone.`)) {
       return
     }
 
     try {
       setIsDeleting(true)
-      
+
       let successCount = 0
       let failedIds: number[] = []
-      
+
       await Promise.all(
         selectedProspectIds.map(async (prospectId) => {
           try {
@@ -329,19 +367,9 @@ export default function AdminProspectsPage() {
         })
       )
 
-      // Refresh data
-      const [apiProspects, apiAssignments] = await Promise.all([
-        prospectsApi.getAll(),
-        assignmentsApi.getAll(),
-      ])
-      const uiProspects = apiProspects.map((p: any) =>
-        adaptApiProspectToUiProspect(p, apiAssignments)
-      )
-      setProspects(uiProspects)
-      setAssignments(apiAssignments)
-      
+      await refreshAfterMutation()
       setSelectedProspectIds([])
-      
+
       if (failedIds.length > 0) {
         toast({
           title: "Partial Success",
@@ -368,14 +396,6 @@ export default function AdminProspectsPage() {
   const getAssignedTelecaller = (id?: string) => {
     if (!id) return null
     return telecallers.find((tc) => tc.id === id)
-  }
-
-  // Stats
-  const stats = {
-    total: prospects.length,
-    assigned: prospects.filter((p) => p.assignedTo).length,
-    qualified: prospects.filter((p) => p.status === "Qualified").length,
-    pending: prospects.filter((p) => p.status === "Pending").length,
   }
 
   if (isLoading) {
@@ -608,7 +628,7 @@ export default function AdminProspectsPage() {
       {/* Prospects Table */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className={cn("overflow-x-auto transition-opacity", isFetching && "opacity-60")}>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
@@ -814,10 +834,7 @@ export default function AdminProspectsPage() {
                                     try {
                                       await prospectsApi.delete(Number(prospect.id))
                                       toast({ title: "Prospect deleted" })
-                                      // Refresh data
-                                      const apiProspects = await prospectsApi.getAll()
-                                      const apiAssignments = await assignmentsApi.getAll()
-                                      setProspects(apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments)))
+                                      await refreshAfterMutation()
                                     } catch (err) {
                                       toast({ title: "Error deleting prospect", variant: "destructive" })
                                     }
@@ -842,8 +859,8 @@ export default function AdminProspectsPage() {
           <div className="flex items-center justify-between px-4 py-4 border-t">
             <p className="text-sm text-muted-foreground">
               Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-              {Math.min(currentPage * ITEMS_PER_PAGE, filteredProspects.length)} of{" "}
-              {filteredProspects.length} prospects
+              {Math.min(currentPage * ITEMS_PER_PAGE, total)} of{" "}
+              {total} prospects
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -1240,10 +1257,7 @@ export default function AdminProspectsPage() {
                   toast({ title: "Prospect created" })
                 }
                 setIsProspectDialogOpen(false)
-                // Refresh data
-                const apiProspects = await prospectsApi.getAll()
-                const apiAssignments = await assignmentsApi.getAll()
-                setProspects(apiProspects.map((p: any) => adaptApiProspectToUiProspect(p, apiAssignments)))
+                await refreshAfterMutation()
               } catch (err) {
                 toast({ title: "Error saving prospect", variant: "destructive" })
               }

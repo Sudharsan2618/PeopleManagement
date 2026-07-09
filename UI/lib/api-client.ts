@@ -135,6 +135,89 @@ export interface ProspectAssignment {
   created_at: string
 }
 
+// Row returned by GET /prospects/list — the full prospect columns plus the
+// latest assignment joined server-side, so the client never fetches the whole
+// prospects/assignments tables. Lean consumers just read a subset.
+export interface ProspectListItem {
+  id: number
+  name: string
+  mobile: string
+  email?: string
+  location?: string
+  sourced_from?: string
+  status: string
+  course_interest?: string
+  parent_name?: string
+  department?: string
+  assigned_to?: number
+  closing_reason?: string
+  tags?: any
+  lead_source?: any
+  lead_type?: any
+  alt_phone?: string
+  secondary_email?: string
+  city?: string
+  address?: string
+  postal_code?: string
+  designation?: string
+  created_by?: number
+  created_at?: string
+  updated_at?: string
+  prospect_type?: string
+  company?: string
+  comments?: string
+  follow_up_date?: string
+  is_imported?: boolean
+  lead_id?: string
+  // Joined assignment info
+  assigned_telecaller_name?: string
+  assignment_date?: string
+  assignment_dashboard?: string
+}
+
+export interface PaginatedProspects {
+  items: ProspectListItem[]
+  total: number
+  page: number
+  page_size: number
+  unassigned_total: number
+}
+
+export interface ProspectStats {
+  total: number
+  assigned: number
+  qualified: number
+  pending: number
+}
+
+export interface TelecallerAssignmentCount {
+  telecaller_id: number
+  count: number
+}
+
+export interface ProspectListParams {
+  page?: number
+  pageSize?: number
+  search?: string
+  status?: string
+  assignment?: "assigned" | "unassigned"
+  assignedTo?: number
+  courseInterest?: string
+  tags?: string
+  excludeCampaignId?: number
+}
+
+// Filters shared by /prospects/list and /prospects/ids (no pagination).
+export interface ProspectFilterParams {
+  search?: string
+  status?: string
+  assignment?: "assigned" | "unassigned"
+  assignedTo?: number
+  courseInterest?: string
+  tags?: string
+  excludeCampaignId?: number
+}
+
 export interface Course {
   id: number
   name: string
@@ -353,6 +436,35 @@ export const usersApi = {
 // Prospects API
 export const prospectsApi = {
   getAll: () => apiRequest<Prospect[]>("/prospects"),
+  // Paginated, server-filtered list with the latest assignment joined in.
+  // Prefer this over getAll() for any list UI that renders large datasets.
+  list: (params: ProspectListParams = {}) => {
+    const qs = new URLSearchParams()
+    qs.set("page", String(params.page ?? 1))
+    qs.set("page_size", String(params.pageSize ?? 25))
+    if (params.search) qs.set("search", params.search)
+    if (params.status && params.status !== "all") qs.set("status", params.status)
+    if (params.assignment) qs.set("assignment", params.assignment)
+    if (params.assignedTo != null) qs.set("assigned_to", String(params.assignedTo))
+    if (params.courseInterest) qs.set("course_interest", params.courseInterest)
+    if (params.tags) qs.set("tags", params.tags)
+    if (params.excludeCampaignId != null) qs.set("exclude_campaign_id", String(params.excludeCampaignId))
+    return apiRequest<PaginatedProspects>(`/prospects/list?${qs.toString()}`)
+  },
+  // Ids of every prospect matching the filters (for select-all / range select).
+  listIds: (params: ProspectFilterParams = {}) => {
+    const qs = new URLSearchParams()
+    if (params.search) qs.set("search", params.search)
+    if (params.status && params.status !== "all") qs.set("status", params.status)
+    if (params.assignment) qs.set("assignment", params.assignment)
+    if (params.assignedTo != null) qs.set("assigned_to", String(params.assignedTo))
+    if (params.courseInterest) qs.set("course_interest", params.courseInterest)
+    if (params.tags) qs.set("tags", params.tags)
+    if (params.excludeCampaignId != null) qs.set("exclude_campaign_id", String(params.excludeCampaignId))
+    return apiRequest<{ ids: number[]; total: number }>(`/prospects/ids?${qs.toString()}`)
+  },
+  getDistinctTags: () => apiRequest<string[]>("/prospects/distinct-tags"),
+  getStats: () => apiRequest<ProspectStats>("/prospects/stats"),
   getById: (id: number) => apiRequest<Prospect>(`/prospects/${id}`),
   getByStatus: (status: string) => apiRequest<Prospect[]>(`/prospects/status/${status}`),
   getByCreator: (createdBy: number) => apiRequest<Prospect[]>(`/prospects/creator/${createdBy}`),
@@ -392,6 +504,19 @@ export const prospectsApi = {
 // Assignments API
 export const assignmentsApi = {
   getAll: () => apiRequest<ProspectAssignment[]>("/assignments"),
+  getTelecallerCounts: () =>
+    apiRequest<TelecallerAssignmentCount[]>("/assignments/telecaller-counts"),
+  bulkAssign: (data: {
+    prospect_ids: number[]
+    telecaller_id: number
+    assigned_by: number
+    assigned_date: string
+    dashboard?: string
+  }) =>
+    apiRequest<{ message: string; assigned_count: number }>("/assignments/bulk", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   getById: (id: number) => apiRequest<ProspectAssignment>(`/assignments/${id}`),
   getByTelecaller: (telecallerId: number, date?: string) => {
     const query = date ? `?assigned_date=${date}` : ""

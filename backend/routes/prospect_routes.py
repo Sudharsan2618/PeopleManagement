@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List
-from models.schemas import Prospect, ProspectCreate, ProspectUpdate
+from typing import List, Optional
+from models.schemas import (
+    Prospect,
+    ProspectCreate,
+    ProspectUpdate,
+    PaginatedProspects,
+    ProspectStats,
+)
 from services.prospect_service import ProspectService
 
 router = APIRouter(prefix="/prospects", tags=["prospects"])
@@ -8,10 +14,84 @@ router = APIRouter(prefix="/prospects", tags=["prospects"])
 
 @router.get("", response_model=List[Prospect])
 def get_all_prospects():
-    """Get all prospects."""
+    """Get all prospects. (Legacy full-table fetch — prefer /prospects/list.)"""
     try:
         prospects = ProspectService.get_all_prospects()
         return prospects
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/list", response_model=PaginatedProspects)
+def list_prospects(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=200),
+    search: Optional[str] = Query(None, description="Matches name, mobile, email or location"),
+    status: Optional[str] = Query(None, description="One or more backend statuses, comma-separated"),
+    assignment: Optional[str] = Query(None, description="'assigned' | 'unassigned'"),
+    assigned_to: Optional[int] = Query(None, description="Filter to a specific telecaller id"),
+    course_interest: Optional[str] = Query(None, description="Exact course; 'Unknown' matches empty"),
+    tags: Optional[str] = Query(None, description="One or more tags, comma-separated (overlap match)"),
+    exclude_campaign_id: Optional[int] = Query(None, description="Drop prospects already in this campaign"),
+):
+    """Paginated, server-filtered prospect list with the latest assignment
+    joined in. Declared before /{prospect_id} so the literal path wins."""
+    try:
+        return ProspectService.list_prospects_paginated(
+            page=page,
+            page_size=page_size,
+            search=search,
+            status=status,
+            assignment=assignment,
+            assigned_to=assigned_to,
+            course_interest=course_interest,
+            tags=tags,
+            exclude_campaign_id=exclude_campaign_id,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ids")
+def list_prospect_ids(
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    assignment: Optional[str] = Query(None),
+    assigned_to: Optional[int] = Query(None),
+    course_interest: Optional[str] = Query(None),
+    tags: Optional[str] = Query(None),
+    exclude_campaign_id: Optional[int] = Query(None),
+):
+    """Ids of every prospect matching the filters (same order as /list). Backs
+    'select all filtered' and range selection in the recipient pickers."""
+    try:
+        return ProspectService.get_prospect_ids(
+            search=search,
+            status=status,
+            assignment=assignment,
+            assigned_to=assigned_to,
+            course_interest=course_interest,
+            tags=tags,
+            exclude_campaign_id=exclude_campaign_id,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/distinct-tags", response_model=List[str])
+def get_distinct_tags():
+    """Distinct prospect tags for tag filter dropdowns."""
+    try:
+        return ProspectService.get_distinct_tags()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stats", response_model=ProspectStats)
+def get_prospect_stats():
+    """Global prospect counters for stat cards (single aggregate query)."""
+    try:
+        return ProspectService.get_prospect_stats()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

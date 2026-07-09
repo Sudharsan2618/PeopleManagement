@@ -1,15 +1,15 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Search,
-  Plus,
   AlertCircle,
   Loader2,
   RefreshCw,
   CheckCircle2,
-  Users,
   UserPlus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,9 +29,8 @@ import {
   prospectsApi,
   usersApi,
   assignmentsApi,
-  type Prospect,
+  type ProspectListItem,
   type User as ApiUser,
-  type ProspectAssignment,
 } from "@/lib/api-client"
 
 const STATUS_LABELS: Record<string, string> = {
@@ -58,23 +57,44 @@ const STATUS_COLORS: Record<string, string> = {
   lost: "bg-[#FFF1F1] text-destructive",
 }
 
+const PAGE_SIZE = 25
+
+// Translate the single filter dropdown into server-side params. "assigned" /
+// "unassigned" map to the `assignment` param; everything else is a raw status.
+function filterToParams(filter: string): { status?: string; assignment?: "assigned" | "unassigned" } {
+  if (filter === "assigned" || filter === "unassigned") return { assignment: filter }
+  if (filter === "all") return {}
+  return { status: filter }
+}
+
 export default function AssignProspectsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [prospects, setProspects] = useState<Prospect[]>([])
+
+  // Server-driven list state
+  const [prospects, setProspects] = useState<ProspectListItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [unassignedTotal, setUnassignedTotal] = useState(0)
+  const [page, setPage] = useState(1)
+
+  // Reference data fetched once
   const [telecallers, setTelecallers] = useState<ApiUser[]>([])
-  const [assignments, setAssignments] = useState<ProspectAssignment[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [telecallerCounts, setTelecallerCounts] = useState<Record<number, number>>({})
+
+  const [isLoading, setIsLoading] = useState(true) // first paint
+  const [isFetching, setIsFetching] = useState(false) // page/filter changes
   const [isAssigning, setIsAssigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchInput, setSearchInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("") // debounced
   const [filterStatus, setFilterStatus] = useState("all")
   const [selectedProspects, setSelectedProspects] = useState<number[]>([])
   const [selectedDashboard, setSelectedDashboard] = useState<string>("")
   const [selectedTelecaller, setSelectedTelecaller] = useState<string>("")
 
   const adminId = user ? Number(user.id) : 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const dashboardOptions = [
     { value: "student_admission", label: "Student Admission" },
@@ -82,101 +102,128 @@ export default function AssignProspectsPage() {
     { value: "edii", label: "EDII" },
   ]
 
-  const fetchData = async () => {
+  // Debounce the search box → only hits the API 350ms after typing stops.
+  useEffect(() => {
+    const t = setTimeout(() => setSearchQuery(searchInput.trim()), 350)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  // Any change to search or filter resets to page 1.
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery, filterStatus])
+
+  // Reference data (telecallers + per-telecaller counts) — fetched once.
+  const fetchReferenceData = useCallback(async () => {
+    const [apiUsers, counts] = await Promise.all([
+      usersApi.getByRole("telecaller"),
+      assignmentsApi.getTelecallerCounts(),
+    ])
+    setTelecallers(apiUsers)
+    const countMap: Record<number, number> = {}
+    counts.forEach((c) => {
+      countMap[c.telecaller_id] = c.count
+    })
+    setTelecallerCounts(countMap)
+  }, [])
+
+  // The paginated prospect page — refetched on page/search/filter change.
+  // A ref guards against out-of-order responses (a slow page 1 landing after
+  // a fast page 2) overwriting fresher data.
+  const requestSeq = useRef(0)
+  const fetchProspects = useCallback(async () => {
+    const seq = ++requestSeq.current
+    const { status, assignment } = filterToParams(filterStatus)
+    const res = await prospectsApi.list({
+      page,
+      pageSize: PAGE_SIZE,
+      search: searchQuery,
+      status,
+      assignment,
+    })
+    if (seq !== requestSeq.current) return // a newer request already fired
+    setProspects(res.items)
+    setTotal(res.total)
+    setUnassignedTotal(res.unassigned_total)
+  }, [page, searchQuery, filterStatus])
+
+  // Initial load: reference data + first page together.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        await Promise.all([fetchReferenceData(), fetchProspects()])
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to fetch data")
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // Only on mount — subsequent list refetches go through the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Refetch the list whenever page/search/filter changes (after first paint).
+  const didMount = useRef(false)
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setIsFetching(true)
+        setError(null)
+        await fetchProspects()
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to fetch data")
+      } finally {
+        if (!cancelled) setIsFetching(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [fetchProspects])
+
+  const refreshAll = useCallback(async () => {
     try {
-      setIsLoading(true)
+      setIsFetching(true)
       setError(null)
-      const [apiProspects, apiUsers, apiAssignments] = await Promise.all([
-        prospectsApi.getAll(),
-        usersApi.getByRole("telecaller"),
-        assignmentsApi.getAll(),
-      ])
-      setProspects(apiProspects)
-      setTelecallers(apiUsers)
-      setAssignments(apiAssignments)
+      await Promise.all([fetchReferenceData(), fetchProspects()])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch data")
     } finally {
-      setIsLoading(false)
+      setIsFetching(false)
     }
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  // Build a lookup: prospect_id → telecaller name (most recent assignment)
-  const assignmentLookup = useMemo(() => {
-    const lookup: Record<number, { telecallerName: string; date: string }> = {}
-    // Sort by date desc so the first one per prospect is the latest
-    const sorted = [...assignments].sort(
-      (a, b) => b.assigned_date.localeCompare(a.assigned_date)
-    )
-    sorted.forEach((a) => {
-      if (!lookup[a.prospect_id]) {
-        const tc = telecallers.find((t) => t.id === a.telecaller_id)
-        lookup[a.prospect_id] = {
-          telecallerName: tc?.name || `TC #${a.telecaller_id}`,
-          date: a.assigned_date,
-        }
-      }
-    })
-    return lookup
-  }, [assignments, telecallers])
-
-  // Filter & search
-  const filteredProspects = useMemo(() => {
-    return prospects.filter((p) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.mobile.includes(searchQuery) ||
-        (p.email || "").toLowerCase().includes(searchQuery.toLowerCase())
-
-      let matchesFilter = true
-      if (filterStatus === "unassigned") {
-        matchesFilter = !assignmentLookup[p.id]
-      } else if (filterStatus === "assigned") {
-        matchesFilter = !!assignmentLookup[p.id]
-      } else if (filterStatus !== "all") {
-        matchesFilter = p.status === filterStatus
-      }
-
-      return matchesSearch && matchesFilter
-    })
-  }, [prospects, searchQuery, filterStatus, assignmentLookup])
-
-  // Per-telecaller assignment counts
-  const telecallerCounts = useMemo(() => {
-    const counts: Record<number, number> = {}
-    assignments.forEach((a) => {
-      counts[a.telecaller_id] = (counts[a.telecaller_id] || 0) + 1
-    })
-    return counts
-  }, [assignments])
+  }, [fetchReferenceData, fetchProspects])
 
   const filteredTelecallers = useMemo(() => {
-    if (!selectedDashboard) return telecallers
-
-    const dashboardTelecallerIds = new Set(
-      assignments
-        .filter((assignment) => assignment.dashboard === selectedDashboard)
-        .map((assignment) => assignment.telecaller_id)
-    )
-
-    if (dashboardTelecallerIds.size > 0) {
-      return telecallers.filter((telecaller) => dashboardTelecallerIds.has(telecaller.id))
-    }
-
+    // Telecallers list is small; no dashboard-specific filtering needed now that
+    // counts come from the aggregate endpoint. Show all active/known telecallers.
     return telecallers
-  }, [assignments, selectedDashboard, telecallers])
+  }, [telecallers])
 
-  // Selection handlers
-  const handleSelectAll = () => {
-    if (selectedProspects.length === filteredProspects.length) {
-      setSelectedProspects([])
+  // Selection is scoped to the current page (server pagination).
+  const allOnPageSelected =
+    prospects.length > 0 && prospects.every((p) => selectedProspects.includes(p.id))
+
+  const handleSelectAllOnPage = () => {
+    if (allOnPageSelected) {
+      const pageIds = new Set(prospects.map((p) => p.id))
+      setSelectedProspects((prev) => prev.filter((id) => !pageIds.has(id)))
     } else {
-      setSelectedProspects(filteredProspects.map((p) => p.id))
+      setSelectedProspects((prev) =>
+        Array.from(new Set([...prev, ...prospects.map((p) => p.id)]))
+      )
     }
   }
 
@@ -186,7 +233,7 @@ export default function AssignProspectsPage() {
     )
   }
 
-  // Assign handler
+  // Assign handler — one bulk request instead of N sequential POSTs.
   const handleAssign = async (telecallerId: number) => {
     if (selectedProspects.length === 0) return
     if (!selectedDashboard) {
@@ -200,35 +247,31 @@ export default function AssignProspectsPage() {
 
     setIsAssigning(true)
     const today = new Date().toISOString().split("T")[0]
-    let successCount = 0
-    let failCount = 0
 
     try {
-      for (const prospectId of selectedProspects) {
-        try {
-          await assignmentsApi.create({
-            prospect_id: prospectId,
-            telecaller_id: telecallerId,
-            assigned_by: adminId,
-            assigned_date: today,
-            dashboard: selectedDashboard,
-          })
-          successCount++
-        } catch {
-          failCount++
-        }
-      }
+      const res = await assignmentsApi.bulkAssign({
+        prospect_ids: selectedProspects,
+        telecaller_id: telecallerId,
+        assigned_by: adminId,
+        assigned_date: today,
+        dashboard: selectedDashboard,
+      })
 
       toast({
-        title: `Assignment Complete`,
-        description: `${successCount} prospect(s) assigned${failCount > 0 ? `, ${failCount} failed (may already be assigned today)` : ""}`,
-        variant: failCount > 0 ? "destructive" : "default",
+        title: "Assignment Complete",
+        description: `${res.assigned_count} prospect(s) assigned successfully`,
       })
 
       setSelectedProspects([])
       setSelectedDashboard("")
       setSelectedTelecaller("")
-      await fetchData()
+      await refreshAll()
+    } catch (err) {
+      toast({
+        title: "Assignment failed",
+        description: err instanceof Error ? err.message : "Please try again",
+        variant: "destructive",
+      })
     } finally {
       setIsAssigning(false)
     }
@@ -246,7 +289,7 @@ export default function AssignProspectsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <p className="text-destructive">{error}</p>
-        <Button onClick={fetchData} variant="outline" size="sm">
+        <Button onClick={refreshAll} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" /> Retry
         </Button>
       </div>
@@ -257,16 +300,13 @@ export default function AssignProspectsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-normal ">
-            Assign Prospects
-          </h1>
+          <h1 className="text-xl font-normal ">Assign Prospects</h1>
           <p className="text-muted-foreground mt-1">
-            Assign prospects to telecallers for outreach.{" "}
-            {prospects.filter((p) => !assignmentLookup[p.id]).length} unassigned.
+            Assign prospects to telecallers for outreach. {unassignedTotal} unassigned.
           </p>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+        <Button onClick={refreshAll} variant="outline" size="sm" disabled={isFetching}>
+          <RefreshCw className={cn("h-4 w-4 mr-2", isFetching && "animate-spin")} /> Refresh
         </Button>
       </div>
 
@@ -338,8 +378,8 @@ export default function AssignProspectsPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search name, mobile, email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-8"
                 />
               </div>
@@ -367,17 +407,14 @@ export default function AssignProspectsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className={cn("space-y-2 transition-opacity", isFetching && "opacity-60")}>
             {/* Header */}
             <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-muted/50 rounded-lg text-sm font-medium">
               <div className="col-span-1">
                 <input
                   type="checkbox"
-                  checked={
-                    selectedProspects.length === filteredProspects.length &&
-                    filteredProspects.length > 0
-                  }
-                  onChange={handleSelectAll}
+                  checked={allOnPageSelected}
+                  onChange={handleSelectAllOnPage}
                   className="rounded"
                 />
               </div>
@@ -390,8 +427,8 @@ export default function AssignProspectsPage() {
 
             {/* Rows */}
             <div className="space-y-1 divide-y">
-              {filteredProspects.map((prospect) => {
-                const assignment = assignmentLookup[prospect.id]
+              {prospects.map((prospect) => {
+                const isAssigned = prospect.assigned_to != null
                 return (
                   <div
                     key={prospect.id}
@@ -425,30 +462,27 @@ export default function AssignProspectsPage() {
                     <div className="col-span-1">
                       <Badge
                         variant="outline"
-                        className={cn(
-                          "text-xs",
-                          STATUS_COLORS[prospect.status] || ""
-                        )}
+                        className={cn("text-xs", STATUS_COLORS[prospect.status] || "")}
                       >
                         {STATUS_LABELS[prospect.status] || prospect.status}
                       </Badge>
                     </div>
                     <div className="col-span-3">
-                      {assignment ? (
+                      {isAssigned ? (
                         <div className="flex items-center gap-1">
                           <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                           <span className="text-sm text-green-700 font-medium">
-                            {assignment.telecallerName}
+                            {prospect.assigned_telecaller_name ||
+                              `TC #${prospect.assigned_to}`}
                           </span>
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({assignment.date})
-                          </span>
+                          {prospect.assignment_date && (
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({prospect.assignment_date})
+                            </span>
+                          )}
                         </div>
                       ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-[#FCF4D6] text-yellow-700"
-                        >
+                        <Badge variant="outline" className="bg-[#FCF4D6] text-yellow-700">
                           Unassigned
                         </Badge>
                       )}
@@ -458,7 +492,7 @@ export default function AssignProspectsPage() {
               })}
             </div>
 
-            {filteredProspects.length === 0 && (
+            {prospects.length === 0 && (
               <div className="text-center py-8">
                 <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-muted-foreground">No prospects found</p>
@@ -466,8 +500,37 @@ export default function AssignProspectsPage() {
             )}
           </div>
 
-          <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredProspects.length} of {prospects.length} prospects
+          {/* Pagination footer */}
+          <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="text-sm text-muted-foreground">
+              {total === 0
+                ? "No prospects"
+                : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(
+                    page * PAGE_SIZE,
+                    total
+                  )} of ${total} prospects`}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || isFetching}
+              >
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || isFetching}
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -498,9 +561,7 @@ export default function AssignProspectsPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs">
                     <span>Assigned Prospects:</span>
-                    <span className="font-medium">
-                      {telecallerCounts[tc.id] || 0}
-                    </span>
+                    <span className="font-medium">{telecallerCounts[tc.id] || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span>Mobile:</span>

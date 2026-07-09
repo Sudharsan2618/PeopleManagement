@@ -135,6 +135,65 @@ class ProspectImport(BaseModel):
     prospects: List[ProspectCreate]
 
 
+class ProspectListItem(BaseModel):
+    """Full prospect row for paginated list UIs, plus the latest assignment
+    joined server-side. Carries every prospect column so rich tables (Prospect
+    Management) render without a second fetch; lean consumers just ignore the
+    extra fields."""
+    id: int
+    name: str
+    mobile: str
+    email: Optional[str] = None
+    location: Optional[str] = None
+    sourced_from: Optional[str] = None
+    status: str
+    course_interest: Optional[str] = None
+    parent_name: Optional[str] = None
+    department: Optional[str] = None
+    assigned_to: Optional[int] = None
+    closing_reason: Optional[str] = None
+    tags: Optional[Any] = None
+    lead_source: Optional[Any] = None
+    lead_type: Optional[Any] = None
+    alt_phone: Optional[str] = None
+    secondary_email: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    designation: Optional[str] = None
+    created_by: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    prospect_type: Optional[str] = None
+    company: Optional[str] = None
+    comments: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    is_imported: Optional[bool] = None
+    lead_id: Optional[str] = None
+    # Joined assignment info (latest assignment for this prospect)
+    assigned_telecaller_name: Optional[str] = None
+    assignment_date: Optional[date] = None
+    assignment_dashboard: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PaginatedProspects(BaseModel):
+    items: List[ProspectListItem]
+    total: int
+    page: int
+    page_size: int
+    unassigned_total: int
+
+
+class ProspectStats(BaseModel):
+    total: int
+    assigned: int
+    qualified: int
+    pending: int
+
+
 # ==================== PROSPECT ASSIGNMENTS ====================
 class ProspectAssignmentBase(BaseModel):
     prospect_id: int
@@ -154,6 +213,19 @@ class ProspectAssignment(ProspectAssignmentBase):
 
     class Config:
         from_attributes = True
+
+
+class BulkAssignmentCreate(BaseModel):
+    prospect_ids: List[int]
+    telecaller_id: int
+    assigned_by: int
+    assigned_date: date
+    dashboard: Optional[str] = Field(default="student_admission", max_length=50)
+
+
+class TelecallerAssignmentCount(BaseModel):
+    telecaller_id: int
+    count: int
 
 
 # ==================== CALL LOGS ====================

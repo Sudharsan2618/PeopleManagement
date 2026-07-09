@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { 
   Search,
   Plus,
@@ -88,6 +88,93 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+// Server-paginated recipient picker used by both the Create Campaign sheet and
+// the Inject Recipients dialog. It only ever holds ONE page (50 rows) in memory;
+// "select all filtered" / range selection pull matching ids from the server via
+// fetchAllIds(). `active` gates fetching so the closed dialog does nothing.
+function useRecipientPicker(opts: { active: boolean; excludeCampaignId?: number | null }) {
+  const PAGE_SIZE = 50
+  const [page, setPage] = useState(1)
+  const [searchInput, setSearchInput] = useState("")
+  const [search, setSearch] = useState("")
+  const [status, setStatus] = useState("all")
+  const [tags, setTags] = useState<string[]>([])
+  const [items, setItems] = useState<any[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+
+  // Debounce the search box.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 350)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  // Any filter change resets to page 1.
+  useEffect(() => {
+    setPage(1)
+  }, [search, status, tags])
+
+  const filterParams = useMemo(
+    () => ({
+      search: search || undefined,
+      status: status !== "all" ? status : undefined,
+      tags: tags.length ? tags.join(",") : undefined,
+      excludeCampaignId: opts.excludeCampaignId ?? undefined,
+    }),
+    [search, status, tags, opts.excludeCampaignId]
+  )
+
+  const seq = useRef(0)
+  const fetchPage = useCallback(async () => {
+    const s = ++seq.current
+    setLoading(true)
+    try {
+      const res = await prospectsApi.list({ page, pageSize: PAGE_SIZE, ...filterParams })
+      if (s !== seq.current) return
+      setItems(res.items)
+      setTotal(res.total)
+    } catch {
+      if (s === seq.current) {
+        setItems([])
+        setTotal(0)
+      }
+    } finally {
+      if (s === seq.current) setLoading(false)
+    }
+  }, [page, filterParams])
+
+  // Fetch whenever the dialog is open and page/filters change.
+  useEffect(() => {
+    if (!opts.active) return
+    fetchPage()
+  }, [opts.active, fetchPage])
+
+  const fetchAllIds = useCallback(async () => {
+    const res = await prospectsApi.listIds(filterParams)
+    return res.ids
+  }, [filterParams])
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  return {
+    PAGE_SIZE,
+    page,
+    setPage,
+    totalPages,
+    searchInput,
+    setSearchInput,
+    status,
+    setStatus,
+    tags,
+    setTags,
+    items,
+    total,
+    loading,
+    fetchPage,
+    fetchAllIds,
+  }
+}
+
 export default function WhatsAppAdmin() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("inbox")
@@ -96,7 +183,6 @@ export default function WhatsAppAdmin() {
   const [templates, setTemplates] = useState<any[]>([])
   const [flows, setFlows] = useState<any[]>([])
   const [campaigns, setCampaigns] = useState<any[]>([])
-  const [prospects, setProspects] = useState<any[]>([])
   const [conversations, setConversations] = useState<any[]>([])
   const [selectedChat, setSelectedChat] = useState<any | null>(null)
   const [messages, setMessages] = useState<any[]>([])
@@ -116,6 +202,13 @@ export default function WhatsAppAdmin() {
   useEffect(() => {
     selectedChatRef.current = selectedChat
   }, [selectedChat])
+
+  // Track the active tab in a ref so the SSE/poll callbacks can read it without
+  // re-subscribing — used to skip inbox refreshes while another tab is open.
+  const activeTabRef = useRef(activeTab)
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
 
   // Submissions State
   const [submissions, setSubmissions] = useState<any[]>([])
@@ -165,9 +258,10 @@ export default function WhatsAppAdmin() {
     }
   })
   const [isCustomHeader, setIsCustomHeader] = useState(false)
-  const [searchProspects, setSearchProspects] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
+
+  // Distinct prospect tags for the recipient-picker tag filters (loaded lazily).
+  const [allTags, setAllTags] = useState<string[]>([])
+  const tagsLoadedRef = useRef(false)
   
   // Media Library State
   const [mediaAssets, setMediaAssets] = useState<any[]>([])
@@ -193,15 +287,18 @@ export default function WhatsAppAdmin() {
     totalItems: 0
   })
 
-  // Create Campaign Page/Range state
-  const [prospectsPage, setProspectsPage] = useState(1)
+  // Quick-range inputs for each picker (index range over the filtered set).
   const [rangeStart, setRangeStart] = useState("1")
   const [rangeEnd, setRangeEnd] = useState("500")
-
-  // Inject Page/Range state
-  const [injectPage, setInjectPage] = useState(1)
   const [injectRangeStart, setInjectRangeStart] = useState("1")
   const [injectRangeEnd, setInjectRangeEnd] = useState("500")
+
+  // Server-paginated recipient pickers (one page in memory at a time).
+  const createPicker = useRecipientPicker({ active: isCreateCampaignOpen })
+  const injectPicker = useRecipientPicker({
+    active: isAddingRecipients,
+    excludeCampaignId: targetCampaignId,
+  })
 
   const fetchCampaigns = async (page: number) => {
     try {
@@ -345,11 +442,12 @@ export default function WhatsAppAdmin() {
   const fetchData = async () => {
     try {
       setIsLoading(true)
-      const [tpls, flws, campsData, prospers, convs, assets] = await Promise.all([
+      // Note: prospects are NOT loaded here — the campaign recipient pickers
+      // fetch them server-paginated on demand (see useRecipientPicker).
+      const [tpls, flws, campsData, convs, assets] = await Promise.all([
         whatsappApi.getTemplates(),
         whatsappApi.getFlows(),
         whatsappApi.getCampaigns(1, campaignPagination.pageSize),
-        prospectsApi.getAll(),
         whatsappApi.getConversations(1, 20),
         whatsappApi.getMediaAssets()
       ])
@@ -362,7 +460,6 @@ export default function WhatsAppAdmin() {
         totalPages: campsData.total_pages,
         totalItems: campsData.total
       }))
-      setProspects(prospers)
       setConversations(convs)
       setConversationsPage(1)
       setHasMoreConversations(convs.length === 20)
@@ -378,6 +475,67 @@ export default function WhatsAppAdmin() {
     }
   }
 
+  const fetchMedia = async () => {
+    try {
+      setMediaAssets(await whatsappApi.getMediaAssets())
+    } catch (err) {
+      console.error("Failed to refresh media", err)
+    }
+  }
+
+  // Load the distinct tag list once, the first time a recipient picker opens.
+  useEffect(() => {
+    if ((isCreateCampaignOpen || isAddingRecipients) && !tagsLoadedRef.current) {
+      tagsLoadedRef.current = true
+      prospectsApi.getDistinctTags().then(setAllTags).catch(() => {})
+    }
+  }, [isCreateCampaignOpen, isAddingRecipients])
+
+  // Shared selection helpers for the pickers (operate on newCampaign.recipient_ids).
+  const applyPickerRange = async (
+    picker: ReturnType<typeof useRecipientPicker>,
+    from: string,
+    to: string,
+    isSelect: boolean
+  ) => {
+    const ids = await picker.fetchAllIds()
+    const start = Math.max(1, parseInt(from) || 1) - 1
+    const end = Math.min(ids.length, parseInt(to) || ids.length)
+    if (isNaN(start) || isNaN(end) || start >= end || start < 0) {
+      toast({ title: "Invalid range", description: "Please enter a valid range.", variant: "destructive" })
+      return
+    }
+    const rangeIds = ids.slice(start, end)
+    const rangeSet = new Set(rangeIds)
+    setNewCampaign(prev => ({
+      ...prev,
+      recipient_ids: isSelect
+        ? Array.from(new Set([...prev.recipient_ids, ...rangeIds]))
+        : prev.recipient_ids.filter(id => !rangeSet.has(id)),
+    }))
+    toast({
+      title: isSelect ? "Range Selected" : "Range Deselected",
+      description: `${isSelect ? "Selected" : "Deselected"} prospects from index ${start + 1} to ${end}.`,
+    })
+  }
+
+  const toggleSelectAllFiltered = async (picker: ReturnType<typeof useRecipientPicker>) => {
+    const ids = await picker.fetchAllIds()
+    if (ids.length === 0) return
+    const selected = new Set(newCampaign.recipient_ids)
+    const allSelected = ids.every(id => selected.has(id))
+    const idSet = new Set(ids)
+    setNewCampaign(prev => ({
+      ...prev,
+      recipient_ids: allSelected
+        ? prev.recipient_ids.filter(id => !idSet.has(id))
+        : Array.from(new Set([...prev.recipient_ids, ...ids])),
+    }))
+    toast({
+      title: allSelected ? "Deselected all filtered" : `Selected ${ids.length} filtered prospect(s)`,
+    })
+  }
+
   useEffect(() => {
     fetchData()
 
@@ -388,10 +546,15 @@ export default function WhatsAppAdmin() {
     eventSource.addEventListener("message", (event: any) => {
       try {
         const data = JSON.parse(event.data)
-        // Refresh conversations list (reset to page 1)
-        fetchConversations(1)
-        
-        // Check if currently selected chat matches this incoming message's prospect_id
+        // Only touch the inbox while it's the active tab — no background
+        // refetches when the user is on campaigns/submissions/etc.
+        if (activeTabRef.current !== "inbox") return
+
+        // Merge page-1 conversations in place (keeps already-loaded pages and
+        // scroll position — does NOT truncate the list back to 20).
+        refreshConversationsList()
+
+        // Refresh the open chat only if this event is for it.
         if (selectedChatRef.current && Number(selectedChatRef.current.id) === Number(data.prospect_id)) {
           fetchMessages(selectedChatRef.current.id)
         }
@@ -404,9 +567,10 @@ export default function WhatsAppAdmin() {
       console.warn("SSE connection error, falling back...", err)
     }
 
-    // Fallback polling for backup (15 seconds interval)
+    // Fallback polling (15s) — also gated to the inbox tab.
     const interval = setInterval(() => {
-      fetchConversations(1)
+      if (activeTabRef.current !== "inbox") return
+      refreshConversationsList()
       if (selectedChatRef.current) {
         fetchMessages(selectedChatRef.current.id)
       }
@@ -438,11 +602,30 @@ export default function WhatsAppAdmin() {
   }
 
   const loadNextPage = async () => {
-    if (loadingMore) return
+    if (loadingMore || !hasMoreConversations) return
     setLoadingMore(true)
     const nextPage = conversationsPage + 1
     await fetchConversations(nextPage)
     setLoadingMore(false)
+  }
+
+  // Real-time refresh used by SSE + polling: fetch the latest page 1 and MERGE
+  // it into the current list (update existing, prepend new) instead of replacing
+  // it. This preserves every page the user already scrolled through and keeps
+  // the scroll position stable — fixing the "jumps back to top" bug.
+  const refreshConversationsList = async () => {
+    try {
+      const latest = await whatsappApi.getConversations(1, 20)
+      setConversations(prev => {
+        const byId = new Map(prev.map(c => [c.id, c]))
+        latest.forEach((c: any) => byId.set(c.id, { ...byId.get(c.id), ...c }))
+        return Array.from(byId.values()).sort(
+          (a: any, b: any) =>
+            new Date(b.last_message_at || 0).getTime() -
+            new Date(a.last_message_at || 0).getTime()
+        )
+      })
+    } catch (err) {}
   }
 
   const fetchMessages = async (prospectId: number) => {
@@ -562,57 +745,31 @@ export default function WhatsAppAdmin() {
     }
   }
 
+  // Auto-scroll the chat to the bottom only when it makes sense: when a chat is
+  // freshly opened, or a new message arrives while the user is already near the
+  // bottom. This stops the 15s poll / refetch from yanking the user down while
+  // they're scrolled up reading older messages.
+  const prevChatIdRef = useRef<any>(null)
+  const prevMsgCountRef = useRef(0)
   useEffect(() => {
-    if (scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+    const viewport = scrollRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null
+    if (!viewport) return
+
+    const chatChanged = prevChatIdRef.current !== selectedChat?.id
+    const grew = messages.length > prevMsgCountRef.current
+    const nearBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 120
+
+    if (chatChanged || (grew && nearBottom)) {
+      viewport.scrollTop = viewport.scrollHeight
     }
-  }, [messages])
 
-  const filteredProspects = useMemo(() => {
-    return prospects.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchProspects.toLowerCase()) || p.mobile.includes(searchProspects)
-      const matchesStatus = statusFilter === "all" || p.status === statusFilter
-      const matchesTags = selectedTags.length === 0 || 
-                         (Array.isArray(p.tags) && selectedTags.some(tag => p.tags.includes(tag)))
-      return matchesSearch && matchesStatus && matchesTags
-    })
-  }, [prospects, searchProspects, statusFilter, selectedTags])
+    prevChatIdRef.current = selectedChat?.id
+    prevMsgCountRef.current = messages.length
+  }, [messages, selectedChat])
 
-  const prospectsForInjection = useMemo(() => {
-    // Hide prospects who are already in this specific campaign's message list
-    const existingProspectIds = new Set(campaignMessages.map(m => m.prospect_id))
-    return filteredProspects.filter(p => !existingProspectIds.has(p.id))
-  }, [filteredProspects, campaignMessages])
-
-  const paginatedProspects = useMemo(() => {
-    const startIdx = (prospectsPage - 1) * 500
-    const endIdx = startIdx + 500
-    return filteredProspects.slice(startIdx, endIdx)
-  }, [filteredProspects, prospectsPage])
-
-  const paginatedInjectProspects = useMemo(() => {
-    const startIdx = (injectPage - 1) * 500
-    const endIdx = startIdx + 500
-    return prospectsForInjection.slice(startIdx, endIdx)
-  }, [prospectsForInjection, injectPage])
-
-  useEffect(() => {
-    setProspectsPage(1)
-    setInjectPage(1)
-  }, [searchProspects, statusFilter, selectedTags])
-
-  const allTags = useMemo(() => {
-    const tags = new Set<string>()
-    prospects.forEach(p => {
-      if (Array.isArray(p.tags)) {
-        p.tags.forEach((t: any) => tags.add(t))
-      }
-    })
-    return Array.from(tags).sort()
-  }, [prospects])
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name || !newCampaign.template_name || !newCampaign.language_code || newCampaign.recipient_ids.length === 0) {
@@ -638,7 +795,8 @@ export default function WhatsAppAdmin() {
           default: { type: "document", media_ids: [] as string[], caption: "" }
         }
       })
-      fetchData()
+      // New campaign lands on page 1 (sorted newest first) — refresh just that.
+      fetchCampaigns(1)
     } finally {
       setIsSending(false)
     }
@@ -670,7 +828,7 @@ export default function WhatsAppAdmin() {
       setMediaFile(null)
       setMediaNickname("")
       setIsMediaLibraryOpen(false)
-      fetchData() // Refresh media list
+      fetchMedia() // Refresh media list only
     } catch (err) {
       toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
@@ -683,7 +841,7 @@ export default function WhatsAppAdmin() {
       setIsSending(true)
       await whatsappApi.startCampaign(campaignId)
       toast({ title: "Campaign Started", description: "Bulk messages are being sent in the background." })
-      fetchData()
+      fetchCampaigns(campaignPagination.currentPage)
     } catch (err) {
       toast({ title: "Failed to start", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
@@ -696,7 +854,7 @@ export default function WhatsAppAdmin() {
       setIsSending(true)
       const res = await whatsappApi.resumeCampaign(id)
       toast({ title: "Campaign Resumed", description: res.message })
-      fetchData()
+      fetchCampaigns(campaignPagination.currentPage)
     } catch (err) {
       toast({ title: "Resume failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
@@ -717,63 +875,11 @@ export default function WhatsAppAdmin() {
       ])
       setCampaignDetails(details)
       setCampaignMessages(messages)
-      fetchData()
+      fetchCampaigns(campaignPagination.currentPage)
     } catch (err) {
       toast({ title: "Resend failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
       setIsResendingFailed(false)
-    }
-  }
-
-  const handleSelectRange = (isSelect: boolean) => {
-    const start = Math.max(1, parseInt(rangeStart) || 1) - 1
-    const end = Math.min(filteredProspects.length, parseInt(rangeEnd) || filteredProspects.length)
-    
-    if (isNaN(start) || isNaN(end) || start >= end || start < 0) {
-      toast({ title: "Invalid range", description: "Please enter a valid range.", variant: "destructive" })
-      return
-    }
-
-    const rangeIds = filteredProspects.slice(start, end).map(p => p.id)
-    
-    if (isSelect) {
-      setNewCampaign(prev => ({
-        ...prev,
-        recipient_ids: Array.from(new Set([...prev.recipient_ids, ...rangeIds]))
-      }))
-      toast({ title: "Range Selected", description: `Selected prospects from index ${start + 1} to ${end}.` })
-    } else {
-      setNewCampaign(prev => ({
-        ...prev,
-        recipient_ids: prev.recipient_ids.filter(id => !rangeIds.includes(id))
-      }))
-      toast({ title: "Range Deselected", description: `Deselected prospects from index ${start + 1} to ${end}.` })
-    }
-  }
-
-  const handleSelectInjectRange = (isSelect: boolean) => {
-    const start = Math.max(1, parseInt(injectRangeStart) || 1) - 1
-    const end = Math.min(prospectsForInjection.length, parseInt(injectRangeEnd) || prospectsForInjection.length)
-    
-    if (isNaN(start) || isNaN(end) || start >= end || start < 0) {
-      toast({ title: "Invalid range", description: "Please enter a valid range.", variant: "destructive" })
-      return
-    }
-
-    const rangeIds = prospectsForInjection.slice(start, end).map(p => p.id)
-    
-    if (isSelect) {
-      setNewCampaign(prev => ({
-        ...prev,
-        recipient_ids: Array.from(new Set([...prev.recipient_ids, ...rangeIds]))
-      }))
-      toast({ title: "Range Selected", description: `Selected prospects from index ${start + 1} to ${end}.` })
-    } else {
-      setNewCampaign(prev => ({
-        ...prev,
-        recipient_ids: prev.recipient_ids.filter(id => !rangeIds.includes(id))
-      }))
-      toast({ title: "Range Deselected", description: `Deselected prospects from index ${start + 1} to ${end}.` })
     }
   }
 
@@ -798,7 +904,12 @@ export default function WhatsAppAdmin() {
     try {
       await whatsappApi.deleteCampaign(id)
       toast({ title: "Campaign Deleted" })
-      fetchData()
+      // Stay on the current page unless it just emptied out.
+      fetchCampaigns(
+        campaigns.length === 1 && campaignPagination.currentPage > 1
+          ? campaignPagination.currentPage - 1
+          : campaignPagination.currentPage
+      )
     } catch (err) {
       toast({ title: "Delete failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     }
@@ -864,7 +975,17 @@ export default function WhatsAppAdmin() {
       })
       setIsAddingRecipients(false)
       setNewCampaign({ ...newCampaign, recipient_ids: [] })
-      fetchData()
+      // Refresh the campaigns list counts; if the target campaign's detail view
+      // is open, refresh its details + message list too.
+      fetchCampaigns(campaignPagination.currentPage)
+      if (selectedCampaign && targetCampaignId === selectedCampaign.id) {
+        const [details, msgs] = await Promise.all([
+          whatsappApi.getCampaignDetails(selectedCampaign.id),
+          whatsappApi.getCampaignMessages(selectedCampaign.id),
+        ])
+        setCampaignDetails(details)
+        setCampaignMessages(msgs)
+      }
     } catch (err) {
       toast({ title: "Injection failed", description: err instanceof Error ? err.message : "Error", variant: "destructive" })
     } finally {
@@ -1071,14 +1192,14 @@ export default function WhatsAppAdmin() {
                   </div>
                 </div>
                 
-                <div 
+                <div
                   className="flex-1 overflow-y-auto px-2 pb-6 space-y-0.5"
                   onScroll={(e) => {
                     const target = e.currentTarget;
-                    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 20) {
-                      if (hasMoreConversations && !loadingMore) {
-                        loadNextPage();
-                      }
+                    const reachedBottom =
+                      target.scrollHeight - target.scrollTop - target.clientHeight <= 150;
+                    if (reachedBottom && hasMoreConversations && !loadingMore) {
+                      loadNextPage();
                     }
                   }}
                 >
@@ -1116,6 +1237,22 @@ export default function WhatsAppAdmin() {
                           </div>
                     </div>
                   ))}
+
+                  {loadingMore && (
+                    <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading more…
+                    </div>
+                  )}
+                  {!hasMoreConversations && conversations.length > 0 && (
+                    <div className="py-3 text-center text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                      End of conversations
+                    </div>
+                  )}
+                  {conversations.length === 0 && !isLoading && (
+                    <div className="py-8 text-center text-xs text-muted-foreground">
+                      No conversations yet
+                    </div>
+                  )}
                 </div>
               </Card>
               
@@ -2548,14 +2685,14 @@ export default function WhatsAppAdmin() {
                         <button
                           key={tag}
                           onClick={() => {
-                            setSelectedTags(prev => 
+                            createPicker.setTags(prev =>
                               prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
                             )
                           }}
                           className={cn(
                             "px-3 py-1 rounded-full text-[10px] font-semibold uppercase  transition-all border",
-                            selectedTags.includes(tag) 
-                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-105" 
+                            createPicker.tags.includes(tag)
+                              ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-105"
                               : "bg-white text-slate-500 border-slate-200 hover:border-emerald-600"
                           )}
                         >
@@ -2571,14 +2708,14 @@ export default function WhatsAppAdmin() {
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <Input 
-                      placeholder="Search name or number..." 
-                      value={searchProspects} 
-                      onChange={e => setSearchProspects(e.target.value)}
+                    <Input
+                      placeholder="Search name or number..."
+                      value={createPicker.searchInput}
+                      onChange={e => createPicker.setSearchInput(e.target.value)}
                       className="pl-9 h-10 text-xs border-2"
                     />
                   </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select value={createPicker.status} onValueChange={createPicker.setStatus}>
                     <SelectTrigger className="w-32 h-10 text-xs border-2">
                       <SelectValue />
                     </SelectTrigger>
@@ -2594,21 +2731,15 @@ export default function WhatsAppAdmin() {
 
                 <div className="flex items-center justify-between px-1">
                   <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
-                    Showing {filteredProspects.length} prospects
+                    {createPicker.total.toLocaleString()} prospects match
                   </p>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
-                    onClick={() => {
-                      if (newCampaign.recipient_ids.length === filteredProspects.length) {
-                        setNewCampaign({...newCampaign, recipient_ids: []})
-                      } else {
-                        setNewCampaign({...newCampaign, recipient_ids: filteredProspects.map(p => p.id)})
-                      }
-                    }}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => toggleSelectAllFiltered(createPicker)}
                     className="h-auto p-0 text-[10px] font-semibold uppercase tracking-widest text-emerald-600"
                   >
-                    {newCampaign.recipient_ids.length === filteredProspects.length ? 'Deselect All' : 'Select All Filtered'}
+                    Select All Filtered
                   </Button>
                 </div>
 
@@ -2616,35 +2747,35 @@ export default function WhatsAppAdmin() {
                 <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100/80 space-y-3 shadow-sm">
                   <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
                     <span>Quick Range Selection</span>
-                    <span>Total Filtered: {filteredProspects.length}</span>
+                    <span>Total Filtered: {createPicker.total.toLocaleString()}</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5 flex-1">
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</span>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        max={filteredProspects.length}
+                      <Input
+                        type="number"
+                        min="1"
+                        max={createPicker.total}
                         value={rangeStart}
                         onChange={e => setRangeStart(e.target.value)}
                         className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                       />
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        max={filteredProspects.length}
+                      <Input
+                        type="number"
+                        min="1"
+                        max={createPicker.total}
                         value={rangeEnd}
                         onChange={e => setRangeEnd(e.target.value)}
                         className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                       />
                     </div>
-                    
+
                     <div className="flex gap-1.5 shrink-0">
                       <Button
                         size="sm"
-                        onClick={() => handleSelectRange(true)}
+                        onClick={() => applyPickerRange(createPicker, rangeStart, rangeEnd, true)}
                         className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md shadow-emerald-600/10"
                       >
                         Select Range
@@ -2652,7 +2783,7 @@ export default function WhatsAppAdmin() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleSelectRange(false)}
+                        onClick={() => applyPickerRange(createPicker, rangeStart, rangeEnd, false)}
                         className="h-8 px-2.5 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest"
                       >
                         Deselect Range
@@ -2661,17 +2792,17 @@ export default function WhatsAppAdmin() {
                   </div>
 
                   {/* Pagination Controls */}
-                  {filteredProspects.length > 500 && (
+                  {createPicker.totalPages > 1 && (
                     <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/50">
                       <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                        Page {prospectsPage} of {Math.ceil(filteredProspects.length / 500)} (500 per page)
+                        Page {createPicker.page} of {createPicker.totalPages} ({createPicker.PAGE_SIZE} per page)
                       </div>
                       <div className="flex gap-1">
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={prospectsPage === 1}
-                          onClick={() => setProspectsPage(prev => Math.max(1, prev - 1))}
+                          disabled={createPicker.page === 1 || createPicker.loading}
+                          onClick={() => createPicker.setPage(prev => Math.max(1, prev - 1))}
                           className="h-7 w-7 p-0 rounded-lg border-2"
                         >
                           <ChevronLeft className="h-4 w-4" />
@@ -2679,8 +2810,8 @@ export default function WhatsAppAdmin() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={prospectsPage >= Math.ceil(filteredProspects.length / 500)}
-                          onClick={() => setProspectsPage(prev => prev + 1)}
+                          disabled={createPicker.page >= createPicker.totalPages || createPicker.loading}
+                          onClick={() => createPicker.setPage(prev => prev + 1)}
                           className="h-7 w-7 p-0 rounded-lg border-2"
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -2690,11 +2821,11 @@ export default function WhatsAppAdmin() {
                   )}
                 </div>
 
-                <div className="border rounded-xl overflow-hidden shadow-inner bg-slate-50/30 min-h-[300px]">
+                <div className={cn("border rounded-xl overflow-hidden shadow-inner bg-slate-50/30 min-h-[300px] transition-opacity", createPicker.loading && "opacity-60")}>
                   <div className="divide-y divide-slate-100">
-                    {paginatedProspects.map((prospect: any) => (
-                      <div 
-                        key={prospect.id} 
+                    {createPicker.items.map((prospect: any) => (
+                      <div
+                        key={prospect.id}
                         className={cn(
                           "flex items-center gap-4 p-4 hover:bg-white transition-all group",
                           newCampaign.recipient_ids.includes(prospect.id) && "bg-emerald-50/50"
@@ -2707,12 +2838,12 @@ export default function WhatsAppAdmin() {
                           onChange={(e) => {
                             if (e.target.checked) {
                               setNewCampaign({
-                                ...newCampaign, 
+                                ...newCampaign,
                                 recipient_ids: [...newCampaign.recipient_ids, prospect.id]
                               })
                             } else {
                               setNewCampaign({
-                                ...newCampaign, 
+                                ...newCampaign,
                                 recipient_ids: newCampaign.recipient_ids.filter(id => id !== prospect.id)
                               })
                             }
@@ -2721,7 +2852,7 @@ export default function WhatsAppAdmin() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <label 
+                            <label
                               htmlFor={`prospect-${prospect.id}`}
                               className="font-semibold text-sm text-slate-900 cursor-pointer truncate uppercase "
                             >
@@ -2738,6 +2869,11 @@ export default function WhatsAppAdmin() {
                         </div>
                       </div>
                     ))}
+                    {!createPicker.loading && createPicker.items.length === 0 && (
+                      <div className="p-12 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                        No prospects match
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2899,105 +3035,114 @@ export default function WhatsAppAdmin() {
       </Dialog>
       {/* Add Recipients Modal */}
       <Dialog open={isAddingRecipients} onOpenChange={setIsAddingRecipients}>
-        <DialogContent className="sm:max-w-2xl rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-[#1A1F2B] text-white">
-            <DialogTitle className="text-xl font-semibold uppercase  flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-emerald-400" />
+        <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-4 bg-[#1A1F2B] text-white shrink-0">
+            <DialogTitle className="text-base font-semibold uppercase flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-emerald-400" />
               Inject New Recipients
             </DialogTitle>
-            <DialogDescription className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-1">
+            <DialogDescription className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-0.5">
               Select students to add to the existing campaign flow.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="p-6 space-y-6 bg-white">
+
+          {/* Scrollable middle */}
+          <div className="p-4 space-y-3 bg-white overflow-y-auto flex-1 min-h-0">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input 
-                  placeholder="Search name or number..." 
-                  value={searchProspects} 
-                  onChange={e => setSearchProspects(e.target.value)}
-                  className="pl-9 h-11 border-2 rounded-xl text-sm font-semibold"
+                <Input
+                  placeholder="Search name or number..."
+                  value={injectPicker.searchInput}
+                  onChange={e => injectPicker.setSearchInput(e.target.value)}
+                  className="pl-9 h-10 border-2 rounded-xl text-sm font-semibold"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 h-11 border-2 rounded-xl text-sm font-semibold">
+              <Select value={injectPicker.status} onValueChange={injectPicker.setStatus}>
+                <SelectTrigger className="w-36 h-10 border-2 rounded-xl text-sm font-semibold">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="warm">Warm</SelectItem>
                   <SelectItem value="hot">Hot</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Tag filter */}
+            {allTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {allTags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      injectPicker.setTags(prev =>
+                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                      )
+                    }}
+                    className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase transition-all border",
+                      injectPicker.tags.includes(tag)
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : "bg-white text-slate-500 border-slate-200 hover:border-emerald-600"
+                    )}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center justify-between px-1">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                {prospectsForInjection.length} Available Students
+                {injectPicker.total.toLocaleString()} Available Students
               </p>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={() => {
-                  const allFilteredIds = prospectsForInjection.map(p => p.id);
-                  const currentlySelectedFiltered = newCampaign.recipient_ids.filter(id => allFilteredIds.includes(id));
-                  
-                  if (currentlySelectedFiltered.length === allFilteredIds.length && allFilteredIds.length > 0) {
-                    setNewCampaign({
-                      ...newCampaign,
-                      recipient_ids: newCampaign.recipient_ids.filter(id => !allFilteredIds.includes(id))
-                    });
-                  } else {
-                    const otherSelected = newCampaign.recipient_ids.filter(id => !allFilteredIds.includes(id));
-                    setNewCampaign({
-                      ...newCampaign,
-                      recipient_ids: [...otherSelected, ...allFilteredIds]
-                    });
-                  }
-                }}
+                onClick={() => toggleSelectAllFiltered(injectPicker)}
                 className="h-6 px-3 text-[9px] font-black text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg uppercase tracking-widest"
               >
-                {prospectsForInjection.length > 0 && newCampaign.recipient_ids.filter(id => prospectsForInjection.some(p => p.id === id)).length === prospectsForInjection.length
-                  ? 'Deselect All Filtered' 
-                  : 'Select All Filtered'}
+                Select All Filtered
               </Button>
             </div>
 
             {/* Range Selector & Pagination Controls */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100/80 space-y-3 shadow-sm">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100/80 space-y-2.5 shadow-sm">
               <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
                 <span>Quick Range Selection</span>
-                <span>Total Filtered: {prospectsForInjection.length}</span>
+                <span>Total Filtered: {injectPicker.total.toLocaleString()}</span>
               </div>
-              
+
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 flex-1">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</span>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    max={prospectsForInjection.length}
+                  <Input
+                    type="number"
+                    min="1"
+                    max={injectPicker.total}
                     value={injectRangeStart}
                     onChange={e => setInjectRangeStart(e.target.value)}
                     className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                   />
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    max={prospectsForInjection.length}
+                  <Input
+                    type="number"
+                    min="1"
+                    max={injectPicker.total}
                     value={injectRangeEnd}
                     onChange={e => setInjectRangeEnd(e.target.value)}
                     className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
                   />
                 </div>
-                
+
                 <div className="flex gap-1.5 shrink-0">
                   <Button
                     size="sm"
-                    onClick={() => handleSelectInjectRange(true)}
+                    onClick={() => applyPickerRange(injectPicker, injectRangeStart, injectRangeEnd, true)}
                     className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md shadow-emerald-600/10"
                   >
                     Select Range
@@ -3005,7 +3150,7 @@ export default function WhatsAppAdmin() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleSelectInjectRange(false)}
+                    onClick={() => applyPickerRange(injectPicker, injectRangeStart, injectRangeEnd, false)}
                     className="h-8 px-2.5 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest"
                   >
                     Deselect Range
@@ -3014,17 +3159,17 @@ export default function WhatsAppAdmin() {
               </div>
 
               {/* Pagination Controls */}
-              {prospectsForInjection.length > 500 && (
+              {injectPicker.totalPages > 1 && (
                 <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/50">
                   <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    Page {injectPage} of {Math.ceil(prospectsForInjection.length / 500)} (500 per page)
+                    Page {injectPicker.page} of {injectPicker.totalPages} ({injectPicker.PAGE_SIZE} per page)
                   </div>
                   <div className="flex gap-1">
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={injectPage === 1}
-                      onClick={() => setInjectPage(prev => Math.max(1, prev - 1))}
+                      disabled={injectPicker.page === 1 || injectPicker.loading}
+                      onClick={() => injectPicker.setPage(prev => Math.max(1, prev - 1))}
                       className="h-7 w-7 p-0 rounded-lg border-2"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -3032,8 +3177,8 @@ export default function WhatsAppAdmin() {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={injectPage >= Math.ceil(prospectsForInjection.length / 500)}
-                      onClick={() => setInjectPage(prev => prev + 1)}
+                      disabled={injectPicker.page >= injectPicker.totalPages || injectPicker.loading}
+                      onClick={() => injectPicker.setPage(prev => prev + 1)}
                       className="h-7 w-7 p-0 rounded-lg border-2"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -3043,11 +3188,11 @@ export default function WhatsAppAdmin() {
               )}
             </div>
 
-            <ScrollArea className="h-[300px] border border-slate-100 rounded-2xl p-2 bg-slate-50/30 shadow-inner">
+            <div className={cn("border border-slate-100 rounded-2xl p-2 bg-slate-50/30 shadow-inner transition-opacity", injectPicker.loading && "opacity-60")}>
               <div className="space-y-1">
-                {paginatedInjectProspects.map((prospect: any) => (
-                  <div 
-                    key={prospect.id} 
+                {injectPicker.items.map((prospect: any) => (
+                  <div
+                    key={prospect.id}
                     onClick={() => {
                       if (newCampaign.recipient_ids.includes(prospect.id)) {
                         setNewCampaign({...newCampaign, recipient_ids: newCampaign.recipient_ids.filter(id => id !== prospect.id)})
@@ -3056,7 +3201,7 @@ export default function WhatsAppAdmin() {
                       }
                     }}
                     className={cn(
-                      "flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all",
+                      "flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all",
                       newCampaign.recipient_ids.includes(prospect.id) ? "bg-emerald-600 text-white shadow-lg" : "hover:bg-white text-slate-600"
                     )}
                   >
@@ -3077,29 +3222,30 @@ export default function WhatsAppAdmin() {
                     </Badge>
                   </div>
                 ))}
-                {prospectsForInjection.length === 0 && (
-                  <div className="p-12 text-center">
+                {!injectPicker.loading && injectPicker.items.length === 0 && (
+                  <div className="p-10 text-center">
                     <p className="text-slate-400 font-semibold text-[10px] uppercase tracking-widest">No new students available to add</p>
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
+          </div>
 
-            <div className="flex items-center justify-between px-2 pt-2">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {newCampaign.recipient_ids.length} Selected to add
-              </p>
-              <div className="flex gap-3">
-                <Button variant="ghost" onClick={() => setIsAddingRecipients(false)} className="h-10 px-4 text-[10px] font-black uppercase">Cancel</Button>
-                <Button 
-                  onClick={handleAddRecipients}
-                  disabled={isSending || newCampaign.recipient_ids.length === 0}
-                  className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-200"
-                >
-                  {isSending ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                  Inject Recipients
-                </Button>
-              </div>
+          {/* Fixed footer */}
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-white shrink-0">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {newCampaign.recipient_ids.length} Selected to add
+            </p>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setIsAddingRecipients(false)} className="h-10 px-4 text-[10px] font-black uppercase">Cancel</Button>
+              <Button
+                onClick={handleAddRecipients}
+                disabled={isSending || newCampaign.recipient_ids.length === 0}
+                className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-200"
+              >
+                {isSending ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                Inject Recipients
+              </Button>
             </div>
           </div>
         </DialogContent>

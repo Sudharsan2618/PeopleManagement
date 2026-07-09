@@ -26,6 +26,232 @@ class ProspectService:
         return execute_query(query, fetch="all")
     
     @staticmethod
+    def _build_prospect_filters(
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        assignment: Optional[str] = None,
+        assigned_to: Optional[int] = None,
+        course_interest: Optional[str] = None,
+        tags: Optional[any] = None,
+        exclude_campaign_id: Optional[int] = None,
+    ):
+        """Build the shared WHERE clause (+ params) for prospect list / ids
+        queries. All predicates reference alias `p` (prospects)."""
+        conditions: List[str] = []
+        params: List[any] = []
+
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            conditions.append(
+                "(p.name ILIKE %s OR p.mobile ILIKE %s OR p.email ILIKE %s OR p.location ILIKE %s)"
+            )
+            params.extend([term, term, term, term])
+
+        if assignment == "assigned":
+            conditions.append("p.assigned_to IS NOT NULL")
+        elif assignment == "unassigned":
+            conditions.append("p.assigned_to IS NULL")
+
+        if assigned_to is not None:
+            conditions.append("p.assigned_to = %s")
+            params.append(assigned_to)
+
+        if status and status not in ("all", "assigned", "unassigned"):
+            statuses = [s for s in (status.split(",")) if s]
+            if statuses:
+                conditions.append("p.status = ANY(%s)")
+                params.append(statuses)
+
+        if course_interest:
+            if course_interest in ("Unknown", ""):
+                conditions.append(
+                    "(p.course_interest IS NULL OR p.course_interest = '' OR p.course_interest = 'Unknown')"
+                )
+            else:
+                conditions.append("p.course_interest = %s")
+                params.append(course_interest)
+
+        if tags:
+            tag_list = [t for t in (tags.split(",") if isinstance(tags, str) else tags) if t]
+            if tag_list:
+                # Match if the prospect's tag array contains any of these. Guard
+                # jsonb_typeof so non-array / NULL tags never error.
+                conditions.append(
+                    "(p.tags IS NOT NULL AND jsonb_typeof(p.tags) = 'array' AND EXISTS ("
+                    "SELECT 1 FROM jsonb_array_elements_text(p.tags) AS _t WHERE _t = ANY(%s)))"
+                )
+                params.append(tag_list)
+
+        if exclude_campaign_id is not None:
+            conditions.append(
+                "NOT EXISTS (SELECT 1 FROM whatsapp_messages wm "
+                "WHERE wm.prospect_id = p.id AND wm.campaign_id = %s)"
+            )
+            params.append(exclude_campaign_id)
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        return where_clause, params
+
+    @staticmethod
+    def list_prospects_paginated(
+        page: int = 1,
+        page_size: int = 25,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        assignment: Optional[str] = None,
+        assigned_to: Optional[int] = None,
+        course_interest: Optional[str] = None,
+        tags: Optional[any] = None,
+        exclude_campaign_id: Optional[int] = None,
+    ) -> dict:
+        """Return a filtered, paginated slice of prospects with the latest
+        assignment (telecaller name + date + dashboard) joined in.
+
+        Returns the full prospect column set (so richer list UIs like the
+        Prospect Management table can render every field) plus the joined
+        assignment info — all filtering, searching and the assignment join
+        happen in one SQL round-trip, backed by indexes. This keeps the client
+        from ever pulling the whole prospects / prospect_assignments tables.
+
+        Filters:
+          - search       : substring match on name / mobile / email / location
+          - status       : one or more backend statuses (comma-separated)
+          - assignment   : 'assigned' | 'unassigned'
+          - assigned_to  : a specific telecaller id
+          - course_interest : exact course; 'Unknown'/'' matches NULL/empty
+          - tags         : one or more tags (comma-separated); prospect matches
+                           if its tag array overlaps any of them
+          - exclude_campaign_id : drop prospects already messaged in that campaign
+        """
+        # The latest-assignment join reads prospect_assignments.dashboard, which
+        # is added at runtime. Ensure it exists once (cheap, guarded by a flag).
+        # Lazy import avoids a circular import at module load time.
+        from services.assignment_service import AssignmentService
+        AssignmentService._ensure_assignment_dashboard_column()
+
+        page = max(1, page)
+        page_size = max(1, min(page_size, 200))
+        offset = (page - 1) * page_size
+
+        where_clause, params = ProspectService._build_prospect_filters(
+            search, status, assignment, assigned_to, course_interest,
+            tags, exclude_campaign_id,
+        )
+
+        count_query = f"SELECT COUNT(*) AS total FROM prospects p {where_clause}"
+        total_row = execute_query(count_query, tuple(params), fetch="one")
+        total = total_row["total"] if total_row else 0
+
+        list_query = f"""
+            SELECT
+                p.id, p.name, p.mobile, p.email, p.location, p.sourced_from,
+                p.status, p.course_interest, p.parent_name, p.department,
+                p.assigned_to, p.closing_reason, p.tags, p.lead_source, p.lead_type,
+                p.alt_phone, p.secondary_email, p.city, p.address, p.postal_code,
+                p.designation, p.created_by, p.created_at, p.updated_at,
+                p.prospect_type, p.company, p.comments, p.follow_up_date,
+                p.is_imported, p.lead_id,
+                u.name AS assigned_telecaller_name,
+                la.assigned_date AS assignment_date,
+                la.dashboard AS assignment_dashboard
+            FROM prospects p
+            LEFT JOIN users u ON u.id = p.assigned_to
+            LEFT JOIN LATERAL (
+                SELECT a.assigned_date, a.dashboard
+                FROM prospect_assignments a
+                WHERE a.prospect_id = p.id
+                ORDER BY a.assigned_date DESC, a.created_at DESC
+                LIMIT 1
+            ) la ON TRUE
+            {where_clause}
+            ORDER BY p.updated_at DESC
+            LIMIT %s OFFSET %s
+        """
+        items = execute_query(
+            list_query, tuple(params) + (page_size, offset), fetch="all"
+        )
+
+        # Global unassigned count for the header — independent of the current
+        # filter/page so the "N unassigned" stat stays accurate while paging.
+        unassigned_row = execute_query(
+            "SELECT COUNT(*) AS total FROM prospects WHERE assigned_to IS NULL",
+            fetch="one",
+        )
+        unassigned_total = unassigned_row["total"] if unassigned_row else 0
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "unassigned_total": unassigned_total,
+        }
+
+    @staticmethod
+    def get_prospect_ids(
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        assignment: Optional[str] = None,
+        assigned_to: Optional[int] = None,
+        course_interest: Optional[str] = None,
+        tags: Optional[any] = None,
+        exclude_campaign_id: Optional[int] = None,
+        limit: int = 100000,
+    ) -> dict:
+        """Return just the ids of every prospect matching the given filters, in
+        the same order as list_prospects_paginated. Powers "select all filtered"
+        and range selection in the campaign recipient pickers without shipping
+        the whole prospect payload."""
+        where_clause, params = ProspectService._build_prospect_filters(
+            search, status, assignment, assigned_to, course_interest,
+            tags, exclude_campaign_id,
+        )
+        query = f"""
+            SELECT p.id
+            FROM prospects p
+            {where_clause}
+            ORDER BY p.updated_at DESC
+            LIMIT %s
+        """
+        rows = execute_query(query, tuple(params) + (limit,), fetch="all")
+        ids = [r["id"] for r in rows]
+        return {"ids": ids, "total": len(ids)}
+
+    @staticmethod
+    def get_distinct_tags() -> List[str]:
+        """Distinct tag values across all prospects (for tag filter dropdowns)."""
+        query = """
+            SELECT DISTINCT jsonb_array_elements_text(tags) AS tag
+            FROM prospects
+            WHERE tags IS NOT NULL AND jsonb_typeof(tags) = 'array'
+            ORDER BY tag
+        """
+        rows = execute_query(query, fetch="all")
+        return [r["tag"] for r in rows]
+
+    @staticmethod
+    def get_prospect_stats() -> dict:
+        """Global prospect counters for dashboard/stat cards — computed in one
+        query instead of loading every prospect and counting client-side.
+        'qualified' = backend status 'hot', 'pending' = backend status 'new'
+        (matching the UI status mapping)."""
+        query = """
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE assigned_to IS NOT NULL) AS assigned,
+                COUNT(*) FILTER (WHERE status = 'hot') AS qualified,
+                COUNT(*) FILTER (WHERE status = 'new') AS pending
+            FROM prospects
+        """
+        row = execute_query(query, fetch="one")
+        return {
+            "total": row["total"] if row else 0,
+            "assigned": row["assigned"] if row else 0,
+            "qualified": row["qualified"] if row else 0,
+            "pending": row["pending"] if row else 0,
+        }
+
+    @staticmethod
     def get_prospect_by_id(prospect_id: int) -> Optional[dict]:
         """Get prospect by ID."""
         query = """
