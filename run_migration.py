@@ -8,15 +8,14 @@ from database.connection import get_db_connection
 
 def run_migration():
     try:
-        with open('add_crm_migration.sql', 'r') as f:
+        with open('add_alt_phone_3_migration.sql', 'r') as f:
             sql = f.read()
             
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
-        cur.close()
-        conn.close()
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
+            cur.close()
         print("Migration executed successfully!")
     except Exception as e:
         print(f"Error executing migration: {e}")

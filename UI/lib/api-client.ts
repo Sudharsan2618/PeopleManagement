@@ -17,7 +17,7 @@ export interface User {
 export interface Prospect {
   id: number
   name: string
-  mobile: string
+  mobile?: string
   email?: string
   location?: string
   sourced_from?: string
@@ -34,7 +34,11 @@ export interface Prospect {
   lead_source?: string[]
   lead_type?: string[]
   alt_phone?: string
+  alt_phone_2?: string
+  alt_phone_3?: string
   secondary_email?: string
+  alternative_email?: string
+  college_name?: string
   city?: string
   address?: string
   postal_code?: string
@@ -141,7 +145,7 @@ export interface ProspectAssignment {
 export interface ProspectListItem {
   id: number
   name: string
-  mobile: string
+  mobile?: string
   email?: string
   location?: string
   sourced_from?: string
@@ -155,7 +159,11 @@ export interface ProspectListItem {
   lead_source?: any
   lead_type?: any
   alt_phone?: string
+  alt_phone_2?: string
+  alt_phone_3?: string
   secondary_email?: string
+  alternative_email?: string
+  college_name?: string
   city?: string
   address?: string
   postal_code?: string
@@ -283,7 +291,11 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     createdAt: apiProspect.created_at,
     updated_at: apiProspect.updated_at,
     altPhone: apiProspect.alt_phone || "",
+    altPhone2: apiProspect.alt_phone_2 || "",
+    altPhone3: apiProspect.alt_phone_3 || "",
     secondaryEmail: apiProspect.secondary_email || "",
+    alternativeEmail: apiProspect.alternative_email || "",
+    collegeName: apiProspect.college_name || "",
     city: apiProspect.city || "",
     address: apiProspect.address || "",
     postalCode: apiProspect.postal_code || "",

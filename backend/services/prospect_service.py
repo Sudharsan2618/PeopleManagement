@@ -17,7 +17,8 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
+                   city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id
             FROM prospects
@@ -147,7 +148,8 @@ class ProspectService:
                 p.id, p.name, p.mobile, p.email, p.location, p.sourced_from,
                 p.status, p.course_interest, p.parent_name, p.department,
                 p.assigned_to, p.closing_reason, p.tags, p.lead_source, p.lead_type,
-                p.alt_phone, p.secondary_email, p.city, p.address, p.postal_code,
+                p.alt_phone, p.alt_phone_2, p.alt_phone_3, p.secondary_email, p.alternative_email, p.college_name,
+                p.city, p.address, p.postal_code,
                 p.designation, p.created_by, p.created_at, p.updated_at,
                 p.prospect_type, p.company, p.comments, p.follow_up_date,
                 p.is_imported, p.lead_id,
@@ -257,7 +259,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id
             FROM prospects
@@ -271,7 +273,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id
             FROM prospects
@@ -286,7 +288,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id
             FROM prospects
@@ -301,7 +303,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id
             FROM prospects
@@ -316,7 +318,7 @@ class ProspectService:
         query = """
             SELECT DISTINCT p.id, p.name, p.mobile, p.email, p.location, p.sourced_from, p.status, 
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
-                   p.lead_source, p.lead_type, p.alt_phone, p.secondary_email, p.city, p.address, p.postal_code, p.designation,
+                   p.lead_source, p.lead_type, p.alt_phone, p.alt_phone_2, p.secondary_email, p.city, p.address, p.postal_code, p.designation,
                    p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
                    p.lead_id
             FROM prospects p
@@ -327,14 +329,16 @@ class ProspectService:
         return execute_query(query, (telecaller_id,), fetch="all")
     
     @staticmethod
-    def create_prospect(name: str, mobile: str, email: Optional[str], location: Optional[str],
+    def create_prospect(name: str, mobile: Optional[str], email: Optional[str], location: Optional[str],
                         sourced_from: Optional[str], status: str, course_interest: Optional[str],
-                        created_by: int, parent_name: Optional[str] = None, 
+                        created_by: int, parent_name: Optional[str] = None,
                         department: Optional[str] = None, assigned_to: Optional[int] = None,
                         closing_reason: Optional[str] = None, tags: Optional[any] = None,
                         lead_source: Optional[List[str]] = None, lead_type: Optional[List[str]] = None,
                         prospect_type: Optional[str] = "student_admission",
-                        alt_phone: Optional[str] = None, secondary_email: Optional[str] = None,
+                        alt_phone: Optional[str] = None, alt_phone_2: Optional[str] = None, alt_phone_3: Optional[str] = None,
+                        secondary_email: Optional[str] = None, alternative_email: Optional[str] = None,
+                        college_name: Optional[str] = None,
                         city: Optional[str] = None, address: Optional[str] = None,
                         postal_code: Optional[str] = None, designation: Optional[str] = None,
                         company: Optional[str] = None, comments: Optional[str] = None,
@@ -345,22 +349,24 @@ class ProspectService:
             INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
                                  created_by, parent_name, department, assigned_to, closing_reason, tags,
                                  lead_source, lead_type, prospect_type, created_at, updated_at,
-                                 alt_phone, secondary_email, city, address, postal_code, designation,
+                                 alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
+                                 city, address, postal_code, designation,
                                  company, comments, follow_up_date, is_imported, lead_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
         ist_now = get_ist_now()
         return execute_insert(query, (
-            name, clean_phone_number(mobile), email, location, sourced_from, status, course_interest, 
+            name, clean_phone_number(mobile) if mobile else None, email, location, sourced_from, status, course_interest,
             created_by, parent_name, department, assigned_to, closing_reason,
             json.dumps(tags) if tags else None,
             json.dumps(lead_source) if lead_source else '[]',
             json.dumps(lead_type) if lead_type else '[]',
             prospect_type,
             ist_now, ist_now,
-            alt_phone, secondary_email, city, address, postal_code, designation,
+            alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
+            city, address, postal_code, designation,
             company, comments, follow_up_date, is_imported, lead_id
         ))
     
@@ -372,7 +378,9 @@ class ProspectService:
                         assigned_to: Optional[int] = _UNSET, closing_reason: Optional[str] = _UNSET,
                         tags: Optional[any] = _UNSET, lead_source: Optional[List[str]] = _UNSET,
                         lead_type: Optional[List[str]] = _UNSET,
-                        alt_phone: Optional[str] = _UNSET, secondary_email: Optional[str] = _UNSET,
+                        alt_phone: Optional[str] = _UNSET, alt_phone_2: Optional[str] = _UNSET, alt_phone_3: Optional[str] = _UNSET,
+                        secondary_email: Optional[str] = _UNSET, alternative_email: Optional[str] = _UNSET,
+                        college_name: Optional[str] = _UNSET,
                         city: Optional[str] = _UNSET, address: Optional[str] = _UNSET,
                         postal_code: Optional[str] = _UNSET, designation: Optional[str] = _UNSET,
                         prospect_type: Optional[str] = _UNSET, company: Optional[str] = _UNSET,
@@ -427,9 +435,21 @@ class ProspectService:
         if alt_phone is not _UNSET:
             updates.append("alt_phone = %s")
             params.append(alt_phone)
+        if alt_phone_2 is not _UNSET:
+            updates.append("alt_phone_2 = %s")
+            params.append(alt_phone_2)
+        if alt_phone_3 is not _UNSET:
+            updates.append("alt_phone_3 = %s")
+            params.append(alt_phone_3)
         if secondary_email is not _UNSET:
             updates.append("secondary_email = %s")
             params.append(secondary_email)
+        if alternative_email is not _UNSET:
+            updates.append("alternative_email = %s")
+            params.append(alternative_email)
+        if college_name is not _UNSET:
+            updates.append("college_name = %s")
+            params.append(college_name)
         if city is not _UNSET:
             updates.append("city = %s")
             params.append(city)
@@ -509,17 +529,6 @@ class ProspectService:
             lead_id = prospect.get("lead_id")
             
             # Validate required fields
-            if not mobile:
-                results["failed"] += 1
-                results["details"].append({
-                    "row": row_number,
-                    "name": name,
-                    "mobile": prospect.get("mobile", ""),
-                    "status": "Failed",
-                    "reason": "Missing Required Field: Mobile number is required"
-                })
-                continue
-            
             if not prospect.get("name"):
                 results["failed"] += 1
                 results["details"].append({
@@ -537,91 +546,22 @@ class ProspectService:
                 # Check if lead_id already exists in the database
                 check_query = "SELECT id FROM prospects WHERE lead_id = %s"
                 existing = execute_query(check_query, (lead_id,), fetch="one")
-            if not existing:
-                # Fall back to mobile number check
+            if not existing and mobile:
+                # Fall back to mobile number check if mobile is provided
                 check_query = "SELECT id FROM prospects WHERE mobile = %s"
                 existing = execute_query(check_query, (mobile,), fetch="one")
-            
+
             if existing:
-                if update_existing:
-                    # Update existing prospect instead of skipping
-                    try:
-                        # Build update dict with only non-None values
-                        update_kwargs = {"prospect_id": existing['id']}
-                        if prospect.get("name") is not None:
-                            update_kwargs["name"] = prospect.get("name")
-                        if prospect.get("email") is not None:
-                            update_kwargs["email"] = prospect.get("email")
-                        if prospect.get("location") is not None:
-                            update_kwargs["location"] = prospect.get("location")
-                        if prospect.get("sourced_from") is not None:
-                            update_kwargs["sourced_from"] = prospect.get("sourced_from")
-                        if prospect.get("status") is not None:
-                            update_kwargs["status"] = prospect.get("status")
-                        if prospect.get("course_interest") is not None:
-                            update_kwargs["course_interest"] = prospect.get("course_interest")
-                        if prospect.get("parent_name") is not None:
-                            update_kwargs["parent_name"] = prospect.get("parent_name")
-                        if prospect.get("department") is not None:
-                            update_kwargs["department"] = prospect.get("department")
-                        if prospect.get("tags") is not None:
-                            update_kwargs["tags"] = prospect.get("tags")
-                        if prospect.get("lead_source") is not None:
-                            update_kwargs["lead_source"] = prospect.get("lead_source")
-                        if prospect.get("lead_type") is not None:
-                            update_kwargs["lead_type"] = prospect.get("lead_type")
-                        if prospect.get("alt_phone") is not None:
-                            update_kwargs["alt_phone"] = prospect.get("alt_phone")
-                        if prospect.get("secondary_email") is not None:
-                            update_kwargs["secondary_email"] = prospect.get("secondary_email")
-                        if prospect.get("city") is not None:
-                            update_kwargs["city"] = prospect.get("city")
-                        if prospect.get("address") is not None:
-                            update_kwargs["address"] = prospect.get("address")
-                        if prospect.get("postal_code") is not None:
-                            update_kwargs["postal_code"] = prospect.get("postal_code")
-                        if prospect.get("designation") is not None:
-                            update_kwargs["designation"] = prospect.get("designation")
-                        if prospect.get("company") is not None:
-                            update_kwargs["company"] = prospect.get("company")
-                        if prospect.get("comments") is not None:
-                            update_kwargs["comments"] = prospect.get("comments")
-                        if prospect.get("follow_up_date") is not None:
-                            update_kwargs["follow_up_date"] = prospect.get("follow_up_date")
-                        if prospect.get("lead_id") is not None:
-                            update_kwargs["lead_id"] = prospect.get("lead_id")
-                        
-                        ProspectService.update_prospect(**update_kwargs)
-                        
-                        results["success"] += 1
-                        results["details"].append({
-                            "row": row_number,
-                            "name": name,
-                            "mobile": mobile,
-                            "status": "Updated",
-                            "reason": f"Successfully updated existing prospect (ID: {existing['id']})"
-                        })
-                        continue
-                    except Exception as e:
-                        results["failed"] += 1
-                        results["details"].append({
-                            "row": row_number,
-                            "name": name,
-                            "mobile": mobile,
-                            "status": "Failed",
-                            "reason": f"Update Failed: {str(e)}"
-                        })
-                        continue
-                else:
-                    results["duplicates"] += 1
-                    results["details"].append({
-                        "row": row_number,
-                        "name": name,
-                        "mobile": mobile,
-                        "status": "Skipped",
-                        "reason": f"Duplicate: Prospect already exists in database (ID: {existing['id']})"
-                    })
-                    continue
+                # Always fail if mobile number already exists
+                results["failed"] += 1
+                results["details"].append({
+                    "row": row_number,
+                    "name": name,
+                    "mobile": mobile or "N/A",
+                    "status": "Failed",
+                    "reason": f"Duplicate: Mobile number already exists in database (ID: {existing['id']})"
+                })
+                continue
             
             # Insert the prospect
             try:
@@ -643,7 +583,11 @@ class ProspectService:
                     lead_type=prospect.get("lead_type"),
                     prospect_type=prospect.get("prospect_type", "student_admission"),
                     alt_phone=prospect.get("alt_phone"),
+                    alt_phone_2=prospect.get("alt_phone_2"),
+                    alt_phone_3=prospect.get("alt_phone_3"),
                     secondary_email=prospect.get("secondary_email"),
+                    alternative_email=prospect.get("alternative_email"),
+                    college_name=prospect.get("college_name"),
                     city=prospect.get("city"),
                     address=prospect.get("address"),
                     postal_code=prospect.get("postal_code"),

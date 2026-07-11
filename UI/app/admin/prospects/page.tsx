@@ -645,11 +645,15 @@ export default function AdminProspectsPage() {
                   </TableHead>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>College Name</TableHead>
                   <TableHead>Lead ID</TableHead>
                   <TableHead>Mobile</TableHead>
-                  <TableHead>Alt Phone</TableHead>
+                  <TableHead>Alt Phone 1</TableHead>
+                  <TableHead>Alt Phone 2</TableHead>
+                  <TableHead>Alt Phone 3</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Secondary Email</TableHead>
+                  <TableHead>Alt Email</TableHead>
                   <TableHead>City</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Postal Code</TableHead>
@@ -674,7 +678,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={27} className="h-24 text-center">
+                    <TableCell colSpan={31} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -698,6 +702,7 @@ export default function AdminProspectsPage() {
                           {prospect.id}
                         </TableCell>
                         <TableCell className="font-medium">{prospect.name}</TableCell>
+                        <TableCell>{prospect.college_name || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {prospect.lead_id || <span className="text-slate-300">—</span>}
                         </TableCell>
@@ -707,8 +712,15 @@ export default function AdminProspectsPage() {
                         <TableCell className="font-mono text-sm">
                           {prospect.altPhone || <span className="text-slate-300">—</span>}
                         </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.altPhone2 || <span className="text-slate-300">—</span>}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.altPhone3 || <span className="text-slate-300">—</span>}
+                        </TableCell>
                         <TableCell>{prospect.email || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.secondaryEmail || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.alternativeEmail || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.city || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{prospect.address || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="font-mono text-sm">{prospect.postalCode || <span className="text-slate-300">—</span>}</TableCell>

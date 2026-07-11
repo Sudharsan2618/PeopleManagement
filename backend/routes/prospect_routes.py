@@ -157,7 +157,11 @@ def create_prospect(prospect: ProspectCreate):
             lead_type=prospect.lead_type,
             prospect_type=prospect.prospect_type,
             alt_phone=prospect.alt_phone,
+            alt_phone_2=prospect.alt_phone_2,
+            alt_phone_3=prospect.alt_phone_3,
             secondary_email=prospect.secondary_email,
+            alternative_email=prospect.alternative_email,
+            college_name=prospect.college_name,
             city=prospect.city,
             address=prospect.address,
             postal_code=prospect.postal_code,
@@ -211,8 +215,16 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["lead_type"] = prospect.lead_type
         if prospect.alt_phone is not None:
             update_kwargs["alt_phone"] = prospect.alt_phone
+        if prospect.alt_phone_2 is not None:
+            update_kwargs["alt_phone_2"] = prospect.alt_phone_2
+        if prospect.alt_phone_3 is not None:
+            update_kwargs["alt_phone_3"] = prospect.alt_phone_3
         if prospect.secondary_email is not None:
             update_kwargs["secondary_email"] = prospect.secondary_email
+        if prospect.alternative_email is not None:
+            update_kwargs["alternative_email"] = prospect.alternative_email
+        if prospect.college_name is not None:
+            update_kwargs["college_name"] = prospect.college_name
         if prospect.city is not None:
             update_kwargs["city"] = prospect.city
         if prospect.address is not None:

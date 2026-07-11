@@ -923,7 +923,17 @@ export default function ReportsPage() {
         )}
         {pdfSaActivityData && (
           <ResponsiveContainer id="pdf-sa-chart-activity" width="100%" height="100%">
-            <BarChart data={pdfSaActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#3b82f6"/></BarChart>
+            <BarChart data={pdfSaActivityData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={56}>
+                {pdfSaActivityData.map((entry: any, index: number) => (
+                  <Cell key={`cell-${index}`} fill={entry.name === 'Total Calls' ? '#3b82f6' : entry.name === 'Pending Calls' ? '#f97316' : '#8b5cf6'} />
+                ))}
+                <LabelList dataKey="value" position="top" formatter={(value: number) => value} style={{ fontSize: '12px', fontWeight: 'bold' }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
 
@@ -939,7 +949,17 @@ export default function ReportsPage() {
         )}
         {pdfCcActivityData && (
           <ResponsiveContainer id="pdf-cc-chart-activity" width="100%" height="100%">
-            <BarChart data={pdfCcActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#8b5cf6"/></BarChart>
+            <BarChart data={pdfCcActivityData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={56}>
+                {pdfCcActivityData.map((entry: any, index: number) => (
+                  <Cell key={`cell-${index}`} fill={entry.name === 'Total Calls' ? '#3b82f6' : entry.name === 'Pending Calls' ? '#f97316' : '#8b5cf6'} />
+                ))}
+                <LabelList dataKey="value" position="top" formatter={(value: number) => value} style={{ fontSize: '12px', fontWeight: 'bold' }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
 
@@ -955,7 +975,17 @@ export default function ReportsPage() {
         )}
         {pdfEdiiActivityData && (
           <ResponsiveContainer id="pdf-edii-chart-activity" width="100%" height="100%">
-            <BarChart data={pdfEdiiActivityData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Bar dataKey="value" fill="#06b6d4"/></BarChart>
+            <BarChart data={pdfEdiiActivityData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={56}>
+                {pdfEdiiActivityData.map((entry: any, index: number) => (
+                  <Cell key={`cell-${index}`} fill={entry.name === 'Total Calls' ? '#3b82f6' : entry.name === 'Pending Calls' ? '#f97316' : '#8b5cf6'} />
+                ))}
+                <LabelList dataKey="value" position="top" formatter={(value: number) => value} style={{ fontSize: '12px', fontWeight: 'bold' }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         )}
         
@@ -1625,7 +1655,9 @@ export default function ReportsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Student Name</TableHead>
+                        <TableHead>College Name</TableHead>
                         <TableHead>Mobile</TableHead>
+                        <TableHead>Alt Email</TableHead>
                         <TableHead>Department</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1633,7 +1665,9 @@ export default function ReportsPage() {
                       {visitDoneProspects.map((prospect: any) => (
                         <TableRow key={prospect.id}>
                           <TableCell className="font-medium">{prospect.name}</TableCell>
+                          <TableCell>{prospect.college_name || "-"}</TableCell>
                           <TableCell>{prospect.mobile}</TableCell>
+                          <TableCell>{prospect.alternative_email || "-"}</TableCell>
                           <TableCell>{prospect.department || "-"}</TableCell>
                         </TableRow>
                       ))}
