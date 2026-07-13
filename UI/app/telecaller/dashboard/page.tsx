@@ -615,7 +615,7 @@ export default function TelecallerDashboard() {
     const studentAdmissionCallLogs = callLogs.filter((log) => studentAdmissionIds.has(log.prospect_id))
     const collegeContactCallLogs = callLogs.filter((log) => collegeContactIds.has(log.prospect_id))
     const ediiCallLogs = callLogs.filter((log) => ediiIds.has(log.prospect_id))
-    
+
     // Student admission stats
     const latestLogByProspect = new Map<number, CallLog>()
     studentAdmissionCallLogs.forEach((log) => {
@@ -628,20 +628,20 @@ export default function TelecallerDashboard() {
     const callbackCount = Array.from(latestLogByProspect.values()).filter(
       (log) => log.callback_scheduled_at
     ).length
-    
+
     const todayStudentLogs = studentAdmissionCallLogs.filter((cl: any) => {
       const today = new Date().toISOString().split("T")[0]
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
       return logDate === today
     })
-    
+
     const todayStudentAssignmentCount = studentAdmissionProspects.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
       if (!assignment) return false
       const today = new Date().toISOString().split("T")[0]
       return assignment.assigned_date === today
     }).length
-    
+
     // College contact specific stats
     const collegeContactsToday = collegeContacts.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
@@ -649,27 +649,27 @@ export default function TelecallerDashboard() {
       const today = new Date().toISOString().split("T")[0]
       return assignment.assigned_date === today
     }).length
-    
-    const collegeInterested = collegeContacts.filter((p) => 
+
+    const collegeInterested = collegeContacts.filter((p) =>
       p.outcome === "Interested" || p.status === "Interested"
     ).length
-    
-    const collegeCallbacks = collegeContacts.filter((p) => 
+
+    const collegeCallbacks = collegeContacts.filter((p) =>
       p.callbackDateTime !== null
     ).length
-    
-    const collegePending = collegeContacts.filter((p) => 
-      (p.outcome === "New" || p.status === "New" || 
-       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
+
+    const collegePending = collegeContacts.filter((p) =>
+      (p.outcome === "New" || p.status === "New" ||
+        (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
       p.totalCalls === 0
     ).length
-    
+
     const collegeCallsMade = collegeContactCallLogs.filter((cl: any) => {
       const today = new Date().toISOString().split("T")[0]
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
       return logDate === today
     }).length
-    
+
     // EDII specific stats
     const ediiToday = ediiProspects.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
@@ -677,21 +677,21 @@ export default function TelecallerDashboard() {
       const today = new Date().toISOString().split("T")[0]
       return assignment.assigned_date === today
     }).length
-    
-    const ediiInterested = ediiProspects.filter((p) => 
+
+    const ediiInterested = ediiProspects.filter((p) =>
       p.outcome === "Interested" || p.status === "Interested"
     ).length
-    
-    const ediiCallbacks = ediiProspects.filter((p) => 
+
+    const ediiCallbacks = ediiProspects.filter((p) =>
       p.callbackDateTime !== null
     ).length
-    
-    const ediiPending = ediiProspects.filter((p) => 
-      (p.outcome === "New" || p.status === "New" || 
-       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
+
+    const ediiPending = ediiProspects.filter((p) =>
+      (p.outcome === "New" || p.status === "New" ||
+        (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
       p.totalCalls === 0
     ).length
-    
+
     const ediiCallsMade = ediiCallLogs.filter((cl: any) => {
       const today = new Date().toISOString().split("T")[0]
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
@@ -886,7 +886,7 @@ export default function TelecallerDashboard() {
         (viewMode === "edii" && dashboard === "edii")
 
       if (!matchesViewMode) return false
-      
+
       const matchesSearch =
         prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         prospect.mobile.includes(searchQuery) ||
@@ -951,7 +951,7 @@ export default function TelecallerDashboard() {
         col.hasData = true
         return
       }
-      
+
       col.hasData = filteredProspects.some((prospect) => {
         const value = prospect[col.key as keyof typeof prospect]
         if (Array.isArray(value)) {

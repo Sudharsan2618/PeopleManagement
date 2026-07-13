@@ -126,18 +126,18 @@ const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = 
 }
 
 const hasLeadInfo = (p: Prospect) => {
-  const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+  const sourceArray = Array.isArray(p.lead_source) ? p.lead_source :
     (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
-  const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+  const typeArray = Array.isArray(p.lead_type) ? p.lead_type :
     (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
   return sourceArray.length > 0 || typeArray.length > 0
 }
 
 const isEDII = (p: Prospect) => {
   const EDII_KEYWORDS = ["wedding photography", "video editing", "solar"]
-  const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+  const sourceArray = Array.isArray(p.lead_source) ? p.lead_source :
     (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
-  const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+  const typeArray = Array.isArray(p.lead_type) ? p.lead_type :
     (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
   const hasEDIIKeyword = (arr: string[]) => arr.some(item => EDII_KEYWORDS.some(k => item.toLowerCase().includes(k)))
   const courseInterestMatch = p.course_interest ? EDII_KEYWORDS.some(k => p.course_interest!.toLowerCase().includes(k)) : false
@@ -224,7 +224,7 @@ export default function CallHistoryPage() {
       const exportData = callLogs.filter(log => {
         const logDate = new Date(log.called_at)
         if (logDate < start || logDate > end) return false
-        
+
         if (exportContactMode === "college") {
           return collegeOutcomes.includes(log.outcome)
         } else if (exportContactMode === "edii") {
@@ -539,7 +539,7 @@ export default function CallHistoryPage() {
         if (!p) return false;
         return hasLeadInfo(p) && !isEDII(p)
       })
-      modeCallLogs = callLogs.filter(log => collegeOutcomes.includes(log.outcome) && !EDII_STATUS_KEYS.includes(log.outcome))
+      modeCallLogs = callLogs.filter(log => collegeOutcomes.includes(log.outcome))
     } else if (contactMode === "edii") {
       modeAssignments = assignments.filter((a) => {
         const p = prospects[a.prospect_id]
@@ -622,7 +622,7 @@ export default function CallHistoryPage() {
   // Pending to call
   const pendingLeadsCount = useMemo(() => {
     const assignedProspectIds = new Set(filteredAssignments.map((a) => a.prospect_id))
-    
+
     if (contactMode === "college" || contactMode === "edii") {
       // For college/edii contact: pending if no calls OR last outcome is "New"
       return Object.values(prospects).filter((p) => {
@@ -727,7 +727,7 @@ export default function CallHistoryPage() {
           counts.decision_pending += 1
         } else if (log.outcome === "admission_done") {
           counts.admission_done += 1
-        } 
+        }
         // Check status_after_call for old modal outcomes
         else if (log.outcome === "not_answered") {
           counts.cold_no_response += 1
@@ -921,9 +921,9 @@ export default function CallHistoryPage() {
               {assignments.filter((a) => {
                 const p = prospects[a.prospect_id]
                 if (!p) return false
-                const sourceArray = Array.isArray(p.lead_source) ? p.lead_source : 
+                const sourceArray = Array.isArray(p.lead_source) ? p.lead_source :
                   (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
-                const typeArray = Array.isArray(p.lead_type) ? p.lead_type : 
+                const typeArray = Array.isArray(p.lead_type) ? p.lead_type :
                   (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
                 return !(sourceArray.length > 0 || typeArray.length > 0)
               }).length}
