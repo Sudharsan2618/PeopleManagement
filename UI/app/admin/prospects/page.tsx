@@ -141,6 +141,7 @@ export default function AdminProspectsPage() {
   const [stats, setStats] = useState({ total: 0, assigned: 0, qualified: 0, pending: 0 })
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
+  const [dynamicStatuses, setDynamicStatuses] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isFetching, setIsFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -196,17 +197,53 @@ export default function AdminProspectsPage() {
   }, [])
 
   const fetchReference = useCallback(async () => {
-    const [apiUsers, apiCourses] = await Promise.all([
+    const [apiUsers, apiCourses, apiCourseInterests, apiStatuses] = await Promise.all([
       usersApi.getByRole("telecaller"),
       coursesApi.getAll(),
+      prospectsApi.getDistinctCourseInterests(),
+      prospectsApi.getDistinctStatuses(),
     ])
     setTelecallers(apiUsers.map(adaptApiUserToUiUser))
     setCourses(apiCourses)
+    // Set courses from distinct course interests in prospects
+    if (apiCourseInterests.length > 0) {
+      setCourses(apiCourseInterests.map((course, index) => ({
+        id: index,
+        code: course,
+        name: course,
+      })))
+    }
+    // Set statuses from distinct statuses in prospects
+    if (apiStatuses.length > 0) {
+      // Map backend statuses to UI statuses
+      const uiStatuses = apiStatuses.map(status => {
+        const statusMap: Record<string, string> = {
+          'new': 'Pending',
+          'contacted': 'InProgress',
+          'warm': 'Callback',
+          'hot': 'Qualified',
+          'visit_scheduled': 'Callback',
+          'visit_done': 'InProgress',
+          'admission_done': 'Enrolled',
+          'cold_no_response': 'DNC',
+          'cold_not_interested': 'NotInterested',
+          'lost': 'Archived',
+        }
+        return statusMap[status] || status
+      })
+      // Remove duplicates and filter out empty values
+      const uniqueUiStatuses = [...new Set(uiStatuses)].filter(s => s)
+      // Update the status filter options dynamically
+      if (uniqueUiStatuses.length > 0) {
+        // We'll use this to populate the status dropdown
+        setDynamicStatuses(uniqueUiStatuses)
+      }
+    }
   }, [])
 
   const refreshAfterMutation = useCallback(async () => {
-    await Promise.all([fetchProspects(), fetchStats()])
-  }, [fetchProspects, fetchStats])
+    await Promise.all([fetchProspects(), fetchStats(), fetchReference()])
+  }, [fetchProspects, fetchStats, fetchReference])
 
   // Initial load: reference data + first page + stats.
   useEffect(() => {
@@ -543,12 +580,22 @@ export default function AdminProspectsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="InProgress">In Progress</SelectItem>
-                  <SelectItem value="Callback">Callback</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="NotInterested">Not Interested</SelectItem>
-                  <SelectItem value="DNC">DNC</SelectItem>
+                  {dynamicStatuses.length > 0 ? (
+                    dynamicStatuses.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status === "NotInterested" ? "Not Interested" : status}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="InProgress">In Progress</SelectItem>
+                      <SelectItem value="Callback">Callback</SelectItem>
+                      <SelectItem value="Qualified">Qualified</SelectItem>
+                      <SelectItem value="NotInterested">Not Interested</SelectItem>
+                      <SelectItem value="DNC">DNC</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <Select

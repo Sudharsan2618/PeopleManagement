@@ -232,6 +232,30 @@ class ProspectService:
         return [r["tag"] for r in rows]
 
     @staticmethod
+    def get_distinct_course_interests() -> List[str]:
+        """Distinct course_interest values across all prospects (for course filter dropdowns)."""
+        query = """
+            SELECT DISTINCT course_interest
+            FROM prospects
+            WHERE course_interest IS NOT NULL AND course_interest != ''
+            ORDER BY course_interest
+        """
+        rows = execute_query(query, fetch="all")
+        return [r["course_interest"] for r in rows]
+
+    @staticmethod
+    def get_distinct_statuses() -> List[str]:
+        """Distinct status values across all prospects (for status filter dropdowns)."""
+        query = """
+            SELECT DISTINCT status
+            FROM prospects
+            WHERE status IS NOT NULL AND status != ''
+            ORDER BY status
+        """
+        rows = execute_query(query, fetch="all")
+        return [r["status"] for r in rows]
+
+    @staticmethod
     def get_prospect_stats() -> dict:
         """Global prospect counters for dashboard/stat cards — computed in one
         query instead of loading every prospect and counting client-side.

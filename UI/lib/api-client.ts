@@ -476,6 +476,8 @@ export const prospectsApi = {
     return apiRequest<{ ids: number[]; total: number }>(`/prospects/ids?${qs.toString()}`)
   },
   getDistinctTags: () => apiRequest<string[]>("/prospects/distinct-tags"),
+  getDistinctCourseInterests: () => apiRequest<string[]>("/prospects/distinct-course-interests"),
+  getDistinctStatuses: () => apiRequest<string[]>("/prospects/distinct-statuses"),
   getStats: () => apiRequest<ProspectStats>("/prospects/stats"),
   getById: (id: number) => apiRequest<Prospect>(`/prospects/${id}`),
   getByStatus: (status: string) => apiRequest<Prospect[]>(`/prospects/status/${status}`),

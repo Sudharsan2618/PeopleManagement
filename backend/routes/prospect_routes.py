@@ -87,6 +87,24 @@ def get_distinct_tags():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/distinct-course-interests", response_model=List[str])
+def get_distinct_course_interests():
+    """Distinct course_interest values for course filter dropdowns."""
+    try:
+        return ProspectService.get_distinct_course_interests()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/distinct-statuses", response_model=List[str])
+def get_distinct_statuses():
+    """Distinct status values for status filter dropdowns."""
+    try:
+        return ProspectService.get_distinct_statuses()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stats", response_model=ProspectStats)
 def get_prospect_stats():
     """Global prospect counters for stat cards (single aggregate query)."""
