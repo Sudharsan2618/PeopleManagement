@@ -1920,11 +1920,11 @@ export default function TelecallerDashboard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-designation">Designation</Label>
+                <Label htmlFor="edit-department">Department</Label>
                 <Input
-                  id="edit-designation"
-                  value={editingProspect?.designation || ""}
-                  onChange={(e) => setEditingProspect({ ...editingProspect, designation: e.target.value })}
+                  id="edit-department"
+                  value={editingProspect?.department || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, department: e.target.value })}
                 />
               </div>
             </div>
