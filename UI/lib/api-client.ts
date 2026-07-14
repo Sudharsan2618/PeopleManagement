@@ -494,11 +494,34 @@ export const prospectsApi = {
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
   }),
+  bulkImportValidate: (data: any[]) =>
+    apiRequest<{
+      total: number
+      new: number
+      merge: number
+      invalid_phone: number
+      failed: number
+      details: Array<{
+        row: number
+        name: string
+        mobile: string
+        mobile_valid: boolean
+        action: "new" | "merge" | "fail"
+        matched: { source: string; id?: number; name?: string; course_interest?: string; row?: number } | null
+        reason: string
+      }>
+    }>(`/prospects/bulk-import/validate`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   bulkImport: (data: any[], updateExisting: boolean = false) => {
     const query = updateExisting ? "?update_existing=true" : ""
     return apiRequest<{
       total: number
       success: number
+      imported: number
+      merged: number
+      invalid_phone: number
       duplicates: number
       failed: number
       details: Array<{
@@ -506,6 +529,7 @@ export const prospectsApi = {
         name: string
         mobile: string
         status: string
+        action: string
         reason: string
       }>
     }>(`/prospects/bulk-import${query}`, {
@@ -730,6 +754,18 @@ export const whatsappApi = {
     return apiRequest<any[]>(`/whatsapp/conversations?${params.toString()}`)
   },
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
+  // Direct URL to the inbound-media proxy — usable straight in <audio>/<img>/<video> src
+  // (the API has no auth middleware). The browser caches by media_id.
+  mediaUrl: (mediaId: string) => `${API_BASE_URL}/whatsapp/media/${mediaId}`,
+  // Cloud API number health for the inbox connection badge.
+  getPhoneStatus: () => apiRequest<{
+    connected: boolean
+    display_phone_number?: string
+    verified_name?: string
+    quality_rating?: string
+    messaging_limit_tier?: string | null
+    error?: string
+  }>("/whatsapp/phone-status"),
   getUnreadCount: (telecallerId: number) =>
     apiRequest<{ count: number }>(`/whatsapp/unread-count?telecaller_id=${telecallerId}`),
   getSessionStatus: (prospectId: number) => apiRequest<{

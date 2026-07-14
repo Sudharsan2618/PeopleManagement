@@ -1,10 +1,14 @@
 import os
+import time
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 
 import uuid
+
+# Cloud API number-health cache (5-min TTL) for the inbox connection badge.
+_phone_status_cache = {"data": None, "exp": 0.0}
 
 from utils.phone_utils import format_for_meta
 from database.connection import execute_query, execute_insert
@@ -259,6 +263,74 @@ class WhatsAppService:
         return execute_query("SELECT * FROM whatsapp_media_assets ORDER BY created_at DESC")
 
     @staticmethod
+    def fetch_media(media_id: str):
+        """Resolve a Meta media_id to (streaming_iterator, mime_type).
+
+        Cloud API media isn't a public URL — it's a two-step exchange: look up
+        the media_id to get a short-lived, token-authenticated download URL, then
+        stream the bytes with the same bearer. Used by the inbox media proxy so
+        the browser can play/view inbound voice notes, images and videos.
+
+        Raises LookupError when the media can't be resolved (expired/deleted).
+        """
+        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+        meta = requests.get(f"{BASE_URL}/{media_id}", headers=headers, timeout=15)
+        if meta.status_code != 200:
+            raise LookupError(f"media lookup failed: {meta.status_code} {meta.text[:200]}")
+        info = meta.json()
+        url = info.get("url")
+        mime = info.get("mime_type") or "application/octet-stream"
+        if not url:
+            raise LookupError("media url missing in Meta response")
+        resp = requests.get(url, headers=headers, stream=True, timeout=30)
+        if resp.status_code != 200:
+            raise LookupError(f"media download failed: {resp.status_code}")
+
+        def _iter():
+            try:
+                for chunk in resp.iter_content(chunk_size=64 * 1024):
+                    if chunk:
+                        yield chunk
+            finally:
+                resp.close()
+
+        return _iter(), mime
+
+    @staticmethod
+    def get_phone_status():
+        """Cloud API number health for the inbox header badge (5-min TTL cache).
+
+        Since a Cloud API number has no 'scan-QR / is-it-connected' surface, this
+        surfaces the useful equivalents: the display number, verified name,
+        Meta quality rating (GREEN/YELLOW/RED) and messaging-limit tier.
+        """
+        now = time.time()
+        cached = _phone_status_cache
+        if cached["data"] is not None and cached["exp"] > now:
+            return cached["data"]
+        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+        fields = "display_phone_number,verified_name,quality_rating,messaging_limit_tier"
+        try:
+            resp = requests.get(f"{BASE_URL}/{PHONE_NUMBER_ID}", headers=headers,
+                                params={"fields": fields}, timeout=15)
+            if resp.status_code != 200:
+                data = {"connected": False, "error": f"{resp.status_code}"}
+            else:
+                j = resp.json()
+                data = {
+                    "connected": True,
+                    "display_phone_number": j.get("display_phone_number"),
+                    "verified_name": j.get("verified_name"),
+                    "quality_rating": j.get("quality_rating"),
+                    "messaging_limit_tier": j.get("messaging_limit_tier"),
+                }
+        except requests.RequestException as e:
+            data = {"connected": False, "error": str(e)}
+        cached["data"] = data
+        cached["exp"] = now + 300
+        return data
+
+    @staticmethod
     def get_unread_count(telecaller_id: int):
         """Count a caller's conversations whose most recent message is inbound
         (i.e. the prospect replied and is awaiting a response)."""
@@ -266,16 +338,14 @@ class WhatsAppService:
         row = execute_query(
             """
             SELECT COUNT(*) AS count FROM (
-                SELECT p.id,
-                    (SELECT direction FROM whatsapp_messages
-                       WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) AS last_dir
-                FROM prospects p
-                JOIN prospect_assignments pa
-                    ON pa.prospect_id = p.id AND pa.telecaller_id = %s
-                JOIN whatsapp_messages m ON m.prospect_id = p.id
-                GROUP BY p.id
+                SELECT DISTINCT ON (m.prospect_id) m.prospect_id, m.direction
+                FROM whatsapp_messages m
+                WHERE m.prospect_id IN (
+                    SELECT prospect_id FROM prospect_assignments WHERE telecaller_id = %s
+                )
+                ORDER BY m.prospect_id, m.created_at DESC
             ) t
-            WHERE last_dir = 'inbound'
+            WHERE t.direction = 'inbound'
             """,
             (telecaller_id,),
             fetch="one",

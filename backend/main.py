@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import Settings
 from crypto import decrypt_flow_request, encrypt_flow_response
-from database import db_lifespan
+from database import db_lifespan, get_pool_stats
 from tasks import enqueue_send_prospectus, WorkerSettings, task_complete_lead_and_send_prospectus
 from services.webhook_service import WebhookService
 
@@ -160,6 +160,16 @@ app.include_router(dashboard_routes.router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+async def health_db():
+    """Connection-pool saturation snapshot for ops/diagnostics.
+
+    `checked_out` near `max` signals pool exhaustion (requests will start
+    waiting/erroring) — a cue to raise DB_POOL_MAX_CONN or add a pooler.
+    """
+    return get_pool_stats()
 
 
 # ── /flow ─────────────────────────────────────────────────────────────────────

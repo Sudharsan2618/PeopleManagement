@@ -47,6 +47,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { MessageBubble } from "@/components/whatsapp/message-bubble"
+import { ContactPanel } from "@/components/whatsapp/contact-panel"
+import { ConnectionBadge } from "@/components/whatsapp/connection-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   Sheet, 
@@ -1276,7 +1279,25 @@ export default function WhatsAppAdmin() {
                                 ? `📣 ${conv.ad_headline}`
                                 : (conv.last_message || "No messages yet")}
                             </p>
+                            {(conv.status || conv.assigned_telecaller_name || conv.window_open) && (
+                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                {conv.status && (
+                                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 capitalize font-medium">
+                                    {String(conv.status).replace(/_/g, " ")}
+                                  </Badge>
+                                )}
+                                {conv.window_open && (
+                                  <span className="text-[8px] font-semibold uppercase tracking-wide text-emerald-600">● open</span>
+                                )}
+                                {conv.assigned_telecaller_name && (
+                                  <span className="text-[8px] text-muted-foreground truncate">· {conv.assigned_telecaller_name}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
+                      {conv.unread && (
+                        <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" />
+                      )}
                     </div>
                   ))}
 
@@ -1320,6 +1341,7 @@ export default function WhatsAppAdmin() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <ConnectionBadge />
                         {sessionStatus && (
                           sessionStatus.window_open ? (
                             <Badge variant="green" className="gap-1">
@@ -1353,169 +1375,14 @@ export default function WhatsAppAdmin() {
                           </div>
                           
                           <div className="space-y-6 pb-4">
-                            {messages.map((msg) => {
-                               const isTemplate = msg.body?.toLowerCase().includes("template:")
-                               
-                               const getRealTemplateText = (bodyText: string) => {
-                                 const cleanBody = bodyText.replace(/Template:/i, "").trim()
-                                 const templateName = cleanBody.split(" to ")[0].trim()
-                                 const foundTemplate = templates.find(t => t.name === templateName || t.name === cleanBody)
-                                 if (foundTemplate) {
-                                   const bodyComp = foundTemplate.components?.find((c: any) => c.type === "BODY")
-                                   if (bodyComp?.text) {
-                                     let text = bodyComp.text
-                                     if (selectedChat) {
-                                       text = text.replace(/{{1}}/g, selectedChat.name)
-                                     }
-                                     return text
-                                   }
-                                 }
-                                 return cleanBody
-                               }
-
-                               const getFlowData = (m: any) => {
-                                 if (m.payload && m.message_type === "interactive") {
-                                   let payloadObj = typeof m.payload === "string" ? null : m.payload;
-                                   if (typeof m.payload === "string") {
-                                     try { payloadObj = JSON.parse(m.payload); } catch (e) {}
-                                   }
-                                   const interactive = payloadObj?.interactive;
-                                   if (interactive && interactive.type === "nfm_reply" && interactive.nfm_reply) {
-                                     try { return JSON.parse(interactive.nfm_reply.response_json); } catch (e) {}
-                                   }
-                                 }
-                                 return null;
-                               };
-
-                               const getDocumentData = (m: any) => {
-                                 if (m.payload && m.message_type === "document") {
-                                   let payloadObj = typeof m.payload === "string" ? null : m.payload;
-                                   if (typeof m.payload === "string") {
-                                     try { payloadObj = JSON.parse(m.payload); } catch (e) {}
-                                   }
-                                   return payloadObj?.document;
-                                 }
-                                 return null;
-                               };
-
-                               const flowData = getFlowData(msg);
-                               const docData = getDocumentData(msg);
-
-                               return (
-                                 <div
-                                   key={msg.id}
-                                   className={cn(
-                                     "flex flex-col animate-in fade-in slide-in-from-bottom-1 duration-300",
-                                     msg.direction === "outbound" ? "items-end" : "items-start"
-                                   )}
-                                 >
-                                   <div
-                                     className={cn(
-                                       "max-w-[85%] rounded-lg px-4 py-2.5 text-[13px] relative group border",
-                                       msg.direction === "outbound" 
-                                         ? isTemplate 
-                                           ? "bg-secondary border-border text-foreground rounded-tr-none shadow-none" 
-                                           : "bg-foreground border-border text-background rounded-tr-none shadow-none"
-                                         : "bg-muted border-border text-foreground rounded-tl-none shadow-none"
-                                     )}
-                                   >
-                                     {isTemplate ? (
-                                       <div className="space-y-2">
-                                         <p className="font-medium leading-relaxed">{getRealTemplateText(msg.body)}</p>
-                                         <div className="bg-background p-2 rounded-sm text-[11px] font-normal italic border border-border mt-2">
-                                           Waiting for student interaction...
-                                         </div>
-                                       </div>
-                                    ) : flowData ? (
-                                      <div className="space-y-3 min-w-[280px]">
-                                        <div className="flex items-center gap-2 pb-2 border-b border-border mb-2">
-                                          <FileText className="h-4 w-4 text-success" />
-                                          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Form Submission</span>
-                                          <Badge variant="outline" className="bg-success/15 text-success border-none font-semibold text-[8px] ml-auto">FLOW</Badge>
-                                        </div>
-                                        <div className="space-y-2 text-xs">
-                                          {flowData.full_name && (
-                                            <div className="flex justify-between border-b border-border pb-1">
-                                              <span className="text-muted-foreground font-medium">Name</span>
-                                              <span className="text-foreground font-semibold">{flowData.full_name}</span>
-                                            </div>
-                                          )}
-                                          {flowData.email && (
-                                            <div className="flex justify-between border-b border-border pb-1">
-                                              <span className="text-muted-foreground font-medium">Email</span>
-                                              <span className="text-foreground font-semibold">{flowData.email}</span>
-                                            </div>
-                                          )}
-                                          {flowData.qualification && (
-                                            <div className="flex justify-between border-b border-border pb-1">
-                                              <span className="text-muted-foreground font-medium">Qualification</span>
-                                              <span className="text-foreground font-semibold uppercase">{flowData.qualification.replace('_', ' ')}</span>
-                                            </div>
-                                          )}
-                                          {flowData.degree && (
-                                            <div className="flex justify-between border-b border-border pb-1">
-                                              <span className="text-muted-foreground font-medium">Interested Course</span>
-                                              <span className="text-foreground font-semibold uppercase">{flowData.degree.replace('_', ' ')}</span>
-                                            </div>
-                                          )}
-                                          {flowData.current_status && (
-                                            <div className="flex justify-between border-b border-border pb-1">
-                                              <span className="text-muted-foreground font-medium">Current Status</span>
-                                              <span className="text-foreground font-semibold uppercase">{flowData.current_status}</span>
-                                            </div>
-                                          )}
-                                          {flowData.confirmed && (
-                                            <div className="flex justify-between pt-1">
-                                              <span className="text-muted-foreground font-medium">Confirmed Interest</span>
-                                              <Badge variant="outline" className={cn(
-                                                "border-none text-[9px] font-semibold uppercase",
-                                                flowData.confirmed.toLowerCase() === 'yes' ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
-                                              )}>
-                                                {flowData.confirmed}
-                                              </Badge>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ) : docData ? (
-                                      <div className="flex items-center gap-3 p-2 bg-muted rounded-sm border border-border min-w-[240px]">
-                                        <div className="h-10 w-10 bg-destructive/15 rounded-sm flex items-center justify-center text-destructive">
-                                          <File className="h-5 w-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-semibold text-foreground truncate">{docData.filename || "Document"}</p>
-                                          <p className="text-[9px] text-muted-foreground font-medium uppercase">{docData.mime_type || "PDF File"}</p>
-                                        </div>
-                                        {docData.url && (
-                                          <a 
-                                            href={docData.url} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="p-2 hover:bg-secondary rounded-sm text-muted-foreground hover:text-foreground transition-colors"
-                                          >
-                                            <ExternalLink className="h-4 w-4" />
-                                          </a>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <p className="whitespace-pre-wrap leading-relaxed font-semibold ">{msg.body}</p>
-                                    )}
-                                    
-                                    <div className={cn(
-                                      "text-[9px] mt-2 flex items-center justify-end gap-1.5 font-black uppercase tracking-tighter opacity-60",
-                                      msg.direction === "outbound" ? "text-emerald-100" : "text-slate-400"
-                                    )}>
-                                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                      {msg.direction === "outbound" && (
-                                        <div className="flex -space-x-1">
-                                          <CheckCircle2 className="h-3 w-3" />
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                            {messages.map((msg) => (
+                              <MessageBubble
+                                key={msg.id}
+                                msg={msg}
+                                templates={templates}
+                                contactName={selectedChat?.name}
+                              />
+                            ))}
                           </div>
                         </div>
                       </ScrollArea>
@@ -1588,6 +1455,13 @@ export default function WhatsAppAdmin() {
                   </div>
                 )}
               </Card>
+
+              {/* --- CONTACT PANEL (right) --- */}
+              {selectedChat && (
+                <Card className="w-[300px] h-full hidden lg:flex flex-col overflow-hidden border border-border bg-card shrink-0 rounded-lg shadow-xs">
+                  <ContactPanel chat={selectedChat} />
+                </Card>
+              )}
             </div>
           )}
 

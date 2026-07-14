@@ -12,13 +12,11 @@ from utils.timezone_utils import get_ist_now
 
 
 class AssignmentService:
-    """Service layer for Prospect Assignments table with direct SQL queries."""
+    """Service layer for Prospect Assignments table with direct SQL queries.
 
-    # Set to True once the runtime `dashboard` column has been verified/created,
-    # so we don't run an ALTER TABLE on every single read (catalog lock + round
-    # trip on the hot path). Reset per process — safe because ADD COLUMN IF NOT
-    # EXISTS is idempotent.
-    _dashboard_column_ensured = False
+    The `dashboard` routing column is provisioned by the migration
+    (backend/migrations/optimize_indexes.py), not at runtime.
+    """
 
     DASHBOARD_ALIASES = {
         "student_admission": "student_admission",
@@ -29,22 +27,6 @@ class AssignmentService:
         "college contact": "college_contact",
         "edii": "edii",
     }
-
-    @staticmethod
-    def _ensure_assignment_dashboard_column() -> None:
-        """Ensure the assignment table has a dashboard column for routing.
-
-        Runs at most once per process. Previously this fired on every read,
-        adding a needless DDL statement + catalog lock to every assignment query.
-        """
-        if AssignmentService._dashboard_column_ensured:
-            return
-        query = """
-            ALTER TABLE prospect_assignments
-            ADD COLUMN IF NOT EXISTS dashboard VARCHAR(50) DEFAULT 'student_admission'
-        """
-        execute_update_delete(query)
-        AssignmentService._dashboard_column_ensured = True
 
     @staticmethod
     def normalize_dashboard(value: Optional[str]) -> str:
@@ -58,7 +40,6 @@ class AssignmentService:
     @staticmethod
     def get_all_assignments() -> List[dict]:
         """Get all prospect assignments."""
-        AssignmentService._ensure_assignment_dashboard_column()
         query = """
             SELECT id, prospect_id, telecaller_id, assigned_by, assigned_date, dashboard, created_at
             FROM prospect_assignments
@@ -69,7 +50,6 @@ class AssignmentService:
     @staticmethod
     def get_assignment_by_id(assignment_id: int) -> Optional[dict]:
         """Get assignment by ID."""
-        AssignmentService._ensure_assignment_dashboard_column()
         query = """
             SELECT id, prospect_id, telecaller_id, assigned_by, assigned_date, dashboard, created_at
             FROM prospect_assignments
@@ -80,7 +60,6 @@ class AssignmentService:
     @staticmethod
     def get_assignments_by_telecaller(telecaller_id: int, assigned_date: Optional[date] = None) -> List[dict]:
         """Get assignments for a specific telecaller, optionally filtered by date."""
-        AssignmentService._ensure_assignment_dashboard_column()
         if assigned_date:
             query = """
                 SELECT id, prospect_id, telecaller_id, assigned_by, assigned_date, dashboard, created_at
@@ -101,7 +80,6 @@ class AssignmentService:
     @staticmethod
     def get_assignments_by_prospect(prospect_id: int) -> List[dict]:
         """Get all assignments for a specific prospect."""
-        AssignmentService._ensure_assignment_dashboard_column()
         query = """
             SELECT id, prospect_id, telecaller_id, assigned_by, assigned_date, dashboard, created_at
             FROM prospect_assignments
@@ -113,7 +91,6 @@ class AssignmentService:
     @staticmethod
     def get_assignment_by_prospect_and_date(prospect_id: int, assigned_date: date) -> Optional[dict]:
         """Get assignment for a prospect on a specific date."""
-        AssignmentService._ensure_assignment_dashboard_column()
         query = """
             SELECT id, prospect_id, telecaller_id, assigned_by, assigned_date, dashboard, created_at
             FROM prospect_assignments
@@ -124,7 +101,6 @@ class AssignmentService:
     @staticmethod
     def create_assignment(prospect_id: int, telecaller_id: int, assigned_by: int, assigned_date: date, dashboard: Optional[str] = None) -> int:
         """Create a new prospect assignment and persist the selected dashboard."""
-        AssignmentService._ensure_assignment_dashboard_column()
         dashboard_value = AssignmentService.normalize_dashboard(dashboard)
         query = """
             INSERT INTO prospect_assignments (prospect_id, telecaller_id, assigned_by, assigned_date, dashboard, created_at)
@@ -150,7 +126,6 @@ class AssignmentService:
         the lead instead of failing, then syncs prospects.assigned_to in one
         bulk UPDATE. Both statements share one transaction (all-or-nothing).
         """
-        AssignmentService._ensure_assignment_dashboard_column()
         if not prospect_ids:
             return 0
 

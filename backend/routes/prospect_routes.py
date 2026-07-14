@@ -282,6 +282,20 @@ def delete_prospect(prospect_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/bulk-import/validate")
+def validate_bulk_import(data: List[ProspectCreate]):
+    """Dry-run validation of an import batch (no writes).
+
+    Classifies each row as new / merge / invalid_phone / fail so the import
+    preview can show the user exactly what will happen before committing.
+    """
+    try:
+        prospects_dicts = [p.model_dump() for p in data]
+        return ProspectService.validate_bulk_prospects(prospects_dicts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/bulk-import", status_code=201)
 def bulk_import_prospects(data: List[ProspectCreate], update_existing: bool = Query(False)):
     """Bulk import prospects.

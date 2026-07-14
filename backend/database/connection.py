@@ -20,6 +20,12 @@ log = logging.getLogger(__name__)
 # NOTE for Cloud Run: connect_timeout covers TCP only — DNS+SSL handshake can
 # stall indefinitely without sslmode set. Render.com PG requires SSL, so we
 # pin sslmode=require for deterministic, fast handshake on cold start.
+# statement_timeout caps any single query so a runaway can't pin a pooled
+# connection forever; idle_in_transaction_session_timeout reclaims connections
+# left mid-transaction. Both are server-side, in ms, and overridable via env.
+STATEMENT_TIMEOUT_MS = os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000")
+IDLE_TX_TIMEOUT_MS = os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000")
+
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", "5432"),
@@ -28,15 +34,28 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD", "password"),
     "connect_timeout": 30,
     "sslmode": os.getenv("DB_SSLMODE", "require"),
-    "options": "-c timezone=Asia/Kolkata"
+    "options": (
+        "-c timezone=Asia/Kolkata "
+        f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
+        f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}"
+    ),
+    # TCP keepalives so idle sockets to the remote DB don't silently go stale
+    # between requests (complements the liveness check in getconn()).
+    "keepalives": 1,
+    "keepalives_idle": 30,
+    "keepalives_interval": 10,
+    "keepalives_count": 3,
 }
 
 log.info("🔧 PostgreSQL config loaded: host=%s db=%s user=%s sslmode=%s", DB_CONFIG["host"], DB_CONFIG["database"], DB_CONFIG["user"], DB_CONFIG["sslmode"])
 
 # ── Pool tuning ───────────────────────────────────────────────────────────────
 # minconn=1 keeps cold-start work small — only one connection opened at init.
-POOL_MIN_CONN = 1
-POOL_MAX_CONN = 20
+# maxconn is PER PROCESS: with N app instances/workers the DB sees N*maxconn
+# real connections, so size it to (plan max_connections / expected instances)
+# via DB_POOL_MAX_CONN rather than hardcoding.
+POOL_MIN_CONN = int(os.getenv("DB_POOL_MIN_CONN", "1"))
+POOL_MAX_CONN = int(os.getenv("DB_POOL_MAX_CONN", "20"))
 
 
 # ── Safe Connection Pool ─────────────────────────────────────────────────────
@@ -160,6 +179,20 @@ def init_pool():
         except Exception as e:
             log.error(f"❌ Failed to initialize PostgreSQL Pool: {e}")
             raise e
+
+
+def get_pool_stats() -> dict:
+    """Return pool saturation stats for the /health/db diagnostics route."""
+    if _pool is None:
+        return {"initialized": False, "checked_out": 0, "max": POOL_MAX_CONN, "min": POOL_MIN_CONN}
+    stats = _pool.stats
+    return {
+        "initialized": True,
+        "checked_out": stats["checked_out"],
+        "max": stats["max"],
+        "min": POOL_MIN_CONN,
+        "available": max(0, stats["max"] - stats["checked_out"]),
+    }
 
 
 def close_pool():

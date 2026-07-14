@@ -1,5 +1,6 @@
 import os
 from fastapi import APIRouter, HTTPException, Body, Request, Query, File, UploadFile
+from fastapi.responses import StreamingResponse
 from services.whatsapp_service import WhatsAppService
 from typing import List, Optional
 
@@ -243,7 +244,8 @@ def get_conversations(page: int = Query(1), page_size: int = Query(20),
             cur = conn.cursor(cursor_factory=RealDictCursor)
             try:
                 cur.execute(f"""
-                    SELECT p.id, p.name, p.mobile,
+                    SELECT p.id, p.name, p.mobile, p.status,
+                           u.name AS assigned_telecaller_name,
                            MAX(m.created_at) as last_message_at,
                            MAX(m.created_at) FILTER (WHERE m.direction = 'inbound') as last_inbound_at,
                            (SELECT direction FROM whatsapp_messages
@@ -265,9 +267,10 @@ def get_conversations(page: int = Query(1), page_size: int = Query(20),
                             FROM whatsapp_messages WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_message
                     FROM prospects p
                     JOIN whatsapp_messages m ON p.id = m.prospect_id
+                    LEFT JOIN users u ON u.id = p.assigned_to
                     {scope_join}
                     {where_sql}
-                    GROUP BY p.id, p.name, p.mobile
+                    GROUP BY p.id, p.name, p.mobile, p.status, u.name
                     ORDER BY last_message_at DESC NULLS LAST
                     LIMIT %s OFFSET %s
                 """, tuple(params))
@@ -448,6 +451,37 @@ def get_media_assets():
     """Get all media assets from the library."""
     try:
         return WhatsAppService.get_media_assets()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/media/{media_id}")
+def stream_media(media_id: str):
+    """Proxy-stream an inbound Cloud API media object (voice/image/video/doc).
+
+    Cloud API media can't be fetched by the browser directly (token-authed,
+    short-lived URL), so we resolve the media_id server-side and stream the
+    bytes. Browser-cached by media_id so replays don't re-hit Meta.
+    """
+    try:
+        stream, mime = WhatsAppService.fetch_media(media_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Media not found or expired")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Media fetch error: {e}")
+    return StreamingResponse(
+        stream,
+        media_type=mime,
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
+
+
+@router.get("/phone-status")
+def phone_status():
+    """Cloud API number health (number, verified name, quality rating, tier)
+    for the inbox connection badge."""
+    try:
+        return WhatsAppService.get_phone_status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
