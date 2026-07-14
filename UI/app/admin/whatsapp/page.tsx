@@ -199,6 +199,14 @@ export default function WhatsAppAdmin() {
   const [loadingMore, setLoadingMore] = useState(false)
   const selectedChatRef = useRef<any>(null)
 
+  // Inbox source filter: 'all' or 'ad' (Click-to-WhatsApp ad leads only).
+  // A ref lets the SSE/poll callbacks read the current value without re-subscribing.
+  const [inboxSource, setInboxSource] = useState<"all" | "ad">("all")
+  const inboxSourceRef = useRef(inboxSource)
+  useEffect(() => {
+    inboxSourceRef.current = inboxSource
+  }, [inboxSource])
+
   useEffect(() => {
     selectedChatRef.current = selectedChat
   }, [selectedChat])
@@ -582,9 +590,9 @@ export default function WhatsAppAdmin() {
     }
   }, [])
 
-  const fetchConversations = async (page = 1) => {
+  const fetchConversations = async (page = 1, source: "all" | "ad" = inboxSourceRef.current) => {
     try {
-      const convs = await whatsappApi.getConversations(page, 20)
+      const convs = await whatsappApi.getConversations(page, 20, undefined, source === "all" ? undefined : source)
       if (page === 1) {
         setConversations(convs)
         setConversationsPage(1)
@@ -615,7 +623,8 @@ export default function WhatsAppAdmin() {
   // the scroll position stable — fixing the "jumps back to top" bug.
   const refreshConversationsList = async () => {
     try {
-      const latest = await whatsappApi.getConversations(1, 20)
+      const source = inboxSourceRef.current
+      const latest = await whatsappApi.getConversations(1, 20, undefined, source === "all" ? undefined : source)
       setConversations(prev => {
         const byId = new Map(prev.map(c => [c.id, c]))
         latest.forEach((c: any) => byId.set(c.id, { ...byId.get(c.id), ...c }))
@@ -1185,10 +1194,36 @@ export default function WhatsAppAdmin() {
                   </div>
                   <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input 
-                      placeholder="Search prospects..." 
-                      className="pl-9 h-8 bg-muted border border-border rounded-sm text-xs placeholder:text-muted-foreground focus-visible:ring-primary/20 transition-all font-sans font-normal" 
+                    <Input
+                      placeholder="Search prospects..."
+                      className="pl-9 h-8 bg-muted border border-border rounded-sm text-xs placeholder:text-muted-foreground focus-visible:ring-primary/20 transition-all font-sans font-normal"
                     />
+                  </div>
+
+                  {/* Source filter: All vs Click-to-WhatsApp ad leads */}
+                  <div className="mt-3 flex gap-1 rounded-md bg-muted p-0.5">
+                    {([
+                      { key: "all", label: "All" },
+                      { key: "ad", label: "From Ads" },
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.key}
+                        onClick={() => {
+                          if (inboxSource === opt.key) return
+                          setInboxSource(opt.key)
+                          setSelectedChat(null)
+                          fetchConversations(1, opt.key)
+                        }}
+                        className={cn(
+                          "flex-1 h-7 rounded-[5px] text-[10px] font-semibold uppercase tracking-wider transition-all",
+                          inboxSource === opt.key
+                            ? "bg-card text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 
@@ -1224,15 +1259,22 @@ export default function WhatsAppAdmin() {
                       </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start mb-1">
-                              <span className="font-semibold text-sm truncate text-foreground">
-                                {conv.name}
+                              <span className="font-semibold text-sm truncate text-foreground flex items-center gap-1.5">
+                                <span className="truncate">{conv.name}</span>
+                                {conv.from_ad && (
+                                  <Badge className="shrink-0 bg-[#EDF5FF] text-blue-700 border-none text-[8px] px-1 py-0 h-3.5 font-bold uppercase tracking-wider">
+                                    Ad
+                                  </Badge>
+                                )}
                               </span>
                               <span className="text-[9px] font-normal text-muted-foreground tracking-widest">
                                 {conv.last_message_at ? new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                               </span>
                             </div>
                             <p className="text-[11px] truncate font-normal leading-none text-muted-foreground opacity-80">
-                              {conv.last_message || "No messages yet"}
+                              {conv.from_ad && conv.ad_headline
+                                ? `📣 ${conv.ad_headline}`
+                                : (conv.last_message || "No messages yet")}
                             </p>
                           </div>
                     </div>

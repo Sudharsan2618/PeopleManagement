@@ -709,9 +709,10 @@ export const whatsappApi = {
   getCampaigns: (page: number = 1, pageSize: number = 10) => apiRequest<any>(`/whatsapp/campaigns?page=${page}&page_size=${pageSize}`),
   getCampaignDetails: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`),
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
-  getConversations: (page: number = 1, pageSize: number = 20, telecallerId?: number) => {
+  getConversations: (page: number = 1, pageSize: number = 20, telecallerId?: number, source?: string) => {
     const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
     if (telecallerId != null) params.append("telecaller_id", String(telecallerId))
+    if (source) params.append("source", source)
     return apiRequest<any[]>(`/whatsapp/conversations?${params.toString()}`)
   },
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),

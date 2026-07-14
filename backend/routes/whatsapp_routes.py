@@ -212,21 +212,32 @@ async def handle_webhook(request: Request):
 
 @router.get("/conversations")
 def get_conversations(page: int = Query(1), page_size: int = Query(20),
-                      telecaller_id: Optional[int] = Query(None)):
+                      telecaller_id: Optional[int] = Query(None),
+                      source: Optional[str] = Query(None, description="'ad' to show only Click-to-WhatsApp ad leads")):
     """Get prospects with WhatsApp activity.
 
     Pass telecaller_id to restrict to that caller's assigned prospects.
+    Pass source='ad' to show only conversations sourced from a Click-to-WhatsApp
+    ad (detected via the stored referral object on any inbound message).
     Each row carries last_direction (for the unread signal — a conversation is
-    unread when its most recent message is inbound) and window_open (24h CSW)."""
+    unread when its most recent message is inbound), window_open (24h CSW), and
+    from_ad / ad_headline for the ad-lead badge."""
     try:
         from database.connection import get_db_connection
         from psycopg2.extras import RealDictCursor
         offset = (page - 1) * page_size
         scope_join = ""
+        where_clauses = []
         params = []
         if telecaller_id is not None:
             scope_join = "JOIN prospect_assignments pa ON pa.prospect_id = p.id AND pa.telecaller_id = %s"
             params.append(telecaller_id)
+        if source == "ad":
+            where_clauses.append(
+                "EXISTS (SELECT 1 FROM whatsapp_messages wm3 "
+                "WHERE wm3.prospect_id = p.id AND wm3.payload -> 'referral' IS NOT NULL)"
+            )
+        where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
         params.extend([page_size, offset])
         with get_db_connection() as conn:
             cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -237,6 +248,11 @@ def get_conversations(page: int = Query(1), page_size: int = Query(20),
                            MAX(m.created_at) FILTER (WHERE m.direction = 'inbound') as last_inbound_at,
                            (SELECT direction FROM whatsapp_messages
                               WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) as last_direction,
+                           EXISTS (SELECT 1 FROM whatsapp_messages wm2
+                              WHERE wm2.prospect_id = p.id AND wm2.payload -> 'referral' IS NOT NULL) as from_ad,
+                           (SELECT wm4.payload -> 'referral' ->> 'headline' FROM whatsapp_messages wm4
+                              WHERE wm4.prospect_id = p.id AND wm4.payload -> 'referral' IS NOT NULL
+                              ORDER BY wm4.created_at DESC LIMIT 1) as ad_headline,
                            (SELECT
                                 CASE
                                     WHEN body = '' AND message_type = 'interactive' THEN 'Form Submitted'
@@ -250,6 +266,7 @@ def get_conversations(page: int = Query(1), page_size: int = Query(20),
                     FROM prospects p
                     JOIN whatsapp_messages m ON p.id = m.prospect_id
                     {scope_join}
+                    {where_sql}
                     GROUP BY p.id, p.name, p.mobile
                     ORDER BY last_message_at DESC NULLS LAST
                     LIMIT %s OFFSET %s

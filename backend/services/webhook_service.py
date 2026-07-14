@@ -76,11 +76,45 @@ class WebhookService:
 
     @staticmethod
     def _handle_incoming_message(message: dict, contacts: list):
-        """Save inbound message and link to prospect."""
+        """Save inbound message and link to prospect.
+
+        Also captures two things Meta sends that we previously dropped:
+          - contacts[].profile.name : the sender's WhatsApp display name, so
+            new contacts show a real name instead of "WhatsApp Contact".
+          - message.referral        : the Click-to-WhatsApp (CTWA) ad object
+            present on the first message after an ad click, so ad leads are
+            identifiable in the inbox.
+        The message's real `timestamp` is used for created_at so the inbox
+        orders correctly even under out-of-order / retried webhooks.
+        """
         from_mobile = clean_phone_number(message.get("from")) # Format: 10 digits
         meta_id = message.get("id")
         msg_type = message.get("type")
         body = ""
+
+        # Sender's WhatsApp profile name (match by wa_id, else first contact).
+        profile_name = None
+        for c in (contacts or []):
+            wa_id = str(c.get("wa_id", ""))
+            if from_mobile and wa_id.endswith(from_mobile[-10:]):
+                profile_name = (c.get("profile") or {}).get("name")
+                break
+        if not profile_name and contacts:
+            profile_name = (contacts[0].get("profile") or {}).get("name")
+        profile_name = (profile_name or "").strip() or None
+
+        # Click-to-WhatsApp ad referral (only on the first post-click message).
+        referral = message.get("referral") or None
+        is_ad = referral is not None
+
+        # Prefer the message's real timestamp over insert time for ordering.
+        created_at = get_ist_now()
+        ts = message.get("timestamp")
+        if ts:
+            try:
+                created_at = datetime.fromtimestamp(int(ts), tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Asia/Kolkata"))
+            except Exception:
+                pass
         
         if msg_type == "text":
             body = message.get("text", {}).get("body", "")
@@ -129,6 +163,7 @@ class WebhookService:
         with get_db_connection() as conn:
             cur = conn.cursor()
             try:
+                now = get_ist_now()
                 # 1. Find prospect by mobile
                 # WhatsApp mobile might have 91 prefix, database might not, or vice versa
                 # We'll try to match the last 10 digits
@@ -137,18 +172,48 @@ class WebhookService:
                     (f"%{from_mobile[-10:]}",)
                 )
                 prospect = cur.fetchone()
-                
+
                 if not prospect:
-                    # Auto-create if it's a new contact
-                    now = get_ist_now()
+                    # Auto-create a contact — use the real WhatsApp name and flag
+                    # ad leads with sourced_from/lead_source.
+                    new_name = profile_name or "WhatsApp Contact"
                     cur.execute(
-                        "INSERT INTO prospects (name, mobile, status, created_at, updated_at) VALUES (%s, %s, 'new', %s, %s) RETURNING id",
-                        ("WhatsApp Contact", from_mobile, 'new', now, now)
+                        """
+                        INSERT INTO prospects (name, mobile, status, sourced_from, lead_source, created_at, updated_at)
+                        VALUES (%s, %s, 'new', %s, %s, %s, %s) RETURNING id
+                        """,
+                        (
+                            new_name,
+                            from_mobile,
+                            'facebook_ad' if is_ad else None,
+                            json.dumps(['facebook_ad']) if is_ad else '[]',
+                            now,
+                            now,
+                        )
                     )
                     prospect_id = cur.fetchone()[0]
                 else:
                     prospect_id = prospect[0]
-                
+                    # Backfill the real name over the generic placeholder (never
+                    # clobber a name a human/import already set), and stamp the ad
+                    # source if this is a CTWA lead.
+                    if profile_name:
+                        cur.execute(
+                            """
+                            UPDATE prospects
+                            SET name = CASE WHEN name IS NULL OR name = '' OR name = 'WhatsApp Contact'
+                                            THEN %s ELSE name END,
+                                sourced_from = CASE WHEN %s THEN COALESCE(sourced_from, 'facebook_ad') ELSE sourced_from END
+                            WHERE id = %s
+                            """,
+                            (profile_name, is_ad, prospect_id)
+                        )
+                    elif is_ad:
+                        cur.execute(
+                            "UPDATE prospects SET sourced_from = COALESCE(sourced_from, 'facebook_ad') WHERE id = %s",
+                            (prospect_id,)
+                        )
+
                 # 2. Find last campaign_id to keep context (optional but good for tracking)
                 cur.execute(
                     "SELECT campaign_id FROM whatsapp_messages WHERE prospect_id = %s AND campaign_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
@@ -157,13 +222,14 @@ class WebhookService:
                 last_campaign = cur.fetchone()
                 campaign_id = last_campaign[0] if last_campaign else None
 
-                # 3. Save Message
+                # 3. Save Message (raw payload keeps the full referral object for
+                # the inbox's ad detection; created_at uses the real msg time).
                 cur.execute(
                     """
                     INSERT INTO whatsapp_messages (prospect_id, campaign_id, meta_message_id, direction, message_type, status, body, payload, created_at)
                     VALUES (%s, %s, %s, %s, %s, 'delivered', %s, %s, %s)
                     """,
-                    (prospect_id, campaign_id, meta_id, 'inbound', msg_type, body, json.dumps(message), get_ist_now())
+                    (prospect_id, campaign_id, meta_id, 'inbound', msg_type, body, json.dumps(message), created_at)
                 )
                 conn.commit()
             except Exception as e:
