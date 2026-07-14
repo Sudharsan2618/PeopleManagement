@@ -394,6 +394,33 @@ const normalizeDashboard = (value: unknown): "student_admission" | "college_cont
   return "student_admission"
 }
 
+const normalizeStatus = (value: string): string => {
+  if (typeof value !== "string") return ""
+  
+  // Convert to lowercase
+  let normalized = value.toLowerCase()
+  
+  // Remove invisible whitespace (non-breaking spaces, zero-width spaces, etc.)
+  normalized = normalized.replace(/[\u00A0\u200B\u200C\u200D\u2060\uFEFF]/g, "")
+  
+  // Trim leading and trailing spaces
+  normalized = normalized.trim()
+  
+  // Replace multiple spaces with a single space
+  normalized = normalized.replace(/\s+/g, " ")
+  
+  // Treat underscores as spaces
+  normalized = normalized.replace(/_/g, " ")
+  
+  // Remove spaces around /
+  normalized = normalized.replace(/\s*\/\s*/g, "/")
+  
+  // Remove spaces around -
+  normalized = normalized.replace(/\s*-\s*/g, "-")
+  
+  return normalized
+}
+
 const getProspectDashboard = (prospect: any, assignment: any) => {
   const dashboardValue = assignment?.dashboard || prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType
   return normalizeDashboard(dashboardValue)
@@ -893,8 +920,8 @@ export default function TelecallerDashboard() {
         (prospect.lead_id && prospect.lead_id.toLowerCase().includes(searchQuery.toLowerCase()))
       const matchesStatus =
         statusFilter === "all" ||
-        prospect.status === statusFilter ||
-        prospect.outcome === statusFilter
+        normalizeStatus(prospect.status) === normalizeStatus(statusFilter) ||
+        normalizeStatus(prospect.outcome) === normalizeStatus(statusFilter)
       const matchesCourse =
         courseFilter === "all" || prospect.courseInterest === courseFilter
 
