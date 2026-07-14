@@ -135,6 +135,7 @@ export default function AdminProspectsPage() {
     comments: "",
     follow_up_date: "",
     lead_id: "",
+    tags: "",
   })
   const [prospects, setProspects] = useState<any[]>([]) // adapted current page
   const [total, setTotal] = useState(0)
@@ -486,6 +487,7 @@ export default function AdminProspectsPage() {
               comments: "",
               follow_up_date: "",
               lead_id: "",
+              tags: "",
             })
             setIsProspectDialogOpen(true)
           }}>
@@ -879,6 +881,7 @@ export default function AdminProspectsPage() {
                                   comments: prospect.comments || "",
                                   follow_up_date: prospect.follow_up_date || "",
                                   lead_id: prospect.lead_id || "",
+                                  tags: Array.isArray(prospect.tags) ? prospect.tags.join(", ") : "",
                                 })
                                 setIsProspectDialogOpen(true)
                               }}>
@@ -1302,17 +1305,37 @@ export default function AdminProspectsPage() {
                 className="col-span-3"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_tags" className="text-right">Tags</Label>
+              <Input
+                id="p_tags"
+                value={prospectFormData.tags}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, tags: e.target.value })}
+                className="col-span-3"
+                placeholder="Enter tags separated by commas"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProspectDialogOpen(false)}>Cancel</Button>
             <Button onClick={async () => {
               try {
+                // Convert tags from comma-separated string to array
+                const tagsArray = prospectFormData.tags 
+                  ? prospectFormData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+                  : []
+                
+                const dataToSave = {
+                  ...prospectFormData,
+                  tags: tagsArray
+                }
+                
                 if (editingProspect) {
-                  await prospectsApi.update(Number(editingProspect.id), prospectFormData)
+                  await prospectsApi.update(Number(editingProspect.id), dataToSave)
                   toast({ title: "Prospect updated" })
                 } else {
                   // In a real app, created_by would be from session
-                  await prospectsApi.create({ ...prospectFormData, created_by: 1 })
+                  await prospectsApi.create({ ...dataToSave, created_by: 1 })
                   toast({ title: "Prospect created" })
                 }
                 setIsProspectDialogOpen(false)
