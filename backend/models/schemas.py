@@ -64,7 +64,7 @@ class Course(CourseBase):
 # ==================== PROSPECTS ====================
 class ProspectBase(BaseModel):
     name: str = Field(..., max_length=150)
-    mobile: str = Field(..., max_length=20)
+    mobile: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
     location: Optional[str] = Field(None, max_length=150)
     sourced_from: Optional[str] = Field(None, max_length=100)
@@ -78,7 +78,11 @@ class ProspectBase(BaseModel):
     lead_source: Optional[List[str]] = Field(default=[])
     lead_type: Optional[List[str]] = Field(default=[])
     alt_phone: Optional[str] = Field(None, max_length=20)
+    alt_phone_2: Optional[str] = Field(None, max_length=20)
+    alt_phone_3: Optional[str] = Field(None, max_length=20)
     secondary_email: Optional[str] = Field(None, max_length=255)
+    alternative_email: Optional[str] = Field(None, max_length=255)
+    college_name: Optional[str] = Field(None, max_length=255)
     city: Optional[str] = Field(None, max_length=100)
     address: Optional[str] = None
     postal_code: Optional[str] = Field(None, max_length=20)
@@ -109,7 +113,11 @@ class ProspectUpdate(BaseModel):
     lead_source: Optional[List[str]] = None
     lead_type: Optional[List[str]] = None
     alt_phone: Optional[str] = Field(None, max_length=20)
+    alt_phone_2: Optional[str] = Field(None, max_length=20)
+    alt_phone_3: Optional[str] = Field(None, max_length=20)
     secondary_email: Optional[str] = Field(None, max_length=255)
+    alternative_email: Optional[str] = Field(None, max_length=255)
+    college_name: Optional[str] = Field(None, max_length=255)
     city: Optional[str] = Field(None, max_length=100)
     address: Optional[str] = None
     postal_code: Optional[str] = Field(None, max_length=20)
@@ -142,7 +150,7 @@ class ProspectListItem(BaseModel):
     extra fields."""
     id: int
     name: str
-    mobile: str
+    mobile: Optional[str] = None
     email: Optional[str] = None
     location: Optional[str] = None
     sourced_from: Optional[str] = None
@@ -156,7 +164,11 @@ class ProspectListItem(BaseModel):
     lead_source: Optional[Any] = None
     lead_type: Optional[Any] = None
     alt_phone: Optional[str] = None
+    alt_phone_2: Optional[str] = None
+    alt_phone_3: Optional[str] = None
     secondary_email: Optional[str] = None
+    alternative_email: Optional[str] = None
+    college_name: Optional[str] = None
     city: Optional[str] = None
     address: Optional[str] = None
     postal_code: Optional[str] = None

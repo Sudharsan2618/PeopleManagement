@@ -91,22 +91,30 @@ export default function ProspectImportPage() {
         const address = normalizedRow.address || normalizedRow["address.street"] || ""
         const company = normalizedRow.company || normalizedRow.organization || ""
         const designation = normalizedRow.designation || normalizedRow.job_title || normalizedRow["designation__c"] || ""
-        const altPhone = normalizedRow.alt_phone || normalizedRow["alternate mobile"] || normalizedRow["alternate phone"] || normalizedRow.secondary_phone || normalizedRow["alternate_mobile_no__c"] || ""
-        const secondaryEmail = normalizedRow.secondary_email || normalizedRow["alternate email"] || normalizedRow["secondary_email__c"] || ""
+        const altPhone = normalizedRow.alt_phone || normalizedRow["alt phone"] || normalizedRow["alt phone 1"] || normalizedRow["alternate mobile 1"] || normalizedRow["alternate phone 1"] || normalizedRow.secondary_phone || normalizedRow["alternate_mobile_no__c"] || ""
+        const altPhone2 = normalizedRow.alt_phone_2 || normalizedRow["alt phone 2"] || normalizedRow["alternate mobile 2"] || normalizedRow["alternate phone 2"] || normalizedRow["alt_phone_2__c"] || ""
+        const altPhone3 = normalizedRow.alt_phone_3 || normalizedRow["alt phone 3"] || normalizedRow["alternate mobile 3"] || normalizedRow["alternate phone 3"] || normalizedRow["alt_phone_3__c"] || ""
+        const secondaryEmail = normalizedRow.secondary_email || normalizedRow["secondary email"] || normalizedRow["secondary_email__c"] || ""
+        // Try to find alternative email by checking all possible variations
+        let alternativeEmail = normalizedRow["alt email"] || normalizedRow["alternate email"] || normalizedRow.alternative_email || normalizedRow["alternative email"] || normalizedRow.alternateemail || normalizedRow.alternativeemail || normalizedRow["alternative_email__c"] || normalizedRow.alt_email || normalizedRow["alt_email__c"] || ""
+        // Fallback: check original row keys with more flexible matching
+        if (!alternativeEmail) {
+          for (const originalKey of Object.keys(row)) {
+            const normalizedKey = originalKey.toLowerCase().trim()
+            if (normalizedKey === "alt email" || normalizedKey === "alternate email" || normalizedKey === "alternative_email" || normalizedKey === "alternative email" || (normalizedKey.includes("alt") && normalizedKey.includes("email"))) {
+              alternativeEmail = row[originalKey]
+              break
+            }
+          }
+        }
+        // Debug: log if alternativeEmail is found
+        if (alternativeEmail) {
+          console.log(`Found alternative email for row ${index}: ${alternativeEmail}`)
+        }
+        const collegeName = normalizedRow.college_name || normalizedRow["college name"] || normalizedRow["college"] || normalizedRow["college_name__c"] || ""
         const postalCode = normalizedRow.postal_code || normalizedRow["postal code"] || normalizedRow.pincode || normalizedRow.zip || normalizedRow["address.postalcode"] || ""
         const comments = normalizedRow.comments || normalizedRow.remarks || normalizedRow.notes || normalizedRow["comments__c"] || ""
         const followUpDate = normalizedRow.follow_up_date || normalizedRow["followup date"] || normalizedRow["follow-up date"] || normalizedRow["followup_date__c"] || ""
-
-        if (!mobile) {
-          frontendFailures.push({
-            row: index + 2,
-            name: String(name).trim() || "Unknown",
-            mobile: "-",
-            status: "Failed",
-            reason: "Missing mobile number"
-          })
-          return
-        }
 
         mappedProspects.push({
           name: (String(name).trim() || "Unknown").substring(0, 150),
@@ -126,7 +134,11 @@ export default function ProspectImportPage() {
           postal_code: String(postalCode).trim().substring(0, 20) || null,
           designation: String(designation).trim().substring(0, 150) || null,
           alt_phone: String(altPhone).trim().substring(0, 20) || null,
+          alt_phone_2: String(altPhone2).trim().substring(0, 20) || null,
+          alt_phone_3: String(altPhone3).trim().substring(0, 20) || null,
           secondary_email: String(secondaryEmail).trim().substring(0, 255) || null,
+          alternative_email: String(alternativeEmail).trim().substring(0, 255) || null,
+          college_name: String(collegeName).trim().substring(0, 255) || null,
           company: String(company).trim().substring(0, 200) || null,
           comments: String(comments).trim().substring(0, 1000) || null,
           follow_up_date: (followUpDate instanceof Date ? followUpDate.toISOString().split('T')[0] : String(followUpDate).trim()).substring(0, 50) || null,
@@ -170,7 +182,7 @@ export default function ProspectImportPage() {
   }
 
   const downloadTemplate = () => {
-    const csvContent = "name,mobile,email,parent_name,department,location,source,course,lead_type,lead_id,status,address,postal_code,company,designation,alt_phone,secondary_email,comments,follow_up_date\nJohn Doe,9876543210,john@example.com,Suresh B,Science,Mumbai,Website,ADSE,Assist,LEAD001,new,123 Main St,400001,ABC Corp,Manager,9876543211,john2@example.com,Interested in course,2024-07-15"
+    const csvContent = "name,mobile,email,parent_name,department,location,source,course,lead_type,lead_id,status,address,postal_code,company,designation,alt_phone,alt_phone_2,alt_phone_3,secondary_email,alt email,college_name,comments,follow_up_date\nJohn Doe,9876543210,john@example.com,Suresh B,Science,Mumbai,Website,ADSE,Assist,LEAD001,new,123 Main St,400001,ABC Corp,Manager,9876543211,9876543212,9876543213,john2@example.com,john3@example.com,ABC College,Interested in course,2024-07-15"
     const blob = new Blob([csvContent], { type: "text/csv" })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -197,8 +209,8 @@ export default function ProspectImportPage() {
         <CardHeader>
           <CardTitle>Upload File</CardTitle>
           <CardDescription>
-            Support for Excel (.xlsx, .xls) and CSV. Required columns: name, mobile.
-            Optional: parent_name, department, location, source, course, lead_type, lead_id, status, address, company, designation, alt_phone, secondary_email, comments, follow_up_date.
+            Support for Excel (.xlsx, .xls) and CSV. Required columns: name.
+            Optional: mobile, parent_name, department, location, source, course, lead_type, lead_id, status, address, company, designation, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alt email, college_name, comments, follow_up_date.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

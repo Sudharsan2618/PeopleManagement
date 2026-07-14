@@ -394,6 +394,33 @@ const normalizeDashboard = (value: unknown): "student_admission" | "college_cont
   return "student_admission"
 }
 
+const normalizeStatus = (value: string): string => {
+  if (typeof value !== "string") return ""
+  
+  // Convert to lowercase
+  let normalized = value.toLowerCase()
+  
+  // Remove invisible whitespace (non-breaking spaces, zero-width spaces, etc.)
+  normalized = normalized.replace(/[\u00A0\u200B\u200C\u200D\u2060\uFEFF]/g, "")
+  
+  // Trim leading and trailing spaces
+  normalized = normalized.trim()
+  
+  // Replace multiple spaces with a single space
+  normalized = normalized.replace(/\s+/g, " ")
+  
+  // Treat underscores as spaces
+  normalized = normalized.replace(/_/g, " ")
+  
+  // Remove spaces around /
+  normalized = normalized.replace(/\s*\/\s*/g, "/")
+  
+  // Remove spaces around -
+  normalized = normalized.replace(/\s*-\s*/g, "-")
+  
+  return normalized
+}
+
 const getProspectDashboard = (prospect: any, assignment: any) => {
   const dashboardValue = assignment?.dashboard || prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType
   return normalizeDashboard(dashboardValue)
@@ -520,11 +547,15 @@ export default function TelecallerDashboard() {
             lead_id: p.lead_id || "",
             // New contact/profile fields
             altPhone: p.alt_phone || "",
+            altPhone2: p.alt_phone_2 || "",
+            altPhone3: p.alt_phone_3 || "",
             secondaryEmail: p.secondary_email || "",
+            alternativeEmail: p.alternative_email || "",
             city: p.city || "",
             address: p.address || "",
             postalCode: p.postal_code || "",
             designation: p.designation || "",
+            collegeName: p.college_name || "",
             is_imported: p.is_imported || false,
             // Lead sheet data
             follow_up_date: p.follow_up_date || "",
@@ -566,7 +597,7 @@ export default function TelecallerDashboard() {
       setProspects((prev: any[]) =>
         prev.map((p) =>
           p.numericId === prospectNumericId
-            ? { ...p, [field === "alt_phone" ? "altPhone" : field === "secondary_email" ? "secondaryEmail" : field === "postal_code" ? "postalCode" : field]: value }
+            ? { ...p, [field === "alt_phone" ? "altPhone" : field === "alt_phone_2" ? "altPhone2" : field === "alt_phone_3" ? "altPhone3" : field === "secondary_email" ? "secondaryEmail" : field === "postal_code" ? "postalCode" : field]: value }
             : p
         )
       )
@@ -611,7 +642,7 @@ export default function TelecallerDashboard() {
     const studentAdmissionCallLogs = callLogs.filter((log) => studentAdmissionIds.has(log.prospect_id))
     const collegeContactCallLogs = callLogs.filter((log) => collegeContactIds.has(log.prospect_id))
     const ediiCallLogs = callLogs.filter((log) => ediiIds.has(log.prospect_id))
-    
+
     // Student admission stats
     const latestLogByProspect = new Map<number, CallLog>()
     studentAdmissionCallLogs.forEach((log) => {
@@ -624,20 +655,20 @@ export default function TelecallerDashboard() {
     const callbackCount = Array.from(latestLogByProspect.values()).filter(
       (log) => log.callback_scheduled_at
     ).length
-    
+
     const todayStudentLogs = studentAdmissionCallLogs.filter((cl: any) => {
       const today = new Date().toISOString().split("T")[0]
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
       return logDate === today
     })
-    
+
     const todayStudentAssignmentCount = studentAdmissionProspects.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
       if (!assignment) return false
       const today = new Date().toISOString().split("T")[0]
       return assignment.assigned_date === today
     }).length
-    
+
     // College contact specific stats
     const collegeContactsToday = collegeContacts.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
@@ -645,27 +676,27 @@ export default function TelecallerDashboard() {
       const today = new Date().toISOString().split("T")[0]
       return assignment.assigned_date === today
     }).length
-    
-    const collegeInterested = collegeContacts.filter((p) => 
+
+    const collegeInterested = collegeContacts.filter((p) =>
       p.outcome === "Interested" || p.status === "Interested"
     ).length
-    
-    const collegeCallbacks = collegeContacts.filter((p) => 
+
+    const collegeCallbacks = collegeContacts.filter((p) =>
       p.callbackDateTime !== null
     ).length
-    
-    const collegePending = collegeContacts.filter((p) => 
-      (p.outcome === "New" || p.status === "New" || 
-       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
+
+    const collegePending = collegeContacts.filter((p) =>
+      (p.outcome === "New" || p.status === "New" ||
+        (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
       p.totalCalls === 0
     ).length
-    
+
     const collegeCallsMade = collegeContactCallLogs.filter((cl: any) => {
       const today = new Date().toISOString().split("T")[0]
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
       return logDate === today
     }).length
-    
+
     // EDII specific stats
     const ediiToday = ediiProspects.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
@@ -673,21 +704,21 @@ export default function TelecallerDashboard() {
       const today = new Date().toISOString().split("T")[0]
       return assignment.assigned_date === today
     }).length
-    
-    const ediiInterested = ediiProspects.filter((p) => 
+
+    const ediiInterested = ediiProspects.filter((p) =>
       p.outcome === "Interested" || p.status === "Interested"
     ).length
-    
-    const ediiCallbacks = ediiProspects.filter((p) => 
+
+    const ediiCallbacks = ediiProspects.filter((p) =>
       p.callbackDateTime !== null
     ).length
-    
-    const ediiPending = ediiProspects.filter((p) => 
-      (p.outcome === "New" || p.status === "New" || 
-       (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
+
+    const ediiPending = ediiProspects.filter((p) =>
+      (p.outcome === "New" || p.status === "New" ||
+        (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
       p.totalCalls === 0
     ).length
-    
+
     const ediiCallsMade = ediiCallLogs.filter((cl: any) => {
       const today = new Date().toISOString().split("T")[0]
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
@@ -882,15 +913,15 @@ export default function TelecallerDashboard() {
         (viewMode === "edii" && dashboard === "edii")
 
       if (!matchesViewMode) return false
-      
+
       const matchesSearch =
         prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         prospect.mobile.includes(searchQuery) ||
         (prospect.lead_id && prospect.lead_id.toLowerCase().includes(searchQuery.toLowerCase()))
+
       const matchesStatus =
         statusFilter === "all" ||
-        prospect.status === statusFilter ||
-        prospect.outcome === statusFilter
+        normalizeStatus(prospect.status) === normalizeStatus(statusFilter)
       const matchesCourse =
         courseFilter === "all" || prospect.courseInterest === courseFilter
 
@@ -916,12 +947,16 @@ export default function TelecallerDashboard() {
       { key: "name", label: "Student Name", hasData: true, alwaysVisible: true },
       { key: "parentName", label: "Parent Name", hasData: false },
       { key: "mobile", label: "Mobile", hasData: true, alwaysVisible: true },
-      { key: "altPhone", label: "Alt. Phone", hasData: false },
+      { key: "altPhone", label: "Alt. Phone 1", hasData: false },
+      { key: "altPhone2", label: "Alt. Phone 2", hasData: false },
+      { key: "altPhone3", label: "Alt. Phone 3", hasData: false },
       { key: "secondaryEmail", label: "Secondary Email", hasData: false },
+      { key: "alternativeEmail", label: "Alt Email", hasData: false },
       { key: "city", label: "City", hasData: false },
       { key: "address", label: "Address", hasData: false },
       { key: "postalCode", label: "Postal Code", hasData: false },
       { key: "designation", label: "Designation", hasData: false },
+      { key: "collegeName", label: "College Name", hasData: false },
       { key: "location", label: "Location", hasData: false },
       { key: "department", label: "Department", hasData: false },
       { key: "courseInterest", label: "Course", hasData: true, alwaysVisible: true },
@@ -930,7 +965,7 @@ export default function TelecallerDashboard() {
       { key: "status", label: "Status", hasData: true, alwaysVisible: true },
       { key: "totalCalls", label: "Calls", hasData: true, alwaysVisible: true },
       { key: "lastCallAt", label: "Last Call", hasData: false },
-      { key: "callbackDateTime", label: "Follow-up Date", hasData: false },
+      { key: "follow_up_date", label: "Follow Up Date", hasData: false },
       { key: "lastReason", label: "Reason / Outcome", hasData: false },
       { key: "lastNotes", label: "Notes", hasData: false },
       { key: "comments", label: "Comments", hasData: false },
@@ -943,7 +978,7 @@ export default function TelecallerDashboard() {
         col.hasData = true
         return
       }
-      
+
       col.hasData = filteredProspects.some((prospect) => {
         const value = prospect[col.key as keyof typeof prospect]
         if (Array.isArray(value)) {
@@ -987,11 +1022,16 @@ export default function TelecallerDashboard() {
         mobile: editingProspect.mobile,
         email: editingProspect.email,
         alt_phone: editingProspect.altPhone,
+        alt_phone_2: editingProspect.altPhone2,
+        alt_phone_3: editingProspect.altPhone3,
         secondary_email: editingProspect.secondaryEmail,
+        alternative_email: editingProspect.alternativeEmail,
         city: editingProspect.city,
         address: editingProspect.address,
         postal_code: editingProspect.postalCode,
         designation: editingProspect.designation,
+        college_name: editingProspect.collegeName,
+        course_interest: editingProspect.courseInterest,
         comments: editingProspect.comments,
       })
       toast({ title: "Saved ✓", description: "Prospect details updated." })
@@ -1368,11 +1408,15 @@ export default function TelecallerDashboard() {
                           col.key === "name" && "min-w-[160px]",
                           col.key === "mobile" && "min-w-[130px]",
                           col.key === "altPhone" && "min-w-[130px]",
+                          col.key === "altPhone2" && "min-w-[130px]",
+                          col.key === "altPhone3" && "min-w-[130px]",
                           col.key === "secondaryEmail" && "min-w-[190px]",
+                          col.key === "alternativeEmail" && "min-w-[190px]",
                           col.key === "city" && "min-w-[110px]",
                           col.key === "address" && "min-w-[200px]",
                           col.key === "postalCode" && "min-w-[110px]",
                           col.key === "designation" && "min-w-[140px]",
+                          col.key === "collegeName" && "min-w-[160px]",
                           col.key === "location" && "min-w-[120px]",
                           col.key === "department" && "min-w-[140px]",
                           col.key === "courseInterest" && "min-w-[140px]",
@@ -1380,7 +1424,7 @@ export default function TelecallerDashboard() {
                           col.key === "lead_type" && "min-w-[160px]",
                           col.key === "status" && "min-w-[160px]",
                           col.key === "lastCallAt" && "min-w-[130px]",
-                          col.key === "callbackDateTime" && "min-w-[130px]",
+                          col.key === "follow_up_date" && "min-w-[130px]",
                           col.key === "lastReason" && "min-w-[180px]",
                           col.key === "lastNotes" && "min-w-[200px]",
                           col.key === "comments" && "min-w-[200px]"
@@ -1450,6 +1494,30 @@ export default function TelecallerDashboard() {
                                 />
                               </TableCell>
                             )
+                          case "altPhone2":
+                            return (
+                              <TableCell key="altPhone2" className="min-w-[130px] p-1">
+                                <InlineEditCell
+                                  value={prospect.altPhone2 || ""}
+                                  placeholder="+ alt phone 2"
+                                  type="tel"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone_2", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "altPhone3":
+                            return (
+                              <TableCell key="altPhone3" className="min-w-[130px] p-1">
+                                <InlineEditCell
+                                  value={prospect.altPhone3 || ""}
+                                  placeholder="+ alt phone 3"
+                                  type="tel"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone_3", val)}
+                                />
+                              </TableCell>
+                            )
                           case "secondaryEmail":
                             return (
                               <TableCell key="secondaryEmail" className="min-w-[190px] p-1">
@@ -1459,6 +1527,18 @@ export default function TelecallerDashboard() {
                                   type="email"
                                   readOnly={prospect.is_imported}
                                   onSave={(val) => handleInlineFieldSave(prospect.numericId, "secondary_email", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "alternativeEmail":
+                            return (
+                              <TableCell key="alternativeEmail" className="min-w-[190px] p-1">
+                                <InlineEditCell
+                                  value={prospect.alternativeEmail || ""}
+                                  placeholder="+ alt email"
+                                  type="email"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alternative_email", val)}
                                 />
                               </TableCell>
                             )
@@ -1504,6 +1584,17 @@ export default function TelecallerDashboard() {
                                   placeholder="+ designation"
                                   readOnly={prospect.is_imported}
                                   onSave={(val) => handleInlineFieldSave(prospect.numericId, "designation", val)}
+                                />
+                              </TableCell>
+                            )
+                          case "collegeName":
+                            return (
+                              <TableCell key="collegeName" className="min-w-[160px]">
+                                <InlineEditCell
+                                  value={prospect.collegeName || ""}
+                                  placeholder="+ college"
+                                  readOnly={prospect.is_imported}
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "college_name", val)}
                                 />
                               </TableCell>
                             )
@@ -1575,15 +1666,11 @@ export default function TelecallerDashboard() {
                                   : "—"}
                               </TableCell>
                             )
-                          case "callbackDateTime":
+                          case "follow_up_date":
                             return (
-                              <TableCell key="callbackDateTime" className="text-sm">
-                                {prospect.callbackDateTime ? (
-                                  <span className="text-amber-600 font-medium whitespace-nowrap" title="Callback Scheduled">
-                                    {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
-                                  </span>
-                                ) : prospect.follow_up_date ? (
-                                  <span className="text-slate-600 whitespace-nowrap" title="Spreadsheet Follow-up Date">
+                              <TableCell key="follow_up_date" className="text-sm">
+                                {prospect.follow_up_date ? (
+                                  <span className="text-slate-600 whitespace-nowrap" title="Follow Up Date">
                                     {prospect.follow_up_date}
                                   </span>
                                 ) : (
@@ -1756,11 +1843,29 @@ export default function TelecallerDashboard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-altPhone">Alt. Phone</Label>
+                <Label htmlFor="edit-altPhone">Alt. Phone 1</Label>
                 <Input
                   id="edit-altPhone"
                   value={editingProspect?.altPhone || ""}
                   onChange={(e) => setEditingProspect({ ...editingProspect, altPhone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-altPhone2">Alt. Phone 2</Label>
+                <Input
+                  id="edit-altPhone2"
+                  value={editingProspect?.altPhone2 || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, altPhone2: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-altPhone3">Alt. Phone 3</Label>
+                <Input
+                  id="edit-altPhone3"
+                  value={editingProspect?.altPhone3 || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, altPhone3: e.target.value })}
                 />
               </div>
             </div>
@@ -1775,11 +1880,48 @@ export default function TelecallerDashboard() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-alternativeEmail">Alt Email</Label>
+                <Input
+                  id="edit-alternativeEmail"
+                  type="email"
+                  value={editingProspect?.alternativeEmail || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, alternativeEmail: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="edit-city">City</Label>
                 <Input
                   id="edit-city"
                   value={editingProspect?.city || ""}
                   onChange={(e) => setEditingProspect({ ...editingProspect, city: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-collegeName">College Name</Label>
+                <Input
+                  id="edit-collegeName"
+                  value={editingProspect?.collegeName || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, collegeName: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-designation">Designation</Label>
+                <Input
+                  id="edit-designation"
+                  value={editingProspect?.designation || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, designation: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-courseInterest">Course</Label>
+                <Input
+                  id="edit-courseInterest"
+                  value={editingProspect?.courseInterest || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, courseInterest: e.target.value })}
                 />
               </div>
             </div>
@@ -1801,11 +1943,11 @@ export default function TelecallerDashboard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-designation">Designation</Label>
+                <Label htmlFor="edit-department">Department</Label>
                 <Input
-                  id="edit-designation"
-                  value={editingProspect?.designation || ""}
-                  onChange={(e) => setEditingProspect({ ...editingProspect, designation: e.target.value })}
+                  id="edit-department"
+                  value={editingProspect?.department || ""}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, department: e.target.value })}
                 />
               </div>
             </div>

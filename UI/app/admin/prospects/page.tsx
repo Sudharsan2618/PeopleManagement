@@ -135,12 +135,14 @@ export default function AdminProspectsPage() {
     comments: "",
     follow_up_date: "",
     lead_id: "",
+    tags: "",
   })
   const [prospects, setProspects] = useState<any[]>([]) // adapted current page
   const [total, setTotal] = useState(0)
   const [stats, setStats] = useState({ total: 0, assigned: 0, qualified: 0, pending: 0 })
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
+  const [dynamicStatuses, setDynamicStatuses] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isFetching, setIsFetching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -196,17 +198,53 @@ export default function AdminProspectsPage() {
   }, [])
 
   const fetchReference = useCallback(async () => {
-    const [apiUsers, apiCourses] = await Promise.all([
+    const [apiUsers, apiCourses, apiCourseInterests, apiStatuses] = await Promise.all([
       usersApi.getByRole("telecaller"),
       coursesApi.getAll(),
+      prospectsApi.getDistinctCourseInterests(),
+      prospectsApi.getDistinctStatuses(),
     ])
     setTelecallers(apiUsers.map(adaptApiUserToUiUser))
     setCourses(apiCourses)
+    // Set courses from distinct course interests in prospects
+    if (apiCourseInterests.length > 0) {
+      setCourses(apiCourseInterests.map((course, index) => ({
+        id: index,
+        code: course,
+        name: course,
+      })))
+    }
+    // Set statuses from distinct statuses in prospects
+    if (apiStatuses.length > 0) {
+      // Map backend statuses to UI statuses
+      const uiStatuses = apiStatuses.map(status => {
+        const statusMap: Record<string, string> = {
+          'new': 'Pending',
+          'contacted': 'InProgress',
+          'warm': 'Callback',
+          'hot': 'Qualified',
+          'visit_scheduled': 'Callback',
+          'visit_done': 'InProgress',
+          'admission_done': 'Enrolled',
+          'cold_no_response': 'DNC',
+          'cold_not_interested': 'NotInterested',
+          'lost': 'Archived',
+        }
+        return statusMap[status] || status
+      })
+      // Remove duplicates and filter out empty values
+      const uniqueUiStatuses = [...new Set(uiStatuses)].filter(s => s)
+      // Update the status filter options dynamically
+      if (uniqueUiStatuses.length > 0) {
+        // We'll use this to populate the status dropdown
+        setDynamicStatuses(uniqueUiStatuses)
+      }
+    }
   }, [])
 
   const refreshAfterMutation = useCallback(async () => {
-    await Promise.all([fetchProspects(), fetchStats()])
-  }, [fetchProspects, fetchStats])
+    await Promise.all([fetchProspects(), fetchStats(), fetchReference()])
+  }, [fetchProspects, fetchStats, fetchReference])
 
   // Initial load: reference data + first page + stats.
   useEffect(() => {
@@ -449,6 +487,7 @@ export default function AdminProspectsPage() {
               comments: "",
               follow_up_date: "",
               lead_id: "",
+              tags: "",
             })
             setIsProspectDialogOpen(true)
           }}>
@@ -543,12 +582,22 @@ export default function AdminProspectsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="InProgress">In Progress</SelectItem>
-                  <SelectItem value="Callback">Callback</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="NotInterested">Not Interested</SelectItem>
-                  <SelectItem value="DNC">DNC</SelectItem>
+                  {dynamicStatuses.length > 0 ? (
+                    dynamicStatuses.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status === "NotInterested" ? "Not Interested" : status}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="InProgress">In Progress</SelectItem>
+                      <SelectItem value="Callback">Callback</SelectItem>
+                      <SelectItem value="Qualified">Qualified</SelectItem>
+                      <SelectItem value="NotInterested">Not Interested</SelectItem>
+                      <SelectItem value="DNC">DNC</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
               <Select
@@ -645,11 +694,15 @@ export default function AdminProspectsPage() {
                   </TableHead>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>College Name</TableHead>
                   <TableHead>Lead ID</TableHead>
                   <TableHead>Mobile</TableHead>
-                  <TableHead>Alt Phone</TableHead>
+                  <TableHead>Alt Phone 1</TableHead>
+                  <TableHead>Alt Phone 2</TableHead>
+                  <TableHead>Alt Phone 3</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Secondary Email</TableHead>
+                  <TableHead>Alt Email</TableHead>
                   <TableHead>City</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Postal Code</TableHead>
@@ -674,7 +727,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={27} className="h-24 text-center">
+                    <TableCell colSpan={31} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -698,6 +751,7 @@ export default function AdminProspectsPage() {
                           {prospect.id}
                         </TableCell>
                         <TableCell className="font-medium">{prospect.name}</TableCell>
+                        <TableCell>{prospect.college_name || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {prospect.lead_id || <span className="text-slate-300">—</span>}
                         </TableCell>
@@ -707,8 +761,15 @@ export default function AdminProspectsPage() {
                         <TableCell className="font-mono text-sm">
                           {prospect.altPhone || <span className="text-slate-300">—</span>}
                         </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.altPhone2 || <span className="text-slate-300">—</span>}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {prospect.altPhone3 || <span className="text-slate-300">—</span>}
+                        </TableCell>
                         <TableCell>{prospect.email || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.secondaryEmail || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell>{prospect.alternativeEmail || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.city || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{prospect.address || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="font-mono text-sm">{prospect.postalCode || <span className="text-slate-300">—</span>}</TableCell>
@@ -820,6 +881,7 @@ export default function AdminProspectsPage() {
                                   comments: prospect.comments || "",
                                   follow_up_date: prospect.follow_up_date || "",
                                   lead_id: prospect.lead_id || "",
+                                  tags: Array.isArray(prospect.tags) ? prospect.tags.join(", ") : "",
                                 })
                                 setIsProspectDialogOpen(true)
                               }}>
@@ -1243,17 +1305,37 @@ export default function AdminProspectsPage() {
                 className="col-span-3"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_tags" className="text-right">Tags</Label>
+              <Input
+                id="p_tags"
+                value={prospectFormData.tags}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, tags: e.target.value })}
+                className="col-span-3"
+                placeholder="Enter tags separated by commas"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProspectDialogOpen(false)}>Cancel</Button>
             <Button onClick={async () => {
               try {
+                // Convert tags from comma-separated string to array
+                const tagsArray = prospectFormData.tags 
+                  ? prospectFormData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+                  : []
+                
+                const dataToSave = {
+                  ...prospectFormData,
+                  tags: tagsArray
+                }
+                
                 if (editingProspect) {
-                  await prospectsApi.update(Number(editingProspect.id), prospectFormData)
+                  await prospectsApi.update(Number(editingProspect.id), dataToSave)
                   toast({ title: "Prospect updated" })
                 } else {
                   // In a real app, created_by would be from session
-                  await prospectsApi.create({ ...prospectFormData, created_by: 1 })
+                  await prospectsApi.create({ ...dataToSave, created_by: 1 })
                   toast({ title: "Prospect created" })
                 }
                 setIsProspectDialogOpen(false)
