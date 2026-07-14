@@ -918,10 +918,10 @@ export default function TelecallerDashboard() {
         prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         prospect.mobile.includes(searchQuery) ||
         (prospect.lead_id && prospect.lead_id.toLowerCase().includes(searchQuery.toLowerCase()))
+
       const matchesStatus =
         statusFilter === "all" ||
-        normalizeStatus(prospect.status) === normalizeStatus(statusFilter) ||
-        normalizeStatus(prospect.outcome) === normalizeStatus(statusFilter)
+        normalizeStatus(prospect.status) === normalizeStatus(statusFilter)
       const matchesCourse =
         courseFilter === "all" || prospect.courseInterest === courseFilter
 
