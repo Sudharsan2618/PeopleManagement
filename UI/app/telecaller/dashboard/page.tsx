@@ -965,7 +965,7 @@ export default function TelecallerDashboard() {
       { key: "status", label: "Status", hasData: true, alwaysVisible: true },
       { key: "totalCalls", label: "Calls", hasData: true, alwaysVisible: true },
       { key: "lastCallAt", label: "Last Call", hasData: false },
-      { key: "callbackDateTime", label: "Follow-up Date", hasData: false },
+      { key: "follow_up_date", label: "Follow Up Date", hasData: false },
       { key: "lastReason", label: "Reason / Outcome", hasData: false },
       { key: "lastNotes", label: "Notes", hasData: false },
       { key: "comments", label: "Comments", hasData: false },
@@ -1424,7 +1424,7 @@ export default function TelecallerDashboard() {
                           col.key === "lead_type" && "min-w-[160px]",
                           col.key === "status" && "min-w-[160px]",
                           col.key === "lastCallAt" && "min-w-[130px]",
-                          col.key === "callbackDateTime" && "min-w-[130px]",
+                          col.key === "follow_up_date" && "min-w-[130px]",
                           col.key === "lastReason" && "min-w-[180px]",
                           col.key === "lastNotes" && "min-w-[200px]",
                           col.key === "comments" && "min-w-[200px]"
@@ -1666,15 +1666,11 @@ export default function TelecallerDashboard() {
                                   : "—"}
                               </TableCell>
                             )
-                          case "callbackDateTime":
+                          case "follow_up_date":
                             return (
-                              <TableCell key="callbackDateTime" className="text-sm">
-                                {prospect.callbackDateTime ? (
-                                  <span className="text-amber-600 font-medium whitespace-nowrap" title="Callback Scheduled">
-                                    {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
-                                  </span>
-                                ) : prospect.follow_up_date ? (
-                                  <span className="text-slate-600 whitespace-nowrap" title="Spreadsheet Follow-up Date">
+                              <TableCell key="follow_up_date" className="text-sm">
+                                {prospect.follow_up_date ? (
+                                  <span className="text-slate-600 whitespace-nowrap" title="Follow Up Date">
                                     {prospect.follow_up_date}
                                   </span>
                                 ) : (
