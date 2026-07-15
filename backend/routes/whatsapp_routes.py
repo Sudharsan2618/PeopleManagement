@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, HTTPException, Body, Request, Query, File, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from services.whatsapp_service import WhatsAppService
 from typing import List, Optional
 
@@ -456,23 +456,48 @@ def get_media_assets():
 
 
 @router.get("/media/{media_id}")
-def stream_media(media_id: str):
-    """Proxy-stream an inbound Cloud API media object (voice/image/video/doc).
+def stream_media(media_id: str, request: Request):
+    """Proxy an inbound Cloud API media object (voice/image/video/doc).
 
     Cloud API media can't be fetched by the browser directly (token-authed,
-    short-lived URL), so we resolve the media_id server-side and stream the
-    bytes. Browser-cached by media_id so replays don't re-hit Meta.
+    short-lived URL), so we resolve the media_id server-side and serve the bytes
+    with a Content-Length and HTTP Range support — browser <audio>/<video>
+    elements need those to load/seek (a chunked, length-less stream fails with
+    "no supported sources" for containers like Ogg). Cached by media_id.
     """
     try:
-        stream, mime = WhatsAppService.fetch_media(media_id)
+        data, content_type = WhatsAppService.fetch_media(media_id)
     except LookupError:
         raise HTTPException(status_code=404, detail="Media not found or expired")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Media fetch error: {e}")
-    return StreamingResponse(
-        stream,
-        media_type=mime,
-        headers={"Cache-Control": "private, max-age=86400"},
+
+    file_size = len(data)
+    base_headers = {"Cache-Control": "private, max-age=86400", "Accept-Ranges": "bytes"}
+    range_header = request.headers.get("range")
+
+    if range_header and range_header.startswith("bytes="):
+        try:
+            start_s, end_s = range_header.split("=", 1)[1].split("-", 1)
+            start = int(start_s) if start_s else 0
+            end = int(end_s) if end_s else file_size - 1
+            end = min(end, file_size - 1)
+            if start > end:
+                start = 0
+            chunk = data[start:end + 1]
+            headers = {
+                **base_headers,
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Content-Length": str(len(chunk)),
+            }
+            return Response(content=chunk, status_code=206, media_type=content_type, headers=headers)
+        except (ValueError, IndexError):
+            pass  # malformed Range -> fall through to full response
+
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={**base_headers, "Content-Length": str(file_size)},
     )
 
 

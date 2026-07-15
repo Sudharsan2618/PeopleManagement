@@ -763,22 +763,39 @@ export default function WhatsAppAdmin() {
   // they're scrolled up reading older messages.
   const prevChatIdRef = useRef<any>(null)
   const prevMsgCountRef = useRef(0)
+  const pendingBottomRef = useRef(false)
   useEffect(() => {
     const viewport = scrollRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     ) as HTMLElement | null
+
+    // A chat switch requests a jump to the bottom — but the messages for the new
+    // chat load asynchronously, so remember the request and satisfy it once they
+    // arrive (and again after images/audio settle) instead of only on this pass.
+    if (prevChatIdRef.current !== selectedChat?.id) {
+      prevChatIdRef.current = selectedChat?.id
+      pendingBottomRef.current = true
+      prevMsgCountRef.current = 0
+    }
+
     if (!viewport) return
 
-    const chatChanged = prevChatIdRef.current !== selectedChat?.id
     const grew = messages.length > prevMsgCountRef.current
     const nearBottom =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 120
 
-    if (chatChanged || (grew && nearBottom)) {
-      viewport.scrollTop = viewport.scrollHeight
+    const toBottom = () => { viewport.scrollTop = viewport.scrollHeight }
+
+    if (pendingBottomRef.current && messages.length > 0) {
+      // Jump now and again on the next frame (after layout/media height settles).
+      toBottom()
+      requestAnimationFrame(toBottom)
+      setTimeout(toBottom, 120)
+      pendingBottomRef.current = false
+    } else if (grew && nearBottom) {
+      toBottom()
     }
 
-    prevChatIdRef.current = selectedChat?.id
     prevMsgCountRef.current = messages.length
   }, [messages, selectedChat])
 
@@ -1295,9 +1312,6 @@ export default function WhatsAppAdmin() {
                               </div>
                             )}
                           </div>
-                      {conv.unread && (
-                        <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" />
-                      )}
                     </div>
                   ))}
 
@@ -1320,7 +1334,7 @@ export default function WhatsAppAdmin() {
               </Card>
               
               {/* --- PREMIUM CHAT VIEW --- */}
-              <Card className="flex-1 h-full flex flex-col overflow-hidden border border-border bg-card relative rounded-lg shadow-xs">
+              <Card className="flex-1 min-w-0 h-full flex flex-col overflow-hidden border border-border bg-card relative rounded-lg shadow-xs">
                 {selectedChat ? (
                   <>
                     <div className="p-4 border-b border-border flex items-center justify-between bg-secondary">

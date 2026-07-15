@@ -38,7 +38,7 @@ export function ContactPanel({ chat }: { chat: any }) {
   const tags: string[] = Array.isArray(d?.tags) ? d.tags : []
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto">
+    <div className="h-full w-full flex flex-col overflow-y-auto overflow-x-hidden">
       <div className="flex flex-col items-center text-center p-6 border-b border-border">
         <Avatar className="h-16 w-16 border border-border">
           <AvatarFallback className="text-lg font-semibold bg-muted text-muted-foreground">
@@ -81,7 +81,9 @@ export function ContactPanel({ chat }: { chat: any }) {
           <Row icon={<Tag className="h-4 w-4" />} label="Tags">
             <div className="flex flex-wrap gap-1 mt-1">
               {tags.map((t, i) => (
-                <Badge key={i} variant="secondary" className="text-[10px]">{t}</Badge>
+                <Badge key={i} variant="secondary" className="text-[10px] max-w-full whitespace-normal break-words text-left h-auto py-0.5 leading-snug">
+                  {t}
+                </Badge>
               ))}
             </div>
           </Row>

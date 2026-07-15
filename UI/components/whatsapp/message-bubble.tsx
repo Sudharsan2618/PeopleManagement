@@ -39,16 +39,24 @@ export interface MessageBubbleProps {
 
 export function MessageBubble({ msg, templates = [], contactName }: MessageBubbleProps) {
   const outbound = msg.direction === "outbound"
-  const isTemplate = typeof msg.body === "string" && msg.body.toLowerCase().includes("template:")
+  // Template messages: newer sends store body='' + template_name; older ones
+  // put "Template: <name> to <who>" in body. Detect either way.
+  const isTemplate =
+    msg.message_type === "template" ||
+    (typeof msg.body === "string" && msg.body.toLowerCase().includes("template:"))
   const flowData = getFlowData(msg)
   const media = getMediaInfo(msg)
 
-  const realTemplateText = (bodyText: string) => {
-    const clean = bodyText.replace(/Template:/i, "").trim()
-    const name = clean.split(" to ")[0].trim()
-    const found = templates.find((t) => t.name === name || t.name === clean)
+  const realTemplateText = () => {
+    const name =
+      msg.template_name ||
+      (typeof msg.body === "string"
+        ? msg.body.replace(/Template:/i, "").trim().split(" to ")[0].trim()
+        : "")
+    const found = templates.find((t) => t.name === name)
     const bodyComp = found?.components?.find((c: any) => c.type === "BODY")
-    let text = bodyComp?.text || clean
+    let text = bodyComp?.text
+    if (!text) return name ? `📄 Template: ${name}` : "📄 Template message"
     if (contactName) text = text.replace(/\{\{1\}\}/g, contactName)
     return text
   }
@@ -68,12 +76,7 @@ export function MessageBubble({ msg, templates = [], contactName }: MessageBubbl
         {media ? (
           <MediaMessage msg={msg} />
         ) : isTemplate ? (
-          <div className="space-y-2">
-            <p className="whitespace-pre-wrap leading-relaxed">{realTemplateText(msg.body)}</p>
-            <div className="bg-background/60 p-2 rounded text-[11px] italic border border-border">
-              Waiting for reply…
-            </div>
-          </div>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{realTemplateText()}</p>
         ) : flowData ? (
           <div className="space-y-2 min-w-[240px]">
             <div className="flex items-center gap-2 pb-1.5 border-b border-border">
@@ -94,7 +97,7 @@ export function MessageBubble({ msg, templates = [], contactName }: MessageBubbl
             </div>
           </div>
         ) : (
-          <p className="whitespace-pre-wrap leading-relaxed">{msg.body}</p>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.body}</p>
         )}
 
         <div

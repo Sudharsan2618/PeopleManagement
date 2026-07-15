@@ -755,8 +755,10 @@ export const whatsappApi = {
   },
   getMessages: (prospectId: number) => apiRequest<any[]>(`/whatsapp/messages/${prospectId}`),
   // Direct URL to the inbound-media proxy — usable straight in <audio>/<img>/<video> src
-  // (the API has no auth middleware). The browser caches by media_id.
-  mediaUrl: (mediaId: string) => `${API_BASE_URL}/whatsapp/media/${mediaId}`,
+  // (the API has no auth middleware). The browser caches by full URL; the `v`
+  // param is bumped whenever the proxy's response format changes so previously
+  // cached (broken) responses aren't replayed.
+  mediaUrl: (mediaId: string) => `${API_BASE_URL}/whatsapp/media/${mediaId}?v=2`,
   // Cloud API number health for the inbox connection badge.
   getPhoneStatus: () => apiRequest<{
     connected: boolean

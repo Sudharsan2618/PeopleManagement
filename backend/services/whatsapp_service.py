@@ -264,12 +264,17 @@ class WhatsAppService:
 
     @staticmethod
     def fetch_media(media_id: str):
-        """Resolve a Meta media_id to (streaming_iterator, mime_type).
+        """Resolve a Meta media_id and return (data_bytes, content_type).
 
         Cloud API media isn't a public URL — it's a two-step exchange: look up
         the media_id to get a short-lived, token-authenticated download URL, then
-        stream the bytes with the same bearer. Used by the inbox media proxy so
+        download the bytes with the same bearer. Used by the inbox media proxy so
         the browser can play/view inbound voice notes, images and videos.
+
+        The media is buffered fully (WhatsApp media is small, <=16MB) rather than
+        streamed chunked: browser <audio>/<video> elements reject length-less
+        chunked responses for container formats like Ogg, and a buffered body
+        lets the proxy serve a Content-Length and HTTP Range requests (seeking).
 
         Raises LookupError when the media can't be resolved (expired/deleted).
         """
@@ -279,22 +284,13 @@ class WhatsAppService:
             raise LookupError(f"media lookup failed: {meta.status_code} {meta.text[:200]}")
         info = meta.json()
         url = info.get("url")
-        mime = info.get("mime_type") or "application/octet-stream"
         if not url:
             raise LookupError("media url missing in Meta response")
-        resp = requests.get(url, headers=headers, stream=True, timeout=30)
+        resp = requests.get(url, headers=headers, timeout=30)
         if resp.status_code != 200:
             raise LookupError(f"media download failed: {resp.status_code}")
-
-        def _iter():
-            try:
-                for chunk in resp.iter_content(chunk_size=64 * 1024):
-                    if chunk:
-                        yield chunk
-            finally:
-                resp.close()
-
-        return _iter(), mime
+        content_type = resp.headers.get("Content-Type") or info.get("mime_type") or "application/octet-stream"
+        return resp.content, content_type
 
     @staticmethod
     def get_phone_status():

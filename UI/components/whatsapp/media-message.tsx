@@ -65,11 +65,37 @@ function AudioPlayer({ info, outbound }: { info: MediaInfo; outbound: boolean })
   const [playing, setPlaying] = useState(false)
   const [cur, setCur] = useState(0)
   const [dur, setDur] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const src = srcFor(info)
 
   const toggle = () => {
     const el = ref.current
     if (!el) return
-    if (playing) { el.pause() } else { el.play() }
+    if (playing) {
+      el.pause()
+    } else {
+      // Always catch — a failed/expired source rejects play() with
+      // NotSupportedError, which would otherwise surface as an unhandled
+      // rejection (and the Next.js dev error overlay).
+      const p = el.play()
+      if (p && typeof p.catch === "function") p.catch(() => setFailed(true))
+    }
+  }
+
+  if (failed) {
+    return (
+      <a
+        href={src}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "flex items-center gap-2 text-xs underline underline-offset-2",
+          outbound ? "text-background/80" : "text-muted-foreground"
+        )}
+      >
+        <Mic className="h-3.5 w-3.5" /> Voice message — open
+      </a>
+    )
   }
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -120,11 +146,12 @@ function AudioPlayer({ info, outbound }: { info: MediaInfo; outbound: boolean })
       </div>
       <audio
         ref={ref}
-        src={srcFor(info)}
+        src={src}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
+        onError={() => setFailed(true)}
         onTimeUpdate={(e) => setCur((e.target as HTMLAudioElement).currentTime)}
         onLoadedMetadata={(e) => setDur((e.target as HTMLAudioElement).duration)}
       />
