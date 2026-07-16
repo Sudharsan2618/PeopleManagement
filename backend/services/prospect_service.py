@@ -12,6 +12,30 @@ from utils.phone_utils import clean_phone_number, normalize_indian_mobile
 # Sentinel value to distinguish between "not provided" and "explicitly None"
 _UNSET = object()
 
+# Auto-generated stub names. The WhatsApp webhook creates prospects named
+# "WhatsApp Contact" for unknown inbound numbers; when an import later matches
+# that number it must replace the stub with the real name from the sheet.
+_NAME_PLACEHOLDERS = {"", "whatsapp contact", "wa contact", "unknown"}
+
+# Columns pre-loaded for merge targets: enough to union the list fields and to
+# decide which blank columns the incoming row can fill in.
+_MERGE_PRELOAD_COLS = (
+    "id, mobile, lead_id, name, course_interest, tags, lead_source, lead_type, "
+    "email, sourced_from, location, city, parent_name, department, company, "
+    "designation, college_name, address, postal_code, secondary_email, "
+    "alternative_email, alt_phone, alt_phone_2, alt_phone_3, comments, follow_up_date"
+)
+
+# Scalar columns a merge may fill when the existing value is blank/NULL. Never
+# overwrites a value a human or earlier import already set. (Fixed list — safe to
+# interpolate into the UPDATE statement.)
+_MERGE_FILLABLE = (
+    "email", "sourced_from", "location", "city", "parent_name", "department",
+    "company", "designation", "college_name", "address", "postal_code",
+    "secondary_email", "alternative_email", "alt_phone", "alt_phone_2",
+    "alt_phone_3", "comments", "follow_up_date",
+)
+
 # ── Short-lived count cache ──────────────────────────────────────────────────
 # COUNT(*) for the prospect list is identical while paging within one filter
 # set, so cache it briefly instead of recomputing on every page turn. TTL is
@@ -587,30 +611,43 @@ class ProspectService:
         return merged[:100]
 
     @staticmethod
-    def _find_existing(lead_id: Optional[str], mobile: Optional[str]) -> Optional[dict]:
-        """Locate an existing prospect by lead_id first, then normalized mobile.
-
-        Returns the row (id, name, course_interest, tags, lead_source, lead_type)
-        or None.
-        """
-        cols = "id, name, course_interest, tags, lead_source, lead_type"
-        if lead_id:
-            row = execute_query(f"SELECT {cols} FROM prospects WHERE lead_id = %s", (lead_id,), fetch="one")
-            if row:
-                return row
-        if mobile:
-            row = execute_query(f"SELECT {cols} FROM prospects WHERE mobile = %s", (mobile,), fetch="one")
-            if row:
-                return row
-        return None
+    def _is_placeholder_name(name) -> bool:
+        """True for the auto-generated stub names the WhatsApp webhook creates
+        for unknown numbers — a real name from an import should replace these."""
+        return (name or "").strip().lower() in _NAME_PLACEHOLDERS
 
     @staticmethod
-    def _classify_row(prospect: dict, seen_mobiles: dict, seen_lead_ids: dict) -> dict:
-        """Classify a single incoming import row without writing.
+    def _preload_existing(mobiles, lead_ids):
+        """Load every existing prospect matching these mobiles/lead_ids in TWO
+        queries (not one per row).
 
-        Returns dict: {action, mobile, mobile_valid, phone_reason, matched, reason}
-        where action is 'new' | 'merge' | 'fail'. ``matched`` describes the record
-        this row will merge into (DB row or an earlier in-file row).
+        This is the difference between an import preview taking seconds and taking
+        minutes: the DB is remote, so a per-row lookup pays full network latency
+        380+ times over.
+        """
+        by_mobile, by_lead = {}, {}
+        if mobiles:
+            for r in execute_query(
+                f"SELECT {_MERGE_PRELOAD_COLS} FROM prospects WHERE mobile = ANY(%s)",
+                (list(mobiles),), fetch="all",
+            ):
+                by_mobile[r["mobile"]] = r
+        if lead_ids:
+            for r in execute_query(
+                f"SELECT {_MERGE_PRELOAD_COLS} FROM prospects WHERE lead_id = ANY(%s)",
+                (list(lead_ids),), fetch="all",
+            ):
+                by_lead[r["lead_id"]] = r
+        return by_mobile, by_lead
+
+    @staticmethod
+    def _classify_row(prospect: dict, seen_mobiles: dict, seen_lead_ids: dict,
+                      existing_by_mobile: dict, existing_by_lead: dict) -> dict:
+        """Classify a single incoming import row against PRE-LOADED existing rows.
+
+        Pure/in-memory — performs no queries. Returns
+        {action, mobile, mobile_valid, phone_reason, matched, reason} where action
+        is 'new' | 'merge' | 'fail'.
         """
         name = (prospect.get("name") or "").strip()
         raw_mobile = prospect.get("mobile", "")
@@ -636,14 +673,20 @@ class ProspectService:
                     "phone_reason": phone_reason, "matched": m,
                     "reason": f"Same mobile as row {m.get('row')} — will merge"}
 
-        # Database match.
-        existing = ProspectService._find_existing(lead_id, mobile)
+        # Database match (from the pre-loaded index).
+        existing = (existing_by_lead.get(lead_id) if lead_id else None) \
+            or (existing_by_mobile.get(mobile) if mobile else None)
         if existing:
-            matched = {"source": "db", "id": existing["id"], "name": existing.get("name"),
+            ex_name = existing.get("name")
+            matched = {"source": "db", "id": existing["id"], "name": ex_name,
                        "course_interest": existing.get("course_interest")}
+            if ProspectService._is_placeholder_name(ex_name):
+                reason = (f"Existing lead (ID {existing['id']}) — will merge course/tags "
+                          f"and set name to '{name}'")
+            else:
+                reason = f"Existing lead '{ex_name}' (ID {existing['id']}) — will merge course/tags"
             return {"action": "merge", "mobile": mobile, "mobile_valid": mobile_valid,
-                    "phone_reason": phone_reason, "matched": matched,
-                    "reason": f"Existing lead '{existing.get('name')}' (ID {existing['id']}) — will merge course/tags"}
+                    "phone_reason": phone_reason, "matched": matched, "reason": reason}
 
         reason = "New lead"
         if raw_mobile and not mobile_valid:
@@ -655,17 +698,37 @@ class ProspectService:
     def validate_bulk_prospects(prospects: List[dict]) -> dict:
         """Dry-run classification of an import batch. Performs NO writes.
 
-        Used by the preview screen to show, per row, whether it will be created
-        new, merged into an existing lead, flagged for an invalid phone, or failed.
+        Backs the import preview. Existing leads are pre-loaded in two queries and
+        every row is then classified in memory, so a 380-row sheet is checked in
+        one round-trip pair rather than ~760 (which took >10 minutes against the
+        remote DB).
         """
         details = []
         counts = {"new": 0, "merge": 0, "invalid_phone": 0, "fail": 0}
         seen_mobiles: dict = {}
         seen_lead_ids: dict = {}
 
+        # Pass 1: normalize + collect lookup keys (no DB).
+        normalized = []
+        mobiles, lead_ids = set(), set()
+        for prospect in prospects:
+            mobile, _valid, _reason = normalize_indian_mobile(prospect.get("mobile", ""))
+            lead_id = (prospect.get("lead_id") or "").strip() or None
+            normalized.append((mobile, lead_id))
+            if mobile:
+                mobiles.add(mobile)
+            if lead_id:
+                lead_ids.add(lead_id)
+
+        # Pass 2: two queries for every possible match.
+        existing_by_mobile, existing_by_lead = ProspectService._preload_existing(mobiles, lead_ids)
+
+        # Pass 3: classify in memory.
         for index, prospect in enumerate(prospects):
             row_number = index + 1
-            c = ProspectService._classify_row(prospect, seen_mobiles, seen_lead_ids)
+            c = ProspectService._classify_row(
+                prospect, seen_mobiles, seen_lead_ids, existing_by_mobile, existing_by_lead
+            )
 
             counts[c["action"]] += 1
             if c["action"] != "fail" and prospect.get("mobile") and not c["mobile_valid"]:
@@ -686,7 +749,7 @@ class ProspectService:
                 marker = {"source": "file", "row": row_number, "name": prospect.get("name")}
                 if c["mobile"]:
                     seen_mobiles.setdefault(c["mobile"], marker)
-                lead_id = (prospect.get("lead_id") or "").strip()
+                lead_id = normalized[index][1]
                 if lead_id:
                     seen_lead_ids.setdefault(lead_id, marker)
 
@@ -786,16 +849,7 @@ class ProspectService:
                 lead_ids.add(lead_id)
 
         # ── Pass 2: pre-load existing leads (2 queries, not N) ─────────────────
-        cols = "id, mobile, lead_id, course_interest, tags, lead_source, lead_type"
-        existing_by_mobile, existing_by_lead = {}, {}
-        if mobiles:
-            for r in execute_query(f"SELECT {cols} FROM prospects WHERE mobile = ANY(%s)",
-                                   (list(mobiles),), fetch="all"):
-                existing_by_mobile[r["mobile"]] = r
-        if lead_ids:
-            for r in execute_query(f"SELECT {cols} FROM prospects WHERE lead_id = ANY(%s)",
-                                   (list(lead_ids),), fetch="all"):
-                existing_by_lead[r["lead_id"]] = r
+        existing_by_mobile, existing_by_lead = ProspectService._preload_existing(mobiles, lead_ids)
 
         # ── Pass 3: classify in memory (merge into DB rows / fold in-file dups) ─
         detail_slots: list = [None] * len(parsed)
@@ -803,10 +857,13 @@ class ProspectService:
         new_records: list = []       # ordered rows to insert
         new_by_mobile, new_by_lead = {}, {}
 
-        def _acc_from(course, tags, source, type_):
+        def _acc_from(course, tags, source, type_, existing=None):
             return {"course": course, "tags": ProspectService._as_list(tags),
                     "source": ProspectService._as_list(source),
-                    "type": ProspectService._as_list(type_)}
+                    "type": ProspectService._as_list(type_),
+                    # `existing` is None for in-file (pending-insert) accumulators,
+                    # which have no stored row to enrich.
+                    "existing": existing, "fills": {}}
 
         def _fold(acc, p):
             inc_course = (p.get("course_interest") or "").strip()
@@ -815,6 +872,25 @@ class ProspectService:
             acc["tags"] = ProspectService._union(acc["tags"], ProspectService._as_list(p.get("tags")) + course_tags)
             acc["source"] = ProspectService._union(acc["source"], ProspectService._as_list(p.get("lead_source")))
             acc["type"] = ProspectService._union(acc["type"], ProspectService._as_list(p.get("lead_type")))
+
+            ex = acc.get("existing")
+            if not ex:
+                return
+            # Replace a webhook stub name ("WhatsApp Contact") with the real name
+            # from the sheet — otherwise the imported name is silently discarded.
+            inc_name = (p.get("name") or "").strip()
+            if (inc_name and "name" not in acc["fills"]
+                    and ProspectService._is_placeholder_name(ex.get("name"))):
+                acc["fills"]["name"] = inc_name[:150]
+            # Fill columns the existing lead is missing; never overwrite real data.
+            for f in _MERGE_FILLABLE:
+                if f in acc["fills"]:
+                    continue
+                cur_val = ex.get(f)
+                if cur_val is None or str(cur_val).strip() == "":
+                    inc_val = p.get(f)
+                    if inc_val is not None and str(inc_val).strip() != "":
+                        acc["fills"][f] = inc_val
 
         for i, item in enumerate(parsed):
             row, name, mobile, lead_id, p = item["row"], item["name"], item["mobile"], item["lead_id"], item["p"]
@@ -832,7 +908,8 @@ class ProspectService:
                 acc = merges_by_id.get(eid)
                 if acc is None:
                     acc = _acc_from(exrow.get("course_interest"), exrow.get("tags"),
-                                    exrow.get("lead_source"), exrow.get("lead_type"))
+                                    exrow.get("lead_source"), exrow.get("lead_type"),
+                                    existing=exrow)
                     merges_by_id[eid] = acc
                 _fold(acc, p)
                 detail_slots[i] = {"row": row, "name": name, "mobile": mobile or "",
@@ -873,14 +950,22 @@ class ProspectService:
         try:
             with get_db_cursor() as cur:
                 for eid, acc in merges_by_id.items():
+                    sets = ["course_interest=%s", "tags=%s", "lead_source=%s",
+                            "lead_type=%s", "updated_at=%s"]
+                    params = [acc["course"] or None,
+                              json.dumps(acc["tags"]) if acc["tags"] else None,
+                              json.dumps(acc["source"]) if acc["source"] else '[]',
+                              json.dumps(acc["type"]) if acc["type"] else '[]',
+                              now]
+                    # Backfilled name + any columns the existing lead was missing.
+                    # Field names come from a fixed allow-list, not user input.
+                    for field, value in acc["fills"].items():
+                        sets.append(f"{field}=%s")
+                        params.append(value)
+                    params.append(eid)
                     cur.execute(
-                        "UPDATE prospects SET course_interest=%s, tags=%s, "
-                        "lead_source=%s, lead_type=%s, updated_at=%s WHERE id=%s",
-                        (acc["course"] or None,
-                         json.dumps(acc["tags"]) if acc["tags"] else None,
-                         json.dumps(acc["source"]) if acc["source"] else '[]',
-                         json.dumps(acc["type"]) if acc["type"] else '[]',
-                         now, eid),
+                        f"UPDATE prospects SET {', '.join(sets)} WHERE id=%s",
+                        tuple(params),
                     )
 
                 if new_records:
