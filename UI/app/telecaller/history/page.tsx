@@ -243,7 +243,7 @@ export default function CallHistoryPage() {
         return
       }
 
-      const headers = ["Date", "Time", "Prospect Name", "Mobile", "Outcome", "Status After", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Outcome", "Status After", "Notes"]
       const rows = exportData.map(log => {
         const prospect = prospects[log.prospect_id]
         const dt = new Date(log.called_at)
@@ -251,6 +251,7 @@ export default function CallHistoryPage() {
         const prospectMobile = prospect ? prospect.mobile : "—"
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
         return [
+          prospect ? (prospect.lead_id || "—") : "—",
           dt.toLocaleDateString('en-IN'),
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           prospectName,
@@ -414,6 +415,7 @@ export default function CallHistoryPage() {
         const prospectMobile = prospect ? prospect.mobile : "—"
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
         return [
+          prospect ? (prospect.lead_id || "—") : "—",
           dt.toLocaleDateString('en-IN'),
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           prospectName,
@@ -424,7 +426,7 @@ export default function CallHistoryPage() {
       })
 
       // Try client-side PDF generation via jsPDF + autoTable for a direct download.
-      const headers = ["Date", "Time", "Prospect", "Mobile", "Outcome", "Status"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Outcome", "Status"]
       try {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
