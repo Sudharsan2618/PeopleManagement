@@ -915,8 +915,8 @@ export default function TelecallerDashboard() {
       if (!matchesViewMode) return false
 
       const matchesSearch =
-        prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prospect.mobile.includes(searchQuery) ||
+        (prospect.name && prospect.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (prospect.mobile && prospect.mobile.includes(searchQuery)) ||
         (prospect.lead_id && prospect.lead_id.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesStatus =
