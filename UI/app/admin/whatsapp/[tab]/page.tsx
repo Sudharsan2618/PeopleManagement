@@ -40,7 +40,8 @@ import {
   Pencil,
   Copy,
   Check,
-  X
+  X,
+  ChevronsUpDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -255,6 +256,8 @@ export default function WhatsAppAdmin() {
   const [campaignMessages, setCampaignMessages] = useState<any[]>([])
   const [isCampaignDetailLoading, setIsCampaignDetailLoading] = useState(false)
   const [messageStatusFilter, setMessageStatusFilter] = useState("all")
+  const [campaignMsgSearch, setCampaignMsgSearch] = useState("")
+  const [campaignSearch, setCampaignSearch] = useState("")
   const [isResendingFailed, setIsResendingFailed] = useState(false)
 
   const failedMessagesCount = useMemo(() => {
@@ -308,6 +311,7 @@ export default function WhatsAppAdmin() {
   // Agile Campaign state
   const [isAddingRecipients, setIsAddingRecipients] = useState(false)
   const [targetCampaignId, setTargetCampaignId] = useState<number | null>(null)
+  const [tagMenuOpen, setTagMenuOpen] = useState(false)
 
   // Pagination State
   const [campaignPagination, setCampaignPagination] = useState({
@@ -1043,6 +1047,8 @@ export default function WhatsAppAdmin() {
 
   const handleSelectCampaign = async (campaign: any) => {
     setSelectedCampaign(campaign)
+    setMessageStatusFilter("all")
+    setCampaignMsgSearch("")
     setIsCampaignDetailLoading(true)
     try {
       const [details, messages] = await Promise.all([
@@ -1069,9 +1075,34 @@ export default function WhatsAppAdmin() {
   }
 
   const filteredCampaignMessages = useMemo(() => {
-    if (messageStatusFilter === "all") return campaignMessages
-    return campaignMessages.filter(msg => msg.status === messageStatusFilter)
-  }, [campaignMessages, messageStatusFilter])
+    const q = campaignMsgSearch.trim().toLowerCase()
+    return campaignMessages.filter(msg => {
+      if (messageStatusFilter !== "all" && msg.status !== messageStatusFilter) return false
+      if (q) {
+        const name = (msg.prospect_name || "").toLowerCase()
+        const mobile = String(msg.prospect_mobile || "")
+        if (!name.includes(q) && !mobile.includes(q)) return false
+      }
+      return true
+    })
+  }, [campaignMessages, messageStatusFilter, campaignMsgSearch])
+
+  // Client-side filter over the currently loaded campaigns page.
+  const filteredCampaigns = useMemo(() => {
+    const q = campaignSearch.trim().toLowerCase()
+    if (!q) return campaigns
+    return campaigns.filter(c =>
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.template_name || "").toLowerCase().includes(q)
+    )
+  }, [campaigns, campaignSearch])
+
+  // Per-status counts for the recipient tracking filter chips.
+  const campaignMsgCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: campaignMessages.length }
+    for (const m of campaignMessages) counts[m.status] = (counts[m.status] || 0) + 1
+    return counts
+  }, [campaignMessages])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -1084,6 +1115,25 @@ export default function WhatsAppAdmin() {
       default: return "bg-gray-100 text-gray-700 border-gray-200"
     }
   }
+
+  // Clean, CRM-style status pill: a colored dot + label on a neutral chip.
+  const statusDotClass = (status: string) => {
+    switch ((status || "").toLowerCase()) {
+      case "approved": case "completed": case "read": return "bg-emerald-500"
+      case "delivered": return "bg-blue-500"
+      case "sent": case "sending": case "pending": return "bg-amber-500"
+      case "rejected": case "failed": return "bg-rose-500"
+      case "draft": return "bg-slate-400"
+      default: return "bg-slate-400"
+    }
+  }
+
+  const StatusPill = ({ status }: { status: string }) => (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-2.5 py-0.5 text-[11px] font-medium capitalize text-foreground">
+      <span className={cn("h-1.5 w-1.5 rounded-full", statusDotClass(status))} />
+      {(status || "unknown").replace(/_/g, " ")}
+    </span>
+  )
 
   const getAvatarColor = (index: number) => {
     const colors = ["bg-emerald-600", "bg-blue-600", "bg-indigo-600", "bg-rose-600", "bg-amber-600"]
@@ -1497,49 +1547,59 @@ export default function WhatsAppAdmin() {
 
           {activeTab === "templates" && (
             <div className="h-full overflow-y-auto space-y-4 pb-4">
-            <Card className="border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden flex flex-col">
-              <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
-                <h2 className="text-sm font-semibold uppercase tracking-widest text-slate-900">Message Templates</h2>
-                <Badge variant="outline" className="text-[9px] font-semibold uppercase tracking-widest">{templates.length} Total</Badge>
+            <Card className="overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold">Message templates</h2>
+                <Badge variant="secondary" className="text-xs">{templates.length} total</Badge>
               </div>
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-slate-50/30">
+                  <TableHeader>
                     <TableRow>
-                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Name</TableHead>
-                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Category</TableHead>
-                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Language</TableHead>
-                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest">Status</TableHead>
-                      <TableHead className="px-6 text-[9px] font-semibold uppercase tracking-widest text-right">Actions</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Name</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Category</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Language</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {templates.map((tpl) => (
-                      <TableRow key={`${tpl.name}-${tpl.language}`} className="hover:bg-slate-50/50">
-                        <TableCell className="px-6 font-semibold text-xs uppercase ">{tpl.name}</TableCell>
-                        <TableCell className="px-6 text-[10px] font-medium text-slate-500 uppercase">{tpl.category}</TableCell>
-                        <TableCell className="px-6 text-[10px] font-semibold text-slate-700 uppercase">{tpl.language}</TableCell>
-                        <TableCell className="px-6">
-                          <Badge className={cn("text-[8px] px-1.5 h-4 border-none font-semibold uppercase  shadow-sm", getStatusColor(tpl.status))}>
-                            {tpl.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-7 text-[10px] font-semibold uppercase tracking-widest text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => {
-                              setViewingTemplate(tpl);
-                              setTemplateDetailOpen(true);
-                            }}
-                          >
-                            <Eye className="h-3 w-3 mr-1.5" />
-                            View Detail
-                          </Button>
+                    {isLoading && templates.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-32 text-center">
+                          <Loader2 className="h-5 w-5 animate-spin inline text-muted-foreground" />
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : templates.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                          No templates found. Sync to pull them from WhatsApp.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      templates.map((tpl) => (
+                        <TableRow key={`${tpl.name}-${tpl.language}`}>
+                          <TableCell className="font-medium text-sm">{tpl.name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground capitalize">{(tpl.category || "").toLowerCase()}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground uppercase">{tpl.language}</TableCell>
+                          <TableCell><StatusPill status={tpl.status} /></TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => {
+                                setViewingTemplate(tpl);
+                                setTemplateDetailOpen(true);
+                              }}
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1.5" />
+                              View detail
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -1551,45 +1611,17 @@ export default function WhatsAppAdmin() {
           {activeTab === "campaigns" && (
             <div className="flex-1 flex flex-col min-h-0 animate-in fade-in slide-in-from-right-4 duration-500">
               {selectedCampaign ? (
-                <div className="h-full flex flex-col gap-4 overflow-hidden min-h-0">
+                <div className="h-full flex flex-col gap-3 overflow-hidden min-h-0">
                   {/* --- CAMPAIGN HEADER & STATS --- */}
-                  <Card className="border border-slate-800 rounded-lg bg-[#0f172a] text-white p-6 relative overflow-hidden shadow-none">
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                      <Zap className="h-32 w-32" />
-                    </div>
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-4 mb-6">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={handleBackToCampaigns} 
-                          className="h-9 px-4 bg-white/10 hover:bg-white/20 text-white rounded-md font-semibold text-[10px] uppercase tracking-wider border border-white/10"
-                        >
-                          <ArrowLeft className="h-4 w-4 mr-2" />
-                          BACK TO LIST
+                  <Card className="p-4 shrink-0">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex items-start gap-3">
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={handleBackToCampaigns} title="Back to campaigns">
+                          <ArrowLeft className="h-4 w-4" />
                         </Button>
-                        <Badge className={cn("px-3 py-1 rounded-sm font-semibold text-[10px] uppercase tracking-wider border-none", getStatusColor(selectedCampaign.status))}>
-                          {selectedCampaign.status}
-                        </Badge>
-                        
-                        <Button 
-                          size="sm" 
-                          onClick={() => {
-                            setTargetCampaignId(selectedCampaign.id)
-                            setIsAddingRecipients(true)
-                          }}
-                          className="h-9 px-4 bg-[#10b981] hover:bg-emerald-600 text-white rounded-md font-semibold text-[10px] uppercase tracking-wider ml-auto shadow-none"
-                        >
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          ADD RECIPIENTS
-                        </Button>
-                      </div>
-                      
-                      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
                           {editingCampaignId === selectedCampaign.id ? (
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2">
                               <Input
                                 value={editingCampaignName}
                                 onChange={e => setEditingCampaignName(e.target.value)}
@@ -1599,316 +1631,355 @@ export default function WhatsAppAdmin() {
                                 }}
                                 onBlur={() => handleSaveCampaignName(selectedCampaign.id)}
                                 autoFocus
-                                className="h-12 text-2xl font-black uppercase bg-white/10 border-white/30 text-white placeholder:text-white/40 focus-visible:ring-white/20 w-80"
+                                className="h-9 w-72 text-lg font-semibold"
                               />
                               {isSavingName
-                                ? <Loader2 className="h-5 w-5 animate-spin text-white/60" />
-                                : <Check className="h-5 w-5 text-emerald-400 cursor-pointer" onClick={() => handleSaveCampaignName(selectedCampaign.id)} />
+                                ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                : <Check className="h-4 w-4 text-emerald-600 cursor-pointer" onClick={() => handleSaveCampaignName(selectedCampaign.id)} />
                               }
                             </div>
                           ) : (
-                            <div className="flex items-end gap-3 mb-2 group/title">
-                              <h2 className="text-4xl font-black tracking-tighter">{selectedCampaign.name}</h2>
+                            <div className="flex items-center gap-2 group/title">
+                              <h2 className="text-lg font-semibold tracking-tight">{selectedCampaign.name}</h2>
                               <button
                                 onClick={() => { setEditingCampaignId(selectedCampaign.id); setEditingCampaignName(selectedCampaign.name) }}
-                                className="opacity-0 group-hover/title:opacity-100 transition-opacity p-1.5 hover:bg-white/10 rounded-lg mb-0.5"
+                                className="opacity-0 group-hover/title:opacity-100 transition-opacity p-1 hover:bg-secondary rounded"
                                 title="Rename campaign"
                               >
-                                <Pencil className="h-4 w-4 text-slate-300" />
+                                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                               </button>
                             </div>
                           )}
-                          <div className="flex items-center gap-4 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
-                            <span className="flex items-center gap-2"><Layers className="h-3 w-3" /> {selectedCampaign.template_name}</span>
-                            <span className="flex items-center gap-2"><Clock className="h-3 w-3" /> {new Date(selectedCampaign.created_at).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
+                            <span className="flex items-center gap-1"><Layers className="h-3 w-3" /> {selectedCampaign.template_name}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(selectedCampaign.created_at).toLocaleDateString()}</span>
+                            <StatusPill status={selectedCampaign.status} />
                           </div>
                         </div>
-                        
-                        <div className="flex gap-4">
-                          <div className="bg-white/5 border border-white/10 rounded-[24px] px-6 py-4 backdrop-blur-md">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">TOTAL REACH</p>
-                            <p className="text-2xl font-black">{selectedCampaign.total_recipients}</p>
-                          </div>
-                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[24px] px-6 py-4 backdrop-blur-md">
-                            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">SENT</p>
-                            <p className="text-2xl font-black text-emerald-400">{selectedCampaign.sent_count}</p>
-                          </div>
-                          {failedMessagesCount > 0 && (
-                            <div className="bg-rose-500/10 border border-rose-500/20 rounded-[24px] px-6 py-4 backdrop-blur-md flex items-center gap-4">
-                              <div>
-                                <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">FAILED</p>
-                                <p className="text-2xl font-black text-rose-400">{failedMessagesCount}</p>
-                              </div>
-                              <Button
-                                size="sm"
-                                onClick={handleResendFailed}
-                                disabled={isResendingFailed}
-                                className="h-8 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-md font-semibold text-[9px] uppercase tracking-wider flex items-center gap-1.5 shadow-none"
-                              >
-                                <RefreshCw className={cn("h-3 w-3", isResendingFailed && "animate-spin")} />
-                                {isResendingFailed ? "Resending..." : "Resend"}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {failedMessagesCount > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleResendFailed}
+                            disabled={isResendingFailed}
+                            className="h-9 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                          >
+                            <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isResendingFailed && "animate-spin")} />
+                            {isResendingFailed ? "Resending…" : `Resend ${failedMessagesCount} failed`}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          className="h-9"
+                          onClick={() => {
+                            setTargetCampaignId(selectedCampaign.id)
+                            setIsAddingRecipients(true)
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4 mr-1.5" />
+                          Add recipients
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Stat tiles */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                      <div className="rounded-lg border border-border bg-secondary/40 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total reach</p>
+                        <p className="text-xl font-semibold mt-0.5">{selectedCampaign.total_recipients}</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-secondary/40 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sent</p>
+                        <p className="text-xl font-semibold mt-0.5 text-emerald-600">{selectedCampaign.sent_count}</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-secondary/40 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Failed</p>
+                        <p className={cn("text-xl font-semibold mt-0.5", failedMessagesCount > 0 ? "text-rose-600" : "text-foreground")}>{failedMessagesCount}</p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-secondary/40 px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Progress</p>
+                        <p className="text-xl font-semibold mt-0.5">{Math.round((selectedCampaign.sent_count / (selectedCampaign.total_recipients || 1)) * 100)}%</p>
                       </div>
                     </div>
                   </Card>
-                  
+
                   {/* --- MESSAGE RECIPIENT TABLE --- */}
-                  <Card className="flex-1 border border-slate-200 rounded-lg bg-white overflow-hidden flex flex-col shadow-none">
-                    <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-4 w-1 bg-[#10b981] rounded-sm" />
-                        <h3 className="font-semibold text-sm text-slate-900  uppercase">Recipient Tracking</h3>
-                      </div>
-                      <div className="flex gap-2">
-                        {["all", "sent", "delivered", "read", "failed"].map((status) => (
-                          <Button 
-                            key={status}
-                            variant="outline" 
-                            size="sm" 
-                            className={cn(
-                              "h-8 px-3 text-[10px] font-semibold uppercase tracking-wider rounded-md transition-all",
-                              messageStatusFilter === status 
-                                ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200" 
-                                : "text-slate-400 border-slate-100 hover:bg-slate-50"
-                            )}
-                            onClick={() => setMessageStatusFilter(status)}
-                          >
-                            {status}
-                          </Button>
-                        ))}
+                  <Card className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 flex-wrap">
+                      <h3 className="text-sm font-semibold">Recipient tracking</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Search recipient…"
+                            value={campaignMsgSearch}
+                            onChange={e => setCampaignMsgSearch(e.target.value)}
+                            className="pl-9 w-52 h-9"
+                          />
+                        </div>
+                        <Select value={messageStatusFilter} onValueChange={setMessageStatusFilter}>
+                          <SelectTrigger className="w-44 h-9 text-sm capitalize">
+                            <SelectValue placeholder="All statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["all", "sent", "delivered", "read", "failed"].map((status) => (
+                              <SelectItem key={status} value={status} className="capitalize">
+                                <span className="flex items-center gap-2">
+                                  {status === "all" ? "All statuses" : status}
+                                  {campaignMsgCounts[status] ? (
+                                    <span className="text-xs text-muted-foreground">({campaignMsgCounts[status]})</span>
+                                  ) : null}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                    
-                    <ScrollArea className="flex-1 min-h-0">
+
+                    <div className="flex-1 min-h-0 overflow-auto">
                       <Table>
-                        <TableHeader className="bg-slate-50/50">
-                          <TableRow className="hover:bg-transparent border-none">
-                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Prospect</TableHead>
-                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Connection</TableHead>
-                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Activity Status</TableHead>
-                            <TableHead className="px-8 h-12 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 text-right">Timestamp</TableHead>
+                        <TableHeader className="sticky top-0 bg-card z-10">
+                          <TableRow>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Prospect</TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Mobile</TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Timestamp</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredCampaignMessages.map((msg) => (
-                            <TableRow key={msg.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
-                              <TableCell className="px-8 py-4">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="bg-slate-100 text-slate-600 text-[10px] font-black">
-                                      {msg.prospect_name[0]?.toUpperCase() || "P"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="font-black text-xs text-slate-900 truncate ">{msg.prospect_name}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="px-8 py-4 text-[11px] font-semibold text-slate-500">
-                                <span className="flex items-center gap-2"><Phone className="h-3 w-3" /> +{msg.prospect_mobile}</span>
-                              </TableCell>
-                              <TableCell className="px-8 py-4">
-                                <Badge className={cn("text-[9px] px-3 h-5 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(msg.status))}>
-                                  {msg.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="px-8 py-4 text-[10px] font-black text-slate-400 text-right uppercase">
-                                {msg.sent_at ? new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending'}
+                          {isCampaignDetailLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="h-32 text-center">
+                                <Loader2 className="h-5 w-5 animate-spin inline text-muted-foreground" />
                               </TableCell>
                             </TableRow>
-                          ))}
+                          ) : filteredCampaignMessages.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="h-32 text-center text-sm text-muted-foreground">
+                                {campaignMsgSearch || messageStatusFilter !== "all"
+                                  ? "No recipients match this filter."
+                                  : "No recipients yet."}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredCampaignMessages.map((msg) => (
+                              <TableRow key={msg.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-2.5">
+                                    <Avatar className="h-7 w-7">
+                                      <AvatarFallback className="bg-secondary text-foreground text-[10px] font-semibold">
+                                        {msg.prospect_name?.[0]?.toUpperCase() || "P"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium text-sm">{msg.prospect_name}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">+{msg.prospect_mobile}</TableCell>
+                                <TableCell><StatusPill status={msg.status} /></TableCell>
+                                <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
+                                  {msg.sent_at
+                                    ? new Date(msg.sent_at).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                    : 'Pending'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
-                    </ScrollArea>
+                    </div>
                   </Card>
                 </div>
               ) : (
-                <Card className="h-full border border-slate-200 rounded-lg bg-white overflow-hidden flex flex-col shadow-none">
-                  <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/20">
-                    <h2 className="text-xl font-semibold text-slate-900  uppercase">Campaigns</h2>
-                    <Badge className="bg-slate-100 text-slate-500 border-none font-semibold text-[10px] px-3 py-1 rounded-sm uppercase tracking-wider">
-                      {campaignPagination.totalItems} TOTAL
-                    </Badge>
+                <Card className="h-full flex flex-col overflow-hidden">
+                  {/* Header + search */}
+                  <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-sm font-semibold">Campaigns</h2>
+                      <Badge variant="secondary" className="text-xs">{campaignPagination.totalItems} total</Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search this page…"
+                        value={campaignSearch}
+                        onChange={(e) => setCampaignSearch(e.target.value)}
+                        className="pl-9 w-60 h-9"
+                      />
+                    </div>
                   </div>
-                  
-                  <ScrollArea className="flex-1 min-h-0">
+
+                  <div className="flex-1 min-h-0 overflow-auto">
                     <Table>
-                      <TableHeader className="bg-slate-50/50">
-                        <TableRow className="hover:bg-transparent border-b border-slate-200">
-                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Campaign Details</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Date</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Engagement</TableHead>
-                          <TableHead className="px-8 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right">Actions</TableHead>
+                      <TableHeader className="sticky top-0 bg-card z-10">
+                        <TableRow>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Campaign</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Created</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider w-52">Progress</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {campaigns.map((camp) => (
-                          <TableRow 
-                            key={camp.id} 
-                            className="hover:bg-slate-50/50 transition-colors border-slate-50 cursor-pointer"
-                            onClick={() => handleSelectCampaign(camp)}
-                          >
-                            <TableCell className="px-8 py-5" onClick={e => e.stopPropagation()}>
-                              <div>
-                                {editingCampaignId === camp.id ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <Input
-                                      value={editingCampaignName}
-                                      onChange={e => setEditingCampaignName(e.target.value)}
-                                      onKeyDown={e => {
-                                        if (e.key === "Enter") handleSaveCampaignName(camp.id)
-                                        if (e.key === "Escape") setEditingCampaignId(null)
-                                      }}
-                                      onBlur={() => handleSaveCampaignName(camp.id)}
-                                      autoFocus
-                                      className="h-7 w-44 text-xs font-black uppercase border-2 border-emerald-500 focus-visible:ring-0 px-2"
-                                    />
-                                    {isSavingName
-                                      ? <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
-                                      : <Check className="h-3 w-3 text-emerald-600 shrink-0 cursor-pointer" onClick={() => handleSaveCampaignName(camp.id)} />
-                                    }
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5 group/name cursor-pointer" onClick={() => { setEditingCampaignId(camp.id); setEditingCampaignName(camp.name) }}>
-                                    <p className="font-black text-sm text-slate-900  mb-0.5 uppercase">{camp.name}</p>
-                                    <Pencil className="h-3 w-3 text-slate-300 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0 mb-0.5" />
-                                  </div>
-                                )}
-                                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">{camp.template_name}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-8 py-5 text-[11px] font-semibold text-slate-500">
-                              {new Date(camp.created_at).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="px-8 py-5">
-                              <Badge className={cn("text-[9px] px-3 h-5 border-none font-black uppercase tracking-widest shadow-sm", getStatusColor(camp.status))}>
-                                {camp.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="px-8 py-5">
-                              <div className="flex flex-col gap-1.5 w-32">
-                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                  <span>{camp.sent_count}/{camp.total_recipients}</span>
-                                  <span>{Math.round((camp.sent_count / (camp.total_recipients || 1)) * 100)}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden p-0.5">
-                                  <div 
-                                    className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                                    style={{ width: `${(camp.sent_count / (camp.total_recipients || 1)) * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-8 py-5 text-right" onClick={e => e.stopPropagation()}>
-                              <div className="flex justify-end gap-2">
-                                {camp.status === 'draft' && (
-                                  <Button 
-                                    size="sm" 
-                                    className="h-9 px-4 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
-                                    onClick={() => handleStartCampaign(camp.id)}
-                                    disabled={isSending}
-                                  >
-                                    LAUNCH
-                                  </Button>
-                                )}
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost"
-                                  className="h-9 px-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl"
-                                  onClick={() => {
-                                    setTargetCampaignId(camp.id)
-                                    setIsAddingRecipients(true)
-                                  }}
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                                {(camp.status === 'failed' || camp.status === 'sending') && (
-                                  <Button 
-                                    size="sm" 
-                                    variant="ghost"
-                                    className="h-9 px-3 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl"
-                                    onClick={() => handleResumeCampaign(camp.id)}
-                                    title="Resume Campaign"
-                                  >
-                                    <PlayCircle className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-9 px-3 text-slate-400 hover:text-primary hover:bg-[#EDF5FF] rounded-xl"
-                                  title="Duplicate campaign"
-                                  onClick={() => handleDuplicateCampaign(camp)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-9 px-3 text-slate-400 hover:text-destructive hover:bg-[#FFF1F1] rounded-xl"
-                                  onClick={() => handleDeleteCampaign(camp.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        {isLoading && campaigns.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="h-32 text-center">
+                              <Loader2 className="h-5 w-5 animate-spin inline text-muted-foreground" />
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : filteredCampaigns.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                              {campaignSearch
+                                ? "No campaigns match your search."
+                                : "No campaigns yet — create one to get started."}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredCampaigns.map((camp) => {
+                            const pct = Math.round((camp.sent_count / (camp.total_recipients || 1)) * 100)
+                            return (
+                              <TableRow
+                                key={camp.id}
+                                className="cursor-pointer"
+                                onClick={() => handleSelectCampaign(camp)}
+                              >
+                                <TableCell onClick={e => e.stopPropagation()} className="max-w-[280px]">
+                                  {editingCampaignId === camp.id ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <Input
+                                        value={editingCampaignName}
+                                        onChange={e => setEditingCampaignName(e.target.value)}
+                                        onKeyDown={e => {
+                                          if (e.key === "Enter") handleSaveCampaignName(camp.id)
+                                          if (e.key === "Escape") setEditingCampaignId(null)
+                                        }}
+                                        onBlur={() => handleSaveCampaignName(camp.id)}
+                                        autoFocus
+                                        className="h-8 w-52 text-sm"
+                                      />
+                                      {isSavingName
+                                        ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                                        : <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 cursor-pointer" onClick={() => handleSaveCampaignName(camp.id)} />
+                                      }
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className="group/name flex items-center gap-1.5 cursor-pointer"
+                                      onClick={() => { setEditingCampaignId(camp.id); setEditingCampaignName(camp.name) }}
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="font-medium text-sm text-foreground truncate">{camp.name}</p>
+                                        <p className="text-[11px] text-muted-foreground truncate">{camp.template_name}</p>
+                                      </div>
+                                      <Pencil className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {new Date(camp.created_at).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell><StatusPill status={camp.status} /></TableCell>
+                                <TableCell onClick={e => e.stopPropagation()}>
+                                  <div className="flex flex-col gap-1 w-44">
+                                    <div className="flex justify-between text-[11px]">
+                                      <span className="text-muted-foreground">{camp.sent_count}/{camp.total_recipients} sent</span>
+                                      <span className="font-medium text-foreground">{pct}%</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-primary rounded-full transition-all duration-500"
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                                  <div className="flex justify-end items-center gap-1">
+                                    {camp.status === 'draft' && (
+                                      <Button
+                                        size="sm"
+                                        className="h-8"
+                                        onClick={() => handleStartCampaign(camp.id)}
+                                        disabled={isSending}
+                                      >
+                                        <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
+                                        Launch
+                                      </Button>
+                                    )}
+                                    {(camp.status === 'failed' || camp.status === 'sending') && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8"
+                                        onClick={() => handleResumeCampaign(camp.id)}
+                                        title="Resume campaign"
+                                      >
+                                        <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
+                                        Resume
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                      title="Add recipients"
+                                      onClick={() => { setTargetCampaignId(camp.id); setIsAddingRecipients(true) }}
+                                    >
+                                      <UserPlus className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                      title="Duplicate campaign"
+                                      onClick={() => handleDuplicateCampaign(camp)}
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                      title="Delete campaign"
+                                      onClick={() => handleDeleteCampaign(camp.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
+                  </div>
 
-                  {/* Pagination Controls - Enhanced Visibility */}
-                  <div className="p-4 border-t border-slate-100 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between shrink-0">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Page {campaignPagination.currentPage} of {Math.max(1, campaignPagination.totalPages)}
-                    </div>
-                    <div className="flex items-center gap-2">
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between border-t border-border px-4 py-2.5 shrink-0">
+                    <span className="text-xs text-muted-foreground">
+                      Page {campaignPagination.currentPage} of {Math.max(1, campaignPagination.totalPages)} · {campaignPagination.totalItems} total
+                    </span>
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8"
                         disabled={campaignPagination.currentPage <= 1}
                         onClick={() => fetchCampaigns(campaignPagination.currentPage - 1)}
-                        className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: campaignPagination.totalPages }, (_, i) => i + 1)
-                          .filter(p => {
-                            const curr = campaignPagination.currentPage;
-                            return p === 1 || p === campaignPagination.totalPages || (p >= curr - 1 && p <= curr + 1);
-                          })
-                          .map((page, idx, array) => (
-                            <div key={page} className="flex items-center gap-1">
-                              {idx > 0 && array[idx-1] !== page - 1 && <span className="text-slate-300 text-[10px]">...</span>}
-                              <Button
-                                variant={campaignPagination.currentPage === page ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => fetchCampaigns(page)}
-                                className={cn(
-                                  "h-8 w-8 p-0 rounded-xl font-black text-[10px] transition-all",
-                                  campaignPagination.currentPage === page 
-                                    ? "bg-slate-900 text-white border-slate-900" 
-                                    : "border-slate-200 text-slate-600 hover:bg-white"
-                                )}
-                              >
-                                {page}
-                              </Button>
-                            </div>
-                          ))
-                        }
-                      </div>
-
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8"
                         disabled={campaignPagination.currentPage >= campaignPagination.totalPages}
                         onClick={() => fetchCampaigns(campaignPagination.currentPage + 1)}
-                        className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -1920,35 +1991,62 @@ export default function WhatsAppAdmin() {
           )}
 
           {activeTab === "flows" && (
-             <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <div className="h-20 w-20 bg-emerald-50 rounded-3xl flex items-center justify-center mb-6 ring-8 ring-emerald-50/50">
-                  <Layers className="h-10 w-10 text-emerald-600" />
+            <div className="h-full overflow-y-auto">
+              <Card className="overflow-hidden">
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                  <div>
+                    <h2 className="text-sm font-semibold">Meta flows</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Interactive WhatsApp flows you can attach to templates.
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{flows.length} total</Badge>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 uppercase ">Meta Flows</h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-3 font-semibold uppercase tracking-widest leading-loose">
-                  Configure and manage your interactive WhatsApp flows. Connect them to your templates for powerful automated workflows.
-                </p>
-                <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-md">
-                   {flows.map(flow => (
-                     <Card key={flow.id} className="p-4 border-slate-100 hover:border-emerald-200 transition-all cursor-pointer group">
-                        <div className="flex justify-between items-start mb-2">
-                           <Badge className="bg-emerald-100 text-emerald-700 text-[8px] font-semibold uppercase">{flow.status}</Badge>
+
+                {isLoading && flows.length === 0 ? (
+                  <div className="h-40 flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : flows.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-16 px-8">
+                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
+                      <Layers className="h-6 w-6" />
+                    </span>
+                    <h3 className="text-sm font-semibold">No flows yet</h3>
+                    <p className="text-xs text-muted-foreground max-w-sm mt-1.5 leading-relaxed">
+                      Configure interactive WhatsApp flows in Meta and connect them to your templates for automated workflows.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+                    {flows.map(flow => (
+                      <div
+                        key={flow.id}
+                        className="group rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-secondary/40 cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-muted-foreground group-hover:text-primary transition-colors">
+                            <Layers className="h-4 w-4" />
+                          </span>
+                          <StatusPill status={flow.status} />
                         </div>
-                        <p className="text-[11px] font-semibold uppercase  group-hover:text-emerald-600 transition-colors">{flow.name}</p>
-                        <p className="text-[9px] text-slate-400 font-semibold mt-1 uppercase">ID: {flow.id}</p>
-                     </Card>
-                   ))}
-                </div>
-             </div>
+                        <p className="text-sm font-medium text-foreground truncate">{flow.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">ID: {flow.id}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </div>
           )}
 
           {activeTab === "submissions" && (
-            <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500 bg-white border border-slate-200 rounded-lg p-6 overflow-hidden shadow-none">
-              <div className="flex justify-between items-center mb-6 shrink-0">
+            <Card className="h-full flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 flex-wrap">
                 <div>
-                  <h2 className="text-xl font-semibold  text-slate-900">FORM SUBMISSIONS</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Structured responses captured from Meta Flows ({submissionsPagination.totalItems} total)
+                  <h2 className="text-sm font-semibold">Form submissions</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Structured responses from Meta Flows · {submissionsPagination.totalItems} total
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1956,39 +2054,45 @@ export default function WhatsAppAdmin() {
                     onClick={handleDownloadExcel}
                     variant="outline"
                     size="sm"
-                    className="h-8 border-slate-200 text-[10px] font-semibold uppercase tracking-wider hover:bg-slate-50 rounded-md text-emerald-700 hover:text-emerald-800 gap-1.5"
+                    className="h-9"
                     disabled={isExporting}
                   >
                     {isExporting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                     ) : (
-                      <Download className="h-3.5 w-3.5" />
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
                     )}
-                    Download Excel
+                    Export CSV
                   </Button>
-                  <Button onClick={() => fetchSubmissions(submissionsPagination.currentPage)} variant="outline" size="sm" className="h-8 border-slate-200 text-[10px] font-semibold uppercase tracking-wider hover:bg-slate-50 rounded-md" disabled={isLoading}>
-                    <RefreshCw className={cn("h-3 w-3 mr-1.5", isLoading && "animate-spin")} />
+                  <Button onClick={() => fetchSubmissions(submissionsPagination.currentPage)} variant="outline" size="sm" className="h-9" disabled={isLoading}>
+                    <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isLoading && "animate-spin")} />
                     Refresh
                   </Button>
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
+              <div className="flex-1 min-h-0 overflow-auto">
                 <Table>
-                  <TableHeader className="bg-slate-50/50">
-                    <TableRow className="hover:bg-transparent border-b border-slate-200">
-                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Prospect / Date</TableHead>
-                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Course Interest</TableHead>
-                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Qualification</TableHead>
-                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
-                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Confirmed</TableHead>
-                      <TableHead className="px-6 h-12 text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right">Actions</TableHead>
+                  <TableHeader className="sticky top-0 bg-card z-10">
+                    <TableRow>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Prospect / Date</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Course interest</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Qualification</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider">Confirmed</TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {submissions.length === 0 ? (
+                    {isLoading && submissions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-slate-400 font-medium text-xs uppercase tracking-widest">
+                        <TableCell colSpan={6} className="h-32 text-center">
+                          <Loader2 className="h-5 w-5 animate-spin inline text-muted-foreground" />
+                        </TableCell>
+                      </TableRow>
+                    ) : submissions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
                           No submissions found.
                         </TableCell>
                       </TableRow>
@@ -2002,7 +2106,7 @@ export default function WhatsAppAdmin() {
                               : sub.raw_payload;
                           }
                         } catch (e) {}
-                        
+
                         const degree = (sub.degree || flowData.degree || "").replace(/_/g, ' ');
                         const qualification = (sub.qualification || flowData.qualification || "").replace(/_/g, ' ');
                         const currentStatus = (flowData.current_status || sub.current_status || "—").replace(/_/g, ' ');
@@ -2017,55 +2121,52 @@ export default function WhatsAppAdmin() {
                         });
 
                         return (
-                          <TableRow key={sub.id} className="hover:bg-slate-50/50 transition-colors border-slate-50">
-                            <TableCell className="px-6 py-4">
+                          <TableRow key={sub.id}>
+                            <TableCell>
                               <div className="flex flex-col">
-                                <span className="text-xs font-black text-slate-900 uppercase">
+                                <span className="text-sm font-medium text-foreground">
                                   {flowData.full_name || sub.full_name || sub.prospect_name || "Unknown"}
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                                  {sub.prospect_mobile ? `+${sub.prospect_mobile}` : "No number"} • {dateFormatted}
+                                <span className="text-xs text-muted-foreground mt-0.5">
+                                  {sub.prospect_mobile ? `+${sub.prospect_mobile}` : "No number"} · {dateFormatted}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="px-6 py-4">
-                              <span className="text-[11px] font-black text-slate-700 uppercase ">
-                                {degree}
-                              </span>
+                            <TableCell className="text-xs text-foreground capitalize">
+                              {degree || <span className="text-muted-foreground/50">—</span>}
                             </TableCell>
-                            <TableCell className="px-6 py-4">
-                              <span className="text-[11px] font-semibold text-slate-500 uppercase ">
-                                {qualification}
-                              </span>
+                            <TableCell className="text-xs text-muted-foreground capitalize">
+                              {qualification || <span className="text-muted-foreground/50">—</span>}
                             </TableCell>
-                            <TableCell className="px-6 py-4">
-                              <span className="text-[11px] font-semibold text-slate-500 uppercase ">
-                                {currentStatus}
-                              </span>
+                            <TableCell className="text-xs text-muted-foreground capitalize">
+                              {currentStatus}
                             </TableCell>
-                            <TableCell className="px-6 py-4">
+                            <TableCell>
                               {confirmed ? (
-                                <Badge className={cn(
-                                  "border-none text-[8px] font-black uppercase tracking-wider px-2 py-0.5",
-                                  confirmed.toLowerCase() === 'yes' 
-                                    ? "bg-emerald-100 text-emerald-700" 
-                                    : "bg-rose-100 text-rose-700"
-                                )}>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[11px] capitalize",
+                                    confirmed.toLowerCase() === 'yes'
+                                      ? "text-emerald-700 border-emerald-200 bg-emerald-50"
+                                      : "text-rose-700 border-rose-200 bg-rose-50"
+                                  )}
+                                >
                                   {confirmed}
                                 </Badge>
                               ) : (
-                                <span className="text-slate-400">—</span>
+                                <span className="text-muted-foreground/50">—</span>
                               )}
                             </TableCell>
-                            <TableCell className="px-6 py-4 text-right">
-                              <Button 
-                                size="sm" 
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
                                 variant="outline"
-                                className="h-8 border-slate-200 text-[10px] font-black uppercase tracking-widest px-3 hover:bg-slate-100/50 rounded-xl"
+                                className="h-8"
                                 onClick={() => handleViewInInbox(sub.prospect_id)}
                               >
-                                <MessageCircle className="h-3 w-3 mr-1" />
-                                View Chat
+                                <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                                View chat
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -2074,65 +2175,37 @@ export default function WhatsAppAdmin() {
                     )}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
 
-              {/* Pagination Controls */}
+              {/* Pagination */}
               {submissionsPagination.totalPages > 1 && (
-                <div className="p-4 border-t border-slate-100 bg-white flex items-center justify-between shrink-0">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Page {submissionsPagination.currentPage} of {submissionsPagination.totalPages}
-                  </div>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between border-t border-border px-4 py-2.5 shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    Page {submissionsPagination.currentPage} of {submissionsPagination.totalPages} · {submissionsPagination.totalItems} total
+                  </span>
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8"
                       disabled={submissionsPagination.currentPage <= 1}
                       onClick={() => fetchSubmissions(submissionsPagination.currentPage - 1)}
-                      className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: submissionsPagination.totalPages }, (_, i) => i + 1)
-                        .filter(p => {
-                          const curr = submissionsPagination.currentPage;
-                          return p === 1 || p === submissionsPagination.totalPages || (p >= curr - 1 && p <= curr + 1);
-                        })
-                        .map((page, idx, array) => (
-                          <div key={page} className="flex items-center gap-1">
-                            {idx > 0 && array[idx-1] !== page - 1 && <span className="text-slate-300 text-[10px]">...</span>}
-                            <Button
-                              variant={submissionsPagination.currentPage === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => fetchSubmissions(page)}
-                              className={cn(
-                                "h-8 w-8 p-0 rounded-xl font-black text-[10px] transition-all",
-                                submissionsPagination.currentPage === page 
-                                  ? "bg-slate-900 text-white border-slate-900" 
-                                  : "border-slate-200 text-slate-600 hover:bg-white"
-                              )}
-                            >
-                              {page}
-                            </Button>
-                          </div>
-                        ))
-                      }
-                    </div>
-
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8"
                       disabled={submissionsPagination.currentPage >= submissionsPagination.totalPages}
                       onClick={() => fetchSubmissions(submissionsPagination.currentPage + 1)}
-                      className="h-8 px-3 rounded-xl border-slate-200 text-slate-600 hover:bg-white transition-all disabled:opacity-30"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           )}
         </div>
       </div>
@@ -2863,31 +2936,35 @@ export default function WhatsAppAdmin() {
       </Sheet>
       {/* Media Library Upload Dialog */}
       <Dialog open={isMediaLibraryOpen} onOpenChange={setIsMediaLibraryOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-          <DialogHeader className="p-6 bg-[#1A1F2B] text-white">
-            <DialogTitle className="text-xl font-semibold uppercase  flex items-center gap-2">
-              <Upload className="h-5 w-5 text-emerald-400" />
-              Upload to Media Library
-            </DialogTitle>
-            <DialogDescription className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest mt-1">
-              Upload PDF, image, or video files for use in campaign auto-replies.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
+          <DialogHeader className="p-5 pb-4 border-b border-border space-y-0 bg-secondary/40">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+                <Upload className="h-4.5 w-4.5" />
+              </span>
+              <div className="text-left">
+                <DialogTitle className="text-base">Upload to media library</DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">
+                  PDF, image, or video files for use in campaign auto-replies.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          
-          <div className="p-6 space-y-6 bg-white">
-            <div className="grid gap-2">
-              <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">File Nickname</Label>
-              <Input 
-                placeholder="e.g. June Brochure 2024" 
+
+          <div className="p-5 space-y-5">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">File nickname</Label>
+              <Input
+                placeholder="e.g. June Brochure 2024"
                 value={mediaNickname}
                 onChange={e => setMediaNickname(e.target.value)}
-                className="h-11 border-2 focus:border-emerald-600 rounded-xl font-semibold"
+                className="h-10"
               />
-              <p className="text-[9px] text-slate-400 font-medium ml-1">This name will appear in your campaign dropdowns.</p>
+              <p className="text-xs text-muted-foreground">This name appears in your campaign dropdowns.</p>
             </div>
 
-            <div className="grid gap-2">
-              <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">Select File (PDF, Image, Video)</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Select file</Label>
               <div className="relative group">
                 <input
                   type="file"
@@ -2899,49 +2976,45 @@ export default function WhatsAppAdmin() {
                 <label
                   htmlFor="media-upload"
                   className={cn(
-                    "flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-2xl cursor-pointer transition-all",
+                    "flex flex-col items-center justify-center w-full h-36 border border-dashed rounded-lg cursor-pointer transition-colors",
                     mediaFile
-                      ? "border-emerald-500 bg-emerald-50/30"
-                      : "border-slate-200 hover:border-emerald-400 bg-slate-50/50 hover:bg-white"
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border hover:border-primary/50 bg-secondary/40 hover:bg-secondary"
                   )}
                 >
                   {mediaFile ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center",
-                        mediaFile.type.startsWith("video/") ? "bg-[#EDF5FF]" : "bg-emerald-100"
-                      )}>
+                    <div className="flex flex-col items-center gap-1.5 px-4 text-center">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
                         {mediaFile.type.startsWith("video/")
-                          ? <Video className="h-5 w-5 text-primary" />
-                          : <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                        }
-                      </div>
-                      <span className="text-xs font-semibold text-slate-700">{mediaFile.name}</span>
+                          ? <Video className="h-4.5 w-4.5" />
+                          : mediaFile.type.includes("pdf")
+                            ? <FileText className="h-4.5 w-4.5" />
+                            : <Image className="h-4.5 w-4.5" />}
+                      </span>
+                      <span className="text-sm font-medium text-foreground truncate max-w-[260px]">{mediaFile.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-slate-400 font-semibold uppercase">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
-                        {mediaFile.type.startsWith("video/") && (
-                          <Badge className="bg-[#EDF5FF] text-blue-700 border-none text-[8px] font-semibold uppercase">Video</Badge>
-                        )}
+                        <span className="text-xs text-muted-foreground">{(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
                         {mediaFile.size > (mediaFile.type.startsWith("video/") ? 16 * 1024 * 1024 : 5 * 1024 * 1024) && (
-                          <Badge className="bg-rose-100 text-rose-600 border-none text-[8px] font-semibold uppercase">Too Large</Badge>
+                          <Badge variant="outline" className="text-[10px] text-rose-600 border-rose-200">Too large</Badge>
                         )}
                       </div>
+                      <span className="text-[11px] text-muted-foreground">Click to choose a different file</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Upload className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
-                      </div>
-                      <span className="text-xs font-semibold text-slate-500">Click to browse or drag and drop</span>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold uppercase">
-                          <FileText className="h-3 w-3 text-rose-400" /> PDF
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground group-hover:text-primary transition-colors">
+                        <Upload className="h-4.5 w-4.5" />
+                      </span>
+                      <span className="text-sm font-medium text-foreground">Click to browse or drag and drop</span>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <FileText className="h-3 w-3" /> PDF
                         </span>
-                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold uppercase">
-                          <Image className="h-3 w-3 text-emerald-400" /> Image · max 5MB
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Image className="h-3 w-3" /> Image · 5MB
                         </span>
-                        <span className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold uppercase">
-                          <Video className="h-3 w-3 text-blue-400" /> Video · max 16MB
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Video className="h-3 w-3" /> Video · 16MB
                         </span>
                       </div>
                     </div>
@@ -2949,63 +3022,67 @@ export default function WhatsAppAdmin() {
                 </label>
               </div>
             </div>
+          </div>
 
-            <div className="flex gap-3 pt-2">
-              <Button 
-                variant="outline" 
-                className="flex-1 h-11 rounded-xl font-semibold uppercase tracking-widest text-[10px]"
-                onClick={() => setIsMediaLibraryOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                className="flex-[2] h-11 bg-[#1A1F2B] hover:bg-black rounded-xl font-semibold uppercase tracking-widest text-[10px] shadow-lg shadow-slate-200"
-                onClick={handleMediaUpload}
-                disabled={isUploadingMedia || !mediaFile || !mediaNickname}
-              >
-                {isUploadingMedia ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4 mr-2 text-emerald-400" />
-                    Upload & Save
-                  </>
-                )}
-              </Button>
-            </div>
+          <div className="flex gap-2 px-5 py-3 border-t border-border bg-secondary/40">
+            <Button
+              variant="outline"
+              className="flex-1 h-10"
+              onClick={() => setIsMediaLibraryOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-[2] h-10"
+              onClick={handleMediaUpload}
+              disabled={isUploadingMedia || !mediaFile || !mediaNickname}
+            >
+              {isUploadingMedia ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading…
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload &amp; save
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
       {/* Add Recipients Modal */}
       <Dialog open={isAddingRecipients} onOpenChange={setIsAddingRecipients}>
-        <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
-          <DialogHeader className="p-4 bg-[#1A1F2B] text-white shrink-0">
-            <DialogTitle className="text-base font-semibold uppercase flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-emerald-400" />
-              Inject New Recipients
-            </DialogTitle>
-            <DialogDescription className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest mt-0.5">
-              Select students to add to the existing campaign flow.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col p-0 overflow-hidden gap-0">
+          <DialogHeader className="p-5 pb-4 border-b border-border shrink-0 space-y-0 bg-secondary/40">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+                <UserPlus className="h-4.5 w-4.5" />
+              </span>
+              <div className="text-left">
+                <DialogTitle className="text-base">Add recipients</DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">
+                  Select prospects to add to this campaign.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           {/* Scrollable middle */}
-          <div className="p-4 space-y-3 bg-white overflow-y-auto flex-1 min-h-0">
+          <div className="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search name or number..."
+                  placeholder="Search name or number…"
                   value={injectPicker.searchInput}
                   onChange={e => injectPicker.setSearchInput(e.target.value)}
-                  className="pl-9 h-10 border-2 rounded-xl text-sm font-semibold"
+                  className="pl-9 h-9"
                 />
               </div>
               <Select value={injectPicker.status} onValueChange={injectPicker.setStatus}>
-                <SelectTrigger className="w-36 h-10 border-2 rounded-xl text-sm font-semibold">
+                <SelectTrigger className="w-36 h-9 text-sm">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3018,114 +3095,166 @@ export default function WhatsAppAdmin() {
               </Select>
             </div>
 
-            {/* Tag filter */}
+            {/* Tag filter — dropdown multi-select */}
             {allTags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {allTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => {
-                      injectPicker.setTags(prev =>
-                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-                      )
-                    }}
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase transition-all border",
-                      injectPicker.tags.includes(tag)
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                        : "bg-white text-slate-500 border-slate-200 hover:border-emerald-600"
-                    )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Inline (non-portaled) dropdown so wheel-scroll works inside the dialog */}
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    onClick={() => setTagMenuOpen(o => !o)}
+                    className="h-9 justify-between font-normal min-w-44"
                   >
+                    <span className="truncate text-sm">
+                      {injectPicker.tags.length > 0
+                        ? `${injectPicker.tags.length} tag${injectPicker.tags.length > 1 ? "s" : ""} selected`
+                        : <span className="text-muted-foreground">Filter by tags</span>}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                  </Button>
+                  {tagMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setTagMenuOpen(false)} />
+                      <div className="absolute left-0 top-full mt-1 z-50 w-[280px] rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+                        <div className="max-h-56 overflow-y-auto overscroll-contain p-1">
+                          {allTags.map(tag => {
+                            const active = injectPicker.tags.includes(tag)
+                            return (
+                              <div
+                                key={tag}
+                                onClick={() =>
+                                  injectPicker.setTags(prev =>
+                                    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                  )
+                                }
+                                className={cn(
+                                  "flex items-center gap-2 px-2.5 py-2 text-sm rounded-md cursor-pointer select-none transition-colors",
+                                  active ? "bg-primary/10 text-primary font-medium" : "hover:bg-secondary"
+                                )}
+                              >
+                                <div className={cn(
+                                  "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                                  active ? "bg-primary border-primary text-primary-foreground" : "border-border"
+                                )}>
+                                  {active && <Check className="h-3 w-3" />}
+                                </div>
+                                <span className="truncate">{tag}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {injectPicker.tags.length > 0 && (
+                          <div className="border-t border-border p-2">
+                            <Button variant="ghost" size="sm" className="w-full h-7 text-xs" onClick={() => injectPicker.setTags([])}>
+                              <X className="h-3 w-3 mr-1" /> Clear tags
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {injectPicker.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="h-7 gap-1 pl-2.5 pr-1 text-xs font-normal">
                     {tag}
-                  </button>
+                    <button
+                      onClick={() => injectPicker.setTags(prev => prev.filter(t => t !== tag))}
+                      className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
                 ))}
               </div>
             )}
 
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                {injectPicker.total.toLocaleString()} Available Students
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                {injectPicker.loading && <Loader2 className="h-3 w-3 animate-spin" />}
+                {injectPicker.loading ? "Loading prospects…" : `${injectPicker.total.toLocaleString()} available prospects`}
               </p>
               <Button
-                variant="ghost"
+                variant="link"
                 size="sm"
                 onClick={() => toggleSelectAllFiltered(injectPicker)}
-                className="h-6 px-3 text-[9px] font-black text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg uppercase tracking-widest"
+                disabled={injectPicker.loading}
+                className="h-auto p-0 text-xs"
               >
-                Select All Filtered
+                Select all filtered
               </Button>
             </div>
 
             {/* Range Selector & Pagination Controls */}
-            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100/80 space-y-2.5 shadow-sm">
-              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-400">
-                <span>Quick Range Selection</span>
-                <span>Total Filtered: {injectPicker.total.toLocaleString()}</span>
+            <div className="rounded-lg border border-border bg-secondary/40 p-3 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+                <span className="uppercase tracking-wider">Quick range selection</span>
+                <span>Total filtered: {injectPicker.total.toLocaleString()}</span>
               </div>
 
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 flex-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</span>
+                  <span className="text-xs text-muted-foreground">From</span>
                   <Input
                     type="number"
                     min="1"
                     max={injectPicker.total}
                     value={injectRangeStart}
                     onChange={e => setInjectRangeStart(e.target.value)}
-                    className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
+                    className="h-8 text-xs text-center px-1 w-16"
                   />
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</span>
+                  <span className="text-xs text-muted-foreground">To</span>
                   <Input
                     type="number"
                     min="1"
                     max={injectPicker.total}
                     value={injectRangeEnd}
                     onChange={e => setInjectRangeEnd(e.target.value)}
-                    className="h-8 text-xs border-2 bg-white text-center font-semibold px-1 w-16 rounded-lg"
+                    className="h-8 text-xs text-center px-1 w-16"
                   />
                 </div>
 
                 <div className="flex gap-1.5 shrink-0">
                   <Button
                     size="sm"
+                    className="h-8"
                     onClick={() => applyPickerRange(injectPicker, injectRangeStart, injectRangeEnd, true)}
-                    className="h-8 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-md shadow-emerald-600/10"
                   >
-                    Select Range
+                    Select range
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
+                    className="h-8"
                     onClick={() => applyPickerRange(injectPicker, injectRangeStart, injectRangeEnd, false)}
-                    className="h-8 px-2.5 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-[9px] font-black uppercase tracking-widest"
                   >
-                    Deselect Range
+                    Deselect
                   </Button>
                 </div>
               </div>
 
               {/* Pagination Controls */}
               {injectPicker.totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2.5 border-t border-slate-200/50">
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    Page {injectPicker.page} of {injectPicker.totalPages} ({injectPicker.PAGE_SIZE} per page)
+                <div className="flex items-center justify-between pt-2.5 border-t border-border">
+                  <div className="text-xs text-muted-foreground">
+                    Page {injectPicker.page} of {injectPicker.totalPages} · {injectPicker.PAGE_SIZE}/page
                   </div>
                   <div className="flex gap-1">
                     <Button
-                      size="sm"
+                      size="icon"
                       variant="outline"
                       disabled={injectPicker.page === 1 || injectPicker.loading}
                       onClick={() => injectPicker.setPage(prev => Math.max(1, prev - 1))}
-                      className="h-7 w-7 p-0 rounded-lg border-2"
+                      className="h-7 w-7"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <Button
-                      size="sm"
+                      size="icon"
                       variant="outline"
                       disabled={injectPicker.page >= injectPicker.totalPages || injectPicker.loading}
                       onClick={() => injectPicker.setPage(prev => prev + 1)}
-                      className="h-7 w-7 p-0 rounded-lg border-2"
+                      className="h-7 w-7"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -3134,63 +3263,68 @@ export default function WhatsAppAdmin() {
               )}
             </div>
 
-            <div className={cn("border border-slate-100 rounded-2xl p-2 bg-slate-50/30 shadow-inner transition-opacity", injectPicker.loading && "opacity-60")}>
-              <div className="space-y-1">
-                {injectPicker.items.map((prospect: any) => (
+            <div className="relative rounded-lg border border-border overflow-hidden">
+              {injectPicker.loading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 bg-background/70 backdrop-blur-[1px]">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-xs font-medium text-muted-foreground">Loading prospects…</span>
+                </div>
+              )}
+              <div className={cn("divide-y divide-border transition-opacity", injectPicker.loading && "opacity-40")}>
+              {injectPicker.items.map((prospect: any) => {
+                const selected = newCampaign.recipient_ids.includes(prospect.id)
+                return (
                   <div
                     key={prospect.id}
                     onClick={() => {
-                      if (newCampaign.recipient_ids.includes(prospect.id)) {
+                      if (selected) {
                         setNewCampaign({...newCampaign, recipient_ids: newCampaign.recipient_ids.filter(id => id !== prospect.id)})
                       } else {
                         setNewCampaign({...newCampaign, recipient_ids: [...newCampaign.recipient_ids, prospect.id]})
                       }
                     }}
                     className={cn(
-                      "flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all",
-                      newCampaign.recipient_ids.includes(prospect.id) ? "bg-emerald-600 text-white shadow-lg" : "hover:bg-white text-slate-600"
+                      "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors select-none",
+                      selected ? "bg-primary/10" : "hover:bg-secondary"
                     )}
                   >
                     <div className={cn(
-                      "h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0",
-                      newCampaign.recipient_ids.includes(prospect.id) ? "bg-white border-white" : "border-slate-200"
+                      "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                      selected ? "bg-primary border-primary text-primary-foreground" : "border-border"
                     )}>
-                      {newCampaign.recipient_ids.includes(prospect.id) && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                      {selected && <Check className="h-3 w-3" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-xs uppercase  truncate">{prospect.name}</p>
-                      <p className={cn("text-[10px] font-semibold opacity-70", newCampaign.recipient_ids.includes(prospect.id) ? "text-white" : "text-slate-400")}>
-                        +{prospect.mobile}
-                      </p>
+                      <p className={cn("font-medium text-sm truncate", selected && "text-primary")}>{prospect.name}</p>
+                      <p className="text-xs font-mono text-muted-foreground">+{prospect.mobile}</p>
                     </div>
-                    <Badge className={cn("text-[8px] h-4 font-black uppercase border-none", getStatusColor(prospect.status))}>
-                      {prospect.status}
-                    </Badge>
+                    {prospect.status && <StatusPill status={prospect.status} />}
                   </div>
-                ))}
-                {!injectPicker.loading && injectPicker.items.length === 0 && (
-                  <div className="p-10 text-center">
-                    <p className="text-slate-400 font-semibold text-[10px] uppercase tracking-widest">No new students available to add</p>
-                  </div>
-                )}
+                )
+              })}
+              {!injectPicker.loading && injectPicker.items.length === 0 && (
+                <div className="p-10 text-center">
+                  <p className="text-sm text-muted-foreground">No new prospects available to add.</p>
+                </div>
+              )}
               </div>
             </div>
           </div>
 
           {/* Fixed footer */}
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-white shrink-0">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {newCampaign.recipient_ids.length} Selected to add
+          <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border shrink-0 bg-secondary/40">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{newCampaign.recipient_ids.length}</span> selected to add
             </p>
-            <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setIsAddingRecipients(false)} className="h-10 px-4 text-[10px] font-black uppercase">Cancel</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsAddingRecipients(false)} className="h-9">Cancel</Button>
               <Button
                 onClick={handleAddRecipients}
                 disabled={isSending || newCampaign.recipient_ids.length === 0}
-                className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-emerald-200"
+                className="h-9"
               >
-                {isSending ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                Inject Recipients
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                Add {newCampaign.recipient_ids.length > 0 ? newCampaign.recipient_ids.length : ""} recipients
               </Button>
             </div>
           </div>
