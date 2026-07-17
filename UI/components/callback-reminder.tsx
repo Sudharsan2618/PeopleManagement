@@ -23,11 +23,13 @@ export function CallbackReminder() {
 
   const {
     activeReminder,
+    dueCount,
     isOpen,
     setReminderOpen,
     handleCallNow,
     handleSnooze,
     handleDismiss,
+    closeForSession,
     isOverdue,
   } = useCallbackReminder(telecallerId)
 
@@ -54,16 +56,14 @@ export function CallbackReminder() {
       })
     : "Scheduled time unavailable"
 
-  // Diagnostic: log active reminder details when modal renders
-  try {
-    console.debug("[CallbackReminderModal] activeReminder:", activeReminder && ({ id: activeReminder.id, prospect_id: activeReminder.prospect_id, outcome: activeReminder.outcome, callback_scheduled_at: activeReminder.callback_scheduled_at }))
-  } catch (e) {
-    // ignore
-  }
-
   const onCallNow = async () => {
     await handleCallNow()
     router.push(`/telecaller/callbacks?prospect=${activeReminder.prospect_id}`)
+  }
+
+  const onViewAll = () => {
+    closeForSession()
+    router.push("/telecaller/callbacks")
   }
 
   const isHot = activeReminder.status_after_call === "hot"
@@ -87,7 +87,7 @@ export function CallbackReminder() {
       open={isOpen}
       onOpenChange={setReminderOpen}
     >
-      <DialogContent showCloseButton={false} className="max-w-xl">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className={cn(
@@ -123,7 +123,9 @@ export function CallbackReminder() {
                 </Badge>
               </div>
               <DialogDescription className="text-slate-500">
-                A callback is due for a prospect assigned to you.
+                {dueCount > 1
+                  ? `${dueCount} callbacks are due for prospects assigned to you.`
+                  : "A callback is due for a prospect assigned to you."}
               </DialogDescription>
             </div>
           </div>
@@ -153,7 +155,11 @@ export function CallbackReminder() {
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Callback queue</p>
-              <p className="mt-2 text-sm font-semibold text-slate-900">Queued by schedule order</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">
+                {dueCount > 1
+                  ? `Earliest of ${dueCount} due now`
+                  : "Only callback due now"}
+              </p>
             </div>
           </div>
         </div>
@@ -165,6 +171,11 @@ export function CallbackReminder() {
           <Button variant="outline" onClick={handleDismiss} className="w-full sm:w-auto">
             Dismiss
           </Button>
+          {dueCount > 1 && (
+            <Button variant="outline" onClick={onViewAll} className="w-full sm:w-auto">
+              View all {dueCount}
+            </Button>
+          )}
           <Button onClick={onCallNow} className="w-full sm:w-auto">
             Call Now
           </Button>

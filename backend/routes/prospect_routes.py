@@ -33,6 +33,11 @@ def list_prospects(
     course_interest: Optional[str] = Query(None, description="Exact course; 'Unknown' matches empty"),
     tags: Optional[str] = Query(None, description="One or more tags, comma-separated (overlap match)"),
     exclude_campaign_id: Optional[int] = Query(None, description="Drop prospects already in this campaign"),
+    department: Optional[str] = Query(None, description="Substring match on department"),
+    lead_source: Optional[str] = Query(None, description="One or more lead sources, comma-separated (overlap match)"),
+    lead_type: Optional[str] = Query(None, description="One or more lead types, comma-separated (overlap match)"),
+    closing_reason: Optional[str] = Query(None, description="Substring match on closing reason"),
+    campaign_id: Optional[int] = Query(None, description="Only prospects messaged in this WhatsApp campaign"),
 ):
     """Paginated, server-filtered prospect list with the latest assignment
     joined in. Declared before /{prospect_id} so the literal path wins."""
@@ -47,6 +52,11 @@ def list_prospects(
             course_interest=course_interest,
             tags=tags,
             exclude_campaign_id=exclude_campaign_id,
+            department=department,
+            lead_source=lead_source,
+            lead_type=lead_type,
+            closing_reason=closing_reason,
+            campaign_id=campaign_id,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -61,6 +71,11 @@ def list_prospect_ids(
     course_interest: Optional[str] = Query(None),
     tags: Optional[str] = Query(None),
     exclude_campaign_id: Optional[int] = Query(None),
+    department: Optional[str] = Query(None),
+    lead_source: Optional[str] = Query(None),
+    lead_type: Optional[str] = Query(None),
+    closing_reason: Optional[str] = Query(None),
+    campaign_id: Optional[int] = Query(None),
 ):
     """Ids of every prospect matching the filters (same order as /list). Backs
     'select all filtered' and range selection in the recipient pickers."""
@@ -73,7 +88,30 @@ def list_prospect_ids(
             course_interest=course_interest,
             tags=tags,
             exclude_campaign_id=exclude_campaign_id,
+            department=department,
+            lead_source=lead_source,
+            lead_type=lead_type,
+            closing_reason=closing_reason,
+            campaign_id=campaign_id,
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/distinct-lead-sources", response_model=List[str])
+def get_distinct_lead_sources():
+    """Distinct lead_source values for filter dropdowns."""
+    try:
+        return ProspectService.get_distinct_lead_sources()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/distinct-lead-types", response_model=List[str])
+def get_distinct_lead_types():
+    """Distinct lead_type values for filter dropdowns."""
+    try:
+        return ProspectService.get_distinct_lead_types()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

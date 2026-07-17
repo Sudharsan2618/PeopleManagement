@@ -213,6 +213,11 @@ export interface ProspectListParams {
   courseInterest?: string
   tags?: string
   excludeCampaignId?: number
+  department?: string
+  leadSource?: string
+  leadType?: string
+  closingReason?: string
+  campaignId?: number
 }
 
 // Filters shared by /prospects/list and /prospects/ids (no pagination).
@@ -224,6 +229,11 @@ export interface ProspectFilterParams {
   courseInterest?: string
   tags?: string
   excludeCampaignId?: number
+  department?: string
+  leadSource?: string
+  leadType?: string
+  closingReason?: string
+  campaignId?: number
 }
 
 export interface Course {
@@ -461,6 +471,11 @@ export const prospectsApi = {
     if (params.courseInterest) qs.set("course_interest", params.courseInterest)
     if (params.tags) qs.set("tags", params.tags)
     if (params.excludeCampaignId != null) qs.set("exclude_campaign_id", String(params.excludeCampaignId))
+    if (params.department) qs.set("department", params.department)
+    if (params.leadSource) qs.set("lead_source", params.leadSource)
+    if (params.leadType) qs.set("lead_type", params.leadType)
+    if (params.closingReason) qs.set("closing_reason", params.closingReason)
+    if (params.campaignId != null) qs.set("campaign_id", String(params.campaignId))
     return apiRequest<PaginatedProspects>(`/prospects/list?${qs.toString()}`)
   },
   // Ids of every prospect matching the filters (for select-all / range select).
@@ -473,9 +488,16 @@ export const prospectsApi = {
     if (params.courseInterest) qs.set("course_interest", params.courseInterest)
     if (params.tags) qs.set("tags", params.tags)
     if (params.excludeCampaignId != null) qs.set("exclude_campaign_id", String(params.excludeCampaignId))
+    if (params.department) qs.set("department", params.department)
+    if (params.leadSource) qs.set("lead_source", params.leadSource)
+    if (params.leadType) qs.set("lead_type", params.leadType)
+    if (params.closingReason) qs.set("closing_reason", params.closingReason)
+    if (params.campaignId != null) qs.set("campaign_id", String(params.campaignId))
     return apiRequest<{ ids: number[]; total: number }>(`/prospects/ids?${qs.toString()}`)
   },
   getDistinctTags: () => apiRequest<string[]>("/prospects/distinct-tags"),
+  getDistinctLeadSources: () => apiRequest<string[]>("/prospects/distinct-lead-sources"),
+  getDistinctLeadTypes: () => apiRequest<string[]>("/prospects/distinct-lead-types"),
   getDistinctCourseInterests: () => apiRequest<string[]>("/prospects/distinct-course-interests"),
   getDistinctStatuses: () => apiRequest<string[]>("/prospects/distinct-statuses"),
   getStats: () => apiRequest<ProspectStats>("/prospects/stats"),

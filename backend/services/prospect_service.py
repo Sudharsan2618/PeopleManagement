@@ -85,6 +85,11 @@ class ProspectService:
         course_interest: Optional[str] = None,
         tags: Optional[any] = None,
         exclude_campaign_id: Optional[int] = None,
+        department: Optional[str] = None,
+        lead_source: Optional[str] = None,
+        lead_type: Optional[str] = None,
+        closing_reason: Optional[str] = None,
+        campaign_id: Optional[int] = None,
     ):
         """Build the shared WHERE clause (+ params) for prospect list / ids
         queries. All predicates reference alias `p` (prospects)."""
@@ -134,6 +139,40 @@ class ProspectService:
                 )
                 params.append(tag_list)
 
+        if department:
+            conditions.append("p.department ILIKE %s")
+            params.append(f"%{department.strip()}%")
+
+        # lead_source / lead_type are jsonb arrays (like tags) — overlap match
+        # against any of the comma-separated values.
+        if lead_source:
+            vals = [v for v in lead_source.split(",") if v]
+            if vals:
+                conditions.append(
+                    "(jsonb_typeof(p.lead_source) = 'array' AND p.lead_source ?| %s)"
+                )
+                params.append(vals)
+
+        if lead_type:
+            vals = [v for v in lead_type.split(",") if v]
+            if vals:
+                conditions.append(
+                    "(jsonb_typeof(p.lead_type) = 'array' AND p.lead_type ?| %s)"
+                )
+                params.append(vals)
+
+        if closing_reason:
+            conditions.append("p.closing_reason ILIKE %s")
+            params.append(f"%{closing_reason.strip()}%")
+
+        # Prospect was messaged as part of this WhatsApp campaign.
+        if campaign_id is not None:
+            conditions.append(
+                "EXISTS (SELECT 1 FROM whatsapp_messages wmc "
+                "WHERE wmc.prospect_id = p.id AND wmc.campaign_id = %s)"
+            )
+            params.append(campaign_id)
+
         if exclude_campaign_id is not None:
             conditions.append(
                 "NOT EXISTS (SELECT 1 FROM whatsapp_messages wm "
@@ -155,6 +194,11 @@ class ProspectService:
         course_interest: Optional[str] = None,
         tags: Optional[any] = None,
         exclude_campaign_id: Optional[int] = None,
+        department: Optional[str] = None,
+        lead_source: Optional[str] = None,
+        lead_type: Optional[str] = None,
+        closing_reason: Optional[str] = None,
+        campaign_id: Optional[int] = None,
     ) -> dict:
         """Return a filtered, paginated slice of prospects with the latest
         assignment (telecaller name + date + dashboard) joined in.
@@ -183,7 +227,8 @@ class ProspectService:
 
         where_clause, params = ProspectService._build_prospect_filters(
             search, status, assignment, assigned_to, course_interest,
-            tags, exclude_campaign_id,
+            tags, exclude_campaign_id, department, lead_source, lead_type,
+            closing_reason, campaign_id,
         )
 
         # Cache the filtered total briefly so paging within one filter set
@@ -247,6 +292,11 @@ class ProspectService:
         course_interest: Optional[str] = None,
         tags: Optional[any] = None,
         exclude_campaign_id: Optional[int] = None,
+        department: Optional[str] = None,
+        lead_source: Optional[str] = None,
+        lead_type: Optional[str] = None,
+        closing_reason: Optional[str] = None,
+        campaign_id: Optional[int] = None,
         limit: int = 100000,
     ) -> dict:
         """Return just the ids of every prospect matching the given filters, in
@@ -255,7 +305,8 @@ class ProspectService:
         the whole prospect payload."""
         where_clause, params = ProspectService._build_prospect_filters(
             search, status, assignment, assigned_to, course_interest,
-            tags, exclude_campaign_id,
+            tags, exclude_campaign_id, department, lead_source, lead_type,
+            closing_reason, campaign_id,
         )
         query = f"""
             SELECT p.id
@@ -279,6 +330,30 @@ class ProspectService:
         """
         rows = execute_query(query, fetch="all")
         return [r["tag"] for r in rows]
+
+    @staticmethod
+    def get_distinct_lead_sources() -> List[str]:
+        """Distinct lead_source values (jsonb array elements) for filter dropdowns."""
+        query = """
+            SELECT DISTINCT jsonb_array_elements_text(lead_source) AS v
+            FROM prospects
+            WHERE lead_source IS NOT NULL AND jsonb_typeof(lead_source) = 'array'
+            ORDER BY v
+        """
+        rows = execute_query(query, fetch="all")
+        return [r["v"] for r in rows]
+
+    @staticmethod
+    def get_distinct_lead_types() -> List[str]:
+        """Distinct lead_type values (jsonb array elements) for filter dropdowns."""
+        query = """
+            SELECT DISTINCT jsonb_array_elements_text(lead_type) AS v
+            FROM prospects
+            WHERE lead_type IS NOT NULL AND jsonb_typeof(lead_type) = 'array'
+            ORDER BY v
+        """
+        rows = execute_query(query, fetch="all")
+        return [r["v"] for r in rows]
 
     @staticmethod
     def get_distinct_course_interests() -> List[str]:

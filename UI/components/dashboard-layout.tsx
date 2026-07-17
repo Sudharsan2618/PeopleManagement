@@ -24,6 +24,11 @@ import {
   BookOpen,
   FolderOpen,
   MessageSquare,
+  Megaphone,
+  ChevronRight,
+  Inbox,
+  Layers,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -47,6 +52,7 @@ interface NavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   badge?: number
+  children?: NavItem[]
 }
 
 const CALLBACK_COUNT_POLL_INTERVAL = 30 * 1000
@@ -55,6 +61,7 @@ const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
   { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar },
   { title: "Messages", href: "/telecaller/messages", icon: MessageSquare },
+  { title: "Bulk Message", href: "/telecaller/bulk-message", icon: Megaphone },
   { title: "Call History", href: "/telecaller/history", icon: History },
   // { title: "Follow-up Tasks", href: "/telecaller/followups", icon: ClipboardList },
 ]
@@ -74,7 +81,18 @@ const adminNav: NavItem[] = [
   { title: "Assign Prospects", href: "/admin/assign", icon: ClipboardList },
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
-  { title: "WhatsApp", href: "/admin/whatsapp", icon: MessageSquare },
+  {
+    title: "WhatsApp",
+    href: "/admin/whatsapp",
+    icon: MessageSquare,
+    children: [
+      { title: "Inbox", href: "/admin/whatsapp/inbox", icon: Inbox },
+      { title: "Templates", href: "/admin/whatsapp/templates", icon: FileText },
+      { title: "Campaigns", href: "/admin/whatsapp/campaigns", icon: Send },
+      { title: "Flows", href: "/admin/whatsapp/flows", icon: Layers },
+      { title: "Submissions", href: "/admin/whatsapp/submissions", icon: ClipboardList },
+    ],
+  },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
   { title: "SPOC Reports", href: "/admin/spoc-reports", icon: FileText },
 ]
@@ -116,6 +134,9 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   const router = useRouter()
   const { logout, user } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  // Explicit open/closed override for tree groups; when unset, a group is open
+  // whenever the current route lives inside it.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [pendingCallbacks, setPendingCallbacks] = useState<any[]>([])
   const [counts, setCounts] = useState({ callbacks: 0, followups: 0, whatsappUnread: 0 })
 
@@ -259,6 +280,67 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       <ScrollArea className="flex-1 py-3">
         <nav className="space-y-0.5">
           {navItems.map((item) => {
+            // --- Tree group (e.g. WhatsApp) ---
+            if (item.children?.length) {
+              const isInside = pathname.startsWith(item.href)
+              const isOpen = openGroups[item.title] ?? isInside
+              return (
+                <div key={item.href}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroups(prev => ({ ...prev, [item.title]: !isOpen }))}
+                    className={cn(
+                      "flex w-full items-center gap-3 py-2 text-sm transition-all duration-150 border-l-[3px]",
+                      isInside
+                        ? "text-foreground border-sidebar-primary pl-[9px] font-semibold"
+                        : "text-muted-foreground border-transparent pl-3 hover:bg-sidebar-accent/50 hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="flex-1 text-left">{item.title}</span>
+                    <ChevronRight
+                      className={cn(
+                        "h-3.5 w-3.5 mr-2 text-muted-foreground transition-transform duration-150",
+                        isOpen && "rotate-90"
+                      )}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="ml-[21px] border-l border-sidebar-border">
+                      {item.children.map((child) => {
+                        const isChildActive = pathname === child.href
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => mobile && setIsMobileMenuOpen(false)}
+                            className={cn(
+                              "flex items-center gap-2.5 py-1.5 pl-3 pr-2 text-[13px] transition-all duration-150 -ml-px border-l-[2px]",
+                              isChildActive
+                                ? "bg-sidebar-accent text-foreground border-sidebar-primary font-semibold"
+                                : "text-muted-foreground border-transparent hover:bg-sidebar-accent/50 hover:text-foreground"
+                            )}
+                          >
+                            <child.icon className="h-3.5 w-3.5" />
+                            <span className="flex-1">{child.title}</span>
+                            {child.badge && (
+                              <Badge
+                                variant="outline"
+                                className="h-4.5 min-w-4.5 px-1.5 text-[10px] font-semibold border-none bg-sidebar-accent text-sidebar-foreground"
+                              >
+                                {child.badge}
+                              </Badge>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            // --- Flat item ---
             const isActive = pathname === item.href
             return (
               <Link
