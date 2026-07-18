@@ -133,7 +133,7 @@ export default function ReportsPage() {
   const [pdfSaActivityData, setPdfSaActivityData] = useState<any[] | null>(null)
   const [pdfCcActivityData, setPdfCcActivityData] = useState<any[] | null>(null)
   const [pdfEdiiActivityData, setPdfEdiiActivityData] = useState<any[] | null>(null)
-  
+
 
   const handleRangeChange = (start: string, end: string) => {
     setStartDate(start)
@@ -265,7 +265,7 @@ export default function ReportsPage() {
     const collegeContacts = allProspects.filter((p: any) =>
       p.prospect_type !== 'edii' &&
       ((p.lead_source && p.lead_source.length > 0) ||
-       (p.lead_type && p.lead_type.length > 0))
+        (p.lead_type && p.lead_type.length > 0))
     )
     const studentAdmissionProspects = allProspects.filter((p: any) =>
       p.prospect_type !== 'edii' &&
@@ -343,14 +343,14 @@ export default function ReportsPage() {
       const saHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Cold NR', 'Cold NI', 'Warm', 'Hot', 'Visit Sch.', 'Dec. Pend.', 'Admitted']
       const ccHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Ringing NR', 'Not Interest.', 'Interested', 'Proposal Sent', 'Training F/U', 'Qualified']
       const ediiHead = ['Telecaller', 'Assigned', 'Calls', 'Pending', 'Callbacks', 'Ringing NR', 'Not Interest.', 'Interested', 'Interested F/U', 'Qualified']
-      
+
       const saRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.warmCount ?? 0, t.hotCount ?? 0, t.visitScheduledCount ?? 0, t.decisionPendingCount ?? 0, t.admittedCount ?? 0]
       const ccRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.warmCount ?? 0, t.proposalSentCount ?? 0, t.hotCount ?? 0, t.qualifiedCount ?? 0]
       const ediiRow = (t: any) => [t.name || '-', t.totalAssignedLeads ?? 0, t.totalCalls ?? 0, t.pendingCalls ?? 0, t.callbacks ?? 0, t.coldNRCount ?? 0, t.coldNICount ?? 0, t.ediiInterestedCount ?? 0, t.ediiInterestedFollowupCount ?? 0, t.ediiQualifiedCount ?? 0]
-      
+
       const head = module === "sa" ? saHead : module === "edii" ? ediiHead : ccHead
       const body = perfData.map(module === "sa" ? saRow : module === "edii" ? ediiRow : ccRow)
-      
+
       autoTable(doc, {
         startY,
         head: [head],
@@ -447,7 +447,7 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Outcome Distribution', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    
+
     // Add Outcome Distribution Chart for Student Admission (use offscreen PDF chart)
     const outcomeChart = await getSvgImageDataUrl('pdf-sa-chart-outcome')
     if (outcomeChart) {
@@ -456,7 +456,7 @@ export default function ReportsPage() {
       doc.addImage(outcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
       y += chartHeight + 15
     }
-    
+
     y = ensurePage(y, 80)
     y = drawOutcomeTable([
       { label: 'Cold / No Response', color: [241, 245, 249] },
@@ -521,7 +521,7 @@ export default function ReportsPage() {
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Outcome Distribution', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    
+
     // Add Outcome Distribution Chart for College Contact (use offscreen PDF chart)
     const ccOutcomeChart = await getSvgImageDataUrl('pdf-cc-chart-outcome')
     if (ccOutcomeChart) {
@@ -530,7 +530,7 @@ export default function ReportsPage() {
       doc.addImage(ccOutcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
       y += chartHeight + 15
     }
-    
+
     y = ensurePage(y, 80)
     y = drawOutcomeTable([
       { label: 'New', color: [219, 234, 254] },
@@ -659,21 +659,21 @@ export default function ReportsPage() {
           adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'college_contact').catch(() => null),
           adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'edii').catch(() => null),
         ])
-        
+
         // Filter prospects by module type using same logic as Telecaller Dashboard
-        const ediiProspects = prospects.filter((p: any) => 
+        const ediiProspects = prospects.filter((p: any) =>
           p.prospect_type === 'edii' || p.dashboard === 'edii'
         )
 
-        const collegeContacts = prospects.filter((p: any) => 
+        const collegeContacts = prospects.filter((p: any) =>
           !(p.prospect_type === 'edii' || p.dashboard === 'edii') &&
-          ((p.lead_source && p.lead_source.length > 0) || 
-           (p.lead_type && p.lead_type.length > 0))
+          ((p.lead_source && p.lead_source.length > 0) ||
+            (p.lead_type && p.lead_type.length > 0))
         )
-        
-        const studentAdmissionProspects = prospects.filter((p: any) => 
+
+        const studentAdmissionProspects = prospects.filter((p: any) =>
           !(p.prospect_type === 'edii' || p.dashboard === 'edii') &&
-          !((p.lead_source && p.lead_source.length > 0) || 
+          !((p.lead_source && p.lead_source.length > 0) ||
             (p.lead_type && p.lead_type.length > 0))
         )
 
@@ -681,20 +681,20 @@ export default function ReportsPage() {
         const collegeContactIds = new Set(collegeContacts.map((p) => p.id))
         const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.id))
         const ediiIds = new Set(ediiProspects.map((p) => p.id))
-        
+
         const collegeContactCallLogs = callLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
         const studentAdmissionCallLogs = callLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
         const ediiCallLogs = callLogs.filter((log: any) => ediiIds.has(log.prospect_id))
-        
+
         // Calculate outcome distribution from call logs (filtered by module)
         const calculateOutcomeDistribution = (logs: any[], module: "sa" | "cc" | "edii") => {
           const distribution: Record<string, number> = {}
-          
+
           if (module === "cc") {
             // College Contact outcomes
             const ccOutcomes = CC_OUTCOME_ORDER
             ccOutcomes.forEach(outcome => distribution[outcome] = 0)
-            
+
             logs.forEach((log: any) => {
               const outcome = log.status_after_call || log.outcome || 'New'
               if (distribution.hasOwnProperty(outcome)) {
@@ -705,7 +705,7 @@ export default function ReportsPage() {
             // EDII outcomes
             const ediiOutcomes = EDII_OUTCOME_ORDER
             ediiOutcomes.forEach(outcome => distribution[outcome] = 0)
-            
+
             logs.forEach((log: any) => {
               let outcome = log.status_after_call || log.outcome || 'New'
               if (outcome === 'Interested Followup') outcome = 'Interested-Followup'
@@ -717,7 +717,7 @@ export default function ReportsPage() {
             // Student Admission outcomes
             const saOutcomes = SA_OUTCOME_ORDER
             saOutcomes.forEach(outcome => distribution[outcome] = 0)
-            
+
             logs.forEach((log: any) => {
               const status = log.status_after_call
               let outcome = 'Cold / No Response'
@@ -727,21 +727,21 @@ export default function ReportsPage() {
               else if (status === 'hot') outcome = 'Hot'
               else if (status === 'warm' || status === 'contacted') outcome = 'Warm'
               else if (status === 'cold_not_interested' || status === 'Not Interested') outcome = 'Cold / Not Interested'
-              
+
               if (distribution.hasOwnProperty(outcome)) {
                 distribution[outcome]++
               }
             })
           }
-          
+
           return Object.entries(distribution).map(([name, value]) => ({ name, value }))
         }
-        
+
         // Calculate summary stats from filtered data
         const calculateSummary = (prospects: any[], logs: any[], module: "sa" | "cc" | "edii") => {
           // Use all logs filtered by date range from backend, not just today
           const totalCalls = logs.length
-          
+
           // Filter prospects by date range (created_at or assigned_date within range)
           const dateFilteredProspects = prospects.filter((p: any) => {
             const prospectDate = new Date(p.created_at || p.assigned_date)
@@ -750,28 +750,28 @@ export default function ReportsPage() {
             end.setHours(23, 59, 59, 999)
             return prospectDate >= start && prospectDate <= end
           })
-          
+
           // Calculate total calls per prospect for pending logic (using all logs, not just today)
           const prospectCallCounts = new Map<number, number>()
           logs.forEach((log: any) => {
             const current = prospectCallCounts.get(log.prospect_id) || 0
             prospectCallCounts.set(log.prospect_id, current + 1)
           })
-          
+
           // Match telecaller dashboard pending logic (on date-filtered prospects)
           const pendingCalls = dateFilteredProspects.filter((p: any) => {
             const totalCallsForProspect = prospectCallCounts.get(p.id) || 0
             if (module === "cc" || module === "edii") {
               // College contact/edii: outcome='New' or no calls
-              return (p.outcome === 'New' || p.status === 'New' || 
-                      (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === 'New'))) &&
-                      totalCallsForProspect === 0
+              return (p.outcome === 'New' || p.status === 'New' ||
+                (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === 'New'))) &&
+                totalCallsForProspect === 0
             } else {
               // Student admission: status='new' OR (status='contacted' AND totalCalls=0)
               return p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)
             }
           }).length
-          
+
           // Match telecaller dashboard callback logic: count unique prospects with callbacks (using all logs)
           const callbackProspectIds = new Set<number>()
           logs.forEach((log: any) => {
@@ -780,7 +780,7 @@ export default function ReportsPage() {
             }
           })
           const callbacks = callbackProspectIds.size
-          
+
           return {
             totalCalls,
             totalPendingCalls: pendingCalls,
@@ -788,7 +788,7 @@ export default function ReportsPage() {
             totalEnrollments: dateFilteredProspects.filter((p: any) => p.status === 'admission_done').length
           }
         }
-        
+
         // Build consistent data object - use backend's summary and outcome distribution which are already correctly filtered
         const filteredProspects = activeTabType === 'college_contact'
           ? collegeContacts
@@ -821,7 +821,7 @@ export default function ReportsPage() {
           filteredProspects,
           filteredCallLogs
         }
-        
+
         setData(consistentData)
         setVisitDoneProspects(studentAdmissionProspects.filter((p: any) => p.status === 'visit_done'))
         setErrorMessage(null)
@@ -914,19 +914,19 @@ export default function ReportsPage() {
         {pdfSaStatusData && (
           <ResponsiveContainer id="pdf-sa-chart-outcome" width="100%" height="100%">
             <BarChart data={pdfSaStatusData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3"/>
+              <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" interval={0} tick={{ fontSize: 10 }} angle={-35} textAnchor="end" height={60} />
-              <YAxis/>
-              <Bar dataKey="value" fill="#8b5cf6"><LabelList dataKey="value" position="top"/></Bar>
+              <YAxis />
+              <Bar dataKey="value" fill="#8b5cf6"><LabelList dataKey="value" position="top" /></Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
         {pdfSaActivityData && (
           <ResponsiveContainer id="pdf-sa-chart-activity" width="100%" height="100%">
             <BarChart data={pdfSaActivityData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={56}>
                 {pdfSaActivityData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={entry.name === 'Total Calls' ? '#3b82f6' : entry.name === 'Pending Calls' ? '#f97316' : '#8b5cf6'} />
@@ -940,19 +940,19 @@ export default function ReportsPage() {
         {pdfCcStatusData && (
           <ResponsiveContainer id="pdf-cc-chart-outcome" width="100%" height="100%">
             <BarChart data={pdfCcStatusData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3"/>
+              <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" interval={0} tick={{ fontSize: 10 }} angle={-35} textAnchor="end" height={60} />
-              <YAxis/>
-              <Bar dataKey="value" fill="#3b82f6"><LabelList dataKey="value" position="top"/></Bar>
+              <YAxis />
+              <Bar dataKey="value" fill="#3b82f6"><LabelList dataKey="value" position="top" /></Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
         {pdfCcActivityData && (
           <ResponsiveContainer id="pdf-cc-chart-activity" width="100%" height="100%">
             <BarChart data={pdfCcActivityData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={56}>
                 {pdfCcActivityData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={entry.name === 'Total Calls' ? '#3b82f6' : entry.name === 'Pending Calls' ? '#f97316' : '#8b5cf6'} />
@@ -966,19 +966,19 @@ export default function ReportsPage() {
         {pdfEdiiStatusData && (
           <ResponsiveContainer id="pdf-edii-chart-outcome" width="100%" height="100%">
             <BarChart data={pdfEdiiStatusData} margin={{ top: 10, right: 10, left: 0, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3"/>
+              <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" interval={0} tick={{ fontSize: 10 }} angle={-35} textAnchor="end" height={60} />
-              <YAxis/>
-              <Bar dataKey="value" fill="#06b6d4"><LabelList dataKey="value" position="top"/></Bar>
+              <YAxis />
+              <Bar dataKey="value" fill="#06b6d4"><LabelList dataKey="value" position="top" /></Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
         {pdfEdiiActivityData && (
           <ResponsiveContainer id="pdf-edii-chart-activity" width="100%" height="100%">
             <BarChart data={pdfEdiiActivityData} margin={{ top: 20, right: 20, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false}/>
-              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
               <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={56}>
                 {pdfEdiiActivityData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={entry.name === 'Total Calls' ? '#3b82f6' : entry.name === 'Pending Calls' ? '#f97316' : '#8b5cf6'} />
@@ -988,10 +988,10 @@ export default function ReportsPage() {
             </BarChart>
           </ResponsiveContainer>
         )}
-        
+
       </div>
       {/* Header */}
-      
+
       <div className="flex gap-2">
         <Button variant={activeTabType === "student_admission" ? "default" : "outline"} onClick={() => setActiveTabType("student_admission")}
           className={activeTabType === "student_admission" ? "bg-blue-600 hover:bg-blue-700 flex-1" : "flex-1"}>
@@ -1006,7 +1006,7 @@ export default function ReportsPage() {
           EDII
         </Button>
       </div>
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-normal text-foreground">Reports & Analytics</h1>
           <p className="text-muted-foreground">Performance metrics and insights</p>
@@ -1200,7 +1200,7 @@ export default function ReportsPage() {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Module comparison is shown in exported PDF only */}
+            {/* Module comparison is shown in exported PDF only */}
             <Card>
               <CardHeader>
                 <CardTitle>Call Activity</CardTitle>
@@ -1638,47 +1638,47 @@ export default function ReportsPage() {
         </TabsContent>
 
         {activeTabType === "student_admission" && (
-        <TabsContent value="fieldvisits" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Students - Visit Done / Decision Pending</CardTitle>
-              <CardDescription>Prospects awaiting decision after campus visit</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {visitDoneProspects.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground text-sm">No prospects awaiting decision at this time</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Student Name</TableHead>
-                        <TableHead>College Name</TableHead>
-                        <TableHead>Mobile</TableHead>
-                        <TableHead>Alt Email</TableHead>
-                        <TableHead>Department</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visitDoneProspects.map((prospect: any) => (
-                        <TableRow key={prospect.id}>
-                          <TableCell className="font-medium">{prospect.name}</TableCell>
-                          <TableCell>{prospect.college_name || "-"}</TableCell>
-                          <TableCell>{prospect.mobile}</TableCell>
-                          <TableCell>{prospect.alternative_email || "-"}</TableCell>
-                          <TableCell>{prospect.department || "-"}</TableCell>
+          <TabsContent value="fieldvisits" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Students - Visit Done / Decision Pending</CardTitle>
+                <CardDescription>Prospects awaiting decision after campus visit</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {visitDoneProspects.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <p className="text-muted-foreground text-sm">No prospects awaiting decision at this time</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Student Name</TableHead>
+                          <TableHead>College Name</TableHead>
+                          <TableHead>Mobile</TableHead>
+                          <TableHead>Alt Email</TableHead>
+                          <TableHead>Department</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      )}
+                      </TableHeader>
+                      <TableBody>
+                        {visitDoneProspects.map((prospect: any) => (
+                          <TableRow key={prospect.id}>
+                            <TableCell className="font-medium">{prospect.name}</TableCell>
+                            <TableCell>{prospect.college_name || "-"}</TableCell>
+                            <TableCell>{prospect.mobile}</TableCell>
+                            <TableCell>{prospect.alternative_email || "-"}</TableCell>
+                            <TableCell>{prospect.department || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

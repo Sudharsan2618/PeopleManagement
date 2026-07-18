@@ -802,7 +802,7 @@ export default function CallHistoryPage() {
         <div>
           <h1 className="text-xl font-normal ">Call History</h1>
           <p className="text-sm text-muted-foreground">
-            {filteredCallLogsForStats.length} total calls logged
+            {filteredCallLogsForStats.length} unique leads contacted
           </p>
         </div>
         <div className="flex bg-muted p-1 rounded-lg">
@@ -1126,7 +1126,7 @@ export default function CallHistoryPage() {
             </Table>
           </div>
           <div className="p-4 border-t bg-muted/5 text-xs font-semibold text-muted-foreground flex justify-between items-center">
-            <span>Showing {filteredLogs.length} of {callLogs.length} entries</span>
+            <span>Showing {filteredLogs.length} of {filteredCallLogsForStats.length} unique leads</span>
             <div className="flex gap-1">
               {/* Pagination could go here if needed */}
             </div>

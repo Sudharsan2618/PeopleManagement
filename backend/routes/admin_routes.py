@@ -351,12 +351,22 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         """
 
     outcome_distribution = execute_query(f"""
-        SELECT category as name, COUNT(*) as value
-        FROM (
-            SELECT {cat_select}
+        WITH latest_calls AS (
+            SELECT DISTINCT ON (cl.prospect_id)
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.status_after_call,
+                cl.called_at
             FROM call_logs cl
             {pt_join}
             WHERE 1=1 {tc_clause} {date_clause} {pt_filter}
+            ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
+        )
+        SELECT category as name, COUNT(*) as value
+        FROM (
+            SELECT {cat_select.replace('cl.status_after_call', 'cl.status_after_call')}
+            FROM latest_calls cl
         ) AS categorized
         WHERE category IS NOT NULL
         GROUP BY category
@@ -382,19 +392,33 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             FROM prospect_assignments pa
             {'JOIN prospects p_pa ON p_pa.id = pa.prospect_id' if prospect_type else ''}
             WHERE 1=1 {pa_date_clause} {pt_filter_pa}
+        ),
+        latest_calls AS (
+            -- One row per prospect: the latest call within the date/filter window
+            SELECT DISTINCT ON (cl.prospect_id)
+                cl.id,
+                cl.prospect_id,
+                cl.telecaller_id,
+                cl.status_after_call,
+                cl.callback_scheduled_at,
+                cl.called_at
+            FROM call_logs cl
+            {'LEFT JOIN prospects p_cl ON p_cl.id = cl.prospect_id' if prospect_type else ''}
+            WHERE 1=1 {date_clause} {pt_filter_cl}
+            ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
         )
-        SELECT 
+        SELECT
             u.id,
             u.name,
             (SELECT COUNT(DISTINCT al.prospect_id) FROM assigned_leads al WHERE al.telecaller_id = u.id) as "totalAssignedLeads",
             COUNT(cl.id) as "totalCalls",
             (
-                SELECT COUNT(DISTINCT al.prospect_id) 
-                FROM assigned_leads al 
+                SELECT COUNT(DISTINCT al.prospect_id)
+                FROM assigned_leads al
                 WHERE al.telecaller_id = u.id
                 AND al.prospect_id NOT IN (
-                    SELECT DISTINCT cl2.prospect_id 
-                    FROM call_logs cl2 
+                    SELECT DISTINCT cl2.prospect_id
+                    FROM call_logs cl2
                     WHERE cl2.telecaller_id = u.id
                 )
             ) as "pendingCalls",
@@ -414,15 +438,14 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'Interested') as "ediiInterestedCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('Interested Followup', 'Interested-Followup')) as "ediiInterestedFollowupCount",
             COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'Qualified') as "ediiQualifiedCount",
-            CASE 
+            CASE
                 WHEN COUNT(cl.id) > 0 THEN ROUND(100.0 * COUNT(cl.id) FILTER (WHERE cl.status_after_call = 'admission_done') / COUNT(cl.id))
                 ELSE 0
             END as "conversionRate",
             0 as "avgDuration"
         FROM users u
-        LEFT JOIN call_logs cl ON cl.telecaller_id = u.id {date_clause}
-        {'LEFT JOIN prospects p_cl ON p_cl.id = cl.prospect_id' if prospect_type else ''}
-        WHERE u.role = 'telecaller' AND u.is_active = TRUE {pt_filter_cl}
+        LEFT JOIN latest_calls cl ON cl.telecaller_id = u.id
+        WHERE u.role = 'telecaller' AND u.is_active = TRUE
         GROUP BY u.id, u.name
         ORDER BY "totalCalls" DESC
     """, tuple(params) if params else None, fetch="all")
@@ -465,6 +488,19 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
     pt_filter = _pt_clause("p", params)
     
     call_summary = execute_query(f"""
+        WITH latest_calls AS (
+            -- One row per prospect: the latest call within the date/filter window
+            SELECT DISTINCT ON (cl.prospect_id)
+                cl.id,
+                cl.prospect_id,
+                cl.status_after_call,
+                cl.callback_scheduled_at,
+                cl.called_at
+            FROM call_logs cl
+            {pt_join}
+            WHERE 1=1 {date_clause} {pt_filter}
+            ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
+        )
         SELECT
             COUNT(*) AS "totalCalls",
             COUNT(*) FILTER (WHERE cl.status_after_call NOT IN ('cold', 'cold_no_response', 'lost', 'Ringing / Not Reachable') AND cl.status_after_call IS NOT NULL) AS "answeredCalls",
@@ -476,9 +512,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
             0 AS "wrongNumbers",
             0 AS dnc,
             COUNT(DISTINCT CASE WHEN cl.callback_scheduled_at IS NOT NULL THEN cl.prospect_id END) AS callbacks
-        FROM call_logs cl
-        {pt_join}
-        WHERE 1=1 {date_clause} {pt_filter}
+        FROM latest_calls cl
     """, tuple(params) if params else None, fetch="one")
 
     pending_params = []

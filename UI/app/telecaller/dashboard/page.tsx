@@ -396,28 +396,28 @@ const normalizeDashboard = (value: unknown): "student_admission" | "college_cont
 
 const normalizeStatus = (value: string): string => {
   if (typeof value !== "string") return ""
-  
+
   // Convert to lowercase
   let normalized = value.toLowerCase()
-  
+
   // Remove invisible whitespace (non-breaking spaces, zero-width spaces, etc.)
   normalized = normalized.replace(/[\u00A0\u200B\u200C\u200D\u2060\uFEFF]/g, "")
-  
+
   // Trim leading and trailing spaces
   normalized = normalized.trim()
-  
+
   // Replace multiple spaces with a single space
   normalized = normalized.replace(/\s+/g, " ")
-  
+
   // Treat underscores as spaces
   normalized = normalized.replace(/_/g, " ")
-  
+
   // Remove spaces around /
   normalized = normalized.replace(/\s*\/\s*/g, "/")
-  
+
   // Remove spaces around -
   normalized = normalized.replace(/\s*-\s*/g, "-")
-  
+
   return normalized
 }
 
