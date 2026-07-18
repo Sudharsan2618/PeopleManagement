@@ -165,6 +165,7 @@ def get_telecaller_performance(start_date: str = None, end_date: str = None):
             u.name,
             COUNT(cl.id) AS total_calls,
             COUNT(cl.id) FILTER (WHERE cl.called_at::date = CURRENT_DATE) AS calls_today,
+            COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('hot', 'Qualified', 'admission_done')) AS qualified,
             COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('warm', 'hot', 'Interested Followup', 'Proposal To Be Sent', 'Proposal Sent', 'Training Date Followup', 'Interested', 'Qualified')) AS interested,
             COUNT(cl.id) FILTER (WHERE cl.callback_scheduled_at IS NOT NULL) AS callbacks,
             COUNT(cl.id) FILTER (WHERE cl.status_after_call IN ('cold_not_interested', 'Not Interested')) AS not_interested,
