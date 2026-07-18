@@ -519,7 +519,7 @@ export function CallOutcomeModal({
 
   // For default mode, lead mode & EDII mode – map selectedOutcome to callback-active logic
   const callbackSectionActive = isEDIIMode
-    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested" && selectedOutcome !== "Qualified")
     : isLeadMode
     ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
     : (
