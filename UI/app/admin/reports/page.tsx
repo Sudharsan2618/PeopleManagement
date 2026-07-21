@@ -188,12 +188,8 @@ export default function ReportsPage() {
     const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim()
     const formatNotes = (text: string) => { const n = normalizeText(text); return n ? doc.splitTextToSize(n, 160) : '-' }
 
-    // ─── Fetch data for all 3 modules directly from backend (same as dashboard) ─
-    const [saReports, ccReports, ediiReports] = await Promise.all([
-      adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'student_admission').catch(() => null),
-      adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'college_contact').catch(() => null),
-      adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'edii').catch(() => null),
-    ])
+    // ─── Fetch data only for the active section ─
+    const reports = await adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, activeTabType).catch(() => null)
 
     // Build outcome distributions from backend data
     const buildOutcomeDist = (reports: any, outcomeOrder: string[], normalize?: (s: string) => string) => {
@@ -207,79 +203,110 @@ export default function ReportsPage() {
       })
     }
 
-    const saData = {
-      summary: saReports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
-      outcomeDistribution: buildOutcomeDist(saReports, SA_OUTCOME_ORDER),
-      telecallerPerformance: saReports?.telecallerPerformance || [],
-    }
+    // Determine section-specific data based on activeTabType
+    let sectionData: any
+    let sectionName: string
+    let sectionColor: [number, number, number]
+    let outcomeOrder: string[]
+    let chartPrefix: string
 
-    const ccData = {
-      summary: ccReports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
-      outcomeDistribution: buildOutcomeDist(ccReports, CC_OUTCOME_ORDER),
-      telecallerPerformance: ccReports?.telecallerPerformance || [],
-    }
-
-    const ediiData = {
-      summary: ediiReports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
-      outcomeDistribution: buildOutcomeDist(ediiReports, EDII_OUTCOME_ORDER, (s) => s === 'Interested Followup' ? 'Interested-Followup' : s),
-      telecallerPerformance: ediiReports?.telecallerPerformance || [],
+    if (activeTabType === 'student_admission') {
+      sectionData = {
+        summary: reports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
+        outcomeDistribution: buildOutcomeDist(reports, SA_OUTCOME_ORDER),
+        telecallerPerformance: reports?.telecallerPerformance || [],
+      }
+      sectionName = 'Student Admission'
+      sectionColor = [37, 99, 235]
+      outcomeOrder = SA_OUTCOME_ORDER
+      chartPrefix = 'pdf-sa'
+    } else if (activeTabType === 'college_contact') {
+      sectionData = {
+        summary: reports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
+        outcomeDistribution: buildOutcomeDist(reports, CC_OUTCOME_ORDER),
+        telecallerPerformance: reports?.telecallerPerformance || [],
+      }
+      sectionName = 'College Contact'
+      sectionColor = [124, 58, 237]
+      outcomeOrder = CC_OUTCOME_ORDER
+      chartPrefix = 'pdf-cc'
+    } else { // edii
+      sectionData = {
+        summary: reports?.summary || { totalCalls: 0, totalPendingCalls: 0, callbacks: 0, totalEnrollments: 0, totalProspects: 0 },
+        outcomeDistribution: buildOutcomeDist(reports, EDII_OUTCOME_ORDER, (s) => s === 'Interested Followup' ? 'Interested-Followup' : s),
+        telecallerPerformance: reports?.telecallerPerformance || [],
+      }
+      sectionName = 'EDII Contact'
+      sectionColor = [6, 182, 212]
+      outcomeOrder = EDII_OUTCOME_ORDER
+      chartPrefix = 'pdf-edii'
     }
 
     // Prepare offscreen PDF chart datasets and wait for render
     const buildStatus = (outcomeArr: any[], order: string[]) => order.map((name) => ({ name, value: (outcomeArr || []).find((d: any) => d.name === name)?.value ?? 0 }))
-    setPdfSaStatusData(buildStatus(saData.outcomeDistribution, SA_OUTCOME_ORDER))
-    setPdfCcStatusData(buildStatus(ccData.outcomeDistribution, CC_OUTCOME_ORDER))
-    setPdfEdiiStatusData(buildStatus(ediiData.outcomeDistribution, EDII_OUTCOME_ORDER))
+    
+    if (activeTabType === 'student_admission') {
+      setPdfSaStatusData(buildStatus(sectionData.outcomeDistribution, SA_OUTCOME_ORDER))
+    } else if (activeTabType === 'college_contact') {
+      setPdfCcStatusData(buildStatus(sectionData.outcomeDistribution, CC_OUTCOME_ORDER))
+    } else {
+      setPdfEdiiStatusData(buildStatus(sectionData.outcomeDistribution, EDII_OUTCOME_ORDER))
+    }
 
     // Prepare activity datasets for offscreen PDF charts
-    setPdfSaActivityData([
-      { name: 'Total Calls', value: saData.summary.totalCalls || 0 },
-      { name: 'Pending Calls', value: saData.summary.totalPendingCalls || 0 },
-      { name: 'Scheduled Callbacks', value: saData.callbacks || 0 }
-    ])
-    setPdfCcActivityData([
-      { name: 'Total Calls', value: ccData.summary.totalCalls || 0 },
-      { name: 'Pending Calls', value: ccData.summary.totalPendingCalls || 0 },
-      { name: 'Scheduled Callbacks', value: ccData.callbacks || 0 }
-    ])
-    setPdfEdiiActivityData([
-      { name: 'Total Calls', value: ediiData.summary.totalCalls || 0 },
-      { name: 'Pending Calls', value: ediiData.summary.totalPendingCalls || 0 },
-      { name: 'Scheduled Callbacks', value: ediiData.callbacks || 0 }
-    ])
+    if (activeTabType === 'student_admission') {
+      setPdfSaActivityData([
+        { name: 'Total Calls', value: sectionData.summary.totalCalls || 0 },
+        { name: 'Pending Calls', value: sectionData.summary.totalPendingCalls || 0 },
+        { name: 'Scheduled Callbacks', value: sectionData.summary.callbacks || 0 }
+      ])
+    } else if (activeTabType === 'college_contact') {
+      setPdfCcActivityData([
+        { name: 'Total Calls', value: sectionData.summary.totalCalls || 0 },
+        { name: 'Pending Calls', value: sectionData.summary.totalPendingCalls || 0 },
+        { name: 'Scheduled Callbacks', value: sectionData.summary.callbacks || 0 }
+      ])
+    } else {
+      setPdfEdiiActivityData([
+        { name: 'Total Calls', value: sectionData.summary.totalCalls || 0 },
+        { name: 'Pending Calls', value: sectionData.summary.totalPendingCalls || 0 },
+        { name: 'Scheduled Callbacks', value: sectionData.summary.callbacks || 0 }
+      ])
+    }
 
     // Module comparison removed from PDF as requested
 
     // allow React to paint the hidden SVGs
     await new Promise((r) => setTimeout(r, 120))
 
-    // Build call logs per module from the already-fetched allCallLogs
+    // Build call logs for the active section only
     const [allProspects, allCallLogs] = await Promise.all([
       prospectsApi.getAll(),
       callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined).catch(() => [] as any[])
     ])
 
-    const ediiProspects = allProspects.filter((p: any) =>
-      p.prospect_type === 'edii'
-    )
-    const collegeContacts = allProspects.filter((p: any) =>
-      p.prospect_type !== 'edii' &&
-      ((p.lead_source && p.lead_source.length > 0) ||
-        (p.lead_type && p.lead_type.length > 0))
-    )
-    const studentAdmissionProspects = allProspects.filter((p: any) =>
-      p.prospect_type !== 'edii' &&
-      !((p.lead_source && p.lead_source.length > 0) ||
-        (p.lead_type && p.lead_type.length > 0))
-    )
-
-    const ediiIds = new Set(ediiProspects.map((p: any) => p.id))
-    const collegeContactIds = new Set(collegeContacts.map((p: any) => p.id))
-    const studentAdmissionIds = new Set(studentAdmissionProspects.map((p: any) => p.id))
-
-    const saLogs = allCallLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
-    const ccLogs = allCallLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
-    const ediiLogs = allCallLogs.filter((log: any) => ediiIds.has(log.prospect_id))
+    let sectionLogs: any[] = []
+    if (activeTabType === 'student_admission') {
+      const studentAdmissionProspects = allProspects.filter((p: any) =>
+        p.prospect_type !== 'edii' &&
+        !((p.lead_source && p.lead_source.length > 0) ||
+          (p.lead_type && p.lead_type.length > 0))
+      )
+      const studentAdmissionIds = new Set(studentAdmissionProspects.map((p: any) => p.id))
+      sectionLogs = allCallLogs.filter((log: any) => studentAdmissionIds.has(log.prospect_id))
+    } else if (activeTabType === 'college_contact') {
+      const collegeContacts = allProspects.filter((p: any) =>
+        p.prospect_type !== 'edii' &&
+        ((p.lead_source && p.lead_source.length > 0) ||
+          (p.lead_type && p.lead_type.length > 0))
+      )
+      const collegeContactIds = new Set(collegeContacts.map((p: any) => p.id))
+      sectionLogs = allCallLogs.filter((log: any) => collegeContactIds.has(log.prospect_id))
+    } else { // edii
+      const ediiProspects = allProspects.filter((p: any) => p.prospect_type === 'edii')
+      const ediiIds = new Set(ediiProspects.map((p: any) => p.id))
+      sectionLogs = allCallLogs.filter((log: any) => ediiIds.has(log.prospect_id))
+    }
 
     // ─── Section meta info embedded in section banners ─────────────────────────
 
@@ -406,36 +433,52 @@ export default function ReportsPage() {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // SECTION 1 — STUDENT ADMISSION
+    // SINGLE SECTION — BASED ON ACTIVE TAB
     // ═══════════════════════════════════════════════════════════════════════════
     let y = margin
 
-    // Module comparison removed from PDF — skip inserting chart
+    y = drawSectionBanner(`SECTION — ${sectionName.toUpperCase()}`, `${sectionData?.summary?.totalCalls ?? 0} total calls`, sectionColor, y)
 
-    y = drawSectionBanner("SECTION 1 — STUDENT ADMISSION", `${saData?.summary?.totalCalls ?? 0} total calls`, [37, 99, 235], y)
+    // KPI row - section-specific
+    let kpis: any[] = []
+    if (activeTabType === 'student_admission') {
+      kpis = [
+        { label: 'Total Calls', value: sectionData?.summary?.totalCalls ?? 0 },
+        { label: 'Warm', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Warm')?.value ?? 0 },
+        { label: 'Hot', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Hot')?.value ?? 0 },
+        { label: 'Admission Done', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Admission Done ✓')?.value ?? 0 },
+      ]
+    } else if (activeTabType === 'college_contact') {
+      kpis = [
+        { label: 'Total Calls', value: sectionData?.summary?.totalCalls ?? 0 },
+        { label: 'Proposal Sent', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Proposal Sent')?.value ?? 0 },
+        { label: 'Qualified', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
+        { label: 'Not Interested', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Not Interested')?.value ?? 0 },
+      ]
+    } else { // edii
+      kpis = [
+        { label: 'Total Calls', value: sectionData?.summary?.totalCalls ?? 0 },
+        { label: 'Interested', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Interested')?.value ?? 0 },
+        { label: 'Qualified', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
+        { label: 'Not Interested', value: (sectionData?.outcomeDistribution || []).find((d: any) => d.name === 'Not Interested')?.value ?? 0 },
+      ]
+    }
 
-    // KPI row
-    const saKpis = [
-      { label: 'Total Calls', value: saData?.summary?.totalCalls ?? 0 },
-      { label: 'Warm', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Warm')?.value ?? 0 },
-      { label: 'Hot', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Hot')?.value ?? 0 },
-      { label: 'Admission Done', value: (saData?.outcomeDistribution || []).find((d: any) => d.name === 'Admission Done ✓')?.value ?? 0 },
-    ]
     autoTable(doc, {
       startY: y,
       theme: 'plain',
-      head: [saKpis.map(k => k.label)],
-      body: [saKpis.map(k => k.value)],
-      headStyles: { fillColor: [219, 234, 254], textColor: [30, 64, 175], fontSize: 8 },
+      head: [kpis.map(k => k.label)],
+      body: [kpis.map(k => k.value)],
+      headStyles: { fillColor: sectionColor.map(c => Math.min(c + 180, 255)) as [number, number, number], textColor: sectionColor, fontSize: 8 },
       bodyStyles: { fontSize: 14, fontStyle: 'bold', halign: 'center' },
     })
     y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
 
-    // Add Call Activity Chart for Student Admission
+    // Add Call Activity Chart
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Call Activity Chart', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    const callActivityChart = await getSvgImageDataUrl('pdf-sa-chart-activity')
+    const callActivityChart = await getSvgImageDataUrl(`${chartPrefix}-chart-activity`)
     if (callActivityChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -448,8 +491,8 @@ export default function ReportsPage() {
     doc.text('Outcome Distribution', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
 
-    // Add Outcome Distribution Chart for Student Admission (use offscreen PDF chart)
-    const outcomeChart = await getSvgImageDataUrl('pdf-sa-chart-outcome')
+    // Add Outcome Distribution Chart
+    const outcomeChart = await getSvgImageDataUrl(`${chartPrefix}-chart-outcome`)
     if (outcomeChart) {
       const chartWidth = usableWidth * 0.6
       const chartHeight = 200
@@ -458,176 +501,58 @@ export default function ReportsPage() {
     }
 
     y = ensurePage(y, 80)
-    y = drawOutcomeTable([
-      { label: 'Cold / No Response', color: [241, 245, 249] },
-      { label: 'Cold / Not Interested', color: [241, 245, 249] },
-      { label: 'Warm', color: [254, 243, 199] },
-      { label: 'Hot', color: [254, 226, 226] },
-      { label: 'Visit Scheduled', color: [237, 233, 254] },
-      { label: 'Visit Done / Decision Pending', color: [255, 237, 213] },
-      { label: 'Admission Done ✓', color: [209, 250, 229] },
-    ], saData?.outcomeDistribution || [], saData?.summary?.totalCalls || 0, y, [37, 99, 235])
+    
+    // Outcome table - section-specific
+    let outcomeColors: { label: string; color: [number, number, number] }[] = []
+    if (activeTabType === 'student_admission') {
+      outcomeColors = [
+        { label: 'Cold / No Response', color: [241, 245, 249] },
+        { label: 'Cold / Not Interested', color: [241, 245, 249] },
+        { label: 'Warm', color: [254, 243, 199] },
+        { label: 'Hot', color: [254, 226, 226] },
+        { label: 'Visit Scheduled', color: [237, 233, 254] },
+        { label: 'Visit Done / Decision Pending', color: [255, 237, 213] },
+        { label: 'Admission Done ✓', color: [209, 250, 229] },
+      ]
+    } else if (activeTabType === 'college_contact') {
+      outcomeColors = [
+        { label: 'New', color: [219, 234, 254] },
+        { label: 'Interested', color: [237, 233, 254] },
+        { label: 'Interested Followup', color: [243, 232, 255] },
+        { label: 'Proposal To Be Sent', color: [254, 243, 199] },
+        { label: 'Proposal Sent', color: [255, 237, 213] },
+        { label: 'Training Date Followup', color: [254, 252, 232] },
+        { label: 'Qualified', color: [209, 250, 229] },
+        { label: 'Ringing / Not Reachable', color: [241, 245, 249] },
+        { label: 'Not Interested', color: [254, 226, 226] },
+      ]
+    } else { // edii
+      outcomeColors = [
+        { label: 'New', color: [219, 234, 254] },
+        { label: 'Interested', color: [237, 233, 254] },
+        { label: 'Interested-Followup', color: [243, 232, 255] },
+        { label: 'Qualified', color: [209, 250, 229] },
+        { label: 'Ringing / Not Reachable', color: [241, 245, 249] },
+        { label: 'Not Interested', color: [254, 226, 226] },
+      ]
+    }
+    
+    y = drawOutcomeTable(outcomeColors, sectionData?.outcomeDistribution || [], sectionData?.summary?.totalCalls || 0, y, sectionColor)
 
     y = ensurePage(y, 80)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
     doc.text('Telecaller Performance', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    y = drawTelecallerTable(saData?.telecallerPerformance || [], "sa", y, [37, 99, 235])
+    const moduleType = activeTabType === 'student_admission' ? 'sa' : activeTabType === 'college_contact' ? 'cc' : 'edii'
+    y = drawTelecallerTable(sectionData?.telecallerPerformance || [], moduleType, y, sectionColor)
 
     y = ensurePage(y, 60)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Detailed Call Logs — Student Admission', margin, y); y += 10
+    doc.text(`Detailed Call Logs — ${sectionName}`, margin, y); y += 10
     doc.setFont('helvetica', 'normal')
-    y = drawCallLogsTable(saLogs || [], true, y, [67, 56, 202])
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // SECTION 2 — COLLEGE CONTACT
-    // ═══════════════════════════════════════════════════════════════════════════
-    doc.addPage()
-    y = margin
-
-    y = drawSectionBanner("SECTION 2 — COLLEGE CONTACT", `${ccData?.summary?.totalCalls ?? 0} total calls`, [124, 58, 237], y)
-
-    // KPI row
-    const ccKpis = [
-      { label: 'Total Calls', value: ccData?.summary?.totalCalls ?? 0 },
-      { label: 'Proposal Sent', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Proposal Sent')?.value ?? 0 },
-      { label: 'Qualified', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
-      { label: 'Not Interested', value: (ccData?.outcomeDistribution || []).find((d: any) => d.name === 'Not Interested')?.value ?? 0 },
-    ]
-    autoTable(doc, {
-      startY: y,
-      theme: 'plain',
-      head: [ccKpis.map(k => k.label)],
-      body: [ccKpis.map(k => k.value)],
-      headStyles: { fillColor: [237, 233, 254], textColor: [109, 40, 217], fontSize: 8 },
-      bodyStyles: { fontSize: 14, fontStyle: 'bold', halign: 'center' },
-    })
-    y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
-
-    // Add Call Activity Chart for College Contact
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Call Activity Chart', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    const ccCallActivityChart = await getSvgImageDataUrl('pdf-cc-chart-activity')
-    if (ccCallActivityChart) {
-      const chartWidth = usableWidth * 0.6
-      const chartHeight = 200
-      doc.addImage(ccCallActivityChart, 'PNG', margin, y, chartWidth, chartHeight)
-      y += chartHeight + 15
-    }
-
-    y = ensurePage(y, 80)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Outcome Distribution', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-
-    // Add Outcome Distribution Chart for College Contact (use offscreen PDF chart)
-    const ccOutcomeChart = await getSvgImageDataUrl('pdf-cc-chart-outcome')
-    if (ccOutcomeChart) {
-      const chartWidth = usableWidth * 0.6
-      const chartHeight = 200
-      doc.addImage(ccOutcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
-      y += chartHeight + 15
-    }
-
-    y = ensurePage(y, 80)
-    y = drawOutcomeTable([
-      { label: 'New', color: [219, 234, 254] },
-      { label: 'Interested', color: [237, 233, 254] },
-      { label: 'Interested Followup', color: [243, 232, 255] },
-      { label: 'Proposal To Be Sent', color: [254, 243, 199] },
-      { label: 'Proposal Sent', color: [255, 237, 213] },
-      { label: 'Training Date Followup', color: [254, 252, 232] },
-      { label: 'Qualified', color: [209, 250, 229] },
-      { label: 'Ringing / Not Reachable', color: [241, 245, 249] },
-      { label: 'Not Interested', color: [254, 226, 226] },
-    ], ccData?.outcomeDistribution || [], ccData?.summary?.totalCalls || 0, y, [124, 58, 237])
-
-    y = ensurePage(y, 80)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Telecaller Performance', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    y = drawTelecallerTable(ccData?.telecallerPerformance || [], "cc", y, [124, 58, 237])
-
-    y = ensurePage(y, 60)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Detailed Call Logs — College Contact', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    y = drawCallLogsTable(ccLogs || [], false, y, [124, 58, 237])
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // SECTION 3 — EDII CONTACT
-    // ═══════════════════════════════════════════════════════════════════════════
-    doc.addPage()
-    y = margin
-
-    y = drawSectionBanner("SECTION 3 — EDII CONTACT", `${ediiData?.summary?.totalCalls ?? 0} total calls`, [6, 182, 212], y)
-
-    // KPI row
-    const ediiKpis = [
-      { label: 'Total Calls', value: ediiData?.summary?.totalCalls ?? 0 },
-      { label: 'Interested', value: (ediiData?.outcomeDistribution || []).find((d: any) => d.name === 'Interested')?.value ?? 0 },
-      { label: 'Qualified', value: (ediiData?.outcomeDistribution || []).find((d: any) => d.name === 'Qualified')?.value ?? 0 },
-      { label: 'Not Interested', value: (ediiData?.outcomeDistribution || []).find((d: any) => d.name === 'Not Interested')?.value ?? 0 },
-    ]
-    autoTable(doc, {
-      startY: y,
-      theme: 'plain',
-      head: [ediiKpis.map(k => k.label)],
-      body: [ediiKpis.map(k => k.value)],
-      headStyles: { fillColor: [207, 250, 254], textColor: [8, 145, 178], fontSize: 8 },
-      bodyStyles: { fontSize: 14, fontStyle: 'bold', halign: 'center' },
-    })
-    y = (doc as any).lastAutoTable?.finalY + 12 || y + 60
-
-    // Add Call Activity Chart for EDII
-    y = ensurePage(y, 80)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Call Activity Chart', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    const ediiCallActivityChart = await getSvgImageDataUrl('pdf-edii-chart-activity')
-    if (ediiCallActivityChart) {
-      const chartWidth = usableWidth * 0.6
-      const chartHeight = 200
-      doc.addImage(ediiCallActivityChart, 'PNG', margin, y, chartWidth, chartHeight)
-      y += chartHeight + 15
-    }
-
-    // Add Outcome Distribution Chart for EDII
-    y = ensurePage(y, 80)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Outcome Distribution', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    const ediiOutcomeChart = await getSvgImageDataUrl('pdf-edii-chart-outcome')
-    if (ediiOutcomeChart) {
-      const chartWidth = usableWidth * 0.6
-      const chartHeight = 200
-      doc.addImage(ediiOutcomeChart, 'PNG', margin, y, chartWidth, chartHeight)
-      y += chartHeight + 15
-    }
-
-    y = ensurePage(y, 80)
-    y = drawOutcomeTable([
-      { label: 'New', color: [219, 234, 254] },
-      { label: 'Interested', color: [237, 233, 254] },
-      { label: 'Interested-Followup', color: [243, 232, 255] },
-      { label: 'Qualified', color: [209, 250, 229] },
-      { label: 'Ringing / Not Reachable', color: [241, 245, 249] },
-      { label: 'Not Interested', color: [254, 226, 226] },
-    ], ediiData?.outcomeDistribution || [], ediiData?.summary?.totalCalls || 0, y, [6, 182, 212])
-
-    y = ensurePage(y, 80)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Telecaller Performance', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    y = drawTelecallerTable(ediiData?.telecallerPerformance || [], "edii", y, [6, 182, 212])
-
-    y = ensurePage(y, 60)
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text('Detailed Call Logs — EDII Contact', margin, y); y += 10
-    doc.setFont('helvetica', 'normal')
-    y = drawCallLogsTable(ediiLogs || [], false, y, [6, 182, 212], true)
+    const isSA = activeTabType === 'student_admission'
+    const isEDII = activeTabType === 'edii'
+    y = drawCallLogsTable(sectionLogs || [], isSA, y, sectionColor, isEDII)
 
     // ─── Footer on every page ──────────────────────────────────────────────────
     const pageCount = doc.getNumberOfPages()
@@ -641,7 +566,7 @@ export default function ReportsPage() {
       doc.setTextColor(0, 0, 0)
     }
 
-    doc.save(`crm-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`)
+    doc.save(`${sectionName.toLowerCase().replace(' ', '-')}-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`)
   }
 
 
@@ -651,13 +576,10 @@ export default function ReportsPage() {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const [reports, prospects, callLogs, saReports, ccReports, ediiReports] = await Promise.all([
+        const [reports, prospects, callLogs] = await Promise.all([
           adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, activeTabType),
           prospectsApi.getAll(),
           callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined, activeTabType),
-          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'student_admission').catch(() => null),
-          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'college_contact').catch(() => null),
-          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, 'edii').catch(() => null),
         ])
 
         // Filter prospects by module type using same logic as Telecaller Dashboard
@@ -826,9 +748,9 @@ export default function ReportsPage() {
         setVisitDoneProspects(studentAdmissionProspects.filter((p: any) => p.status === 'visit_done'))
         setErrorMessage(null)
         setModuleSummaries({
-          sa: saReports?.summary || { totalCalls: 0 },
-          cc: ccReports?.summary || { totalCalls: 0 },
-          edii: ediiReports?.summary || { totalCalls: 0 },
+          sa: activeTabType === 'student_admission' ? reports?.summary || { totalCalls: 0 } : { totalCalls: 0 },
+          cc: activeTabType === 'college_contact' ? reports?.summary || { totalCalls: 0 } : { totalCalls: 0 },
+          edii: activeTabType === 'edii' ? reports?.summary || { totalCalls: 0 } : { totalCalls: 0 },
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

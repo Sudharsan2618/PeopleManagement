@@ -485,6 +485,10 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
     # 7. Summary Stats
     params = []
     date_clause = _date_filter_clause("cl.called_at::date", start_date, end_date, params)
+    tc_clause = ""
+    if telecaller_id is not None:
+        params.append(telecaller_id)
+        tc_clause = " AND cl.telecaller_id = %s "
     pt_join = " JOIN prospects p ON p.id = cl.prospect_id " if prospect_type else ""
     pt_filter = _pt_clause("p", params)
     
@@ -499,7 +503,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
                 cl.called_at
             FROM call_logs cl
             {pt_join}
-            WHERE 1=1 {date_clause} {pt_filter}
+            WHERE 1=1 {date_clause} {tc_clause} {pt_filter}
             ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
         )
         SELECT
@@ -518,6 +522,10 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pending_params = []
     pending_date_clause = _date_filter_clause("pa.assigned_date", start_date, end_date, pending_params)
+    pending_tc_clause = ""
+    if telecaller_id is not None:
+        pending_params.append(telecaller_id)
+        pending_tc_clause = " AND pa.telecaller_id = %s "
     pt_join_pa = " JOIN prospects p ON p.id = pa.prospect_id " if prospect_type else ""
     pt_filter_pa = _pt_clause("p", pending_params)
     
@@ -525,7 +533,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
         SELECT COUNT(DISTINCT pa.prospect_id) as count
         FROM prospect_assignments pa
         {pt_join_pa}
-        WHERE 1=1 {pending_date_clause} {pt_filter_pa}
+        WHERE 1=1 {pending_date_clause} {pending_tc_clause} {pt_filter_pa}
         AND pa.prospect_id NOT IN (
             SELECT DISTINCT cl.prospect_id FROM call_logs cl
         )
