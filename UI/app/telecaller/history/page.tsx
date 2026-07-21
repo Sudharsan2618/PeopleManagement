@@ -243,22 +243,31 @@ export default function CallHistoryPage() {
         return
       }
 
+      // Helper function to clean text for CSV export
+      const cleanText = (text: string | null | undefined): string => {
+        if (text === null || text === undefined) return ""
+        // Remove non-printable Unicode characters (except common whitespace)
+        const cleaned = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+        // Replace em dash and other problematic dashes with regular hyphen
+        return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
+      }
+
       const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Outcome", "Status After", "Notes"]
       const rows = exportData.map(log => {
         const prospect = prospects[log.prospect_id]
         const dt = new Date(log.called_at)
         const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
-        const prospectMobile = prospect ? prospect.mobile : "—"
+        const prospectMobile = prospect ? prospect.mobile : ""
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
         return [
-          prospect ? (prospect.lead_id || "—") : "—",
+          prospect ? cleanText(prospect.lead_id) : "",
           dt.toLocaleDateString('en-IN'),
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          prospectName,
-          prospectMobile,
-          outcomeLabel,
-          log.status_after_call || "—",
-          log.notes ? log.notes.replace(/\n/g, " ") : "—"
+          cleanText(prospectName),
+          cleanText(prospectMobile),
+          cleanText(outcomeLabel),
+          cleanText(log.status_after_call),
+          log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : ""
         ]
       })
 
@@ -266,7 +275,9 @@ export default function CallHistoryPage() {
         .map(row => row.map(cell => `"${(cell || "").toString().replace(/"/g, '""')}"`).join(","))
         .join("\n")
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      // Add UTF-8 BOM for proper encoding in Excel and Google Sheets
+      const bom = "\uFEFF"
+      const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.setAttribute("href", url)
