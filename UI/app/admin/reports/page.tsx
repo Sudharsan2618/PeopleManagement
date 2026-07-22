@@ -311,18 +311,58 @@ export default function ReportsPage() {
     // ─── Section meta info embedded in section banners ─────────────────────────
 
     // helper: draw a coloured section banner
-    const drawSectionBanner = (title: string, subtitle: string, color: [number, number, number], y: number) => {
+    const drawSectionBanner = (title: string, subtitle: string, color: [number, number, number], y: number, telecallerInfo?: { name: string; date: string; time: string; reportType: string; reportPeriod: string }) => {
       doc.setFillColor(...color)
-      doc.rect(margin, y, usableWidth, 30, 'F')
+      doc.rect(margin, y, usableWidth, 60, 'F')
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(13)
+      
+      // Left side - Title and subtitle
+      doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
-      doc.text(title, margin + 8, y + 20)
-      doc.setFontSize(9)
+      doc.text(title, margin + 12, y + 25)
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'normal')
-      doc.text(subtitle, margin + 8 + doc.getTextWidth(title) + 12, y + 20)
+      doc.text(subtitle, margin + 12, y + 42)
+      
+      // Add telecaller information on the right side if provided
+      if (telecallerInfo) {
+        const infoSections = [
+          { label: 'Telecaller Name', value: telecallerInfo.name },
+          { label: 'Downloaded Date', value: telecallerInfo.date },
+          { label: 'Downloaded Time', value: telecallerInfo.time },
+          { label: 'Report Type', value: telecallerInfo.reportType }
+        ]
+        
+        const sectionWidth = (usableWidth - 200) / 4
+        const startX = margin + 200
+        const separatorX = [startX + sectionWidth, startX + sectionWidth * 2, startX + sectionWidth * 3]
+        
+        // Draw vertical separators
+        doc.setDrawColor(255, 255, 255)
+        doc.setLineWidth(0.5)
+        separatorX.forEach(x => {
+          doc.line(x, y + 10, x, y + 50)
+        })
+        
+        // Draw each section
+        infoSections.forEach((section, index) => {
+          const sectionX = startX + (index * sectionWidth)
+          const centerX = sectionX + (sectionWidth / 2)
+          
+          // Label
+          doc.setFontSize(8)
+          doc.setFont('helvetica', 'normal')
+          doc.text(section.label, centerX - (doc.getTextWidth(section.label) / 2), y + 25)
+          
+          // Value
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.text(section.value, centerX - (doc.getTextWidth(section.value) / 2), y + 40)
+        })
+      }
+      
       doc.setTextColor(0, 0, 0)
-      return y + 42
+      return y + 70
     }
 
     // helper: outcome summary table
@@ -437,7 +477,24 @@ export default function ReportsPage() {
     // ═══════════════════════════════════════════════════════════════════════════
     let y = margin
 
-    y = drawSectionBanner(`SECTION — ${sectionName.toUpperCase()}`, `${sectionData?.summary?.totalCalls ?? 0} total calls`, sectionColor, y)
+    // Prepare telecaller information if a specific telecaller is selected
+    const telecallerName = selectedTelecallerId 
+      ? (sectionData?.telecallerPerformance?.find((t: any) => t.id === selectedTelecallerId)?.name || 
+         sectionData?.telecallerPerformance?.[0]?.name || 'Unknown')
+      : 'All Telecallers'
+    
+    const currentDate = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    const currentTime = new Date().toLocaleTimeString(undefined, { hour12: true })
+    
+    const telecallerInfo = {
+      name: telecallerName,
+      date: currentDate,
+      time: currentTime,
+      reportType: `${sectionName} Report`,
+      reportPeriod: periodLabel
+    }
+
+    y = drawSectionBanner(`SECTION — ${sectionName.toUpperCase()}`, `${sectionData?.summary?.totalCalls ?? 0} total calls`, sectionColor, y, telecallerInfo)
 
     // KPI row - section-specific
     let kpis: any[] = []
@@ -544,7 +601,13 @@ export default function ReportsPage() {
     doc.text('Telecaller Performance', margin, y); y += 10
     doc.setFont('helvetica', 'normal')
     const moduleType = activeTabType === 'student_admission' ? 'sa' : activeTabType === 'college_contact' ? 'cc' : 'edii'
-    y = drawTelecallerTable(sectionData?.telecallerPerformance || [], moduleType, y, sectionColor)
+    
+    // Filter telecaller performance data to show only selected telecaller
+    const filteredTelecallerPerformance = selectedTelecallerId 
+      ? (sectionData?.telecallerPerformance || []).filter((t: any) => t.id === selectedTelecallerId)
+      : (sectionData?.telecallerPerformance || [])
+    
+    y = drawTelecallerTable(filteredTelecallerPerformance, moduleType, y, sectionColor)
 
     y = ensurePage(y, 60)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
