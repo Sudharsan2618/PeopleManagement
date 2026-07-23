@@ -28,6 +28,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Check, ChevronsUpDown } from "lucide-react"
 import {
   Sheet,
@@ -697,7 +703,20 @@ export function CallOutcomeModal({
                             <p className="text-xs font-medium text-foreground/80 mb-1">{call.reason}</p>
                           )}
                           {call.notes && (
-                            <p className="text-[11px] text-muted-foreground line-clamp-2 italic">&quot;{call.notes}&quot;</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-2 italic cursor-help">&quot;{call.notes}&quot;</p>
+                                </TooltipTrigger>
+                                <TooltipContent 
+                                  className="bg-[#1F2937] text-white rounded-lg px-3 py-2.5 max-w-[360px] shadow-lg"
+                                  side="top"
+                                  sideOffset={8}
+                                >
+                                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{call.notes}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       </div>
