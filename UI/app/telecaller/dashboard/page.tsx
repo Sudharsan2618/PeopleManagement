@@ -1346,36 +1346,6 @@ export default function TelecallerDashboard() {
 
 
 
-    const callbackCount = Array.from(latestLogByProspect.values()).filter(
-
-      (log) => log.callback_scheduled_at
-
-    ).length
-
-
-
-    const todayStudentLogs = studentAdmissionCallLogs.filter((cl: any) => {
-
-      const logDate = new Date(cl.called_at).toISOString().split("T")[0]
-
-      return logDate === targetDate
-
-    })
-
-
-
-    const todayStudentAssignmentCount = studentAdmissionProspects.filter((p) => {
-
-      const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
-
-      if (!assignment) return false
-
-      return assignment.assigned_date === targetDate
-
-    }).length
-
-
-
     // Student admission status counts (filtered by selected date)
 
     const studentProspectsOnDate = studentAdmissionProspects.filter((p) => {
@@ -1390,13 +1360,31 @@ export default function TelecallerDashboard() {
 
 
 
+    const callbackCount = studentProspectsOnDate.filter((p) => p.callbackDateTime !== null).length
+
+
+
+    const todayStudentLogs = studentAdmissionCallLogs.filter((cl: any) => {
+
+      const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+      return logDate === targetDate
+
+    })
+
+
+
+    const todayStudentAssignmentCount = studentProspectsOnDate.length
+
+
+
     const studentStatusCounts = {
 
-      new: studentProspectsOnDate.filter((p) => p.status === "new" || p.status === "New").length,
-
-      contacted: studentProspectsOnDate.filter((p) => p.status === "contacted").length,
-
       warm: studentProspectsOnDate.filter((p) => p.status === "warm").length,
+
+      cold_no_response: studentProspectsOnDate.filter((p) => p.status === "cold_no_response").length,
+
+      cold_not_interested: studentProspectsOnDate.filter((p) => p.status === "cold_not_interested").length,
 
       hot: studentProspectsOnDate.filter((p) => p.status === "hot").length,
 
@@ -1405,14 +1393,6 @@ export default function TelecallerDashboard() {
       visit_done: studentProspectsOnDate.filter((p) => p.status === "visit_done").length,
 
       admission_done: studentProspectsOnDate.filter((p) => p.status === "admission_done").length,
-
-      cold: studentProspectsOnDate.filter((p) => p.status === "cold").length,
-
-      cold_no_response: studentProspectsOnDate.filter((p) => p.status === "cold_no_response").length,
-
-      cold_not_interested: studentProspectsOnDate.filter((p) => p.status === "cold_not_interested").length,
-
-      lost: studentProspectsOnDate.filter((p) => p.status === "lost").length,
 
     }
 
@@ -1590,9 +1570,9 @@ export default function TelecallerDashboard() {
 
       callbacksDue: callbackCount,
 
-      admitted: studentAdmissionProspects.filter((p) => p.status === "admission_done").length,
+      admitted: studentProspectsOnDate.filter((p) => p.status === "admission_done").length,
 
-      pending: studentAdmissionProspects.filter(
+      pending: studentProspectsOnDate.filter(
 
         (p) =>
 
@@ -1600,7 +1580,7 @@ export default function TelecallerDashboard() {
 
       ).length,
 
-      visitDone: studentAdmissionProspects.filter((p) => p.status === "visit_done").length,
+      visitDone: studentProspectsOnDate.filter((p) => p.status === "visit_done").length,
 
       // Student admission status counts
 
@@ -1976,27 +1956,19 @@ export default function TelecallerDashboard() {
 
         ["Status Breakdown", ""],
 
-        ["New", telecallerStats.studentStatusCounts.new],
+        ["Interested", telecallerStats.studentStatusCounts.warm],
 
-        ["Contacted", telecallerStats.studentStatusCounts.contacted],
+        ["Cold / No Response", telecallerStats.studentStatusCounts.cold_no_response],
 
-        ["Warm", telecallerStats.studentStatusCounts.warm],
+        ["Cold / Not Interested", telecallerStats.studentStatusCounts.cold_not_interested],
 
-        ["Hot", telecallerStats.studentStatusCounts.hot],
+        ["Strong Interest / Ready for Counselling", telecallerStats.studentStatusCounts.hot],
 
-        ["Visit Scheduled", telecallerStats.studentStatusCounts.visit_scheduled],
+        ["Visit Planned and Confirmed", telecallerStats.studentStatusCounts.visit_scheduled],
 
-        ["Visit Done", telecallerStats.studentStatusCounts.visit_done],
+        ["Visit Campus / Decision Awaited", telecallerStats.studentStatusCounts.visit_done],
 
-        ["Admission Done", telecallerStats.studentStatusCounts.admission_done],
-
-        ["Cold", telecallerStats.studentStatusCounts.cold],
-
-        ["Cold No Response", telecallerStats.studentStatusCounts.cold_no_response],
-
-        ["Cold Not Interested", telecallerStats.studentStatusCounts.cold_not_interested],
-
-        ["Lost", telecallerStats.studentStatusCounts.lost],
+        ["Admission Successfully Completed", telecallerStats.studentStatusCounts.admission_done],
 
       ]
 
@@ -2138,27 +2110,19 @@ export default function TelecallerDashboard() {
 
         ["Status Breakdown", ""],
 
-        ["New", telecallerStats.studentStatusCounts.new],
+        ["Interested", telecallerStats.studentStatusCounts.warm],
 
-        ["Contacted", telecallerStats.studentStatusCounts.contacted],
+        ["Cold / No Response", telecallerStats.studentStatusCounts.cold_no_response],
 
-        ["Warm", telecallerStats.studentStatusCounts.warm],
+        ["Cold / Not Interested", telecallerStats.studentStatusCounts.cold_not_interested],
 
-        ["Hot", telecallerStats.studentStatusCounts.hot],
+        ["Strong Interest / Ready for Counselling", telecallerStats.studentStatusCounts.hot],
 
-        ["Visit Scheduled", telecallerStats.studentStatusCounts.visit_scheduled],
+        ["Visit Planned and Confirmed", telecallerStats.studentStatusCounts.visit_scheduled],
 
-        ["Visit Done", telecallerStats.studentStatusCounts.visit_done],
+        ["Visit Campus / Decision Awaited", telecallerStats.studentStatusCounts.visit_done],
 
-        ["Admission Done", telecallerStats.studentStatusCounts.admission_done],
-
-        ["Cold", telecallerStats.studentStatusCounts.cold],
-
-        ["Cold No Response", telecallerStats.studentStatusCounts.cold_no_response],
-
-        ["Cold Not Interested", telecallerStats.studentStatusCounts.cold_not_interested],
-
-        ["Lost", telecallerStats.studentStatusCounts.lost],
+        ["Admission Successfully Completed", telecallerStats.studentStatusCounts.admission_done],
 
       ]
 
@@ -2659,7 +2623,6 @@ export default function TelecallerDashboard() {
         } else if (statCardFilter === "Callbacks") {
 
           matchesStatCard = assignment && assignment.assigned_date === targetDate &&
-
             prospect.callbackDateTime !== null
 
         } else if (statCardFilter === "Pending") {
@@ -2669,6 +2632,16 @@ export default function TelecallerDashboard() {
             (prospectCalls.length === 0 ||
 
               (prospectCalls.length > 0 && prospectCalls[prospectCalls.length - 1].outcome === "New"))
+
+        } else if (statCardFilter === "Admitted") {
+
+          matchesStatCard = assignment && assignment.assigned_date === targetDate &&
+            prospect.status === "admission_done"
+
+        } else if (statCardFilter === "Visit Done / Decision Pending") {
+
+          matchesStatCard = assignment && assignment.assigned_date === targetDate &&
+            prospect.status === "visit_done"
 
         }
 
@@ -3426,7 +3399,9 @@ export default function TelecallerDashboard() {
 
                     key={status}
 
-                    className="flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                    onClick={() => setStatusFilter(status)}
+
+                    className="flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer"
 
                   >
 
@@ -3440,7 +3415,7 @@ export default function TelecallerDashboard() {
 
                         <button
 
-                          onClick={() => downloadProspectsByStatus(status, "excel")}
+                          onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "excel"); }}
 
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
 
@@ -3454,7 +3429,7 @@ export default function TelecallerDashboard() {
 
                         <button
 
-                          onClick={() => downloadProspectsByStatus(status, "pdf")}
+                          onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "pdf"); }}
 
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
 
@@ -3486,7 +3461,9 @@ export default function TelecallerDashboard() {
 
                     key={status}
 
-                    className="flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                    onClick={() => setStatusFilter(status)}
+
+                    className="flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer"
 
                   >
 
@@ -3500,7 +3477,7 @@ export default function TelecallerDashboard() {
 
                         <button
 
-                          onClick={() => downloadProspectsByStatus(status, "excel")}
+                          onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "excel"); }}
 
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
 
@@ -3514,7 +3491,7 @@ export default function TelecallerDashboard() {
 
                         <button
 
-                          onClick={() => downloadProspectsByStatus(status, "pdf")}
+                          onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "pdf"); }}
 
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
 
@@ -3546,7 +3523,9 @@ export default function TelecallerDashboard() {
 
                     key={status}
 
-                    className="flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                    onClick={() => setStatusFilter(status)}
+
+                    className="flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer"
 
                   >
 
@@ -3560,7 +3539,7 @@ export default function TelecallerDashboard() {
 
                         <button
 
-                          onClick={() => downloadProspectsByStatus(status, "excel")}
+                          onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "excel"); }}
 
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
 
@@ -3574,7 +3553,7 @@ export default function TelecallerDashboard() {
 
                         <button
 
-                          onClick={() => downloadProspectsByStatus(status, "pdf")}
+                          onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "pdf"); }}
 
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
 

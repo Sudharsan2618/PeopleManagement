@@ -41,6 +41,13 @@ import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import { adminApi, callLogsApi, SpocVisitsApi, prospectsApi } from "@/lib/api-client"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const SA_OUTCOME_ORDER = ['Cold / No Response', 'Cold / Not Interested', 'Warm', 'Hot', 'Visit Scheduled', 'Visit Done / Decision Pending', 'Admission Done ✓']
 const SA_OUTCOME_COLORS: Record<string, string> = {
@@ -133,12 +140,26 @@ export default function ReportsPage() {
   const [pdfSaActivityData, setPdfSaActivityData] = useState<any[] | null>(null)
   const [pdfCcActivityData, setPdfCcActivityData] = useState<any[] | null>(null)
   const [pdfEdiiActivityData, setPdfEdiiActivityData] = useState<any[] | null>(null)
+  const [exportType, setExportType] = useState<"entire" | "status">("entire")
+  const [selectedStatus, setSelectedStatus] = useState<string>("")
 
 
   const handleRangeChange = (start: string, end: string) => {
     setStartDate(start)
     setEndDate(end)
   }
+
+  // Reset selected status when export type changes
+  useEffect(() => {
+    if (exportType === 'entire') {
+      setSelectedStatus('')
+    }
+  }, [exportType])
+
+  // Reset selected status when module changes
+  useEffect(() => {
+    setSelectedStatus('')
+  }, [activeTabType])
 
   const formatChartDate = (value: string) => {
     if (!value) return value
@@ -308,10 +329,66 @@ export default function ReportsPage() {
       sectionLogs = allCallLogs.filter((log: any) => ediiIds.has(log.prospect_id))
     }
 
+    // Filter sectionLogs by selected status if status-wise export
+    if (exportType === 'status' && selectedStatus) {
+      // Handle special statuses: Callback Leads and Pending Calls
+      if (selectedStatus === 'Callback Leads') {
+        sectionLogs = sectionLogs.filter((log: any) => log.callback_scheduled_at)
+      } else if (selectedStatus === 'Pending Calls') {
+        // For pending calls, we need to get prospects with no calls or new status
+        const prospectIdsWithCalls = new Set(sectionLogs.map((log: any) => log.prospect_id))
+        const pendingProspectIds = allProspects
+          .filter((p: any) => {
+            const hasCalls = prospectIdsWithCalls.has(p.id)
+            return (p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && !hasCalls)) && !hasCalls
+          })
+          .map((p: any) => p.id)
+        
+        // Create placeholder logs for pending prospects
+        sectionLogs = pendingProspectIds.map((prospectId: number) => {
+          const prospect = allProspects.find((p: any) => p.id === prospectId)
+          return {
+            prospect_id: prospectId,
+            prospect_name: prospect?.name || '-',
+            prospect_phone: prospect?.mobile || prospect?.phone || '-',
+            course_interest: prospect?.course_interest || '-',
+            telecaller_name: prospect?.assigned_telecaller_name || '-',
+            status_after_call: 'Pending',
+            called_at: prospect?.created_at || '-',
+            callback_scheduled_at: '-',
+            notes: '-'
+          }
+        })
+      } else {
+        // Regular status filtering
+        sectionLogs = sectionLogs.filter((log: any) => {
+          const status = log.status_after_call || log.outcome || 'New'
+          if (activeTabType === 'student_admission') {
+            let outcome = 'Cold / No Response'
+            if (status === 'visit_done') outcome = 'Visit Done / Decision Pending'
+            else if (status === 'admission_done') outcome = 'Admission Done ✓'
+            else if (status === 'visit_scheduled') outcome = 'Visit Scheduled'
+            else if (status === 'hot') outcome = 'Hot'
+            else if (status === 'warm' || status === 'contacted') outcome = 'Warm'
+            else if (status === 'cold_not_interested' || status === 'Not Interested') outcome = 'Cold / Not Interested'
+            return outcome === selectedStatus
+          } else if (activeTabType === 'college_contact') {
+            let outcome = status
+            if (outcome === 'Interested Followup') outcome = 'Interested Followup'
+            return outcome === selectedStatus
+          } else { // edii
+            let outcome = status
+            if (outcome === 'Interested Followup') outcome = 'Interested-Followup'
+            return outcome === selectedStatus
+          }
+        })
+      }
+    }
+
     // ─── Section meta info embedded in section banners ─────────────────────────
 
     // helper: draw a coloured section banner
-    const drawSectionBanner = (title: string, subtitle: string, color: [number, number, number], y: number, telecallerInfo?: { name: string; date: string; time: string; reportType: string; reportPeriod: string }) => {
+    const drawSectionBanner = (title: string, subtitle: string, color: [number, number, number], y: number, telecallerInfo?: { name: string; date: string; time: string; reportType: string; reportPeriod: string; exportType?: string; selectedStatus?: string; totalRecords?: number }) => {
       doc.setFillColor(...color)
       doc.rect(margin, y, usableWidth, 60, 'F')
       doc.setTextColor(255, 255, 255)
@@ -333,16 +410,22 @@ export default function ReportsPage() {
           { label: 'Report Type', value: telecallerInfo.reportType }
         ]
         
-        const sectionWidth = (usableWidth - 200) / 4
+        // Add export type and status if status-wise report
+        if (telecallerInfo.exportType === 'status' && telecallerInfo.selectedStatus) {
+          infoSections[3] = { label: 'Export Type', value: 'Status-wise' }
+          infoSections.push({ label: 'Selected Status', value: telecallerInfo.selectedStatus })
+        }
+        
+        const sectionWidth = (usableWidth - 200) / infoSections.length
         const startX = margin + 200
-        const separatorX = [startX + sectionWidth, startX + sectionWidth * 2, startX + sectionWidth * 3]
         
         // Draw vertical separators
         doc.setDrawColor(255, 255, 255)
         doc.setLineWidth(0.5)
-        separatorX.forEach(x => {
+        for (let i = 1; i < infoSections.length; i++) {
+          const x = startX + (sectionWidth * i)
           doc.line(x, y + 10, x, y + 50)
-        })
+        }
         
         // Draw each section
         infoSections.forEach((section, index) => {
@@ -350,12 +433,12 @@ export default function ReportsPage() {
           const centerX = sectionX + (sectionWidth / 2)
           
           // Label
-          doc.setFontSize(8)
+          doc.setFontSize(7)
           doc.setFont('helvetica', 'normal')
           doc.text(section.label, centerX - (doc.getTextWidth(section.label) / 2), y + 25)
           
           // Value
-          doc.setFontSize(10)
+          doc.setFontSize(9)
           doc.setFont('helvetica', 'bold')
           doc.text(section.value, centerX - (doc.getTextWidth(section.value) / 2), y + 40)
         })
@@ -430,8 +513,69 @@ export default function ReportsPage() {
     }
 
     // helper: call logs table
-    const drawCallLogsTable = (logs: any[], isSA: boolean, startY: number, headColor: [number, number, number], isEDII: boolean = false) => {
+    const drawCallLogsTable = (logs: any[], isSA: boolean, startY: number, headColor: [number, number, number], isEDII: boolean = false, reportType?: string) => {
       if (!logs?.length) return startY
+      
+      // Special handling for Callback Leads and Pending Calls
+      if (reportType === 'Callback Leads') {
+        const rows = logs.map((r: any) => [
+          r.prospect_name || '-',
+          r.prospect_phone || '-',
+          r.course_interest || r.prospect_course_interest || '-',
+          r.telecaller_name || '-',
+          r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleDateString() : '-',
+          r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+          formatNotes(r.notes || ''),
+          r.called_at ? new Date(r.called_at).toLocaleString() : '-',
+        ])
+        const head = ['Lead Name', 'Phone Number', 'Course', 'Assigned Telecaller', 'Callback Date', 'Callback Time', 'Remarks', 'Downloaded On']
+        autoTable(doc, {
+          startY,
+          head: [head],
+          body: rows,
+          styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', valign: 'top' },
+          columnStyles: {
+            0: { cellWidth: 80 }, 1: { cellWidth: 70 }, 2: { cellWidth: 65 },
+            3: { cellWidth: 80 }, 4: { cellWidth: 60 }, 5: { cellWidth: 55 },
+            6: { cellWidth: 120 }, 7: { cellWidth: 80 },
+          },
+          tableWidth: 'auto',
+          headStyles: { fillColor: headColor, textColor: 255 },
+          theme: 'striped',
+        })
+        return (doc as any).lastAutoTable?.finalY + 16 || startY + 100
+      }
+      
+      if (reportType === 'Pending Calls') {
+        const rows = logs.map((r: any) => [
+          r.prospect_name || '-',
+          r.prospect_phone || '-',
+          r.course_interest || r.prospect_course_interest || '-',
+          r.telecaller_name || '-',
+          r.called_at ? new Date(r.called_at).toLocaleDateString() : '-',
+          r.callback_scheduled_at ? new Date(r.callback_scheduled_at).toLocaleDateString() : '-',
+          formatNotes(r.notes || ''),
+          r.called_at ? new Date(r.called_at).toLocaleString() : '-',
+        ])
+        const head = ['Lead Name', 'Phone Number', 'Course', 'Assigned Telecaller', 'Last Call Date', 'Next Follow-up Date', 'Remarks', 'Downloaded On']
+        autoTable(doc, {
+          startY,
+          head: [head],
+          body: rows,
+          styles: { fontSize: 7.5, cellPadding: 4, overflow: 'linebreak', valign: 'top' },
+          columnStyles: {
+            0: { cellWidth: 80 }, 1: { cellWidth: 70 }, 2: { cellWidth: 65 },
+            3: { cellWidth: 80 }, 4: { cellWidth: 60 }, 5: { cellWidth: 65 },
+            6: { cellWidth: 120 }, 7: { cellWidth: 80 },
+          },
+          tableWidth: 'auto',
+          headStyles: { fillColor: headColor, textColor: 255 },
+          theme: 'striped',
+        })
+        return (doc as any).lastAutoTable?.finalY + 16 || startY + 100
+      }
+      
+      // Default call logs table
       const rows = logs.map((r: any) => [
         r.called_at ? new Date(r.called_at).toLocaleDateString() : '-',
         r.called_at ? new Date(r.called_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
@@ -491,10 +635,33 @@ export default function ReportsPage() {
       date: currentDate,
       time: currentTime,
       reportType: `${sectionName} Report`,
-      reportPeriod: periodLabel
+      reportPeriod: periodLabel,
+      exportType: exportType,
+      selectedStatus: exportType === 'status' ? selectedStatus : undefined,
+      totalRecords: exportType === 'status' ? (sectionLogs?.filter((log: any) => {
+        const status = log.status_after_call || log.outcome || 'New'
+        if (activeTabType === 'student_admission') {
+          let outcome = 'Cold / No Response'
+          if (status === 'visit_done') outcome = 'Visit Done / Decision Pending'
+          else if (status === 'admission_done') outcome = 'Admission Done ✓'
+          else if (status === 'visit_scheduled') outcome = 'Visit Scheduled'
+          else if (status === 'hot') outcome = 'Hot'
+          else if (status === 'warm' || status === 'contacted') outcome = 'Warm'
+          else if (status === 'cold_not_interested' || status === 'Not Interested') outcome = 'Cold / Not Interested'
+          return outcome === selectedStatus
+        } else if (activeTabType === 'college_contact') {
+          let outcome = status
+          if (outcome === 'Interested Followup') outcome = 'Interested Followup'
+          return outcome === selectedStatus
+        } else { // edii
+          let outcome = status
+          if (outcome === 'Interested Followup') outcome = 'Interested-Followup'
+          return outcome === selectedStatus
+        }
+      })?.length || 0) : sectionLogs?.length || 0
     }
 
-    y = drawSectionBanner(`SECTION — ${sectionName.toUpperCase()}`, `${sectionData?.summary?.totalCalls ?? 0} total calls`, sectionColor, y, telecallerInfo)
+    y = drawSectionBanner(`SECTION — ${sectionName.toUpperCase()}`, `${exportType === 'status' ? `${selectedStatus} - ${sectionLogs?.length || 0} records` : `${sectionData?.summary?.totalCalls ?? 0} total calls`}`, sectionColor, y, telecallerInfo)
 
     // KPI row - section-specific
     let kpis: any[] = []
@@ -611,11 +778,15 @@ export default function ReportsPage() {
 
     y = ensurePage(y, 60)
     doc.setFontSize(11); doc.setFont('helvetica', 'bold')
-    doc.text(`Detailed Call Logs — ${sectionName}`, margin, y); y += 10
+    const logTitle = exportType === 'status' && selectedStatus 
+      ? `Detailed Call Logs — ${selectedStatus}` 
+      : `Detailed Call Logs — ${sectionName}`
+    doc.text(logTitle, margin, y); y += 10
     doc.setFont('helvetica', 'normal')
     const isSA = activeTabType === 'student_admission'
     const isEDII = activeTabType === 'edii'
-    y = drawCallLogsTable(sectionLogs || [], isSA, y, sectionColor, isEDII)
+    const currentReportType = exportType === 'status' ? selectedStatus : undefined
+    y = drawCallLogsTable(sectionLogs || [], isSA, y, sectionColor, isEDII, currentReportType)
 
     // ─── Footer on every page ──────────────────────────────────────────────────
     const pageCount = doc.getNumberOfPages()
@@ -629,7 +800,10 @@ export default function ReportsPage() {
       doc.setTextColor(0, 0, 0)
     }
 
-    doc.save(`${sectionName.toLowerCase().replace(' ', '-')}-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`)
+    const filename = exportType === 'status' 
+      ? `${sectionName.toLowerCase().replace(' ', '-')}-${selectedStatus.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`
+      : `${sectionName.toLowerCase().replace(' ', '-')}-report-${startDate}-to-${endDate || new Date().toISOString().slice(0, 10)}.pdf`
+    doc.save(filename)
   }
 
 
@@ -998,18 +1172,119 @@ export default function ReportsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker onRangeChange={handleRangeChange} defaultStart={startDate} defaultEnd={endDate} />
-          <Button variant="outline" onClick={downloadReportPdf}>
+          <Select value={exportType} onValueChange={(value: "entire" | "status") => setExportType(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Export Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="entire">Entire Report</SelectItem>
+              <SelectItem value="status">Status-wise Report</SelectItem>
+            </SelectContent>
+          </Select>
+          {exportType === "status" && (
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeTabType === "student_admission" && SA_OUTCOME_ORDER.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+                {activeTabType === "college_contact" && CC_OUTCOME_ORDER.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+                {activeTabType === "edii" && EDII_OUTCOME_ORDER.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+                <div className="border-t border-border my-1" />
+                <SelectItem value="Pending Calls" className="font-semibold text-purple-700 bg-purple-50">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-600" />
+                    Pending Calls
+                  </span>
+                </SelectItem>
+                <SelectItem value="Callback Leads" className="font-semibold text-blue-700 bg-blue-50">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    Callback Leads
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Button variant="outline" onClick={downloadReportPdf} disabled={exportType === "status" && !selectedStatus}>
             Export PDF
           </Button>
         </div>
       </div>
+
+      {/* Preview Panel - Shows when Pending Calls or Callback Leads is selected */}
+      {(selectedStatus === "Pending Calls" || selectedStatus === "Callback Leads") && (
+        <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between gap-6">
+              <div className="flex-1 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-md">
+                    <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      {selectedStatus === "Pending Calls" ? "Pending Calls Report" : "Callback Leads Report"}
+                    </h3>
+                    <p className="text-sm text-gray-600">Filtered Report Preview</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Date Range</p>
+                    <p className="text-sm font-semibold text-gray-900">{startDate} to {endDate}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Total Records</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selectedStatus === "Pending Calls" ? totalPendingCalls : scheduledCallbacks}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Report Type</p>
+                    <p className="text-sm font-semibold text-gray-900">Status-wise</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 font-medium">Selected Status</p>
+                    <p className="text-sm font-semibold text-purple-700">{selectedStatus}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-blue-800 font-medium">Click Export PDF to download the filtered report.</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
+                  <svg className="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-xs font-semibold text-gray-600">PDF Format</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs value={reportType} onValueChange={setReportType}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="telecalling">Telecalling</TabsTrigger>
-          {activeTabType === "student_admission" && <TabsTrigger value="fieldvisits">Visit Done / Decision Pending</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6 mt-6">
@@ -1575,6 +1850,185 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
+          {/* Detailed Callback Leads Table - Shows when Callback Leads is selected */}
+          {selectedStatus === "Callback Leads" && (
+            <Card className="border-2 border-blue-200 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-md">
+                      <Clock className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-blue-900">Callback Leads Details</CardTitle>
+                      <CardDescription className="text-blue-700">
+                        {scheduledCallbacks} callbacks scheduled between {startDate} and {endDate}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge className="bg-blue-600 text-white text-sm px-3 py-1">
+                    Total: {scheduledCallbacks}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-blue-50">
+                        <TableHead className="text-xs font-semibold text-blue-900">Lead Name</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Phone Number</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Course</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Assigned Telecaller</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Callback Date</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Callback Time</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Remarks</TableHead>
+                        <TableHead className="text-xs font-semibold text-blue-900">Downloaded On</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCallLogs
+                        .filter((log: any) => log.callback_scheduled_at)
+                        .map((log: any, index: number) => (
+                          <TableRow key={log.id || index} className="hover:bg-blue-50/50">
+                            <TableCell className="text-xs font-medium">{log.prospect_name || '-'}</TableCell>
+                            <TableCell className="text-xs">{log.prospect_phone || '-'}</TableCell>
+                            <TableCell className="text-xs">{log.course_interest || log.prospect_course_interest || '-'}</TableCell>
+                            <TableCell className="text-xs">{log.telecaller_name || '-'}</TableCell>
+                            <TableCell className="text-xs">
+                              {log.callback_scheduled_at ? new Date(log.callback_scheduled_at).toLocaleDateString() : '-'}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {log.callback_scheduled_at ? new Date(log.callback_scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                            </TableCell>
+                            <TableCell className="text-xs max-w-[200px] truncate" title={log.notes || ''}>
+                              {log.notes || '-'}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {log.called_at ? new Date(log.called_at).toLocaleString() : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      {filteredCallLogs.filter((log: any) => log.callback_scheduled_at).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-sm text-gray-500 py-8">
+                            No callback leads found for the selected date range
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {filteredCallLogs.filter((log: any) => log.callback_scheduled_at).length > 0 && (
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
+                    <span>Showing {filteredCallLogs.filter((log: any) => log.callback_scheduled_at).length} callback records</span>
+                    <span>Page 1 of 1</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Detailed Pending Calls Table - Shows when Pending Calls is selected */}
+          {selectedStatus === "Pending Calls" && (
+            <Card className="border-2 border-purple-200 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b border-purple-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center shadow-md">
+                      <PhoneCall className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-purple-900">Pending Calls Details</CardTitle>
+                      <CardDescription className="text-purple-700">
+                        {totalPendingCalls} pending calls between {startDate} and {endDate}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge className="bg-purple-600 text-white text-sm px-3 py-1">
+                    Total: {totalPendingCalls}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-purple-50">
+                        <TableHead className="text-xs font-semibold text-purple-900">Lead Name</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Phone Number</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Course</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Assigned Telecaller</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Last Call Date</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Next Follow-up Date</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Remarks</TableHead>
+                        <TableHead className="text-xs font-semibold text-purple-900">Downloaded On</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProspects
+                        .filter((p: any) => {
+                          const totalCallsForProspect = filteredCallLogs.filter((log: any) => log.prospect_id === p.id).length
+                          return (p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)) &&
+                            totalCallsForProspect === 0
+                        })
+                        .map((prospect: any, index: number) => {
+                          const lastCall = filteredCallLogs
+                            .filter((log: any) => log.prospect_id === prospect.id)
+                            .sort((a: any, b: any) => new Date(b.called_at).getTime() - new Date(a.called_at).getTime())[0]
+                          return (
+                            <TableRow key={prospect.id || index} className="hover:bg-purple-50/50">
+                              <TableCell className="text-xs font-medium">{prospect.name || '-'}</TableCell>
+                              <TableCell className="text-xs">{prospect.mobile || prospect.phone || '-'}</TableCell>
+                              <TableCell className="text-xs">{prospect.course_interest || '-'}</TableCell>
+                              <TableCell className="text-xs">{prospect.assigned_telecaller_name || '-'}</TableCell>
+                              <TableCell className="text-xs">
+                                {lastCall?.called_at ? new Date(lastCall.called_at).toLocaleDateString() : '-'}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {lastCall?.callback_scheduled_at ? new Date(lastCall.callback_scheduled_at).toLocaleDateString() : '-'}
+                              </TableCell>
+                              <TableCell className="text-xs max-w-[200px] truncate" title={lastCall?.notes || ''}>
+                                {lastCall?.notes || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {lastCall?.called_at ? new Date(lastCall.called_at).toLocaleString() : '-'}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      {filteredProspects.filter((p: any) => {
+                        const totalCallsForProspect = filteredCallLogs.filter((log: any) => log.prospect_id === p.id).length
+                        return (p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)) &&
+                          totalCallsForProspect === 0
+                      }).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-sm text-gray-500 py-8">
+                            No pending calls found for the selected date range
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {filteredProspects.filter((p: any) => {
+                  const totalCallsForProspect = filteredCallLogs.filter((log: any) => log.prospect_id === p.id).length
+                  return (p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)) &&
+                    totalCallsForProspect === 0
+                }).length > 0 && (
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-200">
+                    <span>Showing {filteredProspects.filter((p: any) => {
+                      const totalCallsForProspect = filteredCallLogs.filter((log: any) => log.prospect_id === p.id).length
+                      return (p.status === 'new' || p.status === 'New' || (p.status === 'contacted' && totalCallsForProspect === 0)) &&
+                        totalCallsForProspect === 0
+                    }).length} pending call records</span>
+                    <span>Page 1 of 1</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader className="flex items-start justify-between gap-4">
               <div>
@@ -1621,49 +2075,6 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {activeTabType === "student_admission" && (
-          <TabsContent value="fieldvisits" className="space-y-6 mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Students - Visit Done / Decision Pending</CardTitle>
-                <CardDescription>Prospects awaiting decision after campus visit</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {visitDoneProspects.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <p className="text-muted-foreground text-sm">No prospects awaiting decision at this time</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Student Name</TableHead>
-                          <TableHead>College Name</TableHead>
-                          <TableHead>Mobile</TableHead>
-                          <TableHead>Alt Email</TableHead>
-                          <TableHead>Department</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {visitDoneProspects.map((prospect: any) => (
-                          <TableRow key={prospect.id}>
-                            <TableCell className="font-medium">{prospect.name}</TableCell>
-                            <TableCell>{prospect.college_name || "-"}</TableCell>
-                            <TableCell>{prospect.mobile}</TableCell>
-                            <TableCell>{prospect.alternative_email || "-"}</TableCell>
-                            <TableCell>{prospect.department || "-"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   )
