@@ -99,7 +99,8 @@ export default function AssignProspectsPage() {
   const dashboardOptions = [
     { value: "student_admission", label: "Student Admission" },
     { value: "college_contact", label: "College Contact" },
-    { value: "edii", label: "EDII" },
+    { value: "short_term_course", label: "Short Term Course" },
+    { value: "tatti_course", label: "TATTI Course" },
   ]
 
   // Debounce the search box → only hits the API 350ms after typing stops.

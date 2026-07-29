@@ -31,8 +31,17 @@ class CallLogService:
             where_clauses.append("cl.telecaller_id = %s")
             params.append(telecaller_id)
         if prospect_type:
-            where_clauses.append("p.prospect_type = %s")
-            params.append(prospect_type)
+            # Support both 'short_term_course' and legacy 'edii' values for backward compatibility
+            if prospect_type == 'short_term_course':
+                where_clauses.append("(p.prospect_type = %s OR p.prospect_type = 'edii')")
+                params.append(prospect_type)
+            elif prospect_type == 'college_contact':
+                where_clauses.append("p.prospect_type IS DISTINCT FROM 'short_term_course' AND p.prospect_type IS DISTINCT FROM 'edii'")
+            elif prospect_type == 'student_admission':
+                where_clauses.append("p.prospect_type IS DISTINCT FROM 'short_term_course' AND p.prospect_type IS DISTINCT FROM 'edii'")
+            else:
+                where_clauses.append("p.prospect_type = %s")
+                params.append(prospect_type)
 
         where_sql = " AND ".join(where_clauses)
 

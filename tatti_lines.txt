@@ -1,0 +1,90 @@
+1555: const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "short_term_course" | "tatti_course" => {
+1603: if (normalized === "tatti_course" || normalized === "tatti" || normalized.includes("tatti")) {
+1607: return "tatti_course"
+1847: const [viewMode, setViewMode] = useState<"student_admission" | "college_contact" | "short_term_course" | "tatti_course">("student_admission")
+2695: const tattiProspects = filterProspects(prospects.filter((p) => p.dashboard === "tatti_course"))
+2715: const tattiIds = new Set(tattiProspects.map((p) => p.numericId))
+2735: const tattiCallLogs = callLogs.filter((log) => tattiIds.has(log.prospect_id))
+3453: // TATTI Course specific stats
+3455: const tattiProspectsOnDate = tattiProspects.filter((p) => {
+3467: // Total TATTI leads (not filtered by date)
+3469: const tattiTotal = tattiProspects.length
+3473: const tattiToday = tattiProspectsOnDate.length
+3477: const tattiInterested = tattiCallLogs.filter((cl: any) => {
+3483: const prospect = tattiProspects.find((p) => p.numericId === cl.prospect_id)
+3491: const tattiCallbacks = tattiCallLogs.filter((cl: any) => {
+3503: const tattiPending = tattiProspectsOnDate.filter((p) =>
+3513: const tattiCallsMade = tattiCallLogs.filter((cl: any) => {
+3523: // Calculate TATTI calls made by course
+3525: const tattiCallsMadeByCourse: Record<string, number> = {}
+3527: tattiCallLogs.forEach((log: any) => {
+3533: const prospect = tattiProspects.find((p) => p.numericId === log.prospect_id)
+3539: tattiCallsMadeByCourse[course] = (tattiCallsMadeByCourse[course] || 0) + 1
+3549: // Calculate TATTI callbacks by course
+3551: const tattiCallbacksByCourse: Record<string, number> = {}
+3553: tattiCallLogs.forEach((cl: any) => {
+3561: const prospect = tattiProspects.find((p) => p.numericId === cl.prospect_id)
+3567: tattiCallbacksByCourse[course] = (tattiCallbacksByCourse[course] || 0) + 1
+3575: // Calculate TATTI interested by course
+3577: const tattiInterestedByCourse: Record<string, number> = {}
+3579: tattiCallLogs.forEach((cl: any) => {
+3585: const prospect = tattiProspects.find((p) => p.numericId === cl.prospect_id)
+3591: tattiInterestedByCourse[course] = (tattiInterestedByCourse[course] || 0) + 1
+3599: // TATTI status counts (filtered by selected date)
+3601: const tattiStatusCounts = {
+3603: "TATTI - New": tattiProspectsOnDate.filter((p) => p.outcome === "TATTI - New" || p.status === "TATTI - New").length,
+3605: "TATTI - Interested": tattiProspectsOnDate.filter((p) => p.outcome === "TATTI - Interested" || p.status === "TATTI - Interested").length,
+3607: "TATTI - Interested Followup": tattiProspectsOnDate.filter((p) => p.outcome === "TATTI - Interested Followup" || p.status === "TATTI - Interested Followup").length,
+3609: "TATTI - Qualified": tattiProspectsOnDate.filter((p) => p.outcome === "TATTI - Qualified" || p.status === "TATTI - Qualified").length,
+3611: "TATTI - Ringing / Not Reachable": tattiProspectsOnDate.filter((p) => p.outcome === "TATTI - Ringing / Not Reachable" || p.status === "TATTI - Ringing / Not Reachable").length,
+3613: "TATTI - Not Interested": tattiProspectsOnDate.filter((p) => p.outcome === "TATTI - Not Interested" || p.status === "TATTI - Not Interested").length,
+3771: // TATTI Course stats
+3775: tattiToday,
+3779: tattiTotal,
+3783: tattiInterested,
+3787: tattiCallbacks,
+3791: tattiPending,
+3795: tattiCallsMade,
+3799: tattiCallsMadeByCourse,
+3803: tattiCallbacksByCourse,
+3807: tattiInterestedByCourse,
+3811: tattiStatusCounts,
+4375: // TATTI Course stat cards
+4379: const tattiCards = [
+4391: value: telecallerStats.tattiTotal,
+4419: value: telecallerStats.tattiToday,
+4447: value: telecallerStats.tattiCallsMade,
+4475: value: telecallerStats.tattiInterested,
+4503: value: telecallerStats.tattiCallbacks,
+4531: value: telecallerStats.tattiPending,
+4555: const statCards = viewMode === "student_admission" ? studentAdmissionCards : viewMode === "college_contact" ? collegeContactCards : viewMode === "short_term_course" ? short_term_courseCards : tattiCards
+4871: } else { // tatti_course
+4883: [`Today's Prospects (${effectiveDate})`, telecallerStats.tattiToday],
+4887: [`Calls Made (${effectiveDate})`, telecallerStats.tattiCallsMade],
+4891: ["Interested", telecallerStats.tattiInterested],
+4895: ["Callbacks", telecallerStats.tattiCallbacks],
+4899: ["Pending", telecallerStats.tattiPending],
+4915: ["New", telecallerStats.tattiStatusCounts.New],
+4919: ["Interested", telecallerStats.tattiStatusCounts.Interested],
+4923: ["Interested Followup", telecallerStats.tattiStatusCounts["Interested Followup"]],
+4927: ["Qualified", telecallerStats.tattiStatusCounts.Qualified],
+4931: ["Ringing / Not Reachable", telecallerStats.tattiStatusCounts["Ringing / Not Reachable"]],
+4935: ["Not Interested", telecallerStats.tattiStatusCounts["Not Interested"]],
+5267: } else { // tatti_course
+5279: [`Today's Prospects (${effectiveDate})`, telecallerStats.tattiToday],
+5283: [`Calls Made (${effectiveDate})`, telecallerStats.tattiCallsMade],
+5287: ["Interested", telecallerStats.tattiInterested],
+5291: ["Callbacks", telecallerStats.tattiCallbacks],
+5295: ["Pending", telecallerStats.tattiPending],
+5311: ["New", telecallerStats.tattiStatusCounts.New],
+5315: ["Interested", telecallerStats.tattiStatusCounts.Interested],
+5319: ["Interested Followup", telecallerStats.tattiStatusCounts["Interested Followup"]],
+5323: ["Qualified", telecallerStats.tattiStatusCounts.Qualified],
+5327: ["Ringing / Not Reachable", telecallerStats.tattiStatusCounts["Ringing / Not Reachable"]],
+5331: ["Not Interested", telecallerStats.tattiStatusCounts["Not Interested"]],
+7425: onClick={() => setViewMode("tatti_course")}
+7429: variant={viewMode === "tatti_course" ? "default" : "ghost"}
+7445: viewMode === "tatti_course" ? "shadow-sm" : "text-muted-foreground"
+7461: TATTI Course
+8195: ) : viewMode === "tatti_course" ? (
+8199: {Object.entries(telecallerStats.tattiStatusCounts).map(([status, count]) => (

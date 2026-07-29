@@ -25,7 +25,17 @@ class AssignmentService:
         "college_contact": "college_contact",
         "college-contact": "college_contact",
         "college contact": "college_contact",
-        "edii": "edii",
+        "short_term_course": "short_term_course",
+        "short-term-course": "short_term_course",
+        "short term course": "short_term_course",
+        "edii": "short_term_course",
+        "edii_leads": "short_term_course",
+        "edii-leads": "short_term_course",
+        "edii leads": "short_term_course",
+        "tatti_course": "tatti_course",
+        "tatti-course": "tatti_course",
+        "tatti course": "tatti_course",
+        "tatti": "tatti_course",
     }
 
     @staticmethod

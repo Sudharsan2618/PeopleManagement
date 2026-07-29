@@ -219,6 +219,20 @@ const leadOutcomeOptions: {
     color: "text-success",
   },
   {
+    value: "Direct Visit",
+    label: "Direct Visit",
+    description: "Lead visited directly",
+    icon: MapPin,
+    color: "text-cyan-500",
+  },
+  {
+    value: "Invalid Contact",
+    label: "Invalid Contact",
+    description: "Contact information is invalid",
+    icon: XCircle,
+    color: "text-gray-500",
+  },
+  {
     value: "Ringing / Not Reachable",
     label: "Ringing / Not Reachable",
     description: "Could not reach the lead",
@@ -234,8 +248,8 @@ const leadOutcomeOptions: {
   },
 ]
 
-// ─── Outcome options – EDII MODE (Wedding Photography, Video Editing, Solar) ──
-const ediiOutcomeOptions: {
+// ─── Outcome options – Short Term Course MODE (Wedding Photography, Video Editing, Solar) ──
+const shortTermCourseOutcomeOptions: {
   value: string
   label: string
   description: string
@@ -280,6 +294,58 @@ const ediiOutcomeOptions: {
   {
     value: "Not Interested",
     label: "Not Interested",
+    description: "Lead has declined",
+    icon: Ban,
+    color: "text-destructive",
+  },
+]
+
+// ─── Outcome options – TATTI Course MODE ──
+const tattiOutcomeOptions: {
+  value: string
+  label: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+}[] = [
+  {
+    value: "TATTI - New",
+    label: "TATTI - New",
+    description: "Lead is newly added",
+    icon: Clock,
+    color: "text-primary",
+  },
+  {
+    value: "TATTI - Interested",
+    label: "TATTI - Interested",
+    description: "Lead has shown interest",
+    icon: ThumbsUp,
+    color: "text-success",
+  },
+  {
+    value: "TATTI - Interested Followup",
+    label: "TATTI - Interested Followup",
+    description: "Interested, requires follow-up",
+    icon: Clock,
+    color: "text-warning",
+  },
+  {
+    value: "TATTI - Qualified",
+    label: "TATTI - Qualified",
+    description: "Lead is qualified and ready",
+    icon: CheckCircle2,
+    color: "text-success",
+  },
+  {
+    value: "TATTI - Ringing / Not Reachable",
+    label: "TATTI - Ringing / Not Reachable",
+    description: "Could not reach the lead",
+    icon: PhoneOff,
+    color: "text-warning",
+  },
+  {
+    value: "TATTI - Not Interested",
+    label: "TATTI - Not Interested",
     description: "Lead has declined",
     icon: Ban,
     color: "text-destructive",
@@ -403,34 +469,17 @@ export function CallOutcomeModal({
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
-  // ─── Determine if we're in "lead mode" or "EDII mode" ────────────────────────
-  const EDII_LEAD_SOURCES = ["Wedding Photography", "Video Editing", "Solar"]
-  const EDII_COURSES = ["Wedding Photography", "Video Editing", "Solar"]
+  // ─── Determine if we're in "lead mode" or "Short Term Course mode" ────────────────────────
+  const shortTermCourseLeadSources = ["Wedding Photography", "Video Editing", "Solar"]
+  const shortTermCourseCourses = ["Wedding Photography", "Video Editing", "Solar"]
   const prospectLeadSourcesTop: string[] = Array.isArray((prospect as any)?.lead_source)
     ? (prospect as any).lead_source
     : typeof (prospect as any)?.lead_source === "string"
     ? [(prospect as any).lead_source]
     : []
 
-  const isEDIIMode =
-    leadSource.some((source: string) =>
-      EDII_LEAD_SOURCES.some((ediiSource) =>
-        source.toLowerCase().includes(ediiSource.toLowerCase())
-      )
-    ) ||
-    prospectLeadSourcesTop.some((source: string) =>
-      EDII_LEAD_SOURCES.some((ediiSource) =>
-        source.toLowerCase().includes(ediiSource.toLowerCase())
-      )
-    ) ||
-    (prospect?.courseInterest && prospect.courseInterest !== "Unknown" &&
-      EDII_COURSES.some((ediiCourse) =>
-        prospect.courseInterest.toLowerCase().includes(ediiCourse.toLowerCase())
-      ))
-  const localLeadMode = leadSource.length > 0 || leadType.length > 0
-
   // Normalize dashboard names (matches logic used elsewhere)
-  const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "edii" => {
+  const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "short_term_course" | "tatti_course" => {
     if (typeof value !== "string") return "student_admission"
 
     const normalized = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_")
@@ -439,14 +488,37 @@ export function CallOutcomeModal({
       return "college_contact"
     }
 
-    if (normalized === "edii" || normalized === "edii_leads" || normalized.includes("edii")) {
-      return "edii"
+    if (normalized === "short_term_course" || normalized === "short_term_course_leads" || normalized.includes("short_term_course") || normalized === "edii" || normalized === "edii_leads" || normalized.includes("edii")) {
+      return "short_term_course"
+    }
+
+    if (normalized === "tatti_course" || normalized === "tatti" || normalized.includes("tatti")) {
+      return "tatti_course"
     }
 
     return "student_admission"
   }
 
   const dashboard = normalizeDashboard(prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType)
+
+  const isShortTermCourseModeOrTatti =
+    dashboard === "tatti_course" || dashboard === "short_term_course" ||
+    leadSource.some((source: string) =>
+      shortTermCourseLeadSources.some((shortTermCourseSource) =>
+        source.toLowerCase().includes(shortTermCourseSource.toLowerCase())
+      )
+    ) ||
+    prospectLeadSourcesTop.some((source: string) =>
+      shortTermCourseLeadSources.some((shortTermCourseSource) =>
+        source.toLowerCase().includes(shortTermCourseSource.toLowerCase())
+      )
+    ) ||
+    (prospect?.courseInterest && prospect.courseInterest !== "Unknown" &&
+      shortTermCourseCourses.some((shortTermCourseCourse) =>
+        prospect.courseInterest.toLowerCase().includes(shortTermCourseCourse.toLowerCase())
+      ))
+  const localLeadMode = leadSource.length > 0 || leadType.length > 0
+
   // Show Lead Type only for college_contact dashboard
   const showLeadType = dashboard === "college_contact"
 
@@ -455,15 +527,17 @@ export function CallOutcomeModal({
 
   // Choose outcome options by dashboard
   const currentOutcomeOptions =
-    dashboard === "edii"
-      ? ediiOutcomeOptions
+    dashboard === "tatti_course"
+      ? tattiOutcomeOptions
+      : dashboard === "short_term_course"
+      ? shortTermCourseOutcomeOptions
       : dashboard === "college_contact"
       ? leadOutcomeOptions
       : defaultOutcomeOptions
 
   // Reset outcome selection when mode changes
   // Keep dependency array shape stable across renders by using a single key
-  const modeKey = `${Number(isLeadMode)}-${Number(isEDIIMode)}-${dashboard || ""}`
+  const modeKey = `${Number(isLeadMode)}-${Number(isShortTermCourseModeOrTatti)}-${dashboard || ""}`
   useEffect(() => {
     setSelectedOutcome(null)
   }, [modeKey])
@@ -523,8 +597,8 @@ export function CallOutcomeModal({
     setLeadType([])
   }
 
-  // For default mode, lead mode & EDII mode – map selectedOutcome to callback-active logic
-  const callbackSectionActive = isEDIIMode
+  // For default mode, lead mode & Short Term Course mode – map selectedOutcome to callback-active logic
+  const callbackSectionActive = isShortTermCourseModeOrTatti
     ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested" && selectedOutcome !== "Qualified")
     : isLeadMode
     ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
@@ -736,17 +810,17 @@ export function CallOutcomeModal({
           <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* ── Step 1: Lead Information ── */}
-              {(isLeadMode || isEDIIMode) && (
+              {(isLeadMode || isShortTermCourseModeOrTatti) && (
                 <section>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">1</span>
                     Lead Information
-                    {isEDIIMode && (
+                    {isShortTermCourseModeOrTatti && (
                       <Badge variant="outline" className="ml-2 text-[9px] bg-emerald-100 text-emerald-600 border-none">
-                        EDII Mode Active
+                        Short Term Course Mode Active
                       </Badge>
                     )}
-                    {isLeadMode && !isEDIIMode && (
+                    {isLeadMode && !isShortTermCourseModeOrTatti && (
                       <Badge variant="outline" className="ml-2 text-[9px] bg-primary/10 text-primary border-none">
                         Lead Mode Active
                       </Badge>
@@ -793,12 +867,12 @@ export function CallOutcomeModal({
                       </div>
                     )}
 
-                    {isEDIIMode && (
+                    {isShortTermCourseModeOrTatti && (
                       <p className="text-[11px] text-emerald-600 font-medium bg-emerald-50 rounded-sm p-2 border border-emerald-100">
-                        EDII mode active: Status options have been updated for EDII tracking.
+                        Short Term Course mode active: Status options have been updated for Short Term Course tracking.
                       </p>
                     )}
-                    {isLeadMode && !isEDIIMode && (
+                    {isLeadMode && !isShortTermCourseModeOrTatti && (
                       <p className="text-[11px] text-primary font-medium bg-primary/5 rounded-sm p-2 border border-primary/10">
                         Lead mode active: Status options have been updated for lead tracking.
                       </p>
@@ -811,7 +885,7 @@ export function CallOutcomeModal({
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                   <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
-                    {isLeadMode || isEDIIMode ? 2 : 1}
+                    {isLeadMode || isShortTermCourseModeOrTatti ? 2 : 1}
                   </span>
                   Select Status
                 </h3>
@@ -849,7 +923,7 @@ export function CallOutcomeModal({
                   <section className="animate-in fade-in slide-in-from-top-4 duration-300">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                       <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
-                        {isLeadMode || isEDIIMode ? 3 : 2}
+                        {isLeadMode || isShortTermCourseModeOrTatti ? 3 : 2}
                       </span>
                       Status Details
                     </h3>

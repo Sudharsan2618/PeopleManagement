@@ -114,73 +114,92 @@ import {
 
 const OUTCOME_CONFIG: Record<string, { label: string; color: string }> = {
 
-  not_answered: { label: "No response", color: "bg-warning/15 text-warning border-none" },
-
-  busy: { label: "Busy", color: "bg-warning/10 text-warning border-none" },
-
-  wrong_number: { label: "Wrong Number", color: "bg-destructive/15 text-destructive border-none" },
-
-  callback: { label: "Warm", color: "bg-primary/15 text-primary border-none" },
-
-  not_interested: { label: "Not Interested", color: "bg-muted text-muted-foreground border-none" },
-
-  dnc: { label: "DNC", color: "bg-destructive/15 text-destructive border-none" },
-
-  language_barrier: { label: "Language Barrier", color: "bg-warning/15 text-warning border-none" },
-
-  interested: { label: "Strong Interest / Ready for counselling", color: "bg-success/15 text-success border-none" },
-
-  qualified: { label: "Visit planned and confirmed", color: "bg-primary/15 text-primary border-none" },
-
-  enrolled_elsewhere: { label: "Visit campus / Decision awaited", color: "bg-warning/15 text-warning border-none" },
-
-  application_process: { label: "Admission successfully completed", color: "bg-success/25 text-success border-none" },
 
 
-
-  // New modal default outcomes (literal strings saved as outcomes)
+  // School contact outcomes
 
   warm: { label: "Warm", color: "bg-warning/15 text-warning border-none" },
 
+
+
   hot: { label: "Strong Interest / Ready for Counselling", color: "bg-success/15 text-success border-none" },
+
+
 
   visit_scheduled: { label: "Visit Planned and Confirmed", color: "bg-primary/15 text-primary border-none" },
 
+
+
   visit_done: { label: "Visit Campus / Decision Awaited", color: "bg-warning/15 text-warning border-none" },
+
+
 
   admission_done: { label: "Admission Successfully Completed", color: "bg-success/25 text-success border-none" },
 
+
+
   cold_no_response: { label: "Cold / No Response", color: "bg-muted text-muted-foreground border-none" },
+
+
 
   cold_not_interested: { label: "Cold / Not Interested", color: "bg-destructive/15 text-destructive border-none" },
 
 
 
-  // Lead mode outcomes
+  // College contact outcomes
 
   "New": { label: "New", color: "bg-primary/15 text-primary border-none" },
 
-  "Interested": { label: "Interested (Lead)", color: "bg-success/15 text-success border-none" },
+
+
+  "Interested": { label: "Interested", color: "bg-success/15 text-success border-none" },
+
+
 
   "Interested Followup": { label: "Interested Followup", color: "bg-warning/15 text-warning border-none" },
 
+
+
   "Proposal To Be Sent": { label: "Proposal To Be Sent", color: "bg-primary/15 text-primary border-none" },
+
+
 
   "Proposal Sent": { label: "Proposal Sent", color: "bg-primary/15 text-primary border-none" },
 
+
+
   "Training Date Followup": { label: "Training Date Followup", color: "bg-primary/15 text-primary border-none" },
+
+
 
   "Qualified": { label: "Qualified", color: "bg-success/25 text-success border-none" },
 
+
+
   "Ringing / Not Reachable": { label: "Ringing / Not Reachable", color: "bg-warning/15 text-warning border-none" },
 
-  "Not Interested": { label: "Not Interested (Lead)", color: "bg-destructive/15 text-destructive border-none" },
 
-  "College Contact": { label: "College Contact", color: "bg-primary/15 text-primary border-none" },
+
+  "Not Interested": { label: "Not Interested", color: "bg-destructive/15 text-destructive border-none" },
+
+
+
+  "Direct Visit": { label: "Direct Visit", color: "bg-success/15 text-success border-none" },
+
+
+
+  "Invalid Contact": { label: "Invalid Contact", color: "bg-destructive/15 text-destructive border-none" },
+
+
+
+  // Short term course outcomes
 
   "Interested-Followup": { label: "Interested-Followup", color: "bg-warning/15 text-warning border-none" },
 
+
+
 }
+
 
 
 
@@ -214,9 +233,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 const SCHOOL_STATUS_KEYS = ["cold_no_response", "cold_not_interested", "warm", "hot", "visit_scheduled", "decision_pending", "admission_done"]
 
-const COLLEGE_STATUS_KEYS = ["New", "Interested", "Interested Followup", "Proposal To Be Sent", "Proposal Sent", "Training Date Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
+const COLLEGE_STATUS_KEYS = ["New", "Interested", "Interested Followup", "Proposal To Be Sent", "Proposal Sent", "Training Date Followup", "Qualified", "Ringing / Not Reachable", "Not Interested", "Direct Visit", "Invalid Contact"]
 
-const EDII_STATUS_KEYS = ["New", "Interested", "Interested-Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
+const SHORT_TERM_COURSE_STATUS_KEYS = ["New", "Interested", "Interested-Followup", "Qualified", "Ringing / Not Reachable", "Not Interested"]
 
 
 
@@ -260,6 +279,10 @@ const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = 
 
   "Interested-Followup": { label: "Interested Followup", color: "bg-yellow-100 text-yellow-800 border-yellow-200" },
 
+  "Direct Visit": { label: "Direct Visit", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+
+  "Invalid Contact": { label: "Invalid Contact", color: "bg-red-100 text-red-800 border-red-200" },
+
 }
 
 
@@ -280,9 +303,9 @@ const hasLeadInfo = (p: Prospect) => {
 
 
 
-const isEDII = (p: Prospect) => {
+const isShortTermCourse = (p: Prospect) => {
 
-  const EDII_KEYWORDS = ["wedding photography", "video editing", "solar"]
+  const SHORT_TERM_COURSE_KEYWORDS = ["wedding photography", "video editing", "solar"]
 
   const sourceArray = Array.isArray(p.lead_source) ? p.lead_source :
 
@@ -292,11 +315,11 @@ const isEDII = (p: Prospect) => {
 
     (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
 
-  const hasEDIIKeyword = (arr: string[]) => arr.some(item => EDII_KEYWORDS.some(k => item.toLowerCase().includes(k)))
+  const hasShortTermCourseKeyword = (arr: string[]) => arr.some(item => SHORT_TERM_COURSE_KEYWORDS.some(k => item.toLowerCase().includes(k)))
 
-  const courseInterestMatch = p.course_interest ? EDII_KEYWORDS.some(k => p.course_interest!.toLowerCase().includes(k)) : false
+  const courseInterestMatch = p.course_interest ? SHORT_TERM_COURSE_KEYWORDS.some(k => p.course_interest!.toLowerCase().includes(k)) : false
 
-  return hasEDIIKeyword(sourceArray) || hasEDIIKeyword(typeArray) || courseInterestMatch || (p as any).prospect_type === "edii" || (p as any).dashboard === "edii" || (p as any).dashboard === "edii_leads"
+  return hasShortTermCourseKeyword(sourceArray) || hasShortTermCourseKeyword(typeArray) || courseInterestMatch || (p as any).prospect_type === "short_term_course" || (p as any).prospect_type === "edii" || (p as any).dashboard === "short_term_course" || (p as any).dashboard === "edii" || (p as any).dashboard === "short_term_course_leads" || (p as any).dashboard === "edii_leads"
 
 }
 
@@ -324,11 +347,13 @@ export default function CallHistoryPage() {
 
   const [dateFilter, setDateFilter] = useState("all")
 
+  const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" })
+
   const [courseFilter, setCourseFilter] = useState("all")
 
   const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0])
 
-  const [contactMode, setContactMode] = useState<"school" | "college" | "edii">("school")
+  const [contactMode, setContactMode] = useState<"school" | "college" | "short_term_course">("school")
 
 
 
@@ -338,7 +363,7 @@ export default function CallHistoryPage() {
 
   const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0])
 
-  const [exportContactMode, setExportContactMode] = useState<"school" | "college" | "edii">("school")
+  const [exportContactMode, setExportContactMode] = useState<"school" | "college" | "short_term_course">("school")
 
   const [isExporting, setIsExporting] = useState(false)
 
@@ -470,13 +495,13 @@ export default function CallHistoryPage() {
 
           return collegeOutcomes.includes(log.outcome)
 
-        } else if (exportContactMode === "edii") {
+        } else if (exportContactMode === "short_term_course") {
 
-          return EDII_STATUS_KEYS.includes(log.outcome)
+          return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome)
 
         } else {
 
-          return !collegeOutcomes.includes(log.outcome) && !EDII_STATUS_KEYS.includes(log.outcome)
+          return !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome)
 
         }
 
@@ -1067,7 +1092,9 @@ export default function CallHistoryPage() {
 
         doc.setFontSize(10)
 
-        doc.text(`Telecaller: ${user?.name || user?.email || 'Unknown'}`, 40, 58)
+        const telecallerName = user?.name || user?.email || 'Unknown'
+        const displayName = telecallerName.length > 30 ? telecallerName.substring(0, 30) + '...' : telecallerName
+        doc.text(`Telecaller: ${displayName}`, 40, 58)
 
         doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 40, 72)
 
@@ -1280,7 +1307,9 @@ export default function CallHistoryPage() {
 
         doc.setFontSize(10)
 
-        doc.text(`Telecaller: ${user?.name || user?.email || 'Unknown'}`, 40, 58)
+        const telecallerName = user?.name || user?.email || 'Unknown'
+        const displayName = telecallerName.length > 30 ? telecallerName.substring(0, 30) + '...' : telecallerName
+        doc.text(`Telecaller: ${displayName}`, 40, 58)
 
         doc.text(`Date range: ${exportStartDate} to ${exportEndDate}`, 40, 72)
 
@@ -1492,16 +1521,16 @@ export default function CallHistoryPage() {
 
         if (!p) return false;
 
-        return hasLeadInfo(p) && !isEDII(p)
+        return hasLeadInfo(p) && !isShortTermCourse(p)
 
       })
 
       modeCallLogs = callLogs.filter(log => {
         const prospect = prospects[log.prospect_id]
-        return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isEDII(prospect)
+        return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isShortTermCourse(prospect)
       })
 
-    } else if (contactMode === "edii") {
+    } else if (contactMode === "short_term_course") {
 
       modeAssignments = assignments.filter((a) => {
 
@@ -1509,13 +1538,13 @@ export default function CallHistoryPage() {
 
         if (!p) return false;
 
-        return isEDII(p)
+        return isShortTermCourse(p)
 
       })
 
       modeCallLogs = callLogs.filter(log => {
         const prospect = prospects[log.prospect_id]
-        return EDII_STATUS_KEYS.includes(log.outcome) && prospect && isEDII(prospect)
+        return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome) && prospect && isShortTermCourse(prospect)
       })
 
     } else {
@@ -1526,11 +1555,11 @@ export default function CallHistoryPage() {
 
         if (!p) return false;
 
-        return !hasLeadInfo(p) && !isEDII(p)
+        return !hasLeadInfo(p) && !isShortTermCourse(p)
 
       })
 
-      modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !EDII_STATUS_KEYS.includes(log.outcome))
+      modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome))
 
     }
 
@@ -1642,6 +1671,13 @@ export default function CallHistoryPage() {
 
           matchesDate = logDate >= monthAgo
 
+        } else if (dateFilter === "custom" && customDateRange.from && customDateRange.to) {
+
+          const fromDate = new Date(customDateRange.from)
+          const toDate = new Date(customDateRange.to)
+          toDate.setHours(23, 59, 59, 999)
+          matchesDate = logDate >= fromDate && logDate <= toDate
+
         }
 
       }
@@ -1664,7 +1700,7 @@ export default function CallHistoryPage() {
 
     })
 
-  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter])
+  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange])
 
 
 
@@ -1682,9 +1718,9 @@ export default function CallHistoryPage() {
 
 
 
-    if (contactMode === "college" || contactMode === "edii") {
+    if (contactMode === "college" || contactMode === "short_term_course") {
 
-      // For college/edii contact: pending if no calls OR last outcome is "New"
+      // For college/short_term_course contact: pending if no calls OR last outcome is "New"
 
       return Object.values(prospects).filter((p) => {
 
@@ -1754,8 +1790,8 @@ export default function CallHistoryPage() {
 
       return counts
 
-    } else if (contactMode === "edii") {
-      // EDII contact outcomes
+    } else if (contactMode === "short_term_course") {
+      // Short Term Course outcomes
       const counts: Record<string, number> = {
         "New": 0,
         "Interested": 0,
@@ -2037,17 +2073,17 @@ export default function CallHistoryPage() {
 
           <Button
 
-            variant={contactMode === "edii" ? "default" : "ghost"}
+            variant={contactMode === "short_term_course" ? "default" : "ghost"}
 
             size="sm"
 
-            onClick={() => setContactMode("edii")}
+            onClick={() => setContactMode("short_term_course")}
 
             className="font-bold rounded-md"
 
           >
 
-            EDII Contact
+            Short Term Course
 
           </Button>
 
@@ -2163,17 +2199,17 @@ export default function CallHistoryPage() {
 
                     <Button
 
-                      variant={exportContactMode === "edii" ? "default" : "ghost"}
+                      variant={exportContactMode === "short_term_course" ? "default" : "ghost"}
 
                       size="sm"
 
-                      onClick={() => setExportContactMode("edii")}
+                      onClick={() => setExportContactMode("short_term_course")}
 
                       className="flex-1 font-bold rounded-md text-xs"
 
                     >
 
-                      EDII
+                      Short Term Course
 
                     </Button>
 
@@ -2271,7 +2307,7 @@ export default function CallHistoryPage() {
 
                 if (!p) return false
 
-                return hasLeadInfo(p) && !isEDII(p)
+                return hasLeadInfo(p) && !isShortTermCourse(p)
 
               }).length}
 
@@ -2287,7 +2323,7 @@ export default function CallHistoryPage() {
 
           >
 
-            <span>EDII Contact:</span>
+            <span>Short Term Course:</span>
 
             <span className="text-sm bg-primary/15 px-2 py-0.5 rounded-sm">
 
@@ -2297,7 +2333,7 @@ export default function CallHistoryPage() {
 
                 if (!p) return false
 
-                return isEDII(p)
+                return isShortTermCourse(p)
 
               }).length}
 
@@ -2357,7 +2393,7 @@ export default function CallHistoryPage() {
 
         <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
 
-          {(contactMode === "college" ? COLLEGE_STATUS_KEYS : contactMode === "edii" ? EDII_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
+          {(contactMode === "college" ? COLLEGE_STATUS_KEYS : contactMode === "short_term_course" ? SHORT_TERM_COURSE_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
 
             const count = statusCounts[status]
 
@@ -2404,6 +2440,8 @@ export default function CallHistoryPage() {
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
 
               <History className="h-5 w-5 text-primary" /> Call Log
+
+              <Badge variant="secondary" className="ml-2 text-sm">{filteredLogs.length}</Badge>
 
             </CardTitle>
 
@@ -2471,9 +2509,29 @@ export default function CallHistoryPage() {
 
                   <SelectItem value="month">This Month</SelectItem>
 
+                  <SelectItem value="custom">Custom Range</SelectItem>
+
                 </SelectContent>
 
               </Select>
+
+              {dateFilter === "custom" && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={customDateRange.from}
+                    onChange={(e) => setCustomDateRange({ ...customDateRange, from: e.target.value })}
+                    className="w-36 h-9 rounded-lg"
+                  />
+                  <span className="text-muted-foreground">to</span>
+                  <Input
+                    type="date"
+                    value={customDateRange.to}
+                    onChange={(e) => setCustomDateRange({ ...customDateRange, to: e.target.value })}
+                    className="w-36 h-9 rounded-lg"
+                  />
+                </div>
+              )}
 
               <DropdownMenu>
 

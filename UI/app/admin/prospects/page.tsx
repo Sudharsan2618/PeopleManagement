@@ -111,7 +111,8 @@ export default function AdminProspectsPage() {
   const dashboardOptions = [
     { value: "student_admission", label: "Student Admission" },
     { value: "college_contact", label: "College Contact" },
-    { value: "edii", label: "EDII" },
+    { value: "short_term_course", label: "Short Term Course" },
+    { value: "tatti_course", label: "TATTI Course" },
   ]
   const [isProspectDialogOpen, setIsProspectDialogOpen] = useState(false)
   const [editingProspect, setEditingProspect] = useState<any | null>(null)
@@ -780,7 +781,7 @@ export default function AdminProspectsPage() {
                         <TableCell className="max-w-[200px] truncate">{prospect.department || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell>{prospect.courseInterest || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="capitalize">
-                          {prospect.dashboard?.replace(/_/g, " ") || prospect.prospect_type?.replace(/_/g, " ") || "Student Admission"}
+                          {(prospect.dashboard?.replace(/_/g, " ") || prospect.prospect_type?.replace(/_/g, " ") || "Student Admission").replace("edii", "Short Term Course").replace("tatti course", "TATTI Course")}
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1 max-w-[150px]">
