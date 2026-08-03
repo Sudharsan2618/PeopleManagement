@@ -16,6 +16,9 @@ class CallLogService:
         applied inside the inner query *before* deduplication, meaning the chosen
         row is the latest call that satisfies the filter criteria.
         Historical records in the database are never deleted — only this query changes.
+        
+        Now returns ALL prospect fields to ensure Reports display the latest
+        prospect data after edits.
         """
         # Build the inner WHERE filters
         where_clauses = ["1=1"]
@@ -71,7 +74,36 @@ class CallLogService:
                 p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name,
+                -- All prospect fields for complete data sync
+                p.email,
+                p.location,
+                p.sourced_from,
+                p.status,
+                p.parent_name,
+                p.department,
+                p.assigned_to,
+                p.closing_reason,
+                p.tags,
+                p.lead_source,
+                p.lead_type,
+                p.alt_phone,
+                p.alt_phone_2,
+                p.alt_phone_3,
+                p.secondary_email,
+                p.alternative_email,
+                p.college_name,
+                p.city,
+                p.address,
+                p.postal_code,
+                p.designation,
+                p.prospect_type,
+                p.company,
+                p.comments,
+                p.follow_up_date,
+                p.is_imported,
+                p.created_at,
+                p.updated_at
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
@@ -158,6 +190,9 @@ class CallLogService:
         Historical records in the database are never deleted — only this query changes.
         get_call_logs_by_prospect is intentionally NOT changed (keeps full history for
         the individual prospect detail page).
+        
+        Now returns ALL prospect fields to ensure Call History displays the latest
+        prospect data after edits.
         """
         query = """
             SELECT DISTINCT ON (cl.prospect_id)
@@ -182,7 +217,36 @@ class CallLogService:
                 p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name,
+                -- All prospect fields for complete data sync
+                p.email,
+                p.location,
+                p.sourced_from,
+                p.status,
+                p.parent_name,
+                p.department,
+                p.assigned_to,
+                p.closing_reason,
+                p.tags,
+                p.lead_source,
+                p.lead_type,
+                p.alt_phone,
+                p.alt_phone_2,
+                p.alt_phone_3,
+                p.secondary_email,
+                p.alternative_email,
+                p.college_name,
+                p.city,
+                p.address,
+                p.postal_code,
+                p.designation,
+                p.prospect_type,
+                p.company,
+                p.comments,
+                p.follow_up_date,
+                p.is_imported,
+                p.created_at,
+                p.updated_at
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id

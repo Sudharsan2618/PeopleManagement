@@ -529,39 +529,64 @@ export default function CallHistoryPage() {
 
       // Helper function to clean text for CSV export
 
-      const cleanText = (text: string | null | undefined): string => {
+      const cleanText = (text: any): string => {
 
         if (text === null || text === undefined) return ""
 
+        const str = String(text)
+
         // Remove non-printable Unicode characters (except common whitespace)
 
-        const cleaned = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+        const cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
 
         // Replace em dash and other problematic dashes with regular hyphen
 
         return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
-
       }
 
-
-
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Outcome", "Status After", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
 
       const rows = exportData.map(log => {
-
-        const prospect = prospects[log.prospect_id]
+        const prospect = prospects[log.prospect_id] || log
 
         const dt = new Date(log.called_at)
 
-        const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
+        const prospectName = prospect?.name || "ID: " + log.prospect_id
 
-        const prospectMobile = prospect ? prospect.mobile : ""
+        const prospectMobile = prospect?.mobile || ""
 
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
 
+        // Parse lead_source and lead_type
+        let leadSource: string[] = []
+        try {
+          if (prospect?.lead_source) {
+            if (Array.isArray(prospect.lead_source)) {
+              leadSource = prospect.lead_source
+            } else if (typeof prospect.lead_source === 'string') {
+              leadSource = JSON.parse(prospect.lead_source || '[]')
+            }
+          }
+        } catch (e) {
+          leadSource = []
+        }
+        
+        let leadType: string[] = []
+        try {
+          if (prospect?.lead_type) {
+            if (Array.isArray(prospect.lead_type)) {
+              leadType = prospect.lead_type
+            } else if (typeof prospect.lead_type === 'string') {
+              leadType = JSON.parse(prospect.lead_type || '[]')
+            }
+          }
+        } catch (e) {
+          leadType = []
+        }
+
         return [
 
-          prospect ? cleanText(prospect.lead_id) : "",
+          prospect ? cleanText(prospect.lead_id || "") : "",
 
           dt.toLocaleDateString('en-IN'),
 
@@ -571,17 +596,59 @@ export default function CallHistoryPage() {
 
           cleanText(prospectMobile),
 
+          cleanText(prospect?.alt_phone || ""),
+
+          cleanText(prospect?.alt_phone_2 || ""),
+
+          cleanText(prospect?.alt_phone_3 || ""),
+
+          cleanText(prospect?.email || ""),
+
+          cleanText(prospect?.secondary_email || ""),
+
+          cleanText(prospect?.alternative_email || ""),
+
+          cleanText(prospect?.location || ""),
+
+          cleanText(prospect?.city || ""),
+
+          cleanText(prospect?.address || ""),
+
+          cleanText(prospect?.postal_code || ""),
+
+          cleanText(prospect?.course_interest || ""),
+
+          cleanText(leadSource.join(', ')),
+
+          cleanText(leadType.join(', ')),
+
+          cleanText(prospect?.status || ""),
+
+          cleanText(prospect?.parent_name || ""),
+
+          cleanText(prospect?.department || ""),
+
+          cleanText(prospect?.designation || ""),
+
+          cleanText(prospect?.company || ""),
+
+          cleanText(prospect?.college_name || ""),
+
+          cleanText(prospect?.tags || ""),
+
+          cleanText(prospect?.comments || ""),
+
+          cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
+
           cleanText(outcomeLabel),
 
-          cleanText(log.status_after_call),
+          cleanText(log.status_after_call || ""),
 
           log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : ""
 
         ]
 
       })
-
-
 
       // Calculate outcome counts for summary
       const outcomeCounts: Record<string, number> = {}
@@ -591,10 +658,10 @@ export default function CallHistoryPage() {
       })
 
       const summaryRows = [
-        ["", "", "", "", "", "", "", ""],
-        ["SUMMARY", "", "", "", "", "", "", ""],
-        ["Total Records", exportData.length.toString(), "", "", "", "", "", ""],
-        ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), "", "", "", "", "", ""])
+        ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["SUMMARY", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["Total Records", exportData.length.toString(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
       ]
 
       const csvContent = [headers, ...rows, ...summaryRows]
@@ -869,13 +936,17 @@ export default function CallHistoryPage() {
 
       }
 
+      console.log('Starting CSV export with', filteredLogs.length, 'records')
 
 
-      const cleanText = (text: string | null | undefined): string => {
+
+      const cleanText = (text: any): string => {
 
         if (text === null || text === undefined) return ""
 
-        const cleaned = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+        const str = String(text)
+
+        const cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
 
         return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
 
@@ -883,23 +954,49 @@ export default function CallHistoryPage() {
 
 
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Outcome", "Status After", "Notes", "Course"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
 
       const rows = filteredLogs.map(log => {
-
-        const prospect = prospects[log.prospect_id]
+        const prospect = prospects[log.prospect_id] || log
 
         const dt = new Date(log.called_at)
 
-        const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
+        const prospectName = prospect?.name || "ID: " + log.prospect_id
 
-        const prospectMobile = prospect ? prospect.mobile : ""
+        const prospectMobile = prospect?.mobile || ""
 
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
 
+        // Parse lead_source and lead_type
+        let leadSource: string[] = []
+        try {
+          if (prospect?.lead_source) {
+            if (Array.isArray(prospect.lead_source)) {
+              leadSource = prospect.lead_source
+            } else if (typeof prospect.lead_source === 'string') {
+              leadSource = JSON.parse(prospect.lead_source || '[]')
+            }
+          }
+        } catch (e) {
+          leadSource = []
+        }
+        
+        let leadType: string[] = []
+        try {
+          if (prospect?.lead_type) {
+            if (Array.isArray(prospect.lead_type)) {
+              leadType = prospect.lead_type
+            } else if (typeof prospect.lead_type === 'string') {
+              leadType = JSON.parse(prospect.lead_type || '[]')
+            }
+          }
+        } catch (e) {
+          leadType = []
+        }
+
         return [
 
-          prospect ? cleanText(prospect.lead_id) : "",
+          prospect ? cleanText(prospect.lead_id || "") : "",
 
           dt.toLocaleDateString('en-IN'),
 
@@ -909,13 +1006,55 @@ export default function CallHistoryPage() {
 
           cleanText(prospectMobile),
 
+          cleanText(prospect?.alt_phone || ""),
+
+          cleanText(prospect?.alt_phone_2 || ""),
+
+          cleanText(prospect?.alt_phone_3 || ""),
+
+          cleanText(prospect?.email || ""),
+
+          cleanText(prospect?.secondary_email || ""),
+
+          cleanText(prospect?.alternative_email || ""),
+
+          cleanText(prospect?.location || ""),
+
+          cleanText(prospect?.city || ""),
+
+          cleanText(prospect?.address || ""),
+
+          cleanText(prospect?.postal_code || ""),
+
+          cleanText(prospect?.course_interest || ""),
+
+          cleanText(leadSource.join(', ')),
+
+          cleanText(leadType.join(', ')),
+
+          cleanText(prospect?.status || ""),
+
+          cleanText(prospect?.parent_name || ""),
+
+          cleanText(prospect?.department || ""),
+
+          cleanText(prospect?.designation || ""),
+
+          cleanText(prospect?.company || ""),
+
+          cleanText(prospect?.college_name || ""),
+
+          cleanText(prospect?.tags || ""),
+
+          cleanText(prospect?.comments || ""),
+
+          cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
+
           cleanText(outcomeLabel),
 
-          cleanText(log.status_after_call),
+          cleanText(log.status_after_call || ""),
 
-          log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : "",
-
-          prospect ? cleanText(prospect.course_interest || "") : ""
+          log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : ""
 
         ]
 
@@ -931,10 +1070,10 @@ export default function CallHistoryPage() {
       })
 
       const summaryRows = [
-        ["", "", "", "", "", "", "", "", ""],
-        ["SUMMARY", "", "", "", "", "", "", "", ""],
-        ["Total Records", filteredLogs.length.toString(), "", "", "", "", "", "", ""],
-        ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), "", "", "", "", "", "", ""])
+        ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["SUMMARY", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ["Total Records", filteredLogs.length.toString(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+        ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
       ]
 
       const csvContent = [headers, ...rows, ...summaryRows]
@@ -975,11 +1114,14 @@ export default function CallHistoryPage() {
 
     } catch (err) {
 
+      console.error('CSV export error:', err)
+      console.error('Error details:', JSON.stringify(err, null, 2))
+
       toast({
 
         title: "Export Failed",
 
-        description: "An error occurred while generating the CSV.",
+        description: `An error occurred while generating the CSV: ${err instanceof Error ? err.message : 'Unknown error'}`,
 
         variant: "destructive"
 
@@ -1017,15 +1159,42 @@ export default function CallHistoryPage() {
 
       const rows = filteredLogs.map(log => {
 
-        const prospect = prospects[log.prospect_id]
+        const prospect = prospects[log.prospect_id] || log
 
         const dt = new Date(log.called_at)
 
-        const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
+        const prospectName = prospect?.name || "ID: " + log.prospect_id
 
-        const prospectMobile = prospect ? prospect.mobile : "—"
+        const prospectMobile = prospect?.mobile || "—"
 
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
+
+        // Parse lead_source and lead_type
+        let leadSource: string[] = []
+        try {
+          if (prospect?.lead_source) {
+            if (Array.isArray(prospect.lead_source)) {
+              leadSource = prospect.lead_source
+            } else if (typeof prospect.lead_source === 'string') {
+              leadSource = JSON.parse(prospect.lead_source || '[]')
+            }
+          }
+        } catch (e) {
+          leadSource = []
+        }
+        
+        let leadType: string[] = []
+        try {
+          if (prospect?.lead_type) {
+            if (Array.isArray(prospect.lead_type)) {
+              leadType = prospect.lead_type
+            } else if (typeof prospect.lead_type === 'string') {
+              leadType = JSON.parse(prospect.lead_type || '[]')
+            }
+          }
+        } catch (e) {
+          leadType = []
+        }
 
         return [
 
@@ -1039,13 +1208,55 @@ export default function CallHistoryPage() {
 
           prospectMobile,
 
+          prospect?.alt_phone || "—",
+
+          prospect?.alt_phone_2 || "—",
+
+          prospect?.alt_phone_3 || "—",
+
+          prospect?.email || "—",
+
+          prospect?.secondary_email || "—",
+
+          prospect?.alternative_email || "—",
+
+          prospect?.location || "—",
+
+          prospect?.city || "—",
+
+          prospect?.address || "—",
+
+          prospect?.postal_code || "—",
+
+          prospect?.course_interest || "—",
+
+          leadSource.join(', '),
+
+          leadType.join(', '),
+
+          prospect?.status || "—",
+
+          prospect?.parent_name || "—",
+
+          prospect?.department || "—",
+
+          prospect?.designation || "—",
+
+          prospect?.company || "—",
+
+          prospect?.college_name || "—",
+
+          prospect?.tags || "—",
+
+          prospect?.comments || "—",
+
+          prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—",
+
           outcomeLabel,
 
           log.status_after_call || "—",
 
-          log.notes || "—",
-
-          prospect ? (prospect.course_interest || "—") : "—"
+          log.notes || "—"
 
         ]
 
@@ -1060,7 +1271,7 @@ export default function CallHistoryPage() {
         outcomeCounts[label] = (outcomeCounts[label] || 0) + 1
       })
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Outcome", "Status", "Notes", "Course"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
 
       try {
 
@@ -1084,7 +1295,7 @@ export default function CallHistoryPage() {
 
         // @ts-ignore
 
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' })
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' })
 
         doc.setFontSize(14)
 
@@ -1114,13 +1325,15 @@ export default function CallHistoryPage() {
 
           startY: 90,
 
-          styles: { fontSize: 8 },
+          styles: { fontSize: 5, cellPadding: 2, overflow: 'linebreak' },
 
-          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255] },
+          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontSize: 6 },
 
           theme: 'grid',
 
-          margin: { left: 40, right: 40 }
+          margin: { left: 15, right: 15 },
+
+          tableWidth: 'auto'
 
         })
 
@@ -1151,12 +1364,13 @@ export default function CallHistoryPage() {
       } catch (e) {
 
         console.error('jsPDF export failed', e)
+        console.error('Error details:', JSON.stringify(e, null, 2))
 
         toast({
 
           title: "Export Failed",
 
-          description: "PDF generation failed. Please try again.",
+          description: `PDF generation failed: ${e instanceof Error ? e.message : 'Unknown error'}. Please try again.`,
 
           variant: "destructive"
 
@@ -1232,15 +1446,42 @@ export default function CallHistoryPage() {
 
       const rows = exportData.map(log => {
 
-        const prospect = prospects[log.prospect_id]
+        const prospect = prospects[log.prospect_id] || log
 
         const dt = new Date(log.called_at)
 
-        const prospectName = prospect ? prospect.name : "ID: " + log.prospect_id
+        const prospectName = prospect?.name || "ID: " + log.prospect_id
 
-        const prospectMobile = prospect ? prospect.mobile : "—"
+        const prospectMobile = prospect?.mobile || "—"
 
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
+
+        // Parse lead_source and lead_type
+        let leadSource: string[] = []
+        try {
+          if (prospect?.lead_source) {
+            if (Array.isArray(prospect.lead_source)) {
+              leadSource = prospect.lead_source
+            } else if (typeof prospect.lead_source === 'string') {
+              leadSource = JSON.parse(prospect.lead_source || '[]')
+            }
+          }
+        } catch (e) {
+          leadSource = []
+        }
+        
+        let leadType: string[] = []
+        try {
+          if (prospect?.lead_type) {
+            if (Array.isArray(prospect.lead_type)) {
+              leadType = prospect.lead_type
+            } else if (typeof prospect.lead_type === 'string') {
+              leadType = JSON.parse(prospect.lead_type || '[]')
+            }
+          }
+        } catch (e) {
+          leadType = []
+        }
 
         return [
 
@@ -1254,9 +1495,55 @@ export default function CallHistoryPage() {
 
           prospectMobile,
 
+          prospect?.alt_phone || "—",
+
+          prospect?.alt_phone_2 || "—",
+
+          prospect?.alt_phone_3 || "—",
+
+          prospect?.email || "—",
+
+          prospect?.secondary_email || "—",
+
+          prospect?.alternative_email || "—",
+
+          prospect?.location || "—",
+
+          prospect?.city || "—",
+
+          prospect?.address || "—",
+
+          prospect?.postal_code || "—",
+
+          prospect?.course_interest || "—",
+
+          leadSource.join(', '),
+
+          leadType.join(', '),
+
+          prospect?.status || "—",
+
+          prospect?.parent_name || "—",
+
+          prospect?.department || "—",
+
+          prospect?.designation || "—",
+
+          prospect?.company || "—",
+
+          prospect?.college_name || "—",
+
+          prospect?.tags || "—",
+
+          prospect?.comments || "—",
+
+          prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—",
+
           outcomeLabel,
 
           log.status_after_call || "—",
+
+          log.notes || "—"
 
         ]
 
@@ -1271,11 +1558,11 @@ export default function CallHistoryPage() {
         outcomeCounts[label] = (outcomeCounts[label] || 0) + 1
       })
 
+      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
+
 
 
       // Try client-side PDF generation via jsPDF + autoTable for a direct download.
-
-      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Outcome", "Status"]
 
       try {
 
@@ -1299,7 +1586,7 @@ export default function CallHistoryPage() {
 
         // @ts-ignore
 
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' })
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' })
 
         doc.setFontSize(14)
 
@@ -1329,13 +1616,15 @@ export default function CallHistoryPage() {
 
           startY: 90,
 
-          styles: { fontSize: 9 },
+          styles: { fontSize: 5, cellPadding: 2, overflow: 'linebreak' },
 
-          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255] },
+          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontSize: 6 },
 
           theme: 'grid',
 
-          margin: { left: 40, right: 40 }
+          margin: { left: 15, right: 15 },
+
+          tableWidth: 'auto'
 
         })
 
@@ -2623,9 +2912,51 @@ export default function CallHistoryPage() {
 
                   <TableHead className="font-semibold">Prospect</TableHead>
 
+                  <TableHead className="font-semibold">Mobile</TableHead>
+
+                  <TableHead className="font-semibold">Alt Phone</TableHead>
+
+                  <TableHead className="font-semibold">Alt Phone 2</TableHead>
+
+                  <TableHead className="font-semibold">Alt Phone 3</TableHead>
+
+                  <TableHead className="font-semibold">Email</TableHead>
+
+                  <TableHead className="font-semibold">Secondary Email</TableHead>
+
+                  <TableHead className="font-semibold">Alt Email</TableHead>
+
+                  <TableHead className="font-semibold">Location</TableHead>
+
+                  <TableHead className="font-semibold">City</TableHead>
+
+                  <TableHead className="font-semibold">Address</TableHead>
+
+                  <TableHead className="font-semibold">Postal Code</TableHead>
+
                   <TableHead className="font-semibold">Course</TableHead>
 
-                  <TableHead className="font-semibold">Mobile</TableHead>
+                  <TableHead className="font-semibold">Lead Source</TableHead>
+
+                  <TableHead className="font-semibold">Lead Type</TableHead>
+
+                  <TableHead className="font-semibold">Status</TableHead>
+
+                  <TableHead className="font-semibold">Parent Name</TableHead>
+
+                  <TableHead className="font-semibold">Department</TableHead>
+
+                  <TableHead className="font-semibold">Designation</TableHead>
+
+                  <TableHead className="font-semibold">Company</TableHead>
+
+                  <TableHead className="font-semibold">College Name</TableHead>
+
+                  <TableHead className="font-semibold">Tags</TableHead>
+
+                  <TableHead className="font-semibold">Comments</TableHead>
+
+                  <TableHead className="font-semibold">Follow-up Date</TableHead>
 
                   <TableHead className="font-semibold">Outcome</TableHead>
 
@@ -2645,7 +2976,7 @@ export default function CallHistoryPage() {
 
                   <TableRow>
 
-                    <TableCell colSpan={9} className="h-40 text-center">
+                    <TableCell colSpan={32} className="h-40 text-center">
 
                       <div className="flex flex-col items-center gap-3 text-muted-foreground">
 
@@ -2663,11 +2994,22 @@ export default function CallHistoryPage() {
 
                   filteredLogs.map((log, index) => {
 
-                    const prospect = prospects[log.prospect_id]
+                    const prospect = prospects[log.prospect_id] || log
 
                     const outcomeConf = OUTCOME_CONFIG[log.outcome]
 
+                    
 
+                    // Parse lead_source and lead_type from the call log (now includes prospect fields)
+                    const leadSource = prospect?.lead_source 
+                      ? (Array.isArray(prospect.lead_source) ? prospect.lead_source : 
+                          (typeof prospect.lead_source === 'string' ? JSON.parse(prospect.lead_source || '[]') : []))
+                      : []
+                    
+                    const leadType = prospect?.lead_type
+                      ? (Array.isArray(prospect.lead_type) ? prospect.lead_type :
+                          (typeof prospect.lead_type === 'string' ? JSON.parse(prospect.lead_type || '[]') : []))
+                      : []
 
                     return (
 
@@ -2691,15 +3033,141 @@ export default function CallHistoryPage() {
 
                         </TableCell>
 
+                        <TableCell className="font-mono text-xs text-muted-foreground">
+
+                          {prospect?.mobile || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.alt_phone || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.alt_phone_2 || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.alt_phone_3 || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.email || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.secondary_email || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.alternative_email || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.location || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.city || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.address || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.postal_code || "—"}
+
+                        </TableCell>
+
                         <TableCell className="text-muted-foreground">
 
                           {prospect?.course_interest || "—"}
 
                         </TableCell>
 
-                        <TableCell className="font-mono text-xs text-muted-foreground">
+                        <TableCell className="text-xs text-muted-foreground">
 
-                          {prospect?.mobile || "—"}
+                          {leadSource.length > 0 ? leadSource.join(', ') : "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {leadType.length > 0 ? leadType.join(', ') : "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.status || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.parent_name || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.department || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.designation || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.company || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.college_name || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.tags || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.comments || "—"}
+
+                        </TableCell>
+
+                        <TableCell className="text-xs text-muted-foreground">
+
+                          {prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—"}
 
                         </TableCell>
 
@@ -2725,7 +3193,7 @@ export default function CallHistoryPage() {
 
                         </TableCell>
 
-                        <TableCell className="text-xs text-muted-foreground max-w-[260px] whitespace-normal break-words">
+                        <TableCell className="text-xs text-muted-foreground max-w-[200px] whitespace-normal break-words">
 
                           <span className="font-medium whitespace-normal break-words italic">
 
