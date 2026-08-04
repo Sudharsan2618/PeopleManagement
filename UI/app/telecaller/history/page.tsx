@@ -1,25 +1,17 @@
 "use client"
 
-
-
 import { useState, useEffect, useMemo } from "react"
 
 import {
-
   History,
-
   Phone,
-
   Search,
-
   Loader2,
-
   RefreshCw,
-
   Clock,
-
   Filter,
-
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 
 import { useToast } from "@/hooks/use-toast"
@@ -354,6 +346,14 @@ export default function CallHistoryPage() {
   const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0])
 
   const [contactMode, setContactMode] = useState<"school" | "college" | "short_term_course">("school")
+
+
+
+  // Pagination states
+
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
 
 
@@ -1993,6 +1993,31 @@ export default function CallHistoryPage() {
 
 
 
+  // Pagination logic
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage
+    const endIndex = startIndex + rowsPerPage
+    return filteredLogs.slice(startIndex, endIndex)
+  }, [filteredLogs, currentPage, rowsPerPage])
+
+  const totalPages = Math.ceil(filteredLogs.length / rowsPerPage)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleRowsPerPageChange = (value: number) => {
+    setRowsPerPage(value)
+    setCurrentPage(1)
+  }
+
+  // Reset pagination to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange])
+
+
+
   // Total leads assigned to this telecaller
 
   const totalLeads = filteredAssignments.length
@@ -2898,21 +2923,39 @@ export default function CallHistoryPage() {
 
         <CardContent className="p-0">
 
-          <div className="overflow-hidden">
 
-            <Table>
 
-              <TableHeader>
+          <div className="rounded-lg border overflow-hidden" style={{ maxHeight: '600px' }}>
 
-                <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <div className="overflow-x-auto h-full">
 
-                  <TableHead className="w-12 text-center font-semibold">#</TableHead>
 
-                  <TableHead className="font-semibold">Lead ID</TableHead>
 
-                  <TableHead className="font-semibold">Prospect</TableHead>
+              <Table>
 
-                  <TableHead className="font-semibold">Mobile</TableHead>
+
+
+                <TableHeader className="sticky top-0 z-10 bg-muted/50">
+
+
+
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+
+
+
+                    <TableHead className="w-12 text-center font-semibold">#</TableHead>
+
+
+
+                    <TableHead className="font-semibold">Lead ID</TableHead>
+
+
+
+                    <TableHead className="font-semibold">Prospect</TableHead>
+
+
+
+                    <TableHead className="font-semibold">Mobile</TableHead>
 
                   <TableHead className="font-semibold">Alt Phone</TableHead>
 
@@ -2968,9 +3011,15 @@ export default function CallHistoryPage() {
 
                 </TableRow>
 
+
+
               </TableHeader>
 
-              <TableBody>
+
+
+              <TableBody className="overflow-y-auto" style={{ maxHeight: '500px' }}>
+
+
 
                 {filteredLogs.length === 0 ? (
 
@@ -2992,7 +3041,9 @@ export default function CallHistoryPage() {
 
                 ) : (
 
-                  filteredLogs.map((log, index) => {
+
+
+                  paginatedLogs.map((log, index) => {
 
                     const prospect = prospects[log.prospect_id] || log
 
@@ -3017,7 +3068,11 @@ export default function CallHistoryPage() {
 
                         <TableCell className="text-center text-muted-foreground font-medium">
 
-                          {index + 1}
+
+
+                          {(currentPage - 1) * rowsPerPage + index + 1}
+
+
 
                         </TableCell>
 
@@ -3235,13 +3290,135 @@ export default function CallHistoryPage() {
 
           </div>
 
-          <div className="p-4 border-t bg-muted/5 text-xs font-semibold text-muted-foreground flex justify-between items-center">
+        </div>
 
-            <span>Showing {filteredLogs.length} of {filteredCallLogsForStats.length} unique leads</span>
+          {/* Pagination Bar */}
 
-            <div className="flex gap-1">
+          <div className="mt-4 flex items-center justify-between p-4 border-t bg-muted/5">
 
-              {/* Pagination could go here if needed */}
+            <div className="text-sm text-muted-foreground">
+
+              Showing {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, filteredLogs.length)} of {filteredLogs.length} records
+
+            </div>
+
+            <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2">
+
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+
+                <Select
+
+                  value={rowsPerPage.toString()}
+
+                  onValueChange={(value) => handleRowsPerPageChange(Number(value))}
+
+                >
+
+                  <SelectTrigger className="h-8 w-[70px]">
+
+                    <SelectValue />
+
+                  </SelectTrigger>
+
+                  <SelectContent>
+
+                    <SelectItem value="5">5</SelectItem>
+
+                    <SelectItem value="10">10</SelectItem>
+
+                  </SelectContent>
+
+                </Select>
+
+              </div>
+
+              <div className="flex items-center gap-1">
+
+                <Button
+
+                  variant="outline"
+
+                  size="sm"
+
+                  onClick={() => handlePageChange(currentPage - 1)}
+
+                  disabled={currentPage === 1}
+
+                  className="h-8 w-8 p-0"
+
+                >
+
+                  <ChevronLeft className="h-4 w-4" />
+
+                </Button>
+
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+
+                  let pageNum
+
+                  if (totalPages <= 5) {
+
+                    pageNum = i + 1
+
+                  } else if (currentPage <= 3) {
+
+                    pageNum = i + 1
+
+                  } else if (currentPage >= totalPages - 2) {
+
+                    pageNum = totalPages - 4 + i
+
+                  } else {
+
+                    pageNum = currentPage - 2 + i
+
+                  }
+
+                  return (
+
+                    <Button
+
+                      key={pageNum}
+
+                      variant={currentPage === pageNum ? "default" : "outline"}
+
+                      size="sm"
+
+                      onClick={() => handlePageChange(pageNum)}
+
+                      className="h-8 w-8 p-0"
+
+                    >
+
+                      {pageNum}
+
+                    </Button>
+
+                  )
+
+                })}
+
+                <Button
+
+                  variant="outline"
+
+                  size="sm"
+
+                  onClick={() => handlePageChange(currentPage + 1)}
+
+                  disabled={currentPage === totalPages || totalPages === 0}
+
+                  className="h-8 w-8 p-0"
+
+                >
+
+                  <ChevronRight className="h-4 w-4" />
+
+                </Button>
+
+              </div>
 
             </div>
 

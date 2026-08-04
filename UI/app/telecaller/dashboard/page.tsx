@@ -82,6 +82,14 @@ import {
 
 
 
+  ChevronLeft,
+
+
+
+  ChevronRight,
+
+
+
 } from "lucide-react"
 
 
@@ -1851,6 +1859,9 @@ export default function TelecallerDashboard() {
 
 
   const [statCardFilter, setStatCardFilter] = useState<string | null>(null)
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
 
 
@@ -5676,9 +5687,29 @@ export default function TelecallerDashboard() {
 
 
 
+  // ─── Pagination logic ───────────────────────────────────────────
 
+  const paginatedProspects = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage
+    const endIndex = startIndex + rowsPerPage
+    return filteredProspects.slice(startIndex, endIndex)
+  }, [filteredProspects, currentPage, rowsPerPage])
 
+  const totalPages = Math.ceil(filteredProspects.length / rowsPerPage)
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleRowsPerPageChange = (value: number) => {
+    setRowsPerPage(value)
+    setCurrentPage(1)
+  }
+
+  // Reset pagination to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, statCardFilter])
 
   // ─── Dynamic column visibility based on data ───────────────────
 
@@ -8239,11 +8270,11 @@ export default function TelecallerDashboard() {
 
 
 
-          <div className="rounded-lg border overflow-hidden">
+          <div className="rounded-lg border overflow-hidden" style={{ maxHeight: '600px' }}>
 
 
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto h-full">
 
 
 
@@ -8251,11 +8282,11 @@ export default function TelecallerDashboard() {
 
 
 
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-slate-50">
 
 
 
-                  <TableRow className="bg-slate-50 hover:bg-slate-50 sticky top-0 z-10">
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
 
 
 
@@ -8415,7 +8446,7 @@ export default function TelecallerDashboard() {
 
 
 
-                <TableBody>
+                <TableBody className="overflow-y-auto" style={{ maxHeight: '500px' }}>
 
 
 
@@ -8456,10 +8487,7 @@ export default function TelecallerDashboard() {
 
 
                   ) : (
-
-
-
-                    filteredProspects.map((prospect, index) => {
+                    paginatedProspects.map((prospect, index) => {
 
 
 
@@ -8492,10 +8520,7 @@ export default function TelecallerDashboard() {
 
 
                           case "index":
-
-
-
-                            return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10">{index + 1}</TableCell>
+                            return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10">{(currentPage - 1) * rowsPerPage + index + 1}</TableCell>
 
 
 
@@ -9783,16 +9808,157 @@ export default function TelecallerDashboard() {
 
 
 
-          <div className="mt-4 text-sm text-muted-foreground">
+          {/* Pagination Bar */}
 
 
 
-            Showing {filteredProspects.length} of {prospects.length} prospects
+          <div className="mt-4 flex items-center justify-between">
 
 
 
+            <div className="text-sm text-muted-foreground">
+
+
+
+              Showing {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, filteredProspects.length)} of {filteredProspects.length} prospects
+
+
+
+            </div>
+
+
+
+            <div className="flex items-center gap-2">
+
+
+
+              <div className="flex items-center gap-2">
+
+
+
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+
+
+
+                <Select
+
+
+
+                  value={rowsPerPage.toString()}
+
+
+
+                  onValueChange={(value) => handleRowsPerPageChange(Number(value))}
+
+
+
+                >
+
+
+
+                  <SelectTrigger className="h-8 w-[70px]">
+
+
+
+                    <SelectValue />
+
+
+
+                  </SelectTrigger>
+
+
+
+                  <SelectContent>
+
+
+
+                    <SelectItem value="5">5</SelectItem>
+
+
+
+                    <SelectItem value="10">10</SelectItem>
+
+
+
+                  </SelectContent>
+
+
+
+                </Select>
+
+
+
+              </div>
+
+
+
+              <div className="flex items-center gap-1">
+
+
+
+                <Button
+
+
+
+                  variant="outline"
+
+
+                  size="sm"
+
+
+                  onClick={() => handlePageChange(currentPage - 1)}
+
+
+                  disabled={currentPage === 1}
+
+
+                  className="h-8 w-8 p-0"
+
+
+                >
+
+
+                  <ChevronLeft className="h-4 w-4" />
+
+
+                </Button>
+
+
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
-
 
 
         </CardContent>
