@@ -483,28 +483,34 @@ export default function CallHistoryPage() {
 
 
 
-      const exportData = callLogs.filter(log => {
+      // Use the same filtering logic as the table (filteredLogs)
+      // First apply contact mode filtering with prospect info checks
+      let modeCallLogs = callLogs
 
+      if (exportContactMode === "college") {
+
+        modeCallLogs = callLogs.filter(log => {
+          const prospect = prospects[log.prospect_id]
+          return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isShortTermCourse(prospect)
+        })
+
+      } else if (exportContactMode === "short_term_course") {
+
+        modeCallLogs = callLogs.filter(log => {
+          const prospect = prospects[log.prospect_id]
+          return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome) && prospect && isShortTermCourse(prospect)
+        })
+
+      } else {
+
+        modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome))
+
+      }
+
+      // Then apply date range filtering
+      const exportData = modeCallLogs.filter(log => {
         const logDate = new Date(log.called_at)
-
-        if (logDate < start || logDate > end) return false
-
-
-
-        if (exportContactMode === "college") {
-
-          return collegeOutcomes.includes(log.outcome)
-
-        } else if (exportContactMode === "short_term_course") {
-
-          return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome)
-
-        } else {
-
-          return !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome)
-
-        }
-
+        return logDate >= start && logDate <= end
       })
 
 
@@ -1416,12 +1422,60 @@ export default function CallHistoryPage() {
 
 
 
-      const exportData = callLogs.filter(log => {
+      const collegeOutcomes = [
 
+        "New",
+
+        "Interested",
+
+        "Interested Followup",
+
+        "Proposal To Be Sent",
+
+        "Proposal Sent",
+
+        "Training Date Followup",
+
+        "Qualified",
+
+        "Ringing / Not Reachable",
+
+        "Not Interested",
+
+        "College Contact"
+
+      ]
+
+
+
+      // Use the same filtering logic as the table (filteredLogs)
+      // First apply contact mode filtering with prospect info checks
+      let modeCallLogs = callLogs
+
+      if (exportContactMode === "college") {
+
+        modeCallLogs = callLogs.filter(log => {
+          const prospect = prospects[log.prospect_id]
+          return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isShortTermCourse(prospect)
+        })
+
+      } else if (exportContactMode === "short_term_course") {
+
+        modeCallLogs = callLogs.filter(log => {
+          const prospect = prospects[log.prospect_id]
+          return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome) && prospect && isShortTermCourse(prospect)
+        })
+
+      } else {
+
+        modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome))
+
+      }
+
+      // Then apply date range filtering
+      const exportData = modeCallLogs.filter(log => {
         const logDate = new Date(log.called_at)
-
         return logDate >= start && logDate <= end
-
       })
 
 
