@@ -372,6 +372,23 @@ const LEAD_SOURCE_OPTIONS = [
 
 ]
 
+const SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS = [
+  "Chat",
+  "Direct",
+  "Email Campaign",
+  "Facebook",
+  "Give Lifes - Job Fair",
+  "Job Fair 2026",
+  "LinkedIn",
+  "Phone",
+  "VAC",
+  "Web",
+  "Webinar",
+  "Website",
+  "Website - ZForms",
+  "Website Visit",
+]
+
 
 
 
@@ -1778,11 +1795,13 @@ export default function TelecallerDashboard() {
 
 
 
+  const [viewMode, setViewMode] = useState<"student_admission" | "college_contact" | "short_term_course">("student_admission")
+
   const [courseOptions, setCourseOptions] = useState<string[]>([])
 
 
 
-  const [leadSourceOptions, setLeadSourceOptions] = useState<string[]>(LEAD_SOURCE_OPTIONS)
+  const [leadSourceOptions, setLeadSourceOptions] = useState<string[]>(viewMode === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS)
 
 
 
@@ -1835,10 +1854,6 @@ export default function TelecallerDashboard() {
 
 
   const [editingCell, setEditingCell] = useState<string | null>(null)
-
-
-
-  const [viewMode, setViewMode] = useState<"student_admission" | "college_contact" | "short_term_course">("student_admission")
 
 
 
@@ -2033,7 +2048,8 @@ export default function TelecallerDashboard() {
 
 
 
-      setLeadSourceOptions(Array.from(new Set([...LEAD_SOURCE_OPTIONS, ...Array.from(prospectLeadSourceSet)])).sort())
+      const baseLeadSourceOptions = viewMode === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS
+      setLeadSourceOptions(Array.from(new Set([...baseLeadSourceOptions, ...Array.from(prospectLeadSourceSet)])).sort())
 
 
 
@@ -2434,6 +2450,12 @@ export default function TelecallerDashboard() {
 
 
   }, [telecallerId, toast])
+
+  // ─── Update lead source options when viewMode changes ───────────────────────────────
+  useEffect(() => {
+    const baseLeadSourceOptions = viewMode === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS
+    setLeadSourceOptions(baseLeadSourceOptions)
+  }, [viewMode])
 
 
 

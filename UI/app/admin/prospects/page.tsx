@@ -112,7 +112,6 @@ export default function AdminProspectsPage() {
     { value: "student_admission", label: "Student Admission" },
     { value: "college_contact", label: "College Contact" },
     { value: "short_term_course", label: "Short Term Course" },
-    { value: "tatti_course", label: "TATTI Course" },
   ]
   const [isProspectDialogOpen, setIsProspectDialogOpen] = useState(false)
   const [editingProspect, setEditingProspect] = useState<any | null>(null)

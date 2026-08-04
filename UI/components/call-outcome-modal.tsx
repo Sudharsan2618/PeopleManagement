@@ -101,6 +101,23 @@ const LEAD_SOURCE_OPTIONS = [
   "Solar",
 ]
 
+const SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS = [
+  "Chat",
+  "Direct",
+  "Email Campaign",
+  "Facebook",
+  "Give Lifes - Job Fair",
+  "Job Fair 2026",
+  "LinkedIn",
+  "Phone",
+  "VAC",
+  "Web",
+  "Webinar",
+  "Website",
+  "Website - ZForms",
+  "Website Visit",
+]
+
 const LEAD_TYPE_OPTIONS = [
   "Assist",
   "VAC",
@@ -832,7 +849,7 @@ export function CallOutcomeModal({
                         Lead Source
                       </Label>
                       <MultiSelect
-                        options={LEAD_SOURCE_OPTIONS}
+                        options={dashboard === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS}
                         selected={leadSource}
                         onChange={setLeadSource}
                         placeholder="Select lead source(s)..."
