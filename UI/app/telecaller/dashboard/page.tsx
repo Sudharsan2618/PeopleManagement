@@ -8300,15 +8300,23 @@ export default function TelecallerDashboard() {
 
 
 
+
+
         <CardContent>
 
 
 
-          <div className="rounded-lg border overflow-hidden" style={{ maxHeight: '600px' }}>
+
+
+          <div className="rounded-lg border overflow-hidden" style={{ maxHeight: 'calc(100vh - 220px)' }}>
 
 
 
-            <div className="overflow-x-auto h-full">
+
+
+            <div className="overflow-x-auto overflow-y-auto h-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+
+
 
 
 
@@ -8344,11 +8352,15 @@ export default function TelecallerDashboard() {
 
 
 
-                          col.key === "index" && "w-10",
+                          col.key === "index" && "w-10 sticky left-0 z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
 
 
 
-                          col.key === "lead_id" && "min-w-[100px]",
+                          col.key === "lead_id" && "min-w-[100px] sticky left-[40px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+
+
+
+                          col.key === "name" && "min-w-[160px] sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
 
 
 
@@ -8356,11 +8368,7 @@ export default function TelecallerDashboard() {
 
 
 
-                          col.key === "action" && "text-right sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]",
-
-
-
-                          col.key === "name" && "min-w-[160px]",
+                          col.key === "action" && "text-right sticky right-0 z-30 bg-slate-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]",
 
 
 
@@ -8446,15 +8454,9 @@ export default function TelecallerDashboard() {
 
                           col.key === "lastNotes" && "min-w-[200px]",
 
-
-
                           col.key === "comments" && "min-w-[200px]",
 
-
-
                           col.key === "website" && "min-w-[200px]"
-
-
 
                         )}
 
@@ -8484,7 +8486,7 @@ export default function TelecallerDashboard() {
 
 
 
-                <TableBody className="overflow-y-auto" style={{ maxHeight: '500px' }}>
+                <TableBody>
 
 
 
@@ -8547,89 +8549,38 @@ export default function TelecallerDashboard() {
 
 
 
-
-
                       const renderCell = (colKey: string) => {
 
+                        switch (colKey) 
 
 
-                        switch (colKey) {
+
+                        {
 
 
 
                           case "index":
-                            return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10">{(currentPage - 1) * rowsPerPage + index + 1}</TableCell>
-
-
+                            return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10 sticky left-0 z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">{(currentPage - 1) * rowsPerPage + index + 1}</TableCell>
 
                           case "lead_id":
-
-
-
-                            return <TableCell key="lead_id" className="min-w-[100px]">
-
-
-
+                            return <TableCell key="lead_id" className="min-w-[100px] sticky left-[40px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                               <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">{prospect.lead_id || "—"}</span>
-
-
-
                             </TableCell>
-
-
 
                           case "name":
 
-
-
                             return (
-
-
-
-                              <TableCell key="name" className="min-w-[160px]">
-
-
-
+                              <TableCell key="name" className="min-w-[160px] sticky left-[140px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                                 <div className="flex flex-col">
-
-
-
                                   <span className="font-semibold text-slate-800 text-sm">{prospect.name}</span>
-
-
-
                                   {prospect.callbackDateTime && (
-
-
-
                                     <span className="text-[10px] text-amber-600 flex items-center gap-1 mt-0.5">
-
-
-
                                       <Clock className="h-3 w-3" />
-
-
-
                                       CB: {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
-
-
-
                                     </span>
-
-
-
                                   )}
-
-
-
                                 </div>
-
-
-
                               </TableCell>
-
-
-
                             )
 
 
@@ -9652,208 +9603,60 @@ export default function TelecallerDashboard() {
 
                               </TableCell>
 
-
-
                             )
-
-
 
                           case "action":
 
-
-
                             return (
-
-
-
-                              <TableCell key="action" className="text-right sticky right-0 bg-white shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[150px]">
-
-
-
+                              <TableCell key="action" className="text-right sticky right-0 z-30 bg-white shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[150px]">
                                 <div className="flex items-center justify-end gap-2">
-
-
-
                                   <Button
-
-
-
                                     size="sm"
-
-
-
                                     variant="outline"
-
-
-
                                     className="h-8 text-xs"
-
-
-
                                     onClick={() => handleEdit(prospect)}
-
-
-
                                     disabled={savingId !== null}
-
-
-
                                   >
-
-
-
                                     <Edit className="h-3.5 w-3.5 mr-1" />
-
-
-
                                     Edit
-
-
-
                                   </Button>
-
-
-
                                   <Button
-
-
-
                                     size="sm"
-
-
-
                                     variant="outline"
-
-
-
                                     className="h-8 text-xs"
-
-
-
                                     onClick={() => handleWhatsApp(prospect)}
-
-
-
                                     disabled={savingId !== null}
-
-
-
                                     aria-label="Send WhatsApp"
-
-
-
                                   >
-
-
-
                                     <MessageSquare className="h-3.5 w-3.5 mr-1" />
-
-
-
                                     WhatsApp
-
-
-
                                   </Button>
-
-
-
                                   <Button
-
-
-
                                     size="sm"
-
-
-
                                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-8"
-
-
-
                                     onClick={() => handleCall(prospect)}
-
-
-
                                     disabled={prospect.status === "lost" || savingId !== null}
-
-
-
                                   >
-
-
-
                                     {savingId === prospect.numericId ? (
-
-
-
                                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-
-
-
                                     ) : (
-
-
-
                                       <PhoneCall className="h-4 w-4 mr-1" />
-
-
-
                                     )}
-
-
-
                                     Call Now
-
-
-
                                   </Button>
-
-
-
                                 </div>
-
-
-
                               </TableCell>
-
-
-
                             )
 
-
-
                           default:
-
-
-
                             return null
 
-
-
                         }
-
-
-
                       }
 
-
-
-
-
-
-
                       return (
-
-
-
                         <TableRow
-
-
-
                           key={prospect.id}
-
-
-
                           className={cn(
 
 
@@ -9871,56 +9674,23 @@ export default function TelecallerDashboard() {
 
 
                             prospect.status === "hot" && "bg-destructive/10 hover:bg-destructive/15"
-
-
-
                           )}
-
-
-
                         >
-
-
-
                           {visibleColumns.map((col) => renderCell(col.key))}
-
-
-
                         </TableRow>
-
-
-
                       )
-
-
-
                     })
-
-
-
                   )}
-
-
 
                 </TableBody>
 
-
-
               </Table>
-
-
 
             </div>
 
-
-
           </div>
 
-
-
           {/* Pagination Bar */}
-
-
 
           <div className="mt-4 flex items-center justify-between">
 
@@ -10073,24 +9843,10 @@ export default function TelecallerDashboard() {
 
         </CardContent>
 
-
-
       </Card>
 
-
-
-
-
-
-
       {/* Call Outcome Modal */}
-
-
-
       <CallOutcomeModal
-
-
-
         prospect={selectedProspect}
 
 
