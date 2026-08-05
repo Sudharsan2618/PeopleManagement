@@ -136,6 +136,9 @@ export default function AdminProspectsPage() {
     follow_up_date: "",
     lead_id: "",
     tags: "",
+    lead_source: "",
+    lead_type: "",
+    website: "",
   })
   const [prospects, setProspects] = useState<any[]>([]) // adapted current page
   const [total, setTotal] = useState(0)
@@ -180,7 +183,27 @@ export default function AdminProspectsPage() {
             dashboard: row.assignment_dashboard,
           }]
         : []
-    return adaptApiProspectToUiProspect(row as any, synthetic as any)
+    const adapted = adaptApiProspectToUiProspect(row as any, synthetic as any)
+    // Ensure website and array fields are directly mapped from the list response
+    adapted.website = row.website || ""
+    
+    // Parse JSON strings if needed for array fields
+    const parseArray = (value: any): string[] => {
+      if (Array.isArray(value)) return value
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value || '[]')
+        } catch {
+          return []
+        }
+      }
+      return []
+    }
+    
+    adapted.lead_source = parseArray(row.lead_source)
+    adapted.lead_type = parseArray(row.lead_type)
+    adapted.tags = parseArray(row.tags)
+    return adapted
   }
 
   // Guards against out-of-order responses overwriting fresher data.
@@ -488,6 +511,7 @@ export default function AdminProspectsPage() {
               follow_up_date: "",
               lead_id: "",
               tags: "",
+              website: "",
             })
             setIsProspectDialogOpen(true)
           }}>
@@ -695,6 +719,7 @@ export default function AdminProspectsPage() {
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>College Name</TableHead>
+                  <TableHead>URL</TableHead>
                   <TableHead>Lead ID</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Alt Phone 1</TableHead>
@@ -727,7 +752,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={31} className="h-24 text-center">
+                    <TableCell colSpan={32} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -752,6 +777,21 @@ export default function AdminProspectsPage() {
                         </TableCell>
                         <TableCell className="font-medium">{prospect.name}</TableCell>
                         <TableCell>{prospect.college_name || <span className="text-slate-300">—</span>}</TableCell>
+                        <TableCell className="max-w-[200px]">
+                          {prospect.website ? (
+                            <a
+                              href={prospect.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 hover:underline truncate block"
+                              title={prospect.website}
+                            >
+                              {prospect.website.length > 30 ? `${prospect.website.substring(0, 30)}...` : prospect.website}
+                            </a>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {prospect.lead_id || <span className="text-slate-300">—</span>}
                         </TableCell>
@@ -882,6 +922,9 @@ export default function AdminProspectsPage() {
                                   follow_up_date: prospect.follow_up_date || "",
                                   lead_id: prospect.lead_id || "",
                                   tags: Array.isArray(prospect.tags) ? prospect.tags.join(", ") : "",
+                                  lead_source: Array.isArray(prospect.lead_source) ? prospect.lead_source.join(", ") : "",
+                                  lead_type: Array.isArray(prospect.lead_type) ? prospect.lead_type.join(", ") : "",
+                                  website: prospect.website || "",
                                 })
                                 setIsProspectDialogOpen(true)
                               }}>
@@ -1006,6 +1049,21 @@ export default function AdminProspectsPage() {
                     <div>
                       <span className="text-muted-foreground">Source:</span>
                       <p className="font-medium">{selectedProspect.source}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Website:</span>
+                      {selectedProspect.website ? (
+                        <a
+                          href={selectedProspect.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {selectedProspect.website}
+                        </a>
+                      ) : (
+                        <p className="font-medium">N/A</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1224,6 +1282,26 @@ export default function AdminProspectsPage() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_lead_source" className="text-right">Lead Source</Label>
+              <Input
+                id="p_lead_source"
+                value={prospectFormData.lead_source}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, lead_source: e.target.value })}
+                className="col-span-3"
+                placeholder="Enter lead sources separated by commas"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_lead_type" className="text-right">Lead Type</Label>
+              <Input
+                id="p_lead_type"
+                value={prospectFormData.lead_type}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, lead_type: e.target.value })}
+                className="col-span-3"
+                placeholder="Enter lead types separated by commas"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="p_alt_phone" className="text-right">Alt Phone</Label>
               <Input
                 id="p_alt_phone"
@@ -1315,6 +1393,16 @@ export default function AdminProspectsPage() {
                 placeholder="Enter tags separated by commas"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="p_website" className="text-right">Website</Label>
+              <Input
+                id="p_website"
+                value={prospectFormData.website}
+                onChange={(e) => setProspectFormData({ ...prospectFormData, website: e.target.value })}
+                className="col-span-3"
+                placeholder="https://example.com"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProspectDialogOpen(false)}>Cancel</Button>
@@ -1325,9 +1413,21 @@ export default function AdminProspectsPage() {
                   ? prospectFormData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
                   : []
                 
+                // Convert lead_source from comma-separated string to array
+                const leadSourceArray = prospectFormData.lead_source 
+                  ? prospectFormData.lead_source.split(',').map(s => s.trim()).filter(s => s)
+                  : []
+                
+                // Convert lead_type from comma-separated string to array
+                const leadTypeArray = prospectFormData.lead_type 
+                  ? prospectFormData.lead_type.split(',').map(t => t.trim()).filter(t => t)
+                  : []
+                
                 const dataToSave = {
                   ...prospectFormData,
-                  tags: tagsArray
+                  tags: tagsArray,
+                  lead_source: leadSourceArray,
+                  lead_type: leadTypeArray
                 }
                 
                 if (editingProspect) {

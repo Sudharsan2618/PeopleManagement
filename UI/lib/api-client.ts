@@ -49,6 +49,7 @@ export interface Prospect {
   is_imported?: boolean
   prospect_type?: string
   lead_id?: string
+  website?: string
 }
 
 export interface CallLog {
@@ -177,6 +178,7 @@ export interface ProspectListItem {
   follow_up_date?: string
   is_imported?: boolean
   lead_id?: string
+  website?: string
   // Joined assignment info
   assigned_telecaller_name?: string
   assignment_date?: string
@@ -316,6 +318,7 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     is_imported: apiProspect.is_imported || false,
     prospect_type: apiProspect.prospect_type || "student_admission",
     lead_id: apiProspect.lead_id || "",
+    website: apiProspect.website || "",
   }
 }
 

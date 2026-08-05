@@ -23,7 +23,7 @@ _MERGE_PRELOAD_COLS = (
     "id, mobile, lead_id, name, course_interest, tags, lead_source, lead_type, "
     "email, sourced_from, location, city, parent_name, department, company, "
     "designation, college_name, address, postal_code, secondary_email, "
-    "alternative_email, alt_phone, alt_phone_2, alt_phone_3, comments, follow_up_date"
+    "alternative_email, alt_phone, alt_phone_2, alt_phone_3, comments, follow_up_date, website"
 )
 
 # Scalar columns a merge may fill when the existing value is blank/NULL. Never
@@ -33,7 +33,7 @@ _MERGE_FILLABLE = (
     "email", "sourced_from", "location", "city", "parent_name", "department",
     "company", "designation", "college_name", "address", "postal_code",
     "secondary_email", "alternative_email", "alt_phone", "alt_phone_2",
-    "alt_phone_3", "comments", "follow_up_date",
+    "alt_phone_3", "comments", "follow_up_date", "website",
 )
 
 # ── Short-lived count cache ──────────────────────────────────────────────────
@@ -70,7 +70,7 @@ class ProspectService:
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                    city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id
+                   lead_id, website
             FROM prospects
             ORDER BY updated_at DESC
         """
@@ -246,7 +246,7 @@ class ProspectService:
                 p.city, p.address, p.postal_code,
                 p.designation, p.created_by, p.created_at, p.updated_at,
                 p.prospect_type, p.company, p.comments, p.follow_up_date,
-                p.is_imported, p.lead_id,
+                p.is_imported, p.lead_id, p.website,
                 u.name AS assigned_telecaller_name,
                 la.assigned_date AS assignment_date,
                 la.dashboard AS assignment_dashboard
@@ -409,7 +409,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id
+                   lead_id, website
             FROM prospects
             WHERE id = %s
         """
@@ -423,7 +423,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id
+                   lead_id, website
             FROM prospects
             WHERE status = %s
             ORDER BY created_at DESC
@@ -438,7 +438,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id
+                   lead_id, website
             FROM prospects
             WHERE created_by = %s
             ORDER BY created_at DESC
@@ -453,7 +453,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id
+                   lead_id, website
             FROM prospects
             WHERE assigned_to = %s
             ORDER BY created_at DESC
@@ -468,7 +468,7 @@ class ProspectService:
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
                    p.lead_source, p.lead_type, p.alt_phone, p.alt_phone_2, p.secondary_email, p.city, p.address, p.postal_code, p.designation,
                    p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
-                   p.lead_id
+                   p.lead_id, p.website
             FROM prospects p
             INNER JOIN prospect_assignments a ON p.id = a.prospect_id
             WHERE a.telecaller_id = %s
@@ -491,7 +491,7 @@ class ProspectService:
                         postal_code: Optional[str] = None, designation: Optional[str] = None,
                         company: Optional[str] = None, comments: Optional[str] = None,
                         follow_up_date: Optional[str] = None, is_imported: bool = False,
-                        lead_id: Optional[str] = None) -> int:
+                        lead_id: Optional[str] = None, website: Optional[str] = None) -> int:
         """Create a new prospect."""
         query = """
             INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
@@ -499,8 +499,8 @@ class ProspectService:
                                  lead_source, lead_type, prospect_type, created_at, updated_at,
                                  alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                                  city, address, postal_code, designation,
-                                 company, comments, follow_up_date, is_imported, lead_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 company, comments, follow_up_date, is_imported, lead_id, website)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
@@ -515,7 +515,7 @@ class ProspectService:
             ist_now, ist_now,
             alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
             city, address, postal_code, designation,
-            company, comments, follow_up_date, is_imported, lead_id
+            company, comments, follow_up_date, is_imported, lead_id, website
         ))
     
     @staticmethod
@@ -533,7 +533,7 @@ class ProspectService:
                         postal_code: Optional[str] = _UNSET, designation: Optional[str] = _UNSET,
                         prospect_type: Optional[str] = _UNSET, company: Optional[str] = _UNSET,
                         comments: Optional[str] = _UNSET, follow_up_date: Optional[str] = _UNSET,
-                        lead_id: Optional[str] = _UNSET) -> int:
+                        lead_id: Optional[str] = _UNSET, website: Optional[str] = _UNSET) -> int:
         """Update prospect details."""
         updates = []
         params = []
@@ -625,6 +625,9 @@ class ProspectService:
         if lead_id is not _UNSET:
             updates.append("lead_id = %s")
             params.append(lead_id)
+        if website is not _UNSET:
+            updates.append("website = %s")
+            params.append(website)
         
         if not updates:
             return 0
@@ -845,7 +848,7 @@ class ProspectService:
         "lead_source, lead_type, prospect_type, created_at, updated_at, "
         "alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, "
         "college_name, city, address, postal_code, designation, company, comments, "
-        "follow_up_date, is_imported, lead_id"
+        "follow_up_date, is_imported, lead_id, website"
     )
 
     @staticmethod
@@ -867,7 +870,7 @@ class ProspectService:
             p.get("secondary_email"), p.get("alternative_email"), p.get("college_name"),
             p.get("city"), p.get("address"), p.get("postal_code"), p.get("designation"),
             p.get("company"), p.get("comments"), p.get("follow_up_date"),
-            p.get("is_imported", True), lead_id,
+            p.get("is_imported", True), lead_id, p.get("website"),
         )
 
     @staticmethod

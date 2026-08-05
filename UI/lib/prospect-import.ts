@@ -10,7 +10,7 @@ export type CanonicalField =
   | "source" | "course" | "lead_type" | "lead_id" | "status" | "address"
   | "postal_code" | "company" | "designation" | "alt_phone" | "alt_phone_2"
   | "alt_phone_3" | "secondary_email" | "alternative_email" | "college_name"
-  | "comments" | "follow_up_date" | "tags"
+  | "comments" | "follow_up_date" | "tags" | "website"
 
 // Normalized header synonyms per field. Keys are matched by exact equality after
 // `normalizeHeader` (lowercased, punctuation/underscores -> spaces, `__c` and
@@ -41,6 +41,7 @@ export const FIELD_SYNONYMS: Record<CanonicalField, string[]> = {
   comments: ["comments", "remarks", "notes", "comment", "remark", "note", "description", "feedback"],
   follow_up_date: ["follow up date", "followup date", "next follow up", "next followup", "callback date", "follow up", "followup"],
   tags: ["tags", "tag", "labels", "label"],
+  website: ["website", "web", "url", "site", "website url", "web url", "link", "homepage", "web site"],
 }
 
 // Reverse lookup: normalized synonym -> field. Also includes each canonical

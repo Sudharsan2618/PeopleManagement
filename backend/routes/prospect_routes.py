@@ -226,7 +226,8 @@ def create_prospect(prospect: ProspectCreate):
             comments=prospect.comments,
             follow_up_date=prospect.follow_up_date,
             is_imported=prospect.is_imported,
-            lead_id=prospect.lead_id
+            lead_id=prospect.lead_id,
+            website=prospect.website
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -299,6 +300,8 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["follow_up_date"] = prospect.follow_up_date
         if prospect.lead_id is not None:
             update_kwargs["lead_id"] = prospect.lead_id
+        if prospect.website is not None:
+            update_kwargs["website"] = prospect.website
         
         ProspectService.update_prospect(**update_kwargs)
         return ProspectService.get_prospect_by_id(prospect_id)

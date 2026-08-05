@@ -2353,6 +2353,10 @@ export default function TelecallerDashboard() {
 
 
 
+            website: p.website || "",
+
+
+
             // Enriched from call logs
 
 
@@ -5853,6 +5857,10 @@ export default function TelecallerDashboard() {
 
 
 
+      { key: "website", label: "Website", hasData: false },
+
+
+
       { key: "action", label: "Action", hasData: true, alwaysVisible: true },
 
 
@@ -6106,6 +6114,10 @@ export default function TelecallerDashboard() {
 
 
         comments: editingProspect.comments,
+
+
+
+        website: editingProspect.website,
 
 
 
@@ -8436,7 +8448,11 @@ export default function TelecallerDashboard() {
 
 
 
-                          col.key === "comments" && "min-w-[200px]"
+                          col.key === "comments" && "min-w-[200px]",
+
+
+
+                          col.key === "website" && "min-w-[200px]"
 
 
 
@@ -9559,6 +9575,78 @@ export default function TelecallerDashboard() {
 
 
                                 />
+
+
+
+                              </TableCell>
+
+
+
+                            )
+
+
+
+                          case "website":
+
+
+
+                            return (
+
+
+
+                              <TableCell key="website" className="min-w-[200px]">
+
+
+
+                                {prospect.website ? (
+
+
+
+                                  <a
+
+
+
+                                    href={prospect.website}
+
+
+
+                                    target="_blank"
+
+
+
+                                    rel="noopener noreferrer"
+
+
+
+                                    className="text-blue-600 hover:text-blue-800 hover:underline truncate block max-w-[180px]"
+
+
+
+                                    title={prospect.website}
+
+
+
+                                  >
+
+
+
+                                    {prospect.website.length > 25 ? `${prospect.website.substring(0, 25)}...` : prospect.website}
+
+
+
+                                  </a>
+
+
+
+                                ) : (
+
+
+
+                                  <span className="text-slate-300">—</span>
+
+
+
+                                )}
 
 
 
@@ -10696,6 +10784,46 @@ export default function TelecallerDashboard() {
 
 
                 placeholder="Add any notes or comments about this prospect..."
+
+
+
+              />
+
+
+
+            </div>
+
+
+
+            <div className="space-y-2">
+
+
+
+              <Label htmlFor="edit-website">Website</Label>
+
+
+
+              <Input
+
+
+
+                id="edit-website"
+
+
+
+                type="url"
+
+
+
+                value={editingProspect?.website || ""}
+
+
+
+                onChange={(e) => setEditingProspect({ ...editingProspect, website: e.target.value })}
+
+
+
+                placeholder="https://example.com"
 
 
 

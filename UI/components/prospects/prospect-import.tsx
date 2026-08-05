@@ -43,7 +43,7 @@ const FIELD_LABELS: Record<string, string> = {
   alt_phone: "Alt Phone", alt_phone_2: "Alt Phone 2", alt_phone_3: "Alt Phone 3",
   secondary_email: "Secondary Email", alternative_email: "Alternative Email",
   college_name: "College Name", comments: "Comments", follow_up_date: "Follow-up Date",
-  tags: "Tags",
+  tags: "Tags", website: "Website",
 }
 
 const MAX_PREVIEW_ROWS = 200

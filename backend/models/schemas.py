@@ -93,6 +93,7 @@ class ProspectBase(BaseModel):
     follow_up_date: Optional[str] = Field(None, max_length=50)
     is_imported: bool = Field(default=False, description="Whether this prospect was imported from a lead sheet")
     lead_id: Optional[str] = Field(None, max_length=100)
+    website: Optional[str] = Field(None, max_length=500)
 
 class ProspectCreate(ProspectBase):
     created_by: int
@@ -128,6 +129,7 @@ class ProspectUpdate(BaseModel):
     follow_up_date: Optional[str] = Field(None, max_length=50)
     is_imported: Optional[bool] = None
     lead_id: Optional[str] = Field(None, max_length=100)
+    website: Optional[str] = Field(None, max_length=500)
 
 class Prospect(ProspectBase):
     id: int
@@ -182,6 +184,7 @@ class ProspectListItem(BaseModel):
     follow_up_date: Optional[str] = None
     is_imported: Optional[bool] = None
     lead_id: Optional[str] = None
+    website: Optional[str] = None
     # Joined assignment info (latest assignment for this prospect)
     assigned_telecaller_name: Optional[str] = None
     assignment_date: Optional[date] = None
