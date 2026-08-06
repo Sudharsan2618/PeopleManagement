@@ -6,11 +6,59 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -18,7 +66,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   Users,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -26,7 +98,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   CheckCircle2,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -34,7 +130,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   Search,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -42,7 +162,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   Loader2,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -50,7 +194,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   X,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -58,7 +226,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   GraduationCap,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -66,7 +258,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   Edit,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -74,7 +290,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   Download,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -82,15 +322,49 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ChevronLeft,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ChevronRight,
-
-
-
+  ChevronDown,
 } from "lucide-react"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -98,7 +372,31 @@ import { useToast } from "@/hooks/use-toast"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -106,7 +404,31 @@ import { Button } from "@/components/ui/button"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -114,7 +436,31 @@ import { Input } from "@/components/ui/input"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { Badge } from "@/components/ui/badge"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -122,7 +468,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -130,7 +500,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   SelectContent,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -138,7 +532,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   SelectTrigger,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -146,11 +564,47 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 } from "@/components/ui/select"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -158,7 +612,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   PopoverContent,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -166,7 +644,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 } from "@/components/ui/popover"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -174,11 +676,47 @@ import { Check, ChevronsUpDown } from "lucide-react"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -186,7 +724,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   TableBody,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -194,7 +756,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   TableHead,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -202,7 +788,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   TableRow,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -210,7 +820,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -218,7 +852,31 @@ import { WhatsAppDrawer } from "@/components/whatsapp-drawer"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -226,7 +884,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   DialogContent,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -234,7 +916,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   DialogFooter,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -242,7 +948,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   DialogTitle,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -250,7 +980,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { Label } from "@/components/ui/label"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -258,7 +1012,31 @@ import { Textarea } from "@/components/ui/textarea"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import { cn } from "@/lib/utils"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -266,7 +1044,31 @@ import { useAuth } from "@/lib/auth-context"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -274,7 +1076,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   mockCourses,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -282,7 +1108,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -290,7 +1140,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   assignmentsApi,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -298,7 +1172,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   adaptApiProspectToUiProspect,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -306,7 +1204,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   coursesApi,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -314,7 +1236,31 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 } from "@/lib/api-client"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -322,7 +1268,31 @@ import jsPDF from "jspdf"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 import autoTable from "jspdf-autotable"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -334,7 +1304,43 @@ import * as XLSX from "xlsx"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ─── Lead Source & Lead Type option lists ─────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -342,7 +1348,31 @@ const LEAD_SOURCE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Sourced Polytechnic College",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -350,7 +1380,31 @@ const LEAD_SOURCE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Sourced ITI College",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -358,7 +1412,31 @@ const LEAD_SOURCE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Wedding Photography",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -366,28 +1444,127 @@ const LEAD_SOURCE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Solar",
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 ]
 
+
+
+
+
+
+
 const SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS = [
+
+
+
   "Chat",
+
+
+
   "Direct",
+
+
+
   "Email Campaign",
+
+
+
   "Facebook",
+
+
+
   "Give Lifes - Job Fair",
+
+
+
   "Job Fair 2026",
+
+
+
   "LinkedIn",
+
+
+
   "Phone",
+
+
+
   "VAC",
+
+
+
   "Web",
+
+
+
   "Webinar",
+
+
+
   "Website",
+
+
+
   "Website - ZForms",
+
+
+
   "Website Visit",
+
+
+
 ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -399,7 +1576,31 @@ const LEAD_TYPE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Assist",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -407,7 +1608,31 @@ const LEAD_TYPE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "FDP",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -415,7 +1640,31 @@ const LEAD_TYPE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "shortTermCourse Admission",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -423,15 +1672,69 @@ const LEAD_TYPE_OPTIONS = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 const STUDENT_STATUS_LABELS: Record<string, string> = {
+
+
+
   warm: "Interested",
+
+
+
   cold_no_response: "Cold / No Response",
+
+
+
   cold_not_interested: "Cold / Not Interested",
+
+
+
   hot: "Strong Interest / Ready for Counselling",
+
+
+
   visit_scheduled: "Visit Planned and Confirmed",
+
+
+
   visit_done: "Visit Campus / Decision Awaited",
+
+
+
   admission_done: "Admission Successfully Completed",
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -441,7 +1744,31 @@ const STUDENT_STATUS_LABELS: Record<string, string> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 function MultiSelectFilter({
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -449,7 +1776,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   selected,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -457,7 +1808,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   placeholder,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -465,7 +1840,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   options: string[]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -473,7 +1872,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   onChange: (vals: string[]) => void
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -481,11 +1904,59 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [open, setOpen] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -497,7 +1968,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (selected.includes(val)) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -505,7 +2000,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     } else {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -513,7 +2032,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -525,7 +2068,43 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -533,7 +2112,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       <PopoverTrigger asChild>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -541,7 +2144,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           variant="outline"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -549,7 +2176,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           aria-expanded={open}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -557,7 +2208,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -565,7 +2240,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             {selected.length > 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -573,7 +2272,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               : <span className="text-muted-foreground">{placeholder}</span>}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -581,7 +2304,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -589,7 +2336,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       </PopoverTrigger>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -597,7 +2368,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <ScrollArea className="h-48 w-full p-1">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -605,7 +2400,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             const isSelected = selected.includes(option)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -613,7 +2432,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -621,7 +2464,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 onClick={() => toggleOption(option)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -629,7 +2496,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   "flex items-center gap-2 px-3 py-2 text-sm rounded-md cursor-pointer select-none transition-colors",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -637,7 +2528,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -645,7 +2560,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <div
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -653,7 +2592,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     "h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-all",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -661,7 +2624,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -669,7 +2656,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   {isSelected && <Check className="h-3 w-3" />}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -677,7 +2688,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <span>{option}</span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -685,7 +2720,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -693,7 +2752,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </ScrollArea>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -701,7 +2784,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <div className="border-t p-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -709,7 +2816,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               variant="ghost"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -717,7 +2848,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               className="w-full text-xs h-7"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -725,7 +2880,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -733,7 +2912,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -741,7 +2944,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -749,7 +2976,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     </Popover>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -757,7 +3008,43 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -769,7 +3056,31 @@ function MultiSelectFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 function CourseSearchFilter({
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -777,7 +3088,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   selected,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -785,7 +3120,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }: {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -793,7 +3152,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   selected: string
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -801,11 +3184,47 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [open, setOpen] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -817,11 +3236,59 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const filtered = courses
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     .filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -833,7 +3300,43 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -841,7 +3344,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       <PopoverTrigger asChild>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -849,7 +3376,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           {selected && selected !== "all" ? selected : "Filter by course"}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -857,7 +3408,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       </PopoverTrigger>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -865,7 +3440,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <div className="p-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -873,7 +3472,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -881,7 +3504,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           {filtered.map(c => (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -889,7 +3536,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               {c.name}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -897,7 +3568,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           ))}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -905,7 +3600,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </ScrollArea>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -913,7 +3632,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <Button variant="ghost" size="sm" onClick={() => { onChange("all"); setQuery(""); setOpen(false) }}>Clear</Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -921,7 +3664,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       </PopoverContent>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -929,11 +3696,59 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -945,7 +3760,31 @@ function CourseSearchFilter({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 const statusConfig: Record<string, { label: string; color: string }> = {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -953,7 +3792,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   contacted: { label: "Contacted", color: "bg-sky-100 text-sky-800 border-sky-200" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -961,7 +3824,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   hot: { label: "Strong Interest / Ready for Counselling", color: "bg-success/15 text-success border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -969,7 +3856,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   visit_done: { label: "Visit Campus / Decision Awaited", color: "bg-warning/15 text-warning border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -977,7 +3888,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   cold: { label: "Cold", color: "bg-muted text-muted-foreground border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -985,7 +3920,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   cold_not_interested: { label: "Cold / Not Interested", color: "bg-destructive/15 text-destructive border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -993,7 +3952,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   // Lead mode statuses
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1001,7 +3984,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Interested": { label: "Interested", color: "bg-success/15 text-success border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1009,7 +4016,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Interested-Followup": { label: "Interested-Followup", color: "bg-warning/15 text-warning border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1017,7 +4048,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Proposal Sent": { label: "Proposal Sent", color: "bg-primary/15 text-primary border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1025,7 +4080,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Qualified": { label: "Qualified", color: "bg-success/25 text-success border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1033,7 +4112,31 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   "Not Interested": { label: "Not Interested", color: "bg-destructive/15 text-destructive border-none" },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1045,7 +4148,43 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ─── Inline Edit Cell ─────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1053,7 +4192,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   value,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1061,7 +4224,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   placeholder = "Click to add...",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1069,7 +4256,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   className = "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1077,7 +4288,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }: {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1085,7 +4320,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   onSave: (val: string) => Promise<void>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1093,7 +4352,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   type?: string
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1101,7 +4384,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   readOnly?: boolean
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1109,7 +4416,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [editing, setEditing] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1117,11 +4448,47 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [saving, setSaving] = useState(false)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [saved, setSaved] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1133,7 +4500,43 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(() => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1141,7 +4544,43 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }, [editing])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1157,7 +4596,43 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const commit = async () => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1165,7 +4640,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     setSaving(true)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1173,7 +4672,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       await onSave(draft.trim())
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1181,7 +4704,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       setTimeout(() => setSaved(false), 1800)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1189,7 +4736,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       setSaving(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1197,11 +4768,59 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1213,7 +4832,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     setDraft(value)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1221,7 +4864,43 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1233,7 +4912,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   if (readOnly) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1241,7 +4944,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       <div className={`flex items-center gap-1 px-2 py-0.5 ${className}`}>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1249,7 +4976,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <span
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1257,7 +5008,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             title={value}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1265,7 +5040,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             {value}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1273,7 +5072,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ) : (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1281,7 +5104,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1289,11 +5136,59 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1305,7 +5200,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1313,7 +5232,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1321,7 +5264,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           type={type}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1329,7 +5296,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           onChange={(e) => setDraft(e.target.value)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1337,7 +5328,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             if (e.key === "Enter") { e.preventDefault(); commit() }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1345,7 +5360,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           }}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1353,11 +5392,47 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           placeholder={placeholder}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           disabled={saving}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1365,11 +5440,47 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         {/* Green tick — save */}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1377,7 +5488,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           disabled={saving}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1385,11 +5520,47 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           title="Save"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1397,7 +5568,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1405,7 +5600,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1413,7 +5632,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1421,7 +5664,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1429,7 +5696,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           className="flex items-center justify-center h-6 w-6 rounded-full bg-slate-200 hover:bg-red-100 hover:text-red-500 text-slate-400 shadow-sm transition-colors shrink-0"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1437,7 +5728,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1445,7 +5760,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1453,7 +5792,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1465,7 +5828,43 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1473,7 +5872,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       onClick={() => setEditing(true)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1481,7 +5904,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       title="Click to edit"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1489,7 +5936,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       {saved ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1497,7 +5968,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1505,7 +6000,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1513,7 +6032,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <span
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1521,7 +6064,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           title={value}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1529,7 +6096,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           {value}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1537,7 +6128,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ) : (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1545,7 +6160,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1553,7 +6192,31 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <svg className="h-3 w-3 text-slate-300 group-hover:text-blue-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1561,11 +6224,47 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1577,11 +6276,71 @@ function InlineEditCell({
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "short_term_course" => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   if (typeof value !== "string") return "student_admission"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1597,7 +6356,43 @@ const normalizeDashboard = (value: unknown): "student_admission" | "college_cont
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   if (normalized === "college_contact" || normalized === "college_contacts" || normalized === "college") {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1605,7 +6400,43 @@ const normalizeDashboard = (value: unknown): "student_admission" | "college_cont
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1617,17 +6448,83 @@ const normalizeDashboard = (value: unknown): "student_admission" | "college_cont
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     return "short_term_course"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
   }
 
+
+
+
+
+
+
   return "student_admission"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1639,7 +6536,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   if (typeof value !== "string") return ""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1651,7 +6584,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   let normalized = value.toLowerCase()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1663,7 +6632,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   normalized = normalized.replace(/[\u00A0\u200B\u200C\u200D\u2060\uFEFF]/g, "")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1675,7 +6680,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   normalized = normalized.trim()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1687,7 +6728,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   normalized = normalized.replace(/\s+/g, " ")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1699,7 +6776,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   normalized = normalized.replace(/_/g, " ")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1711,7 +6824,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   normalized = normalized.replace(/\s*\/\s*/g, "/")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1723,7 +6872,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   normalized = normalized.replace(/\s*-\s*/g, "-")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1735,7 +6920,43 @@ const normalizeStatus = (value: string): string => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1747,11 +6968,47 @@ const getProspectDashboard = (prospect: any, assignment: any) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const dashboardValue = assignment?.dashboard || prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   return normalizeDashboard(dashboardValue)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1763,7 +7020,43 @@ const getProspectDashboard = (prospect: any, assignment: any) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export default function TelecallerDashboard() {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1771,7 +7064,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const { toast } = useToast()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1779,7 +7096,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [statusFilter, setStatusFilter] = useState<string>("all")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1787,7 +7128,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [leadSourceFilter, setLeadSourceFilter] = useState<string[]>([])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1795,9 +7160,39 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [viewMode, setViewMode] = useState<"student_admission" | "college_contact" | "short_term_course">("student_admission")
 
+
+
+
+
+
+
   const [courseOptions, setCourseOptions] = useState<string[]>([])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1805,7 +7200,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [leadTypeOptionsState, setLeadTypeOptionsState] = useState<string[]>(LEAD_TYPE_OPTIONS)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1813,7 +7232,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1821,7 +7264,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1829,7 +7296,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [courses, setCourses] = useState<Course[]>([])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1837,11 +7328,48 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [assignments, setAssignments] = useState<any[]>([])
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [isLoading, setIsLoading] = useState(true)
+  const [isDownloading, setIsDownloading] = useState(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1849,7 +7377,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [error, setError] = useState<string | null>(null)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1857,7 +7409,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [editingProspect, setEditingProspect] = useState<any | null>(null)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1865,7 +7441,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [singleDate, setSingleDate] = useState<string>(() => new Date().toISOString().split("T")[0])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1873,10 +7473,55 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const [statCardFilter, setStatCardFilter] = useState<string | null>(null)
 
+
+
+
+
+
+
   const [currentPage, setCurrentPage] = useState(1)
+
+
+
   const [rowsPerPage, setRowsPerPage] = useState(10)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1892,7 +7537,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // ─── Fetch data ───────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1900,7 +7581,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (!telecallerId) return
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1908,7 +7613,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       setIsLoading(true)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1920,7 +7649,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       const [apiProspects, apiAssignments, apiCallLogs, apiCourses] = await Promise.all([
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1928,7 +7693,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         assignmentsApi.getByTelecaller(telecallerId),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1936,7 +7725,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         coursesApi.getAll(),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1948,11 +7761,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       setAssignments(apiAssignments)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       setCourses(apiCourses)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1964,7 +7825,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Build dynamic course options from API courses + prospect.course_interest values
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1972,7 +7869,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       apiProspects.forEach((p: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1980,7 +7901,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1988,7 +7933,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const mergedCourses = Array.from(new Set([...courseNames, ...Array.from(prospectCourseSet)])).sort()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2000,7 +7969,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Build dynamic lead source/type options from prospects
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2008,7 +8013,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const prospectLeadTypeSet = new Set<string>()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2016,11 +8045,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         const ls = p.lead_source
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         if (Array.isArray(ls)) ls.forEach((v: string) => v && prospectLeadSourceSet.add(v))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2032,7 +8097,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         const lt = p.lead_type
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2040,7 +8141,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         else if (typeof lt === 'string' && lt) prospectLeadTypeSet.add(lt)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2048,8 +8173,35 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const baseLeadSourceOptions = viewMode === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS
+
+
+
       setLeadSourceOptions(Array.from(new Set([...baseLeadSourceOptions, ...Array.from(prospectLeadSourceSet)])).sort())
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2061,7 +8213,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Build prospect list from today's assignments
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2069,11 +8257,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         apiAssignments.map((a: any) => a.prospect_id)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2085,7 +8321,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const enrichedProspects = apiProspects
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2093,7 +8353,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         .map((p: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2101,7 +8385,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             .filter((cl: any) => cl.prospect_id === p.id)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2109,7 +8417,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               (a: any, b: any) =>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2117,7 +8449,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 new Date(b.called_at).getTime()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2125,7 +8481,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           const lastLog = prospectLogs[prospectLogs.length - 1]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2133,7 +8513,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             (a: any) => a.prospect_id === p.id
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2145,7 +8549,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           // Count status changes (unique outcomes/reasons in call logs)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2153,7 +8593,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           const seenOutcomes = new Set<string>()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2161,7 +8625,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             if (log.outcome && !seenOutcomes.has(log.outcome)) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2169,11 +8657,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               statusChangeCount++
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2185,7 +8709,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           // Parse JSONB arrays from API
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2193,7 +8753,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             ? p.lead_source
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2201,11 +8785,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           const leadType = Array.isArray(p.lead_type)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             ? p.lead_type
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2217,7 +8837,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           return {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2225,7 +8881,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             numericId: p.id,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2233,7 +8913,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             mobile: p.mobile,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2241,7 +8945,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             location: p.location || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2249,7 +8977,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             parentName: p.parent_name || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2257,7 +9009,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             status: p.status,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2265,7 +9041,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             createdAt: p.created_at,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2273,7 +9073,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             dashboard: getProspectDashboard(p, assignment),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2281,7 +9105,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             lead_type: leadType,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2289,7 +9137,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             lead_id: p.lead_id || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2297,7 +9169,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             altPhone: p.alt_phone || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2305,7 +9201,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             altPhone3: p.alt_phone_3 || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2313,7 +9233,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             alternativeEmail: p.alternative_email || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2321,7 +9265,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             address: p.address || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2329,11 +9297,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             designation: p.designation || "",
 
 
 
-            collegeName: p.college_name || "",
+
+
+
+
+
+
+
+
+
+
+
+
+            collegeName: p.college_name || p.collegeName || p.name || p.organization_name || p.institution_name || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2341,7 +9345,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             // Lead sheet data
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2349,7 +9377,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             comments: p.comments || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2357,7 +9409,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             // Enriched from call logs
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2365,7 +9441,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             lastOutcome: lastLog?.outcome || null,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2373,7 +9473,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             lastNotes: lastLog?.notes || null,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2381,11 +9505,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             totalCalls: statusChangeCount,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2397,7 +9557,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       setProspects(enrichedProspects)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2405,7 +9601,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         window.dispatchEvent(new Event("refreshBadgeCounts"))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2413,7 +9633,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     } catch (err) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2421,7 +9665,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       toast({
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2429,7 +9697,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         description: err instanceof Error ? err.message : "Please check your connection.",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2437,7 +9729,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2445,7 +9761,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       setIsLoading(false)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2453,13 +9793,67 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }, [telecallerId, toast])
 
+
+
+
+
+
+
   // ─── Update lead source options when viewMode changes ───────────────────────────────
+
+
+
   useEffect(() => {
+
+
+
     const baseLeadSourceOptions = viewMode === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS
+
+
+
     setLeadSourceOptions(baseLeadSourceOptions)
+
+
+
   }, [viewMode])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2471,7 +9865,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const handleInlineFieldSave = useCallback(async (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2479,7 +9897,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     field: string,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2487,7 +9929,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2495,7 +9961,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       await prospectsApi.update(prospectNumericId, { [field]: value })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2503,7 +9993,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         prev.map((p) =>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2511,7 +10025,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             ? { ...p, [field === "alt_phone" ? "altPhone" : field === "alt_phone_2" ? "altPhone2" : field === "alt_phone_3" ? "altPhone3" : field === "secondary_email" ? "secondaryEmail" : field === "postal_code" ? "postalCode" : field]: value }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2519,7 +10057,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2527,7 +10089,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       toast({ title: "Saved ✓", description: `${field.replace(/_/g, " ")} updated.` })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2535,11 +10121,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       toast({ title: "Save failed", description: "Could not update field. Please try again.", variant: "destructive" })
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2551,11 +10173,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(() => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     fetchData()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2567,7 +10237,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // ─── Stats ────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2575,7 +10281,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const targetDate = useSingleDate ? singleDate : new Date().toISOString().split("T")[0]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2583,7 +10313,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2591,7 +10345,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2603,7 +10381,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const todayAssignmentCount = useMemo(() => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2611,7 +10425,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const todaysAssignmentProspectIds = new Set(
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2619,7 +10457,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         .filter((a: any) => a.assigned_date === targetDate)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2627,11 +10489,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     return todaysAssignmentProspectIds.size
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2643,7 +10541,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const telecallerStats = useMemo(() => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2651,55 +10585,223 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     // Apply filters to prospects before calculating stats
+
+
+
+
+
+
 
     const filterProspects = (prospectList: any[]) => {
 
+
+
+
+
+
+
       return prospectList.filter((prospect) => {
+
+
+
+
+
+
 
         // Status filter
 
+
+
+
+
+
+
         const matchesStatus =
 
+
+
+
+
+
+
           statusFilter === "all" ||
+
+
+
+
+
+
 
           normalizeStatus(prospect.status) === normalizeStatus(statusFilter)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Course filter
 
+
+
+
+
+
+
         const matchesCourse =
+
+
+
+
+
+
 
           courseFilter === "all" || prospect.courseInterest === courseFilter
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Lead Source filter
+
+
+
+
+
+
 
         const matchesLeadSource =
 
+
+
+
+
+
+
           leadSourceFilter.length === 0 ||
+
+
+
+
+
+
 
           leadSourceFilter.some((ls) => (prospect.lead_source || []).includes(ls))
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Lead Type filter
+
+
+
+
+
+
 
         const matchesLeadType =
 
+
+
+
+
+
+
           leadTypeFilter.length === 0 ||
+
+
+
+
+
+
 
           leadTypeFilter.some((lt) => (prospect.lead_type || []).includes(lt))
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         return matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType
+
+
+
+
+
+
 
       })
 
+
+
+
+
+
+
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2707,7 +10809,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeContacts = filterProspects(prospects.filter((p) => p.dashboard === "college_contact"))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2719,11 +10845,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeContactIds = new Set(collegeContacts.map((p) => p.numericId))
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const studentAdmissionIds = new Set(studentAdmissionProspects.map((p) => p.numericId))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2735,11 +10909,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const studentAdmissionCallLogs = callLogs.filter((log) => studentAdmissionIds.has(log.prospect_id))
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeContactCallLogs = callLogs.filter((log) => collegeContactIds.has(log.prospect_id))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2751,7 +10973,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // Student admission stats
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2759,7 +11017,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     studentAdmissionCallLogs.forEach((log) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2767,7 +11049,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2775,11 +11081,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2791,7 +11145,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const studentProspectsOnDate = studentAdmissionProspects.filter((p) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2799,11 +11177,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (!assignment) return false
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       return assignment.assigned_date === targetDate
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2815,15 +11229,87 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const callbackCount = studentAdmissionCallLogs.filter((cl: any) => {
+
+
+
+
+
+
 
       if (!cl.callback_scheduled_at) return false
 
+
+
+
+
+
+
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
 
       return callDate === targetDate
 
+
+
+
+
+
+
     }).length
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2835,7 +11321,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const logDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2843,77 +11353,323 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate calls made by course
 
+
+
+
+
+
+
     const callsMadeByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     todayStudentLogs.forEach((log: any) => {
 
+
+
+
+
+
+
       const prospect = studentAdmissionProspects.find((p) => p.numericId === log.prospect_id)
+
+
+
+
+
+
 
       if (prospect && prospect.courseInterest) {
 
+
+
+
+
+
+
         const course = prospect.courseInterest
+
+
+
+
+
+
 
         callsMadeByCourse[course] = (callsMadeByCourse[course] || 0) + 1
 
+
+
+
+
+
+
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate callbacks by course
 
+
+
+
+
+
+
     const callbacksByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     studentAdmissionCallLogs.forEach((cl: any) => {
 
+
+
+
+
+
+
       if (!cl.callback_scheduled_at) return
+
+
+
+
+
+
 
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
       if (callDate !== targetDate) return
+
+
+
+
+
+
 
       const prospect = studentAdmissionProspects.find((p) => p.numericId === cl.prospect_id)
 
+
+
+
+
+
+
       if (prospect && prospect.courseInterest) {
+
+
+
+
+
+
 
         const course = prospect.courseInterest
 
+
+
+
+
+
+
         callbacksByCourse[course] = (callbacksByCourse[course] || 0) + 1
+
+
+
+
+
+
 
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate interested by course
 
+
+
+
+
+
+
     const interestedByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     studentAdmissionCallLogs.forEach((cl: any) => {
 
+
+
+
+
+
+
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
 
       if (callDate !== targetDate) return
 
+
+
+
+
+
+
       const prospect = studentAdmissionProspects.find((p) => p.numericId === cl.prospect_id)
+
+
+
+
+
+
 
       if (prospect && prospect.courseInterest && (prospect.status === "hot" || prospect.status === "warm")) {
 
+
+
+
+
+
+
         const course = prospect.courseInterest
+
+
+
+
+
+
 
         interestedByCourse[course] = (interestedByCourse[course] || 0) + 1
 
+
+
+
+
+
+
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2929,7 +11685,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const studentStatusCounts = {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2937,7 +11729,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       cold_no_response: studentProspectsOnDate.filter((p) => p.status === "cold_no_response").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2945,7 +11761,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       hot: studentProspectsOnDate.filter((p) => p.status === "hot").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2953,11 +11793,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       visit_done: studentProspectsOnDate.filter((p) => p.status === "visit_done").length,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       admission_done: studentProspectsOnDate.filter((p) => p.status === "admission_done").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2969,7 +11845,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // College contact specific stats
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2977,7 +11889,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2985,7 +11921,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       return assignment.assigned_date === targetDate
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2997,7 +11957,55 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeContactsToday = collegeContactsOnDate.length
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3014,15 +12022,90 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeCallbacks = collegeContactCallLogs.filter((cl: any) => {
+
+
+
+
+
+
 
       if (!cl.callback_scheduled_at) return false
 
+
+
+
+
+
+
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
 
       return callDate === targetDate
 
+
+
+
+
+
+
     }).length
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3034,7 +12117,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       (p.outcome === "New" || p.status === "New" ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3042,7 +12149,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       p.totalCalls === 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3054,7 +12185,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeCallsMade = collegeContactCallLogs.filter((cl: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3062,7 +12229,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       return logDate === targetDate
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3070,79 +12261,331 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     // Calculate college calls made by course
+
+
+
+
+
+
 
     const collegeCallsMadeByCourse: Record<string, number> = {}
 
+
+
+
+
+
+
     collegeContactCallLogs.forEach((log: any) => {
+
+
+
+
+
+
 
       const logDate = new Date(log.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
       if (logDate === targetDate) {
+
+
+
+
+
+
 
         const prospect = collegeContacts.find((p) => p.numericId === log.prospect_id)
 
+
+
+
+
+
+
         if (prospect && prospect.courseInterest) {
+
+
+
+
+
+
 
           const course = prospect.courseInterest
 
+
+
+
+
+
+
           collegeCallsMadeByCourse[course] = (collegeCallsMadeByCourse[course] || 0) + 1
+
+
+
+
+
+
 
         }
 
+
+
+
+
+
+
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate college callbacks by course
 
+
+
+
+
+
+
     const collegeCallbacksByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     collegeContactCallLogs.forEach((cl: any) => {
 
+
+
+
+
+
+
       if (!cl.callback_scheduled_at) return
+
+
+
+
+
+
 
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
       if (callDate !== targetDate) return
+
+
+
+
+
+
 
       const prospect = collegeContacts.find((p) => p.numericId === cl.prospect_id)
 
+
+
+
+
+
+
       if (prospect && prospect.courseInterest) {
+
+
+
+
+
+
 
         const course = prospect.courseInterest
 
+
+
+
+
+
+
         collegeCallbacksByCourse[course] = (collegeCallbacksByCourse[course] || 0) + 1
+
+
+
+
+
+
 
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate college interested by course
 
+
+
+
+
+
+
     const collegeInterestedByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     collegeContactCallLogs.forEach((cl: any) => {
 
+
+
+
+
+
+
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
 
       if (callDate !== targetDate) return
 
+
+
+
+
+
+
       const prospect = collegeContacts.find((p) => p.numericId === cl.prospect_id)
+
+
+
+
+
+
 
       if (prospect && prospect.courseInterest && (prospect.outcome === "Interested" || prospect.status === "Interested")) {
 
+
+
+
+
+
+
         const course = prospect.courseInterest
+
+
+
+
+
+
 
         collegeInterestedByCourse[course] = (collegeInterestedByCourse[course] || 0) + 1
 
+
+
+
+
+
+
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3154,7 +12597,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const collegeStatusCounts = {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3162,7 +12629,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       Interested: collegeContactsOnDate.filter((p) => p.outcome === "Interested" || p.status === "Interested").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3170,7 +12661,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       "Proposal To Be Sent": collegeContactsOnDate.filter((p) => p.outcome === "Proposal To Be Sent" || p.status === "Proposal To Be Sent").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3178,7 +12693,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       "Training Date Followup": collegeContactsOnDate.filter((p) => p.outcome === "Training Date Followup" || p.status === "Training Date Followup").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3186,7 +12725,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       "Direct Visit": collegeContactsOnDate.filter((p) => p.outcome === "Direct Visit" || p.status === "Direct Visit").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3194,11 +12757,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       "Ringing / Not Reachable": collegeContactsOnDate.filter((p) => p.outcome === "Ringing / Not Reachable" || p.status === "Ringing / Not Reachable").length,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       "Not Interested": collegeContactsOnDate.filter((p) => p.outcome === "Not Interested" || p.status === "Not Interested").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3210,7 +12809,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // shortTermCourse specific stats
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3218,7 +12853,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3226,7 +12885,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       return assignment.assigned_date === targetDate
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3238,7 +12921,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // Total shortTermCourse leads (not filtered by date)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3250,7 +12969,55 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const shortTermCourseToday = shortTermCourseProspectsOnDate.length
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3267,15 +13034,90 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const shortTermCourseCallbacks = shortTermCourseCallLogs.filter((cl: any) => {
+
+
+
+
+
+
 
       if (!cl.callback_scheduled_at) return false
 
+
+
+
+
+
+
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
 
       return callDate === targetDate
 
+
+
+
+
+
+
     }).length
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3287,7 +13129,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       (p.outcome === "New" || p.status === "New" ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3295,7 +13161,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       p.totalCalls === 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3307,7 +13197,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     const shortTermCourseCallsMade = shortTermCourseCallLogs.filter((cl: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3315,7 +13241,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       return logDate === targetDate
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3323,79 +13273,331 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     // Calculate shortTermCourse calls made by course
+
+
+
+
+
+
 
     const shortTermCourseCallsMadeByCourse: Record<string, number> = {}
 
+
+
+
+
+
+
     shortTermCourseCallLogs.forEach((log: any) => {
+
+
+
+
+
+
 
       const logDate = new Date(log.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
       if (logDate === targetDate) {
+
+
+
+
+
+
 
         const prospect = shortTermCourseProspects.find((p) => p.numericId === log.prospect_id)
 
+
+
+
+
+
+
         if (prospect && prospect.courseInterest) {
+
+
+
+
+
+
 
           const course = prospect.courseInterest
 
+
+
+
+
+
+
           shortTermCourseCallsMadeByCourse[course] = (shortTermCourseCallsMadeByCourse[course] || 0) + 1
+
+
+
+
+
+
 
         }
 
+
+
+
+
+
+
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate shortTermCourse callbacks by course
 
+
+
+
+
+
+
     const shortTermCourseCallbacksByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     shortTermCourseCallLogs.forEach((cl: any) => {
 
+
+
+
+
+
+
       if (!cl.callback_scheduled_at) return
+
+
+
+
+
+
 
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
       if (callDate !== targetDate) return
+
+
+
+
+
+
 
       const prospect = shortTermCourseProspects.find((p) => p.numericId === cl.prospect_id)
 
+
+
+
+
+
+
       if (prospect && prospect.courseInterest) {
+
+
+
+
+
+
 
         const course = prospect.courseInterest
 
+
+
+
+
+
+
         shortTermCourseCallbacksByCourse[course] = (shortTermCourseCallbacksByCourse[course] || 0) + 1
+
+
+
+
+
+
 
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
     // Calculate shortTermCourse interested by course
 
+
+
+
+
+
+
     const shortTermCourseInterestedByCourse: Record<string, number> = {}
+
+
+
+
+
+
 
     shortTermCourseCallLogs.forEach((cl: any) => {
 
+
+
+
+
+
+
       const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+
+
+
+
+
+
 
       if (callDate !== targetDate) return
 
+
+
+
+
+
+
       const prospect = shortTermCourseProspects.find((p) => p.numericId === cl.prospect_id)
+
+
+
+
+
+
 
       if (prospect && prospect.courseInterest && (prospect.outcome === "Interested" || prospect.status === "Interested")) {
 
+
+
+
+
+
+
         const course = prospect.courseInterest
+
+
+
+
+
+
 
         shortTermCourseInterestedByCourse[course] = (shortTermCourseInterestedByCourse[course] || 0) + 1
 
+
+
+
+
+
+
       }
 
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3407,11 +13609,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const shortTermCourseStatusCounts = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       New: shortTermCourseProspectsOnDate.filter((p) => p.outcome === "New" || p.status === "New").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3423,7 +13661,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       "Interested-Followup": shortTermCourseProspectsOnDate.filter((p) => p.outcome === "Interested-Followup" || p.status === "Interested-Followup").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3431,7 +13705,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       "Ringing / Not Reachable": shortTermCourseProspectsOnDate.filter((p) => p.outcome === "Ringing / Not Reachable" || p.status === "Ringing / Not Reachable").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3439,7 +13737,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3451,7 +13785,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       totalProspects: studentAdmissionProspects.length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3459,7 +13817,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       callsMade: todayStudentLogs.length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3467,7 +13849,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       admitted: studentProspectsOnDate.filter((p) => p.status === "admission_done").length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3475,7 +13881,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (p) =>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3483,7 +13913,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ).length,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3491,7 +13945,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       // Student admission status counts
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3499,7 +13977,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       callsMadeByCourse,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3507,7 +14009,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       interestedByCourse,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3515,7 +14041,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       collegeContactsToday,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3523,7 +14073,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       collegeCallbacks,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3531,7 +14105,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       collegeCallsMade,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3539,7 +14137,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       collegeCallbacksByCourse,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3547,7 +14169,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       collegeStatusCounts,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3555,7 +14201,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       shortTermCourseToday,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3563,7 +14233,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       shortTermCourseInterested,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3571,7 +14265,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       shortTermCoursePending,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3579,7 +14297,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       shortTermCourseCallsMadeByCourse,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3587,7 +14329,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       shortTermCourseInterestedByCourse,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3595,7 +14361,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3607,7 +14397,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // Student Admission stat cards
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3615,7 +14441,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3623,11 +14473,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.totalProspects,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       icon: Users,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3635,7 +14521,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       bgColor: "bg-muted",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3643,7 +14553,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3651,7 +14585,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.todaysProspects,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3659,7 +14617,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-primary",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3667,11 +14649,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3679,7 +14697,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.callsMade,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3687,7 +14729,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-success",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3695,11 +14761,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3707,7 +14809,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.callbacksDue,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3715,7 +14841,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-warning",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3723,11 +14873,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3735,11 +14921,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.admitted,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       icon: CheckCircle2,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3747,7 +14969,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       bgColor: "bg-success/15",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3755,7 +15001,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3763,7 +15033,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.pending,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3771,7 +15065,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-warning",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3779,7 +15097,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3787,7 +15129,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       title: "Visit Done / Decision Pending",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3795,7 +15161,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       icon: CheckCircle2,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3803,7 +15193,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       bgColor: "bg-primary/10",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3811,7 +15225,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3823,11 +15273,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const collegeContactCards = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3835,7 +15321,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.collegeContactsToday,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3843,7 +15353,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-primary",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3851,11 +15385,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3863,7 +15433,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.collegeCallsMade,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3871,7 +15465,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-success",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3879,11 +15497,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3891,7 +15545,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.collegeInterested,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3899,7 +15577,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-success",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3907,11 +15609,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3919,7 +15657,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.collegeCallbacks,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3927,7 +15689,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-warning",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3935,7 +15721,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3943,7 +15753,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       title: "Pending",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3951,7 +15785,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       icon: Clock,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3959,7 +15817,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       bgColor: "bg-warning/10",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3967,7 +15849,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3979,11 +15897,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const shortTermCourseCards = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3991,7 +15945,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.shortTermCourseTotal,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3999,7 +15977,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-blue-700",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4007,11 +16009,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4019,7 +16057,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.shortTermCourseToday,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4027,7 +16089,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-blue-700",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4035,11 +16121,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4047,7 +16169,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.shortTermCourseCallsMade,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4055,7 +16201,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-green-700",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4063,11 +16233,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4075,7 +16281,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.shortTermCourseInterested,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4083,7 +16313,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-purple-700",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4091,11 +16345,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4103,7 +16393,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       value: telecallerStats.shortTermCourseCallbacks,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4111,7 +16425,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       color: "text-orange-700",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4119,7 +16457,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4127,7 +16489,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       title: "Pending",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4135,7 +16521,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       icon: Clock,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4143,7 +16553,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       bgColor: "bg-warning/10",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4151,7 +16585,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4163,7 +16621,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // ─── Download functions ───────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4171,7 +16665,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const effectiveDate = useSingleDate ? singleDate : new Date().toISOString().split("T")[0]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4179,7 +16697,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4187,7 +16729,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     doc.setFontSize(18)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4195,7 +16761,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     doc.setFontSize(11)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4203,7 +16793,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     doc.text(`View Mode: ${viewMode.replace(/_/g, " ").toUpperCase()}`, 14, 38)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4211,7 +16825,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     // Stats table based on view mode
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4219,7 +16857,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (viewMode === "student_admission") {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4227,7 +16889,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Metric", "Count"],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4235,7 +16921,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         [`Today's Prospects (${effectiveDate})`, telecallerStats.todaysProspects],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4243,7 +16953,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Callbacks Due", telecallerStats.callbacksDue],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4251,7 +16985,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Pending", telecallerStats.pending],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4259,7 +17017,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Status counts
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4267,7 +17049,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Status Breakdown", ""],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4275,7 +17081,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Cold / No Response", telecallerStats.studentStatusCounts.cold_no_response],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4283,7 +17113,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Strong Interest / Ready for Counselling", telecallerStats.studentStatusCounts.hot],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4291,7 +17145,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Visit Campus / Decision Awaited", telecallerStats.studentStatusCounts.visit_done],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4299,7 +17177,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4307,11 +17209,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       statsData = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Metric", "Count"],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4319,7 +17257,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         [`Calls Made (${effectiveDate})`, telecallerStats.collegeCallsMade],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4327,7 +17289,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Callbacks", telecallerStats.collegeCallbacks],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4335,7 +17321,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Status counts
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4343,7 +17353,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Status Breakdown", ""],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4351,7 +17385,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Interested", telecallerStats.collegeStatusCounts.Interested],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4359,7 +17417,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Proposal To Be Sent", telecallerStats.collegeStatusCounts["Proposal To Be Sent"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4367,7 +17449,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Training Date Followup", telecallerStats.collegeStatusCounts["Training Date Followup"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4375,7 +17481,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Direct Visit", telecallerStats.collegeStatusCounts["Direct Visit"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4383,7 +17513,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Ringing / Not Reachable", telecallerStats.collegeStatusCounts["Ringing / Not Reachable"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4391,7 +17545,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4399,7 +17577,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       statsData = [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4407,7 +17609,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         [`Today's Prospects (${effectiveDate})`, telecallerStats.shortTermCourseToday],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4415,7 +17641,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Interested", telecallerStats.shortTermCourseInterested],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4423,7 +17673,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Pending", telecallerStats.shortTermCoursePending],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4431,7 +17705,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["", ""],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4439,7 +17737,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["New", telecallerStats.shortTermCourseStatusCounts.New],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4451,7 +17773,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         ["Interested-Followup", telecallerStats.shortTermCourseStatusCounts["Interested-Followup"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4459,7 +17817,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Ringing / Not Reachable", telecallerStats.shortTermCourseStatusCounts["Ringing / Not Reachable"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4467,7 +17849,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4475,7 +17881,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4483,7 +17913,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       startY: 48,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4491,7 +17945,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       body: statsData.slice(1),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4499,7 +17977,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       headStyles: { fillColor: [15, 98, 254] },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4507,7 +18009,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4515,7 +18041,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4527,7 +18089,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const effectiveDate = useSingleDate ? singleDate : new Date().toISOString().split("T")[0]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4535,7 +18121,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     // Stats data based on view mode
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4543,7 +18153,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (viewMode === "student_admission") {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4551,7 +18185,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Metric", "Count"],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4559,7 +18217,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         [`Today's Prospects (${effectiveDate})`, telecallerStats.todaysProspects],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4567,7 +18249,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Callbacks Due", telecallerStats.callbacksDue],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4575,7 +18281,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Pending", telecallerStats.pending],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4583,7 +18313,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Status counts
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4591,7 +18345,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Status Breakdown", ""],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4599,7 +18377,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Cold / No Response", telecallerStats.studentStatusCounts.cold_no_response],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4607,7 +18409,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Strong Interest / Ready for Counselling", telecallerStats.studentStatusCounts.hot],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4615,7 +18441,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Visit Campus / Decision Awaited", telecallerStats.studentStatusCounts.visit_done],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4623,7 +18473,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4631,11 +18505,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       statsData = [
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Metric", "Count"],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4643,7 +18553,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         [`Calls Made (${effectiveDate})`, telecallerStats.collegeCallsMade],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4651,7 +18585,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Callbacks", telecallerStats.collegeCallbacks],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4659,7 +18617,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Status counts
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4667,7 +18649,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Status Breakdown", ""],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4675,7 +18681,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Interested", telecallerStats.collegeStatusCounts.Interested],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4683,7 +18713,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Proposal To Be Sent", telecallerStats.collegeStatusCounts["Proposal To Be Sent"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4691,7 +18745,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Training Date Followup", telecallerStats.collegeStatusCounts["Training Date Followup"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4699,7 +18777,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Direct Visit", telecallerStats.collegeStatusCounts["Direct Visit"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4707,7 +18809,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Ringing / Not Reachable", telecallerStats.collegeStatusCounts["Ringing / Not Reachable"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4715,7 +18841,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4723,7 +18873,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       statsData = [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4731,7 +18905,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         [`Today's Prospects (${effectiveDate})`, telecallerStats.shortTermCourseToday],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4739,7 +18937,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Interested", telecallerStats.shortTermCourseInterested],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4747,7 +18969,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Pending", telecallerStats.shortTermCoursePending],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4755,7 +19001,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["", ""],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4763,7 +19033,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["New", telecallerStats.shortTermCourseStatusCounts.New],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4775,7 +19069,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         ["Interested-Followup", telecallerStats.shortTermCourseStatusCounts["Interested-Followup"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4783,7 +19113,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Ringing / Not Reachable", telecallerStats.shortTermCourseStatusCounts["Ringing / Not Reachable"]],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4791,7 +19145,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4799,7 +19177,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4807,7 +19209,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const statsWs = XLSX.utils.aoa_to_sheet(statsData)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4815,7 +19241,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4823,7 +19273,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4835,7 +19321,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const downloadProspectsByStatus = (status: string, format: "excel" | "pdf" = "excel") => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4843,7 +19353,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4851,7 +19385,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4859,7 +19417,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       filteredProspects = prospects.filter((p) => 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4867,11 +19449,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (p.status === status || p.status === status.toLowerCase())
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4879,7 +19497,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       filteredProspects = prospects.filter((p) => 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4887,7 +19529,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (p.outcome === status || p.status === status)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4895,7 +19561,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     } else {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4903,7 +19593,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (p.dashboard === "short_term_course" || p.dashboard === "edii" || p.prospect_type === "short_term_course" || p.prospect_type === "edii") && 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4911,7 +19625,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4919,7 +19657,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4927,7 +19689,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     filteredProspects = filteredProspects.filter((p) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4935,7 +19721,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (!assignment) return false
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4943,7 +19753,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4951,7 +19785,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (format === "pdf") {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4959,7 +19817,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       doc.setFontSize(18)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4967,7 +19849,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       doc.setFontSize(11)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4975,7 +19881,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       doc.text(`Total: ${filteredProspects.length}`, 14, 38)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4983,7 +19913,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const prospectData = [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4991,7 +19945,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ...filteredProspects.map((p) => [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -4999,7 +19977,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.mobile,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5007,7 +20009,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.courseInterest,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5015,7 +20041,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.status,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5023,7 +20073,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.totalCalls,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5031,7 +20105,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ]),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5039,7 +20137,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5047,7 +20169,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         startY: 45,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5055,7 +20201,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         body: prospectData.slice(1),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5063,7 +20233,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         headStyles: { fillColor: [15, 98, 254] },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5071,11 +20265,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5083,7 +20313,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     } else {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5091,7 +20345,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ["Name", "Mobile", "Email", "Course Interest", "Location", "Status", "Outcome", "Total Calls", "Last Call", "Comments"],
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5099,7 +20377,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.name,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5107,7 +20409,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.email || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5115,7 +20441,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.location,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5123,7 +20473,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.outcome || "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5131,7 +20505,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           p.lastCallAt ? new Date(p.lastCallAt).toLocaleDateString() : "",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5139,7 +20537,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         ]),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5147,7 +20569,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5155,7 +20601,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const ws = XLSX.utils.aoa_to_sheet(prospectData)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5163,7 +20633,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5171,11 +20665,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5187,7 +20729,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const downloadStatusBreakdownPDF = () => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5195,11 +20761,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const doc = new jsPDF()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5207,7 +20809,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     doc.text(`${viewMode.replace(/_/g, " ").toUpperCase()} Status Breakdown`, 14, 22)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5215,11 +20841,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     doc.text(`Date: ${effectiveDate}`, 14, 30)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5227,7 +20889,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (viewMode === "student_admission") {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5235,7 +20921,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5243,7 +20953,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5251,7 +20985,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       statusData = Object.entries(telecallerStats.collegeStatusCounts).map(([status, count]) => [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5259,11 +21017,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         count,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       ])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5271,7 +21065,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       statusData = Object.entries(telecallerStats.shortTermCourseStatusCounts).map(([status, count]) => [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5279,7 +21097,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         count,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5287,11 +21129,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5299,7 +21177,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       startY: 40,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5307,7 +21209,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       body: statusData,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5315,7 +21241,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       headStyles: { fillColor: [15, 98, 254] },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5323,11 +21273,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     doc.save(`${viewMode}-status-breakdown-${effectiveDate}.pdf`)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5339,7 +21325,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // ─── Sort & filter ────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5347,11 +21369,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     return [...prospects].sort((a, b) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const aCreated = new Date(a.createdAt).getTime()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5363,7 +21421,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       if (aCreated !== bCreated) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5371,7 +21465,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5383,7 +21513,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (!a.callbackDateTime && b.callbackDateTime) return 1
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5391,7 +21545,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         return new Date(a.callbackDateTime).getTime() - new Date(b.callbackDateTime).getTime()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5403,11 +21581,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       return 0
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5419,7 +21645,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const filteredProspects = useMemo(() => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5431,7 +21693,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     return sortedProspects.filter((prospect) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5439,7 +21737,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const matchesViewMode =
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5447,11 +21769,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (viewMode === "college_contact" && dashboard === "college_contact") ||
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (viewMode === "short_term_course" && (dashboard === "short_term_course" || dashboard === "edii"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5467,7 +21837,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       const matchesSearch =
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5475,7 +21881,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         (prospect.mobile && prospect.mobile.includes(searchQuery)) ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5487,7 +21917,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       const matchesStatus =
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5495,11 +21961,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         normalizeStatus(prospect.status) === normalizeStatus(statusFilter)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       const matchesCourse =
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5511,7 +22013,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Lead Source filter: if any selected, prospect must have at least one matching
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5519,7 +22057,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         leadSourceFilter.length === 0 ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5531,7 +22093,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Lead Type filter: if any selected, prospect must have at least one matching
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5539,7 +22137,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         leadTypeFilter.length === 0 ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5551,7 +22173,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Stat card filter
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5559,7 +22217,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (statCardFilter) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5567,7 +22249,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         const assignment = assignments.find((a: any) => a.prospect_id === prospect.numericId)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5575,7 +22281,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         const callsOnDate = prospectCalls.filter((cl: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5583,7 +22313,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           return logDate === targetDate
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5595,7 +22349,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         if (statCardFilter === "Total Leads") {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5603,7 +22393,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         } else if (statCardFilter.includes("Prospects")) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5611,7 +22425,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         } else if (statCardFilter.includes("Calls Made")) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5619,37 +22457,151 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         } else if (statCardFilter === "Interested") {
+
+
+
+
+
+
 
           // Show prospects that had interested status set on the target date
 
+
+
+
+
+
+
           const prospectCallsOnDate = prospectCalls.filter((cl: any) => {
+
+
+
+
+
+
 
             const callDate = new Date(cl.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
             return callDate === targetDate
+
+
+
+
+
+
 
           })
 
+
+
+
+
+
+
           matchesStatCard = prospectCallsOnDate.length > 0 &&
+
+
+
+
+
+
 
             (prospect.outcome === "Interested" || prospect.status === "Interested")
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         } else if (statCardFilter === "Callbacks") {
+
+
+
+
+
+
 
           // Show prospects that had a callback scheduled on the target date
 
+
+
+
+
+
+
           const prospectCallsOnDate = prospectCalls.filter((cl: any) => {
+
+
+
+
+
+
 
             const callDate = new Date(cl.called_at).toISOString().split("T")[0]
 
+
+
+
+
+
+
             return callDate === targetDate && cl.callback_scheduled_at
+
+
+
+
+
+
 
           })
 
+
+
+
+
+
+
           matchesStatCard = prospectCallsOnDate.length > 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5657,7 +22609,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           matchesStatCard = assignment && assignment.assigned_date === targetDate &&
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5665,7 +22641,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               (prospectCalls.length > 0 && prospectCalls[prospectCalls.length - 1].outcome === "New"))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5673,9 +22673,39 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           matchesStatCard = assignment && assignment.assigned_date === targetDate &&
 
+
+
+
+
+
+
             prospect.status === "admission_done"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5683,9 +22713,39 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           matchesStatCard = assignment && assignment.assigned_date === targetDate &&
 
+
+
+
+
+
+
             prospect.status === "visit_done"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5693,7 +22753,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5705,7 +22801,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5713,31 +22833,127 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   // ─── Pagination logic ───────────────────────────────────────────
 
+
+
+
+
+
+
   const paginatedProspects = useMemo(() => {
+
+
+
     const startIndex = (currentPage - 1) * rowsPerPage
+
+
+
     const endIndex = startIndex + rowsPerPage
+
+
+
     return filteredProspects.slice(startIndex, endIndex)
+
+
+
   }, [filteredProspects, currentPage, rowsPerPage])
+
+
+
+
+
+
 
   const totalPages = Math.ceil(filteredProspects.length / rowsPerPage)
 
+
+
+
+
+
+
   const handlePageChange = (page: number) => {
+
+
+
     setCurrentPage(page)
+
+
+
   }
+
+
+
+
+
+
 
   const handleRowsPerPageChange = (value: number) => {
+
+
+
     setRowsPerPage(value)
+
+
+
     setCurrentPage(1)
+
+
+
   }
 
+
+
+
+
+
+
   // Reset pagination to page 1 when filters change
+
+
+
   useEffect(() => {
+
+
+
     setCurrentPage(1)
+
+
+
   }, [searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, statCardFilter])
 
+
+
+
+
+
+
   // ─── Dynamic column visibility based on data ───────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5745,7 +22961,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const columns = [
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5753,7 +22993,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "lead_id", label: "Lead ID", hasData: true, alwaysVisible: true },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5761,7 +23025,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "parentName", label: "Parent Name", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5769,7 +23057,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "altPhone", label: "Alt. Phone 1", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5777,7 +23089,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "altPhone3", label: "Alt. Phone 3", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5785,7 +23121,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "alternativeEmail", label: "Alt Email", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5793,7 +23153,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "address", label: "Address", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5801,11 +23185,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "designation", label: "Designation", hasData: false },
 
 
 
-      { key: "collegeName", label: "College Name", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
+      { key: "collegeName", label: "College Name", hasData: false, alwaysVisible: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5813,7 +23233,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "department", label: "Department", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5821,7 +23265,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "lead_source", label: "Lead Source", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5829,7 +23297,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "status", label: "Status", hasData: true, alwaysVisible: true },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5837,7 +23329,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "lastCallAt", label: "Last Call", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5845,7 +23361,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "lastReason", label: "Reason / Outcome", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5853,7 +23393,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "comments", label: "Comments", hasData: false },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5861,7 +23425,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       { key: "action", label: "Action", hasData: true, alwaysVisible: true },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5873,7 +23461,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // Check which columns have data in filtered prospects
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5881,7 +23505,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (col.alwaysVisible) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5889,11 +23537,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         return
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5905,7 +23601,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         const value = prospect[col.key as keyof typeof prospect]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5913,7 +23633,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           return value.length > 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5921,11 +23665,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         return value !== null && value !== undefined && value !== "" && value !== "—"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5937,11 +23717,78 @@ export default function TelecallerDashboard() {
 
 
 
-    return columns.filter((col) => col.hasData)
 
 
 
-  }, [filteredProspects])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    if (viewMode === "college_contact") {
+      // Ensure collegeName always appears in college_contact mode
+      const collegeNameCol = columns.find((col) => col.key === "collegeName")
+      if (collegeNameCol) {
+        collegeNameCol.hasData = true
+      }
+    }
+
+    let finalColumns = columns.filter((col) => col.hasData)
+
+    if (viewMode === "college_contact") {
+      finalColumns = finalColumns.filter((col) => col.key !== "name")
+      
+      const collegeColIndex = finalColumns.findIndex((col) => col.key === "collegeName")
+      if (collegeColIndex > -1) {
+        const [collegeCol] = finalColumns.splice(collegeColIndex, 1)
+        
+        const leadIdIndex = finalColumns.findIndex((col) => col.key === "lead_id")
+        finalColumns.splice(leadIdIndex > -1 ? leadIdIndex + 1 : 0, 0, collegeCol)
+      }
+    }
+
+    return finalColumns
+  }, [filteredProspects, viewMode])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5953,7 +23800,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const handleCall = (prospect: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5961,11 +23832,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     setIsModalOpen(true)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5977,7 +23896,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const handleWhatsApp = (prospect: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5985,7 +23928,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       id: prospect.numericId,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5993,7 +23960,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       mobile: prospect.mobile,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6001,11 +23992,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     setIsWhatsAppOpen(true)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6017,7 +24056,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const handleEdit = (prospect: any) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6025,11 +24088,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     setIsEditModalOpen(true)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6041,7 +24152,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   const handleSaveEdit = async () => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6049,7 +24184,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     try {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6057,7 +24216,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         name: editingProspect.name,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6065,7 +24248,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         email: editingProspect.email,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6073,7 +24280,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         alt_phone_2: editingProspect.altPhone2,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6081,7 +24312,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         secondary_email: editingProspect.secondaryEmail,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6089,7 +24344,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         city: editingProspect.city,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6097,7 +24376,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         postal_code: editingProspect.postalCode,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6105,7 +24408,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         college_name: editingProspect.collegeName,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6113,7 +24440,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         comments: editingProspect.comments,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6121,7 +24472,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6129,7 +24504,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       await fetchData()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6137,7 +24536,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       setEditingProspect(null)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6145,7 +24568,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       toast({ title: "Save failed", description: "Could not update prospect. Please try again.", variant: "destructive" })
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6153,7 +24600,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6165,7 +24648,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const match = time.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6173,7 +24680,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     let hour = Number(match[1])
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6181,7 +24712,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     const period = match[3].toUpperCase()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6189,7 +24744,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     if (period === "AM" && hour === 12) hour = 0
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6197,7 +24776,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6209,7 +24824,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     status: string,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6217,7 +24856,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   ) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6229,7 +24892,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     setSavingId(Number(selectedProspect.numericId))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6241,7 +24940,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       let callbackScheduledAt: string | null = null
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6249,7 +24984,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (data.callbackDate) {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6257,7 +25016,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         const timeStr = parseCallbackTime(rawTime)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6265,7 +25048,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6277,7 +25096,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       let fullNotes = (data.notes as string) || ""
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6285,7 +25128,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (data.coursePreference)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6293,7 +25160,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (data.studyMode) fullNotes += `\n[Study Mode] ${data.studyMode}`
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6301,7 +25192,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         fullNotes += `\n[Preferred Location] ${data.preferredLocation}`
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6309,7 +25224,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         fullNotes += `\n[Parent Aware] ${data.parentAware}`
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6317,7 +25256,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         fullNotes += `\n[Best Time] ${data.bestTimeToCall}`
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6325,11 +25288,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         fullNotes += `\n[Enrolled At] ${data.institutionName}`
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       if (data.courseConfirmed)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6341,7 +25340,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       const leadSource = (data.lead_source as string[]) || selectedProspect.lead_source || []
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6353,7 +25388,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // 1. Mark ALL previous callback logs for this prospect as notification_shown
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6361,7 +25432,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         const previousLogs = await callLogsApi.getByProspect(Number(selectedProspect.numericId))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6369,7 +25464,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         await Promise.all(
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6377,7 +25496,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6385,11 +25528,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         console.error("Failed to mark previous callbacks as shown:", err)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6401,7 +25592,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       await callLogsApi.create({
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6409,7 +25624,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         telecaller_id: telecallerId,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6417,7 +25656,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         outcome: status,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6425,7 +25688,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         reason: (data.reason as string) || null,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6433,7 +25720,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         course_interest:
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6441,7 +25752,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           (data.courseConfirmed as string) ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6449,11 +25784,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         callback_scheduled_at: callbackScheduledAt,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6465,7 +25848,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       await prospectsApi.update(Number(selectedProspect.numericId), {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6473,7 +25880,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         course_interest:
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6481,7 +25912,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           (data.courseConfirmed as string) ||
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6489,7 +25944,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         lead_source: leadSource,
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6497,7 +25976,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         // Update follow_up_date when a callback is scheduled
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6505,7 +26008,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           ? { follow_up_date: (data.callbackDate as string) }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6513,7 +26040,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6525,7 +26088,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         title: "Call logged ✓",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6533,7 +26120,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6545,7 +26168,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       await fetchData()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6553,7 +26200,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         window.dispatchEvent(new Event("refreshBadgeCounts"))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6561,7 +26232,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6569,7 +26264,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       toast({
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6577,7 +26296,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         description:
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6585,7 +26328,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         variant: "destructive",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6593,7 +26360,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     } finally {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6601,7 +26392,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6613,7 +26428,365 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // ─── Export logic ──────────────────────────────────────────────────
+
+  const exportColumns = [
+    { header: "Lead ID", key: "lead_id" },
+    { header: viewMode === "college_contact" ? "College Name" : "Student Name", key: viewMode === "college_contact" ? "collegeName" : "name" },
+    { header: "Mobile", key: "mobile" },
+    { header: "Alt Phone 1", key: "altPhone" },
+    { header: "Alt Phone 2", key: "altPhone2" },
+    { header: "Alt Phone 3", key: "altPhone3" },
+    { header: "Email", key: "email" },
+    { header: "Secondary Email", key: "secondaryEmail" },
+    { header: "Location", key: "location" },
+    { header: "City", key: "city" },
+    { header: "Course", key: "courseInterest" },
+    { header: "Lead Source", key: "lead_source" },
+    { header: "Lead Type", key: "lead_type" },
+    { header: "Status", key: "status" },
+    { header: "Follow-up Date", key: "follow_up_date" },
+    { header: "Callback Date", key: "callbackDateTime" },
+    { header: "Last Call Time", key: "lastCallAt" },
+    { header: "Comments", key: "comments" },
+    { header: "Website", key: "website" },
+    { header: "Designation", key: "designation" },
+    { header: "Parent Name", key: "parentName" },
+    { header: "Department", key: "department" },
+    { header: "College Name", key: "collegeName" },
+  ]
+
+  const pdfExportColumns = [
+    { header: "#", key: "index" },
+    { header: "Lead ID", key: "lead_id" },
+    { header: viewMode === "college_contact" ? "College Name" : "Student Name", key: viewMode === "college_contact" ? "collegeName" : "name" },
+    { header: "Parent Name", key: "parentName" },
+    { header: "Mobile", key: "mobile" },
+    { header: "Alt Phone 1", key: "altPhone" },
+    { header: "Alt Phone 2", key: "altPhone2" },
+    { header: "Alt Phone 3", key: "altPhone3" },
+    { header: "Secondary Email", key: "secondaryEmail" },
+    { header: "Alt Email", key: "alternativeEmail" },
+    { header: "Location", key: "location" },
+    { header: "City", key: "city" },
+    { header: "Address", key: "address" },
+    { header: "Postal Code", key: "postalCode" },
+    { header: "Designation", key: "designation" },
+    { header: "College Name", key: "collegeName" },
+    { header: "Department", key: "department" },
+    { header: "Course", key: "courseInterest" },
+    { header: "Lead Source", key: "lead_source" },
+    { header: "Lead Type", key: "lead_type" },
+    { header: "Status", key: "status" },
+    { header: "Calls", key: "totalCalls" },
+    { header: "Last Call", key: "lastCallAt" },
+    { header: "Follow Up Date", key: "follow_up_date" },
+    { header: "Reason / Outcome", key: "lastReason" },
+    { header: "Notes", key: "lastNotes" },
+    { header: "Comments", key: "comments" },
+    { header: "Website", key: "website" },
+  ]
+
+  const getPdfVisibleColumns = () => {
+    return visibleColumns
+      .filter((col) => col.key !== "action")
+      .map((col) => ({ ...col, header: col.label === "#" ? "S.No" : col.label }))
+  }
+
+  const getPdfExportColumns = () => {
+    const columns = pdfExportColumns.map((col) => ({
+      key: col.key,
+      label: col.header,
+      header: col.header,
+    }))
+
+    const seenKeys = new Set<string>()
+    return columns.filter((col) => {
+      if (seenKeys.has(col.key)) return false
+      seenKeys.add(col.key)
+      return true
+    })
+  }
+
+  const getPdfRowData = (prospect: any, columns: any[], index: number) => {
+    const row: any = {}
+    columns.forEach((col) => {
+      const label = col.label ?? col.header ?? col.key
+      let val: any = col.key === "index" ? index + 1 : prospect[col.key]
+      if (col.key === "collegeName") {
+        val = prospect.collegeName || prospect.college_name || prospect.name || prospect.organization_name || prospect.institution_name || "-"
+      }
+      if (Array.isArray(val)) val = val.join(", ")
+      if (col.key === "status") val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+      if (["callbackDateTime", "lastCallAt", "follow_up_date"].includes(col.key)) {
+        if (val) {
+          const date = new Date(val)
+          if (!isNaN(date.getTime())) {
+            val = date.toLocaleString("en-IN")
+          }
+        }
+      }
+      if (val === null || val === undefined || val === "") val = "-"
+      row[label] = String(val)
+    })
+    return row
+  }
+
+  const getExportData = () => {
+    return filteredProspects.map((prospect, index) => {
+      const row: any = { "#": index + 1 }
+      exportColumns.forEach(col => {
+        let val = prospect[col.key]
+        if (Array.isArray(val)) val = val.join(", ")
+        if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+        if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
+          if (val) {
+             const date = new Date(val)
+             if (!isNaN(date.getTime())) {
+               val = date.toLocaleString('en-IN')
+             }
+          }
+        }
+        row[col.header] = val || ""
+      })
+      return row
+    })
+  }
+
+  const getPdfExportData = () => {
+    return filteredProspects.map((prospect, index) => {
+      const row: any = { "#": index + 1 }
+      pdfExportColumns.forEach(col => {
+        let val: any = prospect[col.key]
+        if (col.key === 'index') {
+          val = index + 1
+        }
+        if (Array.isArray(val)) val = val.join(", ")
+        if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+        if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
+          if (val) {
+            const date = new Date(val)
+            if (!isNaN(date.getTime())) {
+              val = date.toLocaleString('en-IN')
+            }
+          }
+        }
+        if (col.key === 'collegeName') {
+          val = prospect.collegeName || prospect.college_name || prospect.name || prospect.organization_name || prospect.institution_name || "-"
+        }
+        row[col.header] = val || "-"
+      })
+      return row
+    })
+  }
+
+  const getFiltersText = () => {
+    const filters = []
+    if (searchQuery) filters.push(`Search: ${searchQuery}`)
+    if (statusFilter !== "all") filters.push(`Status: ${statusFilter}`)
+    if (courseFilter !== "all") filters.push(`Course: ${courseFilter}`)
+    if (leadSourceFilter.length > 0) filters.push(`Lead Source: ${leadSourceFilter.join(", ")}`)
+    if (leadTypeFilter.length > 0) filters.push(`Lead Type: ${leadTypeFilter.join(", ")}`)
+    return filters.length > 0 ? filters.join(" | ") : "No filters applied"
+  }
+
+  const handleDownloadExcel = () => {
+    try {
+      setIsDownloading(true)
+      const data = getExportData()
+      if (data.length === 0) {
+        toast({ title: "No data to export", variant: "destructive" })
+        return
+      }
+      const worksheet = XLSX.utils.json_to_sheet(data)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Dashboard Export")
+      const dateStr = new Date().toISOString().split("T")[0]
+      XLSX.writeFile(workbook, `Dashboard_Export_${dateStr}.xlsx`)
+      toast({ title: "Excel downloaded successfully" })
+    } catch (err) {
+      console.error(err)
+      toast({ title: "Export failed", description: "Could not generate Excel file.", variant: "destructive" })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const handleDownloadPDF = () => {
+    try {
+      setIsDownloading(true)
+      const tableColumns = getPdfExportColumns()
+      const data = filteredProspects.map((prospect, index) => getPdfRowData(prospect, tableColumns, index))
+      if (data.length === 0) {
+        toast({ title: "No data to export", variant: "destructive" })
+        setIsDownloading(false)
+        return
+      }
+
+      const doc = new jsPDF({ orientation: "landscape", format: "a3" })
+      const dateStr = new Date().toLocaleString("en-IN")
+      const currentDate = new Date().toISOString().split("T")[0]
+      const reportTitle = viewMode === "college_contact" ? "College Contacts Export Report" : viewMode === "short_term_course" ? "Short Term Course Export Report" : "Student Admissions Export Report"
+      const userName = user?.name ? `${user.name}` : "Telecaller"
+
+      const headerFontSize = 18
+      const subHeaderFontSize = 12
+      const baseFontSize = Math.max(7, Math.min(9, 11 - Math.floor(tableColumns.length / 4)))
+      const tableMargin = 10
+      const pageWidth = doc.internal.pageSize.width - tableMargin * 2
+
+      const buildColumnWidths = (columns: typeof tableColumns, rows: any[]) => {
+        const charWidth = baseFontSize * 0.45
+        const minWidth = 30
+        const maxWidth = 120
+        const sizes = columns.map((col) => {
+          const label = col.label ?? col.header ?? col.key
+          const headerLen = label === "#" ? 4 : label.length
+          const maxContent = rows.reduce((max, row) => Math.max(max, String(row[label] || "").length), 0)
+          const rawWidth = Math.max(headerLen, Math.min(maxContent, 70)) * charWidth + 14
+          return Math.min(Math.max(rawWidth, minWidth), maxWidth)
+        })
+        const totalWidth = sizes.reduce((sum, w) => sum + w, 0)
+        if (totalWidth <= pageWidth) return sizes
+        const scale = pageWidth / totalWidth
+        return sizes.map((w) => Math.max(minWidth, Math.floor(w * scale)))
+      }
+
+      const getColumnChunkSections = (columns: typeof tableColumns) => {
+        const repeatKeys = ["index", "lead_id", viewMode === "college_contact" ? "collegeName" : "name"]
+        const repeatColumns = columns.filter((col) => repeatKeys.includes(col.key))
+        const remaining = columns.filter((col) => !repeatKeys.includes(col.key))
+        const sampleWidths = buildColumnWidths(columns, data)
+        const columnWidthMap = new Map(columns.map((col, idx) => [col.key, sampleWidths[idx]]))
+        const sections: typeof tableColumns[][] = []
+        let cursor = 0
+        while (cursor < remaining.length) {
+          const section: typeof tableColumns = [...repeatColumns]
+          let sectionWidth = repeatColumns.reduce((sum, col) => sum + (columnWidthMap.get(col.key) ?? 60), 0)
+          while (cursor < remaining.length) {
+            const nextCol = remaining[cursor]
+            const nextWidth = columnWidthMap.get(nextCol.key) ?? 60
+            if (section.length > repeatColumns.length && sectionWidth + nextWidth > pageWidth) break
+            section.push(nextCol)
+            sectionWidth += nextWidth
+            cursor += 1
+            if (section.length >= 14) break
+          }
+          if (section.length === repeatColumns.length && remaining[cursor]) {
+            section.push(remaining[cursor])
+            cursor += 1
+          }
+          sections.push(section)
+        }
+        return sections.length === 0 ? [columns] : sections
+      }
+
+      const sections = tableColumns.length > 12 ? getColumnChunkSections(tableColumns) : [tableColumns]
+
+      const renderSection = (sectionColumns: typeof tableColumns, pageNumberOffset: number) => {
+        const sectionRows = data.map((row) => sectionColumns.map((col) => {
+          const label = col.label ?? col.header ?? col.key
+          return String(row[label] || "-")
+        }))
+        const columnHeaders = sectionColumns.map((col) => {
+          const label = col.label ?? col.header ?? col.key
+          return label === "#" ? "S.No" : label
+        })
+        const columnWidths = buildColumnWidths(sectionColumns, data)
+        const columnStyles = columnWidths.reduce((acc, width, index) => ({ ...acc, [index]: { cellWidth: width } }), {})
+
+        if (pageNumberOffset > 0) doc.addPage()
+
+        autoTable(doc, {
+          head: [columnHeaders],
+          body: sectionRows,
+          startY: 72,
+          theme: "grid",
+          headStyles: { fillColor: [28, 76, 165], textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [245, 247, 250] },
+          styles: { fontSize: baseFontSize, cellPadding: 2, overflow: 'linebreak', cellWidth: 'wrap', valign: 'middle' },
+          columnStyles,
+          margin: { top: 72, left: tableMargin, right: tableMargin, bottom: tableMargin },
+          tableWidth: 'wrap',
+          pageBreak: 'auto',
+          didDrawPage: (dataObj) => {
+            const pageNumber = dataObj.pageNumber
+            doc.setFontSize(8)
+            doc.setTextColor(100)
+            doc.text(`Page ${pageNumber}`, tableMargin, doc.internal.pageSize.height - 10)
+            if (pageNumber === 1) {
+              doc.setFontSize(8)
+              doc.text(`This report includes all ${data.length} records as per the applied filters.`, tableMargin, doc.internal.pageSize.height - 18)
+            }
+          },
+        })
+      }
+
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(headerFontSize)
+      doc.text("TATTI CRM", tableMargin, 20)
+      doc.setFontSize(subHeaderFontSize)
+      doc.text(reportTitle, tableMargin, 34)
+      doc.setDrawColor(200)
+      doc.setLineWidth(0.5)
+      doc.line(tableMargin, 38, doc.internal.pageSize.width - tableMargin, 38)
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(100)
+      doc.text(`Exported on: ${dateStr}`, tableMargin, 46)
+      doc.text(`Exported by: ${userName}`, tableMargin, 52)
+      doc.text(`Total Records: ${data.length}`, tableMargin, 58)
+      doc.text(`Filters: ${getFiltersText()}`, tableMargin, 64)
+
+      sections.forEach((section, index) => renderSection(section, index))
+
+      doc.save(`Telecaller_Dashboard_Export_${currentDate}.pdf`)
+      toast({ title: "PDF downloaded successfully" })
+    } catch (err) {
+      console.error(err)
+      toast({ title: "Export failed", description: "Could not generate PDF file.", variant: "destructive" })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   // ─── Render ───────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6621,11 +26794,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     return <DashboardSkeleton />
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6637,7 +26858,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
     <div className="space-y-6">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6645,7 +26890,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <Alert variant="destructive" className="bg-destructive text-destructive-foreground border-none shadow-md">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6653,7 +26922,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <AlertTitle>Error</AlertTitle>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6661,11 +26954,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <span>{error}</span>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <Button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6673,7 +27002,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               size="sm"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6681,11 +27034,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               className="h-7 bg-white/10 hover:bg-white/20 border-white/20 text-white"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6693,7 +27082,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6701,7 +27114,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </Alert>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6709,7 +27146,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       {/* Page Header */}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6717,7 +27178,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6725,7 +27210,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <p className="text-muted-foreground flex items-center gap-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6733,11 +27242,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </p>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6745,7 +27290,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           {/* View Toggle */}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6753,7 +27322,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <Button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6761,7 +27354,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               variant={viewMode === "student_admission" ? "default" : "ghost"}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6769,11 +27386,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               className={cn(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 "h-8 text-xs font-medium",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6781,11 +27434,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               )}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6793,11 +27482,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               Student Admission
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6805,7 +27530,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6813,7 +27562,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 variant={viewMode === "short_term_course" ? "default" : "ghost"}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6821,7 +27594,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 className={cn(
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6829,7 +27626,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   viewMode === "short_term_course" ? "shadow-sm" : "text-muted-foreground"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6837,7 +27658,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6845,7 +27690,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 Short Term Course
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6853,11 +27722,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             )}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <Button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6865,11 +27770,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               variant={viewMode === "college_contact" ? "default" : "ghost"}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               size="sm"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6877,7 +27818,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 "h-8 text-xs font-medium",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6885,11 +27850,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               )}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6897,7 +27898,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               College Contact
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6905,7 +27930,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6913,7 +27962,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <Button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6921,7 +27994,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               variant={useSingleDate ? "default" : "outline"}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6929,7 +28026,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6937,7 +28058,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6945,7 +28090,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="flex items-center gap-2 bg-background border border-input rounded-md px-3 shadow-sm h-9">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6953,7 +28122,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6961,7 +28154,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={singleDate}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6969,7 +28186,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   className="h-8 border-none bg-transparent text-sm focus-visible:outline-none focus:ring-0 w-[130px] cursor-pointer"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6977,7 +28218,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6985,7 +28250,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <CourseSearchFilter courses={courses} selected={courseFilter} onChange={(v) => setCourseFilter(v)} />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6993,7 +28282,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7001,7 +28314,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7009,7 +28346,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Download className="h-4 w-4 mr-2" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7017,7 +28378,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7025,7 +28410,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Download className="h-4 w-4 mr-2" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7033,7 +28442,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7041,11 +28474,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7057,7 +28538,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       <div className={cn(
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7065,7 +28570,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         viewMode === "student_admission" ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-7" : "grid-cols-2 lg:grid-cols-4"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7073,15 +28602,63 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         {statCards.map((stat) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
           const isCallsMade = stat.title.includes("Calls Made")
 
+
+
+
+
+
+
           const isCallbacks = stat.title.includes("Callbacks")
 
+
+
+
+
+
+
           const isInterested = stat.title.includes("Interested")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7089,7 +28666,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <Card
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7097,7 +28698,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             className={cn("cursor-pointer hover:shadow-md transition-shadow", statCardFilter === stat.title ? "ring-2 ring-primary" : "")}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7105,7 +28730,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7113,165 +28762,663 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               {isCallsMade && Object.keys(
+
+
+
+
+
+
 
                 viewMode === "student_admission" ? telecallerStats.callsMadeByCourse || {} :
 
+
+
+
+
+
+
                 viewMode === "college_contact" ? telecallerStats.collegeCallsMadeByCourse || {} :
+
+
+
+
+
+
 
                 telecallerStats.shortTermCourseCallsMadeByCourse || {}
 
+
+
+
+
+
+
               ).length > 0 ? (
+
+
+
+
+
+
 
                 <div>
 
+
+
+
+
+
+
                   <div className="flex items-center gap-3 mb-2">
+
+
+
+
+
+
 
                     <div className={cn("rounded-lg p-2", stat.bgColor)}>
 
+
+
+
+
+
+
                       <stat.icon className={cn("h-5 w-5", stat.color)} />
+
+
+
+
+
+
 
                     </div>
 
+
+
+
+
+
+
                     <p className="text-xs text-muted-foreground">{stat.title}</p>
+
+
+
+
+
+
 
                   </div>
 
+
+
+
+
+
+
                   <div className="ml-11 space-y-1">
+
+
+
+
+
+
 
                     <p className="text-lg font-bold">{stat.value} total</p>
 
+
+
+
+
+
+
                     {Object.entries(
+
+
+
+
+
+
 
                       viewMode === "student_admission" ? telecallerStats.callsMadeByCourse || {} :
 
+
+
+
+
+
+
                       viewMode === "college_contact" ? telecallerStats.collegeCallsMadeByCourse || {} :
+
+
+
+
+
+
 
                       telecallerStats.shortTermCourseCallsMadeByCourse || {}
 
+
+
+
+
+
+
                     ).map(([course, count]) => (
+
+
+
+
+
+
 
                       <div key={course} className="flex justify-between text-xs">
 
+
+
+
+
+
+
                         <span className="text-muted-foreground truncate max-w-[120px]" title={course}>{course}</span>
+
+
+
+
+
+
 
                         <span className="font-semibold">{count}</span>
 
+
+
+
+
+
+
                       </div>
+
+
+
+
+
+
 
                     ))}
 
+
+
+
+
+
+
                   </div>
 
+
+
+
+
+
+
                 </div>
+
+
+
+
+
+
 
               ) : isCallbacks && Object.keys(
 
+
+
+
+
+
+
                 viewMode === "student_admission" ? telecallerStats.callbacksByCourse || {} :
+
+
+
+
+
+
 
                 viewMode === "college_contact" ? telecallerStats.collegeCallbacksByCourse || {} :
 
+
+
+
+
+
+
                 telecallerStats.shortTermCourseCallbacksByCourse || {}
+
+
+
+
+
+
 
               ).length > 0 ? (
 
+
+
+
+
+
+
                 <div>
+
+
+
+
+
+
 
                   <div className="flex items-center gap-3 mb-2">
 
+
+
+
+
+
+
                     <div className={cn("rounded-lg p-2", stat.bgColor)}>
+
+
+
+
+
+
 
                       <stat.icon className={cn("h-5 w-5", stat.color)} />
 
+
+
+
+
+
+
                     </div>
+
+
+
+
+
+
 
                     <p className="text-xs text-muted-foreground">{stat.title}</p>
 
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
 
                   <div className="ml-11 space-y-1">
 
+
+
+
+
+
+
                     <p className="text-lg font-bold">{stat.value} total</p>
 
+
+
+
+
+
+
                     {Object.entries(
+
+
+
+
+
+
 
                       viewMode === "student_admission" ? telecallerStats.callbacksByCourse || {} :
 
+
+
+
+
+
+
                       viewMode === "college_contact" ? telecallerStats.collegeCallbacksByCourse || {} :
+
+
+
+
+
+
 
                       telecallerStats.shortTermCourseCallbacksByCourse || {}
 
+
+
+
+
+
+
                     ).map(([course, count]) => (
+
+
+
+
+
+
 
                       <div key={course} className="flex justify-between text-xs">
 
+
+
+
+
+
+
                         <span className="text-muted-foreground truncate max-w-[120px]" title={course}>{course}</span>
+
+
+
+
+
+
 
                         <span className="font-semibold">{count}</span>
 
+
+
+
+
+
+
                       </div>
+
+
+
+
+
+
 
                     ))}
 
+
+
+
+
+
+
                   </div>
 
+
+
+
+
+
+
                 </div>
+
+
+
+
+
+
 
               ) : isInterested && Object.keys(
 
+
+
+
+
+
+
                 viewMode === "student_admission" ? telecallerStats.interestedByCourse || {} :
+
+
+
+
+
+
 
                 viewMode === "college_contact" ? telecallerStats.collegeInterestedByCourse || {} :
 
+
+
+
+
+
+
                 telecallerStats.shortTermCourseInterestedByCourse || {}
+
+
+
+
+
+
 
               ).length > 0 ? (
 
+
+
+
+
+
+
                 <div>
+
+
+
+
+
+
 
                   <div className="flex items-center gap-3 mb-2">
 
+
+
+
+
+
+
                     <div className={cn("rounded-lg p-2", stat.bgColor)}>
+
+
+
+
+
+
 
                       <stat.icon className={cn("h-5 w-5", stat.color)} />
 
+
+
+
+
+
+
                     </div>
+
+
+
+
+
+
 
                     <p className="text-xs text-muted-foreground">{stat.title}</p>
 
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
 
                   <div className="ml-11 space-y-1">
 
+
+
+
+
+
+
                     <p className="text-lg font-bold">{stat.value} total</p>
+
+
+
+
+
+
 
                     {Object.entries(
 
+
+
+
+
+
+
                       viewMode === "student_admission" ? telecallerStats.interestedByCourse || {} :
+
+
+
+
+
+
 
                       viewMode === "college_contact" ? telecallerStats.collegeInterestedByCourse || {} :
 
+
+
+
+
+
+
                       telecallerStats.shortTermCourseInterestedByCourse || {}
+
+
+
+
+
+
 
                     ).map(([course, count]) => (
 
+
+
+
+
+
+
                       <div key={course} className="flex justify-between text-xs">
+
+
+
+
+
+
 
                         <span className="text-muted-foreground truncate max-w-[120px]" title={course}>{course}</span>
 
+
+
+
+
+
+
                         <span className="font-semibold">{count}</span>
+
+
+
+
+
+
 
                       </div>
 
+
+
+
+
+
+
                     ))}
+
+
+
+
+
+
 
                   </div>
 
+
+
+
+
+
+
                 </div>
+
+
+
+
+
+
 
               ) : (
 
+
+
+
+
+
+
                 <div className="flex items-center gap-3">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7279,11 +29426,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <stat.icon className={cn("h-5 w-5", stat.color)} />
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7291,7 +29474,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <p className="text-xl font-normal">{stat.value}</p>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7299,13 +29506,55 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
                 </div>
 
+
+
+
+
+
+
               )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7313,13 +29562,55 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </Card>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
           )
 
+
+
+
+
+
+
         })}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7331,7 +29622,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       {/* Status Breakdown */}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7339,7 +29666,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <CardHeader>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7347,7 +29698,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <CardTitle className="text-sm">Status Breakdown (Click to download prospects)</CardTitle>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7355,7 +29730,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Download className="h-4 w-4 mr-2" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7363,11 +29762,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7375,7 +29810,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <CardContent>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7383,11 +29842,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             {viewMode === "student_admission" ? (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7395,7 +29890,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <div
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7403,7 +29922,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     onClick={() => setStatusFilter(status)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7411,7 +29954,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7419,7 +29986,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <div className="flex items-center gap-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7427,11 +30018,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <div className="flex gap-1">
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         <button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7439,7 +30066,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7447,7 +30098,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7455,7 +30130,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         </button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7463,7 +30162,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "pdf"); }}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7471,7 +30194,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           title="Download PDF"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7479,7 +30226,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           <Download className="h-3 w-3" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7487,7 +30258,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7495,7 +30290,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7503,7 +30322,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7511,7 +30354,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7519,7 +30386,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <div
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7527,7 +30418,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     onClick={() => setStatusFilter(status)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7535,7 +30450,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7543,7 +30482,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <div className="flex items-center gap-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7551,11 +30514,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <div className="flex gap-1">
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         <button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7563,7 +30562,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7571,7 +30594,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7579,7 +30626,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         </button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7587,7 +30658,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "pdf"); }}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7595,7 +30690,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           title="Download PDF"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7603,7 +30722,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           <Download className="h-3 w-3" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7611,7 +30754,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7619,7 +30786,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7627,7 +30818,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7635,7 +30850,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7643,7 +30882,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <div
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7651,7 +30914,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     onClick={() => setStatusFilter(status)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7659,7 +30946,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7667,7 +30978,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <div className="flex items-center gap-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7675,11 +31010,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <div className="flex gap-1">
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         <button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7687,7 +31058,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           className="p-1.5 bg-primary/10 hover:bg-primary/20 rounded text-primary"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7695,7 +31090,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7703,7 +31122,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         </button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7711,7 +31154,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           onClick={(e) => { e.stopPropagation(); downloadProspectsByStatus(status, "pdf"); }}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7719,7 +31186,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           title="Download PDF"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7727,7 +31218,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           <Download className="h-3 w-3" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7735,7 +31250,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7743,7 +31282,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7751,7 +31314,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7759,7 +31346,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7767,7 +31378,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       </Card>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7779,7 +31426,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       <Card>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7787,7 +31458,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <div className="flex flex-col gap-4">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7795,47 +31490,101 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <CardTitle>{viewMode === "student_admission" ? "Today's Prospects" : viewMode === "short_term_course" ? "Short Term Course Prospects" : "College Contacts"}</CardTitle>
 
 
 
-              <div className="relative">
 
 
 
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
 
 
-                <Input
 
 
 
-                  placeholder="Search by name, mobile, or lead ID..."
 
 
 
-                  value={searchQuery}
-
-
-
-                  onChange={(e) => setSearchQuery(e.target.value)}
-
-
-
-                  className="pl-9 w-full sm:w-64"
-
-
-
-                />
-
-
-
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, mobile, or lead ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 w-full sm:w-64"
+                  />
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="gap-2 w-full sm:w-auto" disabled={isDownloading}>
+                      {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                      <span className="hidden sm:inline">Download</span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-1" align="end">
+                    <div className="flex flex-col gap-1">
+                      <Button variant="ghost" className="justify-start gap-2 text-sm font-normal" onClick={handleDownloadExcel} disabled={isDownloading}>
+                        📊 Download Excel
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7847,7 +31596,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <div className="flex flex-wrap gap-2 items-center">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7855,7 +31628,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7863,7 +31660,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <SelectValue placeholder="Status" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7871,7 +31692,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <SelectContent>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7879,7 +31724,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   {viewMode === "short_term_course" ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7887,11 +31756,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="New">New</SelectItem>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Interested">Interested</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7899,11 +31804,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Qualified">Qualified</SelectItem>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Ringing / Not Reachable">Ringing / Not Reachable</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7911,7 +31852,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     </>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7919,7 +31884,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7927,7 +31916,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Interested">Interested</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7935,7 +31948,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Proposal To Be Sent">Proposal To Be Sent</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7943,7 +31980,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Training Date Followup">Training Date Followup</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7951,7 +32012,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Ringing / Not Reachable">Ringing / Not Reachable</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7959,7 +32044,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="Direct Visit">Direct Visit</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7968,7 +32077,34 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     </>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7976,7 +32112,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7984,7 +32144,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="contacted">Contacted</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -7992,7 +32176,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="hot">Strong Interest / Ready for Counselling</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8000,7 +32208,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="visit_done">Visit Campus / Decision Awaited</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8008,7 +32240,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="cold_not_interested">Cold / Not Interested</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8016,7 +32272,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <SelectItem value="lost">Lost</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8024,7 +32304,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8032,7 +32336,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </Select>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8044,7 +32384,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Select value={courseFilter} onValueChange={setCourseFilter}>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8052,7 +32416,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <SelectValue placeholder="Course" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8060,7 +32448,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <SelectContent>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8068,7 +32480,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   {courseOptions.map((name) => (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8076,7 +32512,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       {name}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8084,7 +32544,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   ))}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8092,7 +32576,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 </SelectContent>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8104,7 +32612,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
               {/* Lead Source Filter */}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8112,7 +32656,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 options={leadSourceOptions}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8120,7 +32688,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 onChange={setLeadSourceFilter}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8128,7 +32720,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8140,7 +32768,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <MultiSelectFilter
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8148,7 +32800,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 selected={leadTypeFilter}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8156,11 +32832,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 placeholder="Lead Type"
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8172,7 +32896,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               {/* Active filter badges */}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8180,7 +32928,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <div className="flex flex-wrap gap-1">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8188,7 +32960,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <Badge
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8196,7 +32992,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       variant="secondary"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8204,11 +33024,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       onClick={() => setLeadSourceFilter(leadSourceFilter.filter((x) => x !== s))}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8216,7 +33072,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     </Badge>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8224,11 +33104,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8236,7 +33152,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <div className="flex flex-wrap gap-1 mt-1">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8244,7 +33184,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <Badge
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8252,7 +33216,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       variant="outline"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8260,7 +33248,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       onClick={() => setLeadTypeFilter(leadTypeFilter.filter((x) => x !== t))}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8268,7 +33280,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       {t} <X className="h-3 w-3 ml-1" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8276,7 +33312,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   ))}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8284,7 +33344,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8292,11 +33376,53 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         </CardHeader>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8308,7 +33434,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           <div className="rounded-lg border overflow-hidden" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8320,7 +33482,37 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
               <Table>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8328,7 +33520,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <TableRow className="bg-slate-50 hover:bg-slate-50">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8336,7 +33552,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <TableHead
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8344,7 +33584,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         className={cn(
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8352,7 +33616,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "index" && "w-10 sticky left-0 z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8360,7 +33648,32 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "name" && "min-w-[160px] sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                          col.key === "collegeName" && viewMode === "college_contact" && "min-w-[160px] sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8368,7 +33681,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "action" && "text-right sticky right-0 z-30 bg-slate-50 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[110px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8376,7 +33713,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "altPhone" && "min-w-[130px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8384,7 +33745,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "altPhone3" && "min-w-[130px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8392,7 +33777,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "alternativeEmail" && "min-w-[190px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8400,7 +33809,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "address" && "min-w-[200px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8408,7 +33841,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "designation" && "min-w-[140px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8416,7 +33873,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "location" && "min-w-[120px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8424,7 +33905,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "courseInterest" && "min-w-[140px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8432,7 +33937,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "lead_type" && "min-w-[160px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8440,7 +33969,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "lastCallAt" && "min-w-[130px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8448,17 +34001,71 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           col.key === "lastReason" && "min-w-[180px]",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
                           col.key === "lastNotes" && "min-w-[200px]",
 
+
+
+
+
+
+
                           col.key === "comments" && "min-w-[200px]",
+
+
+
+
+
+
 
                           col.key === "website" && "min-w-[200px]"
 
+
+
+
+
+
+
                         )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8466,7 +34073,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         {col.label}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8474,7 +34105,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     ))}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8482,7 +34137,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 </TableHeader>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8490,7 +34169,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   {filteredProspects.length === 0 ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8498,7 +34201,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                       <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8506,7 +34233,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           <Users className="h-8 w-8" />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8514,7 +34265,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8522,12 +34297,51 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     </TableRow>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   ) : (
+
+
+
                     paginatedProspects.map((prospect, index) => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8535,11 +34349,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         label: prospect.status,
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                         color: "bg-gray-100 text-gray-800",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8549,9 +34399,45 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                       const renderCell = (colKey: string) => {
 
+
+
+
+
+
+
                         switch (colKey) 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -8559,21 +34445,1947 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                           case "index":
+
+
+
                             return <TableCell key="index" className="font-medium text-slate-400 text-xs w-10 sticky left-0 z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">{(currentPage - 1) * rowsPerPage + index + 1}</TableCell>
 
+
+
+
+
+
+
                           case "lead_id":
+
+
+
                             return <TableCell key="lead_id" className="min-w-[100px] sticky left-[40px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+
+
+
                               <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">{prospect.lead_id || "—"}</span>
+
+
+
                             </TableCell>
+
+
+
+
+
+
 
                           case "name":
 
+
+
+
+
+
+
                             return (
+
+
+
                               <TableCell key="name" className="min-w-[160px] sticky left-[140px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+
+
+
                                 <div className="flex flex-col">
+
+
+
                                   <span className="font-semibold text-slate-800 text-sm">{prospect.name}</span>
+
+
+
                                   {prospect.callbackDateTime && (
+
+
+
+                                    <span className="text-[10px] text-amber-600 flex items-center gap-1 mt-0.5">
+
+
+
+                                      <Clock className="h-3 w-3" />
+
+
+
+                                      CB: {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
+
+
+
+                                    </span>
+
+
+
+                                  )}
+
+
+
+                                </div>
+
+
+
+                              </TableCell>
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "parentName":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return <TableCell key="parentName" className="text-sm text-slate-600 min-w-[130px]">{prospect.parentName || <span className="text-slate-300">—</span>}</TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "mobile":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="mobile" className="min-w-[130px]">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <span className="font-mono text-sm text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{prospect.mobile}</span>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "altPhone":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="altPhone" className="min-w-[130px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.altPhone || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ alt phone"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  type="tel"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "altPhone2":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="altPhone2" className="min-w-[130px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.altPhone2 || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ alt phone 2"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  type="tel"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone_2", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "altPhone3":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="altPhone3" className="min-w-[130px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.altPhone3 || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ alt phone 3"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  type="tel"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone_3", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "secondaryEmail":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="secondaryEmail" className="min-w-[190px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.secondaryEmail || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ email"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  type="email"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "secondary_email", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "alternativeEmail":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="alternativeEmail" className="min-w-[190px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.alternativeEmail || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ alt email"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  type="email"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alternative_email", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "city":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="city" className="min-w-[110px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.city || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ city"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "city", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "address":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="address" className="min-w-[200px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.address || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ address"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "address", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  className="max-w-[180px]"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "postalCode":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="postalCode" className="min-w-[110px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.postalCode || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ postal"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "postal_code", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "designation":
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            return (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              <TableCell key="designation" className="min-w-[140px] p-1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  value={prospect.designation || ""}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  placeholder="+ designation"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  readOnly={prospect.is_imported}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "designation", val)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              </TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                          case "collegeName":
+                            const isCollegeMode = viewMode === "college_contact";
+                            return (
+                              <TableCell 
+                                key="collegeName" 
+                                className={isCollegeMode ? "min-w-[160px] sticky left-[140px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]" : "min-w-[160px]"}
+                              >
+                                <div className="flex flex-col">
+                                  <div className={isCollegeMode ? "font-semibold text-slate-800 text-sm" : ""}>
+                                    <InlineEditCell
+                                      value={prospect.collegeName || ""}
+                                      placeholder="+ college"
+                                      readOnly={prospect.is_imported}
+                                      onSave={(val) => handleInlineFieldSave(prospect.numericId, "college_name", val)}
+                                    />
+                                  </div>
+                                  {isCollegeMode && prospect.callbackDateTime && (
                                     <span className="text-[10px] text-amber-600 flex items-center gap-1 mt-0.5">
                                       <Clock className="h-3 w-3" />
                                       CB: {new Date(prospect.callbackDateTime).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
@@ -8585,499 +36397,15 @@ export default function TelecallerDashboard() {
 
 
 
-                          case "parentName":
 
 
 
-                            return <TableCell key="parentName" className="text-sm text-slate-600 min-w-[130px]">{prospect.parentName || <span className="text-slate-300">—</span>}</TableCell>
 
 
 
-                          case "mobile":
 
 
 
-                            return (
-
-
-
-                              <TableCell key="mobile" className="min-w-[130px]">
-
-
-
-                                <span className="font-mono text-sm text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{prospect.mobile}</span>
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "altPhone":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="altPhone" className="min-w-[130px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.altPhone || ""}
-
-
-
-                                  placeholder="+ alt phone"
-
-
-
-                                  type="tel"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "altPhone2":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="altPhone2" className="min-w-[130px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.altPhone2 || ""}
-
-
-
-                                  placeholder="+ alt phone 2"
-
-
-
-                                  type="tel"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone_2", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "altPhone3":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="altPhone3" className="min-w-[130px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.altPhone3 || ""}
-
-
-
-                                  placeholder="+ alt phone 3"
-
-
-
-                                  type="tel"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alt_phone_3", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "secondaryEmail":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="secondaryEmail" className="min-w-[190px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.secondaryEmail || ""}
-
-
-
-                                  placeholder="+ email"
-
-
-
-                                  type="email"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "secondary_email", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "alternativeEmail":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="alternativeEmail" className="min-w-[190px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.alternativeEmail || ""}
-
-
-
-                                  placeholder="+ alt email"
-
-
-
-                                  type="email"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "alternative_email", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "city":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="city" className="min-w-[110px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.city || ""}
-
-
-
-                                  placeholder="+ city"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "city", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "address":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="address" className="min-w-[200px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.address || ""}
-
-
-
-                                  placeholder="+ address"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "address", val)}
-
-
-
-                                  className="max-w-[180px]"
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "postalCode":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="postalCode" className="min-w-[110px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.postalCode || ""}
-
-
-
-                                  placeholder="+ postal"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "postal_code", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "designation":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="designation" className="min-w-[140px] p-1">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.designation || ""}
-
-
-
-                                  placeholder="+ designation"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "designation", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
-
-
-
-                          case "collegeName":
-
-
-
-                            return (
-
-
-
-                              <TableCell key="collegeName" className="min-w-[160px]">
-
-
-
-                                <InlineEditCell
-
-
-
-                                  value={prospect.collegeName || ""}
-
-
-
-                                  placeholder="+ college"
-
-
-
-                                  readOnly={prospect.is_imported}
-
-
-
-                                  onSave={(val) => handleInlineFieldSave(prospect.numericId, "college_name", val)}
-
-
-
-                                />
-
-
-
-                              </TableCell>
-
-
-
-                            )
 
 
 
@@ -9085,7 +36413,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return <TableCell key="location" className="text-sm text-slate-600 min-w-[120px]">{prospect.location || <span className="text-slate-300">—</span>}</TableCell>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9093,7 +36445,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9101,7 +36477,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 <span className="text-xs text-slate-600 block max-w-[130px] truncate" title={prospect.department}>{prospect.department || <span className="text-slate-300">—</span>}</span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9109,7 +36509,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9117,7 +36541,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9125,7 +36573,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 <span className="text-xs text-slate-700 font-medium">{prospect.courseInterest}</span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9133,7 +36605,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9141,7 +36637,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9149,11 +36669,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.lead_source && prospect.lead_source.length > 0 ? (
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   <div className="flex flex-col gap-0.5">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9161,7 +36717,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                       <Badge key={s} variant="secondary" className="text-[10px] w-fit">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9169,7 +36749,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                       </Badge>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9177,7 +36781,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9185,7 +36813,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   <span className="text-muted-foreground text-xs">—</span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9193,11 +36845,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                               </TableCell>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9205,7 +36893,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9213,7 +36925,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.lead_type && prospect.lead_type.length > 0 ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9221,7 +36957,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     {prospect.lead_type.map((t: string) => (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9229,7 +36989,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                         {t}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9237,7 +37021,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     ))}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9245,7 +37053,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 ) : (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9253,7 +37085,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9261,7 +37117,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9269,7 +37149,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9277,7 +37181,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 <Badge variant="outline" className={cn(sc.color)}>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9285,7 +37213,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 </Badge>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9293,7 +37245,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9301,7 +37277,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9309,7 +37309,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 <span className="text-sm font-medium">{prospect.totalCalls}</span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9317,7 +37341,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9325,7 +37373,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9333,7 +37405,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.lastCallAt
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9341,7 +37437,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   : "—"}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9349,7 +37469,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9357,7 +37501,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9365,7 +37533,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.follow_up_date ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9373,7 +37565,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     {prospect.follow_up_date}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9381,7 +37597,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 ) : (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9389,7 +37629,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9397,7 +37661,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9405,7 +37693,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9413,7 +37725,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.lastReason ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9421,7 +37757,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 ) : (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9429,7 +37789,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9437,7 +37821,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9445,7 +37853,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9453,7 +37885,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.lastNotes ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9461,7 +37917,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     {prospect.lastNotes}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9469,7 +37949,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 ) : (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9477,7 +37981,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 )}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9485,7 +38013,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9493,7 +38045,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9501,7 +38077,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 <InlineEditCell
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9509,7 +38109,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   placeholder="+ comments"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9517,7 +38141,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   onSave={(val) => handleInlineFieldSave(prospect.numericId, "comments", val)}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9525,7 +38173,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9533,7 +38205,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             )
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9541,7 +38237,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             return (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9549,7 +38269,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                 {prospect.website ? (
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9557,7 +38301,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     href={prospect.website}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9565,7 +38333,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     rel="noopener noreferrer"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9573,11 +38365,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                     title={prospect.website}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9585,7 +38413,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   </a>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9593,7 +38445,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                                   <span className="text-slate-300">—</span>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9601,63 +38477,255 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                               </TableCell>
 
+
+
+
+
+
+
                             )
+
+
+
+
+
+
 
                           case "action":
 
+
+
+
+
+
+
                             return (
+
+
+
                               <TableCell key="action" className="text-right sticky right-0 z-30 bg-white shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.08)] min-w-[150px]">
+
+
+
                                 <div className="flex items-center justify-end gap-2">
+
+
+
                                   <Button
+
+
+
                                     size="sm"
+
+
+
                                     variant="outline"
+
+
+
                                     className="h-8 text-xs"
+
+
+
                                     onClick={() => handleEdit(prospect)}
+
+
+
                                     disabled={savingId !== null}
+
+
+
                                   >
+
+
+
                                     <Edit className="h-3.5 w-3.5 mr-1" />
+
+
+
                                     Edit
+
+
+
                                   </Button>
+
+
+
                                   <Button
+
+
+
                                     size="sm"
+
+
+
                                     variant="outline"
+
+
+
                                     className="h-8 text-xs"
+
+
+
                                     onClick={() => handleWhatsApp(prospect)}
+
+
+
                                     disabled={savingId !== null}
+
+
+
                                     aria-label="Send WhatsApp"
+
+
+
                                   >
+
+
+
                                     <MessageSquare className="h-3.5 w-3.5 mr-1" />
+
+
+
                                     WhatsApp
+
+
+
                                   </Button>
+
+
+
                                   <Button
+
+
+
                                     size="sm"
+
+
+
                                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-8"
+
+
+
                                     onClick={() => handleCall(prospect)}
+
+
+
                                     disabled={prospect.status === "lost" || savingId !== null}
+
+
+
                                   >
+
+
+
                                     {savingId === prospect.numericId ? (
+
+
+
                                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+
+
+
                                     ) : (
+
+
+
                                       <PhoneCall className="h-4 w-4 mr-1" />
+
+
+
                                     )}
+
+
+
                                     Call Now
+
+
+
                                   </Button>
+
+
+
                                 </div>
+
+
+
                               </TableCell>
+
+
+
                             )
 
+
+
+
+
+
+
                           default:
+
+
+
                             return null
 
+
+
+
+
+
+
                         }
+
+
+
                       }
 
+
+
+
+
+
+
                       return (
+
+
+
                         <TableRow
+
+
+
                           key={prospect.id}
+
+
+
                           className={cn(
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9665,7 +38733,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             index % 2 === 0 ? "bg-white" : "bg-slate-50/50",
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9673,26 +38765,107 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                             prospect.status === "hot" && "bg-destructive/10 hover:bg-destructive/15"
+
+
+
                           )}
+
+
+
                         >
+
+
+
                           {visibleColumns.map((col) => renderCell(col.key))}
+
+
+
                         </TableRow>
+
+
+
                       )
+
+
+
                     })
+
+
+
                   )}
+
+
+
+
+
+
 
                 </TableBody>
 
+
+
+
+
+
+
               </Table>
+
+
+
+
+
+
 
             </div>
 
+
+
+
+
+
+
           </div>
+
+
+
+
+
+
 
           {/* Pagination Bar */}
 
+
+
+
+
+
+
           <div className="mt-4 flex items-center justify-between">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9700,11 +38873,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               Showing {(currentPage - 1) * rowsPerPage + 1}–{Math.min(currentPage * rowsPerPage, filteredProspects.length)} of {filteredProspects.length} prospects
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9712,7 +38921,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="flex items-center gap-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9720,7 +38953,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Select
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9728,11 +38985,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   onValueChange={(value) => handleRowsPerPageChange(Number(value))}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 >
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9740,7 +39033,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <SelectValue />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9748,7 +39065,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <SelectContent>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9756,7 +39097,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                     <SelectItem value="10">10</SelectItem>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9764,11 +39129,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 </Select>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9776,78 +39177,314 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Button
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
                   variant="outline"
 
 
+
+
+
+
+
+
+
+
+
                   size="sm"
+
+
+
+
+
+
+
+
+
 
 
                   onClick={() => handlePageChange(currentPage - 1)}
 
 
+
+
+
+
+
+
+
+
+
                   disabled={currentPage === 1}
+
+
+
+
+
+
+
+
+
 
 
                   className="h-8 w-8 p-0"
 
 
+
+
+
+
+
+
+
+
+
                 >
+
+
+
+
+
+
+
+
+
 
 
                   <ChevronLeft className="h-4 w-4" />
 
 
+
+
+
+
+
+
+
+
+
                 </Button>
+
+
+
+
+
+
+
+
+
 
 
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+
+
+
                   let pageNum
+
+
+
                   if (totalPages <= 5) {
+
+
+
                     pageNum = i + 1
+
+
+
                   } else if (currentPage <= 3) {
+
+
+
                     pageNum = i + 1
+
+
+
                   } else if (currentPage >= totalPages - 2) {
+
+
+
                     pageNum = totalPages - 4 + i
+
+
+
                   } else {
+
+
+
                     pageNum = currentPage - 2 + i
+
+
+
                   }
+
+
+
                   return (
+
+
+
                     <Button
+
+
+
                       key={pageNum}
+
+
+
                       variant={currentPage === pageNum ? "default" : "outline"}
+
+
+
                       size="sm"
+
+
+
                       onClick={() => handlePageChange(pageNum)}
+
+
+
                       className="h-8 w-8 p-0"
+
+
+
                     >
+
+
+
                       {pageNum}
+
+
+
                     </Button>
+
+
+
                   )
+
+
+
                 })}
+
+
+
                 <Button
+
+
+
                   variant="outline"
+
+
+
                   size="sm"
+
+
+
                   onClick={() => handlePageChange(currentPage + 1)}
+
+
+
                   disabled={currentPage === totalPages || totalPages === 0}
+
+
+
                   className="h-8 w-8 p-0"
+
+
+
                 >
+
+
+
                   <ChevronRight className="h-4 w-4" />
+
+
+
                 </Button>
+
+
+
               </div>
+
+
+
             </div>
+
+
           </div>
+
+
+
+
+
+
+
+
+
 
 
         </CardContent>
 
+
+
+
+
+
+
       </Card>
 
+
+
+
+
+
+
       {/* Call Outcome Modal */}
+
+
+
       <CallOutcomeModal
+
+
+
         prospect={selectedProspect}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9855,7 +39492,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         onOpenChange={setIsModalOpen}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9863,11 +39524,59 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         onLeadModeActivate={() => setViewMode("college_contact")}
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9879,7 +39588,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       <WhatsAppDrawer
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9887,7 +39620,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         open={isWhatsAppOpen}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9895,7 +39652,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         onSent={() => {
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9903,7 +39684,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             window.dispatchEvent(new Event("refreshBadgeCounts"))
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9911,7 +39716,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         }}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9923,7 +39752,43 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       {/* Edit Prospect Modal */}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9931,7 +39796,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9939,7 +39828,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <DialogTitle>Edit Prospect Details</DialogTitle>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9947,7 +39860,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               Update the contact information and comments for {editingProspect?.name}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9955,7 +39892,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </DialogHeader>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9963,11 +39924,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <div className="grid grid-cols-2 gap-4">
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9975,7 +39972,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9983,7 +40004,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.name || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9991,7 +40036,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -9999,7 +40068,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10007,7 +40100,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10015,7 +40132,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.mobile || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10023,7 +40164,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10031,7 +40196,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10039,7 +40228,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10047,7 +40260,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10055,7 +40292,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   type="email"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10063,7 +40324,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   onChange={(e) => setEditingProspect({ ...editingProspect, email: e.target.value })}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10071,11 +40356,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10083,7 +40404,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10091,7 +40436,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.altPhone || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10099,7 +40468,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10107,7 +40500,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10115,7 +40532,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10123,7 +40564,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10131,7 +40596,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.altPhone2 || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10139,7 +40628,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10147,7 +40660,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10155,7 +40692,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10163,7 +40724,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.altPhone3 || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10171,7 +40756,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10179,7 +40788,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10187,7 +40820,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10195,7 +40852,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10203,7 +40884,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   type="email"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10211,7 +40916,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   onChange={(e) => setEditingProspect({ ...editingProspect, secondaryEmail: e.target.value })}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10219,11 +40948,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10231,7 +40996,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10239,7 +41028,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   type="email"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10247,7 +41060,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   onChange={(e) => setEditingProspect({ ...editingProspect, alternativeEmail: e.target.value })}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10255,7 +41092,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10263,11 +41124,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <div className="grid grid-cols-2 gap-4">
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10275,7 +41172,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10283,7 +41204,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.city || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10291,7 +41236,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10299,7 +41268,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10307,7 +41300,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10315,7 +41332,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.collegeName || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10323,7 +41364,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10331,7 +41396,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10339,7 +41428,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10347,7 +41460,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10355,7 +41492,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.designation || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10363,7 +41524,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10371,7 +41556,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10379,7 +41588,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10387,7 +41620,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.courseInterest || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10395,7 +41652,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10403,11 +41684,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10415,7 +41732,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10423,7 +41764,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 value={editingProspect?.address || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10431,11 +41796,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               />
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10443,7 +41844,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10451,7 +41876,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Input
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10459,7 +41908,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   value={editingProspect?.postalCode || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10467,11 +41940,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 />
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10479,7 +41988,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 <Label htmlFor="edit-department">Department</Label>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10487,7 +42020,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   id="edit-department"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10495,7 +42052,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   onChange={(e) => setEditingProspect({ ...editingProspect, department: e.target.value })}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10503,7 +42084,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10511,7 +42116,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             <div className="space-y-2">
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10519,7 +42148,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Textarea
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10527,7 +42180,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 value={editingProspect?.comments || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10535,7 +42212,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 rows={4}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10543,11 +42244,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               />
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10555,7 +42292,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               <Label htmlFor="edit-website">Website</Label>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10563,7 +42324,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 id="edit-website"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10571,7 +42356,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 value={editingProspect?.website || ""}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10579,7 +42388,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                 placeholder="https://example.com"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10587,7 +42420,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10595,7 +42452,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           <DialogFooter>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10603,11 +42484,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               Cancel
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
             </Button>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10615,7 +42532,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
               Save Changes
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10623,7 +42564,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
           </DialogFooter>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10631,7 +42596,31 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
       </Dialog>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10639,11 +42628,47 @@ export default function TelecallerDashboard() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
   )
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
