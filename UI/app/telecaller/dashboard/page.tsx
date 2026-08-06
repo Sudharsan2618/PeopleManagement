@@ -23213,7 +23213,9 @@ export default function TelecallerDashboard() {
 
 
 
-      { key: "collegeName", label: "College Name", hasData: false, alwaysVisible: false },
+      ...(viewMode === "student_admission" ? [] : [
+        { key: "collegeName", label: "College Name", hasData: false, alwaysVisible: false },
+      ]),
 
 
 
