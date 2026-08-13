@@ -50,6 +50,13 @@ export interface Prospect {
   prospect_type?: string
   lead_id?: string
   website?: string
+  // Per-course status map computed dynamically from call_logs.
+  // Key = course name (trimmed), Value = latest status_after_call (or prospect status if no call)
+  course_statuses?: Record<string, string>
+  // Assignment info joined from prospect_assignments
+  assigned_telecaller_name?: string
+  assignment_date?: string
+  assignment_dashboard?: string
 }
 
 export interface CallLog {
@@ -614,6 +621,22 @@ export const callLogsApi = {
   getById: (id: number) => apiRequest<CallLog>(`/call-logs/${id}`),
   getByProspect: (prospectId: number) => apiRequest<CallLog[]>(`/call-logs/prospect/${prospectId}`),
   getByTelecaller: (telecallerId: number) => apiRequest<CallLog[]>(`/call-logs/telecaller/${telecallerId}`),
+  sendReportEmail: (data: {
+    to_email: string
+    subject: string
+    message?: string
+    filename?: string
+    csv_data?: string
+    attachments?: Array<{
+      filename: string
+      content_base64: string
+      mime_type: string
+    }>
+  }) => apiRequest<{ message: string }>('/call-logs/send-report-email', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
   getPendingCallbacks: (telecallerId?: number) => {
     const params = new URLSearchParams()
     if (telecallerId) params.append("telecaller_id", telecallerId.toString())

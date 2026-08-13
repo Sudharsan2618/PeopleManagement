@@ -3,6 +3,7 @@
 
 
 import { useState, useEffect, useMemo } from "react"
+import * as XLSX from "xlsx"
 
 
 
@@ -43,6 +44,10 @@ import { Button } from "@/components/ui/button"
 
 
 import { Input } from "@/components/ui/input"
+
+import { Label } from "@/components/ui/label"
+
+import { Textarea } from "@/components/ui/textarea"
 
 
 
@@ -124,6 +129,8 @@ import { useAuth } from "@/lib/auth-context"
 
 import { callLogsApi, prospectsApi, assignmentsApi, type CallLog, type Prospect } from "@/lib/api-client"
 
+import { normalizeCourseInterest } from "../utils"
+
 
 
 
@@ -135,13 +142,11 @@ import {
 
 
   Download,
-
-
-
+  Mail,
   Calendar as CalendarIcon,
-
-
-
+  GraduationCap,
+  Building2,
+  BookOpen,
 } from "lucide-react"
 
 
@@ -625,14 +630,24 @@ const isShortTermCourse = (p: Prospect) => {
 
 
   return hasShortTermCourseKeyword(sourceArray) || hasShortTermCourseKeyword(typeArray) || courseInterestMatch || (p as any).prospect_type === "short_term_course" || (p as any).prospect_type === "edii" || (p as any).dashboard === "short_term_course" || (p as any).dashboard === "edii" || (p as any).dashboard === "short_term_course_leads" || (p as any).dashboard === "edii_leads"
-
-
-
 }
 
+const normalizeContactMode = (value: unknown): "school" | "college" | "short_term_course" => {
+  if (typeof value !== "string") return "school"
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_")
+  if (normalized === "college_contact" || normalized === "college_contacts" || normalized === "college") {
+    return "college"
+  }
+  if (normalized === "short_term_course" || normalized === "short_term_course_leads" || normalized === "edii" || normalized === "edii_leads") {
+    return "short_term_course"
+  }
+  return "school"
+}
 
-
-
+const getContactMode = (p: Prospect | undefined): "school" | "college" | "short_term_course" => {
+  if (!p) return "school"
+  return normalizeContactMode(p.dashboard || p.prospect_type || (p as any).prospectType || "")
+}
 
 
 
@@ -688,7 +703,35 @@ export default function CallHistoryPage() {
 
 
 
-  const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0])
+  const courseOptions = useMemo(() => {
+
+    const allCourses = new Set<string>()
+
+    Object.values(prospects).forEach((p) => {
+
+      if (p.course_interest) {
+
+        normalizeCourseInterest(p.course_interest)
+
+          .split(",")
+
+          .map((c) => c.trim())
+
+          .filter(Boolean)
+
+          .forEach((c) => allCourses.add(c))
+
+      }
+
+    })
+
+    return Array.from(allCourses).sort()
+
+  }, [prospects])
+
+
+
+  const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toLocaleDateString("en-CA"))
 
 
 
@@ -720,11 +763,8 @@ export default function CallHistoryPage() {
 
 
 
-  const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0])
-
-
-
-  const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().split('T')[0])
+  const [exportStartDate, setExportStartDate] = useState(new Date().toLocaleDateString("en-CA"))
+  const [exportEndDate, setExportEndDate] = useState(new Date().toLocaleDateString("en-CA"))
 
 
 
@@ -738,6 +778,581 @@ export default function CallHistoryPage() {
 
   const [isPdfExporting, setIsPdfExporting] = useState(false)
 
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+  const [emailRecipient, setEmailRecipient] = useState("")
+  const [emailSubject, setEmailSubject] = useState("Filtered Call History Report")
+  const [emailMessage, setEmailMessage] = useState("Please find the attached filtered call history report.")
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+
+  const [emailReportType, setEmailReportType] = useState<"school" | "college" | "short_term_course">("school")
+  const [emailFromDate, setEmailFromDate] = useState("")
+  const [emailToDate, setEmailToDate] = useState("")
+  const [emailOutcome, setEmailOutcome] = useState("all")
+  const [emailCourse, setEmailCourse] = useState("all")
+  const [attachExcel, setAttachExcel] = useState(true)
+  const [attachPdf, setAttachPdf] = useState(true)
+
+  const formatToDDMMYYYY = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    return `${day}-${month}-${year}`;
+  };
+
+  const handleOpenEmailModal = () => {
+    const today = new Date().toLocaleDateString("en-CA");
+    setEmailReportType(contactMode);
+    setEmailFromDate(today);
+    setEmailToDate(today);
+    setEmailOutcome("all");
+    setEmailCourse("all");
+    setEmailRecipient("thirshi7817@gmail.com");
+    
+    const formattedFrom = formatToDDMMYYYY(today);
+    const formattedTo = formatToDDMMYYYY(today);
+    setEmailSubject(`Daily Telecaller Report (${formattedFrom} to ${formattedTo})`);
+    setEmailMessage("Please find the attached call history reports.");
+    setAttachExcel(true);
+    setAttachPdf(true);
+    setIsEmailDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (isEmailDialogOpen) {
+      const fromStr = emailFromDate ? formatToDDMMYYYY(emailFromDate) : "";
+      const toStr = emailToDate ? formatToDDMMYYYY(emailToDate) : "";
+      setEmailSubject(`Daily Telecaller Report (${fromStr} to ${toStr})`);
+    }
+  }, [emailFromDate, emailToDate, isEmailDialogOpen]);
+
+  const getModalOutcomes = (mode: "school" | "college" | "short_term_course") => {
+    if (mode === "college") {
+      return COLLEGE_STATUS_KEYS.map(key => ({
+        key,
+        label: OUTCOME_CONFIG[key]?.label || key
+      }));
+    } else if (mode === "short_term_course") {
+      return SHORT_TERM_COURSE_STATUS_KEYS.map(key => ({
+        key,
+        label: OUTCOME_CONFIG[key]?.label || key
+      }));
+    } else {
+      return SCHOOL_STATUS_KEYS.map(key => {
+        let label = key;
+        if (key === "decision_pending") label = "Visit Done / Decision Pending";
+        else if (OUTCOME_CONFIG[key]) label = OUTCOME_CONFIG[key].label;
+        else if (STATUS_CONFIG[key]) label = STATUS_CONFIG[key].label;
+        return { key, label };
+      });
+    }
+  };
+
+  const getModalCourses = (mode: "school" | "college" | "short_term_course") => {
+    return Array.from(
+      new Set(
+        Object.values(prospects)
+          .filter(p => {
+            if (mode === "college") return getContactMode(p) === "college";
+            if (mode === "short_term_course") return getContactMode(p) === "short_term_course";
+            return getContactMode(p) === "school";
+          })
+          .flatMap((p) => {
+            if (typeof p.course_interest !== "string" || !p.course_interest) return [];
+            return p.course_interest.split(",").map((c: string) => c.trim()).filter(Boolean);
+          })
+      )
+    ).sort();
+  };
+
+  const filterLogsForEmailReport = () => {
+    let modeCallLogs = callLogs;
+    const collegeOutcomes = [
+      "New", "Interested", "Interested Followup", "Proposal To Be Sent",
+      "Proposal Sent", "Training Date Followup", "Qualified",
+      "Ringing / Not Reachable", "Not Interested", "College Contact"
+    ];
+
+    if (emailReportType === "college") {
+      modeCallLogs = callLogs.filter(log => {
+        const prospect = prospects[log.prospect_id];
+        return prospect && getContactMode(prospect) === "college";
+      });
+    } else if (emailReportType === "short_term_course") {
+      modeCallLogs = callLogs.filter(log => {
+        const prospect = prospects[log.prospect_id];
+        return prospect && getContactMode(prospect) === "short_term_course";
+      });
+    } else {
+      modeCallLogs = callLogs.filter(log => {
+        const prospect = prospects[log.prospect_id];
+        return prospect && getContactMode(prospect) === "school";
+      });
+    }
+
+    if (emailFromDate && emailToDate) {
+      const fromD = new Date(emailFromDate);
+      fromD.setHours(0, 0, 0, 0);
+      const toD = new Date(emailToDate);
+      toD.setHours(23, 59, 59, 999);
+
+      modeCallLogs = modeCallLogs.filter(log => {
+        const logDate = new Date(log.called_at);
+        return logDate >= fromD && logDate <= toD;
+      });
+    }
+
+    if (emailOutcome !== "all") {
+      if (emailOutcome === "College Contact") {
+        modeCallLogs = modeCallLogs.filter(log => collegeOutcomes.includes(log.outcome));
+      } else {
+        modeCallLogs = modeCallLogs.filter(log => log.outcome === emailOutcome);
+      }
+    }
+
+    if (emailCourse !== "all") {
+      modeCallLogs = modeCallLogs.filter(log => {
+        const prospect = prospects[log.prospect_id];
+        if (!prospect || !prospect.course_interest) return false;
+        const courses = prospect.course_interest.split(",").map((c: string) => c.trim()).filter(Boolean);
+        return courses.includes(emailCourse);
+      });
+    }
+
+    return modeCallLogs;
+  };
+
+  const generateCSVString = (reportLogs: CallLog[]) => {
+    const cleanText = (text: any): string => {
+      if (text === null || text === undefined) return "";
+      const str = String(text);
+      const cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-");
+    };
+
+    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
+
+    const rows = reportLogs.map(log => {
+      const prospect = prospects[log.prospect_id] || log;
+      const dt = new Date(log.called_at);
+      const prospectName = prospect?.name || "ID: " + log.prospect_id;
+      const prospectMobile = prospect?.mobile || "";
+      const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome;
+
+      let leadSource: string[] = [];
+      try {
+        if (prospect?.lead_source) {
+          if (Array.isArray(prospect.lead_source)) {
+            leadSource = prospect.lead_source;
+          } else if (typeof prospect.lead_source === 'string') {
+            leadSource = JSON.parse(prospect.lead_source || '[]');
+          }
+        }
+      } catch (e) {
+        leadSource = [];
+      }
+
+      let leadType: string[] = [];
+      try {
+        if (prospect?.lead_type) {
+          if (Array.isArray(prospect.lead_type)) {
+            leadType = prospect.lead_type;
+          } else if (typeof prospect.lead_type === 'string') {
+            leadType = JSON.parse(prospect.lead_type || '[]');
+          }
+        }
+      } catch (e) {
+        leadType = [];
+      }
+
+      return [
+        prospect ? cleanText(prospect.lead_id || "") : "",
+        dt.toLocaleDateString('en-IN'),
+        dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        cleanText(prospectName),
+        cleanText(prospectMobile),
+        cleanText(prospect?.alt_phone || ""),
+        cleanText(prospect?.alt_phone_2 || ""),
+        cleanText(prospect?.alt_phone_3 || ""),
+        cleanText(prospect?.email || ""),
+        cleanText(prospect?.secondary_email || ""),
+        cleanText(prospect?.alternative_email || ""),
+        cleanText(prospect?.location || ""),
+        cleanText(prospect?.city || ""),
+        cleanText(prospect?.address || ""),
+        cleanText(prospect?.postal_code || ""),
+        cleanText((log as any).displayCourse || (log as any).displayCourse || (log as any).displayCourse || log.course_interest || prospect?.course_interest || ""),
+        cleanText(leadSource.join(', ')),
+        cleanText(leadType.join(', ')),
+        cleanText(prospect?.status || ""),
+        cleanText(prospect?.parent_name || ""),
+        cleanText(prospect?.department || ""),
+        cleanText(prospect?.designation || ""),
+        cleanText(prospect?.company || ""),
+        cleanText(prospect?.college_name || ""),
+        cleanText(prospect?.website || ""),
+        cleanText(prospect?.tags || ""),
+        cleanText(prospect?.comments || ""),
+        cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
+        cleanText(outcomeLabel),
+        cleanText(log.status_after_call || ""),
+        log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : ""
+      ];
+    });
+
+    const outcomeCounts: Record<string, number> = {};
+    reportLogs.forEach(log => {
+      const label = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome;
+      outcomeCounts[label] = (outcomeCounts[label] || 0) + 1;
+    });
+
+    const summaryRows = [
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      ["SUMMARY", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      ["Total Records", reportLogs.length.toString(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
+    ];
+
+    const csvContent = [headers, ...rows, ...summaryRows]
+      .map(row => row.map(cell => `"${(cell || "").toString().replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    return csvContent;
+  };
+
+  const generatePDFBase64 = async (reportLogs: CallLog[]) => {
+    const { jsPDF } = await import('jspdf');
+    await import('jspdf-autotable');
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' });
+    doc.setFontSize(14);
+    doc.text('Call History Report', 40, 40);
+    doc.setFontSize(10);
+    
+    const telecallerName = user?.name || user?.email || 'Unknown';
+    const displayName = telecallerName.length > 30 ? telecallerName.substring(0, 30) + '...' : telecallerName;
+    doc.text(`Telecaller: ${displayName}`, 40, 58);
+    
+    const fromStr = emailFromDate ? formatToDDMMYYYY(emailFromDate) : "";
+    const toStr = emailToDate ? formatToDDMMYYYY(emailToDate) : "";
+    doc.text(`Date range: ${fromStr} to ${toStr}`, 40, 72);
+
+    const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(emailReportType !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"];
+
+    const rows = reportLogs.map(log => {
+      const prospect = prospects[log.prospect_id] || log;
+      const dt = new Date(log.called_at);
+      const prospectName = prospect?.name || "ID: " + log.prospect_id;
+      const prospectMobile = prospect?.mobile || "—";
+      const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome;
+
+      let leadSource: string[] = [];
+      try {
+        if (prospect?.lead_source) {
+          if (Array.isArray(prospect.lead_source)) {
+            leadSource = prospect.lead_source;
+          } else if (typeof prospect.lead_source === 'string') {
+            leadSource = JSON.parse(prospect.lead_source || '[]');
+          }
+        }
+      } catch (e) {
+        leadSource = [];
+      }
+
+      let leadType: string[] = [];
+      try {
+        if (prospect?.lead_type) {
+          if (Array.isArray(prospect.lead_type)) {
+            leadType = prospect.lead_type;
+          } else if (typeof prospect.lead_type === 'string') {
+            leadType = JSON.parse(prospect.lead_type || '[]');
+          }
+        }
+      } catch (e) {
+        leadType = [];
+      }
+
+      return [
+        prospect?.lead_id || "—",
+        dt.toLocaleDateString('en-IN'),
+        dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        prospectName,
+        prospectMobile,
+        prospect?.alt_phone || "—",
+        prospect?.alt_phone_2 || "—",
+        prospect?.alt_phone_3 || "—",
+        prospect?.email || "—",
+        prospect?.secondary_email || "—",
+        prospect?.alternative_email || "—",
+        prospect?.location || "—",
+        prospect?.city || "—",
+        prospect?.address || "—",
+        prospect?.postal_code || "—",
+        ...(emailReportType !== "college" ? [(log as any).displayCourse || log.course_interest || prospect?.course_interest || "—"] : []),
+        leadSource.join(', ') || "—",
+        leadType.join(', ') || "—",
+        prospect?.status || "—",
+        prospect?.parent_name || "—",
+        prospect?.department || "—",
+        prospect?.designation || "—",
+        prospect?.company || "—",
+        prospect?.college_name || "—",
+        prospect?.tags || "—",
+        prospect?.comments || "—",
+        prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—",
+        outcomeLabel,
+        log.status_after_call || "—",
+        log.notes ? log.notes.replace(/\n/g, " ") : "—"
+      ];
+    });
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    doc.autoTable({
+      head: [headers],
+      body: rows,
+      startY: 90,
+      styles: { fontSize: 5, cellPadding: 2, overflow: 'linebreak' },
+      headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontSize: 6 },
+      theme: 'grid',
+      margin: { left: 15, right: 15 },
+      tableWidth: 'auto'
+    });
+
+    const outcomeCounts: Record<string, number> = {};
+    reportLogs.forEach(log => {
+      const label = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome;
+      outcomeCounts[label] = (outcomeCounts[label] || 0) + 1;
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY || 90;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SUMMARY', 40, finalY + 20);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Records: ${reportLogs.length}`, 40, finalY + 35);
+
+    let summaryY = finalY + 50;
+    Object.entries(outcomeCounts).forEach(([outcome, count]) => {
+      doc.text(`${outcome}: ${count}`, 40, summaryY);
+      summaryY += 12;
+    });
+
+    return doc.output('datauristring').split(',')[1];
+  };
+
+  const generateXLSXBase64 = (filteredLogs: CallLog[]): string => {
+    const cleanText = (text: any): string => {
+      if (text === null || text === undefined) return "";
+      const str = String(text);
+      const cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-");
+    };
+
+    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
+
+    const rows = filteredLogs.map(log => {
+      const prospect = prospects[log.prospect_id] || log;
+      const dt = new Date(log.called_at);
+      const prospectName = prospect?.name || "ID: " + log.prospect_id;
+      const prospectMobile = prospect?.mobile || "";
+      const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome;
+
+      let leadSource: string[] = [];
+      try {
+        if (prospect?.lead_source) {
+          if (Array.isArray(prospect.lead_source)) {
+            leadSource = prospect.lead_source;
+          } else if (typeof prospect.lead_source === 'string') {
+            leadSource = JSON.parse(prospect.lead_source || '[]');
+          }
+        }
+      } catch (e) {
+        leadSource = [];
+      }
+      
+      let leadType: string[] = [];
+      try {
+        if (prospect?.lead_type) {
+          if (Array.isArray(prospect.lead_type)) {
+            leadType = prospect.lead_type;
+          } else if (typeof prospect.lead_type === 'string') {
+            leadType = JSON.parse(prospect.lead_type || '[]');
+          }
+        }
+      } catch (e) {
+        leadType = [];
+      }
+
+      return [
+        prospect ? cleanText(prospect.lead_id || "") : "",
+        dt.toLocaleDateString('en-IN'),
+        dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        cleanText(prospectName),
+        cleanText(prospectMobile),
+        cleanText(prospect?.alt_phone || ""),
+        cleanText(prospect?.alt_phone_2 || ""),
+        cleanText(prospect?.alt_phone_3 || ""),
+        cleanText(prospect?.email || ""),
+        cleanText(prospect?.secondary_email || ""),
+        cleanText(prospect?.alternative_email || ""),
+        cleanText(prospect?.location || ""),
+        cleanText(prospect?.city || ""),
+        cleanText(prospect?.address || ""),
+        cleanText(prospect?.postal_code || ""),
+        cleanText((log as any).displayCourse || (log as any).displayCourse || (log as any).displayCourse || log.course_interest || prospect?.course_interest || ""),
+        cleanText(leadSource.join(', ')),
+        cleanText(leadType.join(', ')),
+        cleanText(prospect?.status || ""),
+        cleanText(prospect?.parent_name || ""),
+        cleanText(prospect?.department || ""),
+        cleanText(prospect?.designation || ""),
+        cleanText(prospect?.company || ""),
+        cleanText(prospect?.college_name || ""),
+        cleanText(prospect?.website || ""),
+        cleanText(prospect?.tags || ""),
+        cleanText(prospect?.comments || ""),
+        cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
+        cleanText(outcomeLabel),
+        cleanText(log.status_after_call || ""),
+        log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : ""
+      ];
+    });
+
+    const outcomeCounts: Record<string, number> = {};
+    filteredLogs.forEach(log => {
+      const label = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome;
+      outcomeCounts[label] = (outcomeCounts[label] || 0) + 1;
+    });
+
+    const summaryRows = [
+      Array(31).fill(""),
+      ["SUMMARY", ...Array(30).fill("")],
+      ["Total Records", filteredLogs.length.toString(), ...Array(29).fill("")],
+      ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), ...Array(29).fill("")])
+    ];
+
+    const data = [headers, ...rows, ...summaryRows];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+    
+    // Write as base64
+    return XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+  };
+
+  const handleSendReport = async () => {
+    if (!attachExcel && !attachPdf) {
+      toast({
+        title: "Attachment required",
+        description: "Please check at least one report attachment option.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+
+    try {
+      const filtered = filterLogsForEmailReport();
+      if (filtered.length === 0) {
+        toast({
+          title: "No data found",
+          description: "No call logs match the selected Report Type, Date, Outcome, and Course filters.",
+          variant: "destructive"
+        });
+        setIsSendingEmail(false);
+        return;
+      }
+
+      const attachmentsToSend = [];
+      const fromStr = emailFromDate ? formatToDDMMYYYY(emailFromDate) : "";
+      const toStr = emailToDate ? formatToDDMMYYYY(emailToDate) : "";
+      const baseFilename = `Telecaller_Report_${fromStr}_to_${toStr}`;
+
+      if (attachExcel) {
+        const xlsxBase64 = generateXLSXBase64(filtered);
+        attachmentsToSend.push({
+          filename: `${baseFilename}.xlsx`,
+          content_base64: xlsxBase64,
+          mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+      }
+
+      if (attachPdf) {
+        const pdfBase64 = await generatePDFBase64(filtered);
+        attachmentsToSend.push({
+          filename: `${baseFilename}.pdf`,
+          content_base64: pdfBase64,
+          mime_type: "application/pdf"
+        });
+      }
+
+      const now = new Date();
+      const optionsDate: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
+      const optionsTime: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+      const formattedSentAt = `${now.toLocaleDateString('en-IN', optionsDate)} ${now.toLocaleTimeString('en-US', optionsTime)}`;
+      
+      const attachmentNames = attachmentsToSend.map(a => a.filename).join("\n- ");
+      
+      const dynamicEmailBody = `
+Daily Telecaller Report
+
+Telecaller Name: ${user?.name || "Telecaller"}
+Report Date Range: ${fromStr} to ${toStr}
+Generated On: ${formattedSentAt}
+
+Attached Files:
+- ${attachmentNames}
+
+This is an automated report from the TATTI CRM System.
+      `.trim();
+
+      await callLogsApi.sendReportEmail({
+        to_email: emailRecipient,
+        subject: emailSubject,
+        message: dynamicEmailBody,
+        filename: "",
+        csv_data: "",
+        attachments: attachmentsToSend
+      });
+
+      const attachmentList = attachmentsToSend.map(a => a.filename);
+
+      toast({
+        description: (
+          <div className="flex items-start gap-3 py-1 text-left">
+            <div className="mt-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 p-1 text-emerald-600 dark:text-emerald-400">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h4 className="font-semibold text-foreground">Daily Report Sent Successfully!</h4>
+              <div className="text-xs text-muted-foreground">
+                <p><span className="font-medium text-foreground">To:</span> {emailRecipient}</p>
+                {attachmentList.length > 0 && (
+                  <p><span className="font-medium text-foreground">Attachments:</span> {attachmentList.join(", ")}</p>
+                )}
+                <p><span className="font-medium text-foreground">Sent At:</span> {formattedSentAt}</p>
+              </div>
+            </div>
+          </div>
+        ),
+        className: "border-emerald-200 dark:border-emerald-900 bg-white dark:bg-zinc-950 shadow-md rounded-xl p-4",
+      });
+
+      setIsEmailDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Failed to send email",
+        description: error instanceof Error ? error.message : "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
 
 
@@ -812,9 +1427,21 @@ export default function CallHistoryPage() {
 
 
 
-      setCallLogs(logs)
+      // Only keep the latest log per prospect and course combination
+      const latestLogByProspect = new Map<string, CallLog>()
+      logs.forEach((log) => {
+        const key = `${log.prospect_id}_${log.course_interest || 'default'}`
+        const existing = latestLogByProspect.get(key)
+        if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+          latestLogByProspect.set(key, log)
+        }
+      })
+      
+      const uniqueLogs = Array.from(latestLogByProspect.values()).sort(
+        (a, b) => new Date(b.called_at).getTime() - new Date(a.called_at).getTime()
+      )
 
-
+      setCallLogs(uniqueLogs)
 
       setAssignments(apiAssignments)
 
@@ -984,7 +1611,7 @@ export default function CallHistoryPage() {
 
           const prospect = prospects[log.prospect_id]
 
-          return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isShortTermCourse(prospect)
+          return prospect && getContactMode(prospect) === "college"
 
         })
 
@@ -998,7 +1625,7 @@ export default function CallHistoryPage() {
 
           const prospect = prospects[log.prospect_id]
 
-          return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome) && prospect && isShortTermCourse(prospect)
+          return prospect && getContactMode(prospect) === "short_term_course"
 
         })
 
@@ -1008,7 +1635,10 @@ export default function CallHistoryPage() {
 
 
 
-        modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome))
+        modeCallLogs = callLogs.filter(log => {
+        const prospect = prospects[log.prospect_id]
+        return prospect && getContactMode(prospect) === "school"
+      })
 
 
 
@@ -1099,7 +1729,7 @@ export default function CallHistoryPage() {
         return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
       }
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(exportContactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
 
       const rows = exportData.map(log => {
 
@@ -1241,7 +1871,7 @@ export default function CallHistoryPage() {
 
 
 
-          cleanText(prospect?.course_interest || ""),
+          ...(exportContactMode !== "college" ? [cleanText((log as any).displayCourse || log.course_interest || prospect?.course_interest || "")] : []),
 
 
 
@@ -1929,7 +2559,7 @@ export default function CallHistoryPage() {
 
 
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
 
 
 
@@ -2073,7 +2703,7 @@ export default function CallHistoryPage() {
 
 
 
-          cleanText(prospect?.course_interest || ""),
+          ...(contactMode !== "college" ? [cleanText(prospect?.course_interest || "")] : []),
 
 
 
@@ -2221,7 +2851,7 @@ export default function CallHistoryPage() {
 
 
 
-      link.setAttribute("download", `FilteredCallHistory_${new Date().toISOString().split('T')[0]}.csv`)
+      link.setAttribute("download", `FilteredCallHistory_${new Date().toLocaleDateString("en-CA")}.csv`)
 
 
 
@@ -2743,7 +3373,7 @@ export default function CallHistoryPage() {
 
 
 
-        doc.save(`FilteredCallHistory_${new Date().toISOString().split('T')[0]}.pdf`)
+        doc.save(`FilteredCallHistory_${new Date().toLocaleDateString("en-CA")}.pdf`)
 
 
 
@@ -2933,7 +3563,7 @@ export default function CallHistoryPage() {
 
           const prospect = prospects[log.prospect_id]
 
-          return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isShortTermCourse(prospect)
+          return prospect && getContactMode(prospect) === "college"
 
         })
 
@@ -2947,7 +3577,7 @@ export default function CallHistoryPage() {
 
           const prospect = prospects[log.prospect_id]
 
-          return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome) && prospect && isShortTermCourse(prospect)
+          return prospect && getContactMode(prospect) === "short_term_course"
 
         })
 
@@ -2957,7 +3587,10 @@ export default function CallHistoryPage() {
 
 
 
-        modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome))
+        modeCallLogs = callLogs.filter(log => {
+        const prospect = prospects[log.prospect_id]
+        return prospect && getContactMode(prospect) === "school"
+      })
 
 
 
@@ -3749,7 +4382,7 @@ export default function CallHistoryPage() {
 
 
 
-        return hasLeadInfo(p) && !isShortTermCourse(p)
+        return getContactMode(p) === "college"
 
 
 
@@ -3761,7 +4394,7 @@ export default function CallHistoryPage() {
 
         const prospect = prospects[log.prospect_id]
 
-        return collegeOutcomes.includes(log.outcome) && prospect && hasLeadInfo(prospect) && !isShortTermCourse(prospect)
+        return prospect && getContactMode(prospect) === "college"
 
       })
 
@@ -3783,7 +4416,7 @@ export default function CallHistoryPage() {
 
 
 
-        return isShortTermCourse(p)
+        return getContactMode(p) === "short_term_course"
 
 
 
@@ -3795,7 +4428,7 @@ export default function CallHistoryPage() {
 
         const prospect = prospects[log.prospect_id]
 
-        return SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome) && prospect && isShortTermCourse(prospect)
+        return prospect && getContactMode(prospect) === "short_term_course"
 
       })
 
@@ -3817,7 +4450,7 @@ export default function CallHistoryPage() {
 
 
 
-        return !hasLeadInfo(p) && !isShortTermCourse(p)
+        return getContactMode(p) === "school"
 
 
 
@@ -3825,7 +4458,10 @@ export default function CallHistoryPage() {
 
 
 
-      modeCallLogs = callLogs.filter(log => !collegeOutcomes.includes(log.outcome) && !SHORT_TERM_COURSE_STATUS_KEYS.includes(log.outcome))
+      modeCallLogs = callLogs.filter(log => {
+        const prospect = prospects[log.prospect_id]
+        return prospect && getContactMode(prospect) === "school"
+      })
 
 
 
@@ -3847,275 +4483,115 @@ export default function CallHistoryPage() {
 
   // Filter logs
 
+  const getLogCourses = (log: CallLog, prospect?: Prospect) => {
+    const explicitCourse = normalizeCourseInterest(log.course_interest || "")
+    if (explicitCourse) {
+      return explicitCourse
+        .split(",")
+        .map((c: string) => c.trim())
+        .filter(Boolean)
+    }
 
+    if (!prospect?.course_interest) return []
+    return normalizeCourseInterest(prospect.course_interest)
+      .split(",")
+      .map((c: string) => c.trim())
+      .filter(Boolean)
+  }
+
+  const expandLogByCourse = (log: CallLog, prospect?: Prospect) => {
+    const courses = getLogCourses(log, prospect)
+    if (courses.length <= 1) {
+      return [
+        {
+          ...log,
+          course_interest: courses[0] || log.course_interest,
+          displayCourse:
+            courses[0] ||
+            ((log as any).displayCourse || (log as any).displayCourse || (log as any).displayCourse || log.course_interest || prospect?.course_interest || "").trim() ||
+            "",
+        } as CallLog & { displayCourse: string },
+      ]
+    }
+
+    return courses.map((course: string, idx: number) => ({
+      ...log,
+      id: `${log.id}_course_${idx}` as any,
+      course_interest: course,
+      displayCourse: course,
+    }) as CallLog & { displayCourse: string })
+  }
 
   const filteredLogs = useMemo(() => {
-
-
-
-    return filteredCallLogsForStats.filter((log) => {
-
-
-
+    const baseLogs = filteredCallLogsForStats.filter((log) => {
       const prospect = prospects[log.prospect_id]
 
-
-
-
-
-
-
       // Search
-
-
-
       const matchesSearch =
-
-
-
         searchQuery === "" ||
-
-
-
         (prospect &&
-
-
-
           (prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-
-
-
-            prospect.mobile.includes(searchQuery)))
-
-
-
-
-
-
+            prospect.mobile?.includes(searchQuery)))
 
       // Outcome Filter
-
-
-
       if (outcomeFilter !== "all") {
-
-
-
         if (outcomeFilter === "College Contact") {
-
-
-
           const leadOutcomes = [
-
-
-
             "New",
-
-
-
             "Interested",
-
-
-
             "Interested Followup",
-
-
-
             "Proposal To Be Sent",
-
-
-
             "Proposal Sent",
-
-
-
             "Training Date Followup",
-
-
-
             "Qualified",
-
-
-
             "Ringing / Not Reachable",
-
-
-
             "Not Interested",
-
-
-
-            "College Contact"
-
-
-
+            "College Contact",
           ]
-
-
-
           if (!leadOutcomes.includes(log.outcome)) return false
-
-
-
         } else if (log.outcome !== outcomeFilter) {
-
-
-
           return false
-
-
-
         }
-
-
-
       }
-
-
-
-
-
-
 
       // Date filter
-
-
-
       let matchesDate = true
-
-
-
       if (dateFilter !== "all") {
-
-
-
         const logDate = new Date(log.called_at)
-
-
-
         const now = new Date()
-
-
-
-        const todayStr = now.toISOString().split("T")[0]
-
-
-
-        const logDateStr = logDate.toISOString().split("T")[0]
-
-
-
-
-
-
-
+        const todayStr = now.toLocaleDateString("en-CA")
+        const logDateStr = logDate.toLocaleDateString("en-CA")
         if (dateFilter === "today") {
-
-
-
           matchesDate = logDateStr === todayStr
-
-
-
         } else if (dateFilter === "week") {
-
-
-
           const weekAgo = new Date(now)
-
-
-
           weekAgo.setDate(weekAgo.getDate() - 7)
-
-
-
           matchesDate = logDate >= weekAgo
-
-
-
         } else if (dateFilter === "month") {
-
-
-
           const monthAgo = new Date(now)
-
-
-
           monthAgo.setMonth(monthAgo.getMonth() - 1)
-
-
-
           matchesDate = logDate >= monthAgo
-
-
-
         } else if (dateFilter === "custom" && customDateRange.from && customDateRange.to) {
-
-
-
           const fromDate = new Date(customDateRange.from)
-
           const toDate = new Date(customDateRange.to)
-
           toDate.setHours(23, 59, 59, 999)
-
           matchesDate = logDate >= fromDate && logDate <= toDate
-
-
-
         }
-
-
-
       }
-
-
-
-
-
-
-
-      // Course filter
-
-
-
-      if (courseFilter !== "all") {
-
-
-
-        if (!prospect || !prospect.course_interest) return false
-
-
-
-        if (prospect.course_interest !== courseFilter) return false
-
-
-
-      }
-
-
-
-
-
-
 
       return matchesSearch && matchesDate
-
-
-
     })
 
+    const expandedLogs = baseLogs.flatMap((log) =>
+      expandLogByCourse(log, prospects[log.prospect_id])
+    )
 
-
+    if (courseFilter === "all") return expandedLogs
+    return expandedLogs.filter((log) => {
+      const courseName = ((log as any).displayCourse || log.course_interest || "").trim()
+      return courseName === courseFilter
+    })
   }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange])
-
-
-
-
-
-
-
-  // Pagination logic
 
   const paginatedLogs = useMemo(() => {
 
@@ -4148,6 +4624,19 @@ export default function CallHistoryPage() {
     setCurrentPage(1)
 
   }
+
+
+
+  const filteredStatsLogs = useMemo(() => {
+    const expandedStatsLogs = filteredCallLogsForStats.flatMap((log) =>
+      expandLogByCourse(log, prospects[log.prospect_id])
+    )
+    if (courseFilter === "all") return expandedStatsLogs
+    return expandedStatsLogs.filter((log) => {
+      const courseName = ((log as any).displayCourse || log.course_interest || "").trim()
+      return courseName === courseFilter
+    })
+  }, [filteredCallLogsForStats, courseFilter, prospects])
 
 
 
@@ -4193,42 +4682,39 @@ export default function CallHistoryPage() {
 
 
 
-    if (contactMode === "college" || contactMode === "short_term_course") {
-
-
-
-      // For college/short_term_course contact: pending if no calls OR last outcome is "New"
-
-
-
+    if (contactMode === "short_term_course") {
+      let count = 0
+      Object.values(prospects)
+        .filter((p) => {
+          if (!assignedProspectIds.has(p.id)) return false
+          if (!isShortTermCourse(p)) return false
+          return true
+        })
+        .forEach((p) => {
+          const courses = (p.course_interest || "").split(",").map((c: string) => c.trim()).filter(Boolean)
+          const prospectCalls = filteredStatsLogs.filter((log) => log.prospect_id === p.id)
+          courses.forEach((course) => {
+            const courseCalls = prospectCalls.filter((log) => (log.course_interest || "").trim() === course)
+            if (courseCalls.length === 0) {
+              count++
+            } else {
+              const lastCall = courseCalls[courseCalls.length - 1]
+              if (lastCall.outcome === "New") {
+                count++
+              }
+            }
+          })
+        })
+      return count
+    } else if (contactMode === "college") {
       return Object.values(prospects).filter((p) => {
-
-
-
         if (!assignedProspectIds.has(p.id)) return false
-
-
-
-        const prospectCalls = filteredCallLogsForStats.filter((log) => log.prospect_id === p.id)
-
-
-
+        if (isShortTermCourse(p) || !hasLeadInfo(p)) return false
+        const prospectCalls = filteredStatsLogs.filter((log) => log.prospect_id === p.id)
         if (prospectCalls.length === 0) return true
-
-
-
         const lastCall = prospectCalls[prospectCalls.length - 1]
-
-
-
         return lastCall.outcome === "New"
-
-
-
       }).length
-
-
-
     } else {
 
 
@@ -4245,7 +4731,7 @@ export default function CallHistoryPage() {
 
 
 
-        const hasCalls = filteredCallLogsForStats.some((log) => log.prospect_id === p.id)
+        const hasCalls = filteredStatsLogs.some((log) => log.prospect_id === p.id)
 
 
 
@@ -4261,11 +4747,7 @@ export default function CallHistoryPage() {
 
 
 
-  }, [filteredAssignments, prospects, filteredCallLogsForStats, contactMode])
-
-
-
-
+  }, [filteredAssignments, prospects, filteredStatsLogs, contactMode])
 
 
 
@@ -4305,11 +4787,11 @@ export default function CallHistoryPage() {
 
 
 
-      filteredCallLogsForStats.forEach((log) => {
+      filteredStatsLogs.forEach((log) => {
 
         if (summaryDate) {
 
-          const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+          const logDateStr = new Date(log.called_at).toLocaleDateString("en-CA")
 
           if (logDateStr !== summaryDate) return
 
@@ -4359,11 +4841,11 @@ export default function CallHistoryPage() {
 
 
 
-      filteredCallLogsForStats.forEach((log) => {
+      filteredStatsLogs.forEach((log) => {
 
         if (summaryDate) {
 
-          const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+          const logDateStr = new Date(log.called_at).toLocaleDateString("en-CA")
 
           if (logDateStr !== summaryDate) return
 
@@ -4443,7 +4925,7 @@ export default function CallHistoryPage() {
 
 
 
-      filteredCallLogsForStats.forEach((log) => {
+      filteredStatsLogs.forEach((log) => {
 
 
 
@@ -4451,7 +4933,7 @@ export default function CallHistoryPage() {
 
 
 
-          const logDateStr = new Date(log.called_at).toISOString().split("T")[0]
+          const logDateStr = new Date(log.called_at).toLocaleDateString("en-CA")
 
 
 
@@ -4559,7 +5041,7 @@ export default function CallHistoryPage() {
 
 
 
-        } else if (["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
+        } else if (log.status_after_call && ["cold", "cold_no_response", "cold_not_interested"].includes(log.status_after_call)) {
 
 
 
@@ -4619,7 +5101,7 @@ export default function CallHistoryPage() {
 
 
 
-  }, [filteredCallLogsForStats, summaryDate, contactMode])
+  }, [filteredStatsLogs, summaryDate, contactMode])
 
 
 
@@ -4671,7 +5153,7 @@ export default function CallHistoryPage() {
 
 
 
-    filteredCallLogsForStats.forEach((log) => {
+    filteredStatsLogs.forEach((log) => {
 
 
 
@@ -4727,7 +5209,7 @@ export default function CallHistoryPage() {
 
 
 
-  }, [filteredCallLogsForStats])
+  }, [filteredStatsLogs])
 
 
 
@@ -5263,346 +5745,48 @@ export default function CallHistoryPage() {
 
 
 
-        <div className="flex flex-wrap items-center gap-4">
-
-
-
-          <Badge
-
-
-
-            variant="outline"
-
-
-
-            className="text-xs px-4 py-2 font-semibold bg-[#EDF5FF] text-blue-700 border-blue-200 shadow-sm rounded-lg flex items-center gap-2"
-
-
-
-          >
-
-
-
-            <span>School Contact:</span>
-
-
-
-            <span className="text-sm bg-primary/15 px-2 py-0.5 rounded-sm">
-
-
-
-              {assignments.filter((a) => {
-
-
-
-                const p = prospects[a.prospect_id]
-
-
-
-                if (!p) return false
-
-
-
-                const sourceArray = Array.isArray(p.lead_source) ? p.lead_source :
-
-
-
-                  (typeof p.lead_source === 'string' ? JSON.parse(p.lead_source || '[]') : [])
-
-
-
-                const typeArray = Array.isArray(p.lead_type) ? p.lead_type :
-
-
-
-                  (typeof p.lead_type === 'string' ? JSON.parse(p.lead_type || '[]') : [])
-
-
-
-                return !(sourceArray.length > 0 || typeArray.length > 0)
-
-
-
-              }).length}
-
-
-
-            </span>
-
-
-
-          </Badge>
-
-
-
-          <Badge
-
-
-
-            variant="outline"
-
-
-
-            className="text-xs px-4 py-2 font-semibold bg-primary/10 text-primary border-none shadow-xs rounded-sm flex items-center gap-2"
-
-
-
-          >
-
-
-
-            <span>College Contact:</span>
-
-
-
-            <span className="text-sm bg-primary/15 px-2 py-0.5 rounded-sm">
-
-
-
-              {assignments.filter((a) => {
-
-
-
-                const p = prospects[a.prospect_id]
-
-
-
-                if (!p) return false
-
-
-
-                return hasLeadInfo(p) && !isShortTermCourse(p)
-
-
-
-              }).length}
-
-
-
-            </span>
-
-
-
-          </Badge>
-
-
-
-          <Badge
-
-
-
-            variant="outline"
-
-
-
-            className="text-xs px-4 py-2 font-semibold bg-primary/10 text-primary border-none shadow-xs rounded-sm flex items-center gap-2"
-
-
-
-          >
-
-
-
-            <span>Short Term Course:</span>
-
-
-
-            <span className="text-sm bg-primary/15 px-2 py-0.5 rounded-sm">
-
-
-
-              {assignments.filter((a) => {
-
-
-
-                const p = prospects[a.prospect_id]
-
-
-
-                if (!p) return false
-
-
-
-                return isShortTermCourse(p)
-
-
-
-              }).length}
-
-
-
-            </span>
-
-
-
-          </Badge>
-
-
-
-          <Badge
-
-
-
-            variant="outline"
-
-
-
-            className="text-xs px-4 py-2 font-semibold bg-[#FCF4D6] text-yellow-700 border-yellow-200 shadow-sm rounded-lg flex items-center gap-2"
-
-
-
-          >
-
-
-
-            <span>Pending to Call:</span>
-
-
-
-            <span className="text-sm bg-[#FCF4D6] px-2 py-0.5 rounded-md">{pendingLeadsCount}</span>
-
-
-
-          </Badge>
-
-
-
-
-
-
-
-          <div className="ml-auto flex items-center gap-2 bg-muted/30 p-1.5 rounded-lg border border-muted">
-
-
-
-            <label className="text-xs font-semibold text-muted-foreground ml-1">Counts for:</label>
-
-
-
-            <Input
-
-
-
-              type="date"
-
-
-
-              value={summaryDate}
-
-
-
-              onChange={(e) => setSummaryDate(e.target.value)}
-
-
-
-              className="h-7 w-[130px] text-xs px-2 py-1"
-
-
-
-            />
-
-
-
-            {summaryDate && (
-
-
-
-              <Button variant="ghost" size="sm" onClick={() => setSummaryDate("")} className="h-7 px-2 text-xs">
-
-
-
-                All-time
-
-
-
-              </Button>
-
-
-
-            )}
-
-
-
-          </div>
-
-
-
-        </div>
-
-
-
-
-
-
-
         {/* Status Breakdown - limited to requested categories */}
-
-
-
-        <div className="flex flex-wrap gap-2 pt-3 border-t border-dashed border-muted-foreground/20">
-
-
-
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-dashed border-muted-foreground/20">
+          <div className="flex flex-wrap gap-2">
           {(contactMode === "college" ? COLLEGE_STATUS_KEYS : contactMode === "short_term_course" ? SHORT_TERM_COURSE_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
-
-
 
             const count = statusCounts[status]
 
-
-
             const config = STATUS_SUMMARY_CONFIG[status]
-
-
 
             if (!summaryDate && count === 0) return null; // hide zeros only for all-time
 
-
-
             if (!config) return null; // fallback
-
-
 
             return (
 
-
-
               <Badge
-
-
-
                 key={status}
-
-
-
                 variant="outline"
-
-
-
                 className={cn("text-xs px-3 py-1 font-semibold", config.color, count === 0 && "opacity-50")}
-
-
-
               >
-
-
-
                 {config.label}: {count}
-
-
-
               </Badge>
-
-
 
             )
 
-
-
           })}
+          </div>
 
-
-
+          <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-lg border border-muted shrink-0">
+            <label className="text-xs font-semibold text-muted-foreground ml-1">Counts for:</label>
+            <Input
+              type="date"
+              value={summaryDate}
+              onChange={(e) => setSummaryDate(e.target.value)}
+              className="h-7 w-[130px] text-xs px-2 py-1"
+            />
+            {summaryDate && (
+              <Button variant="ghost" size="sm" onClick={() => setSummaryDate("")} className="h-7 px-2 text-xs">
+                All-time
+              </Button>
+            )}
+          </div>
         </div>
 
 
@@ -5905,6 +6089,15 @@ export default function CallHistoryPage() {
 
               </DropdownMenu>
 
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 font-semibold gap-1.5"
+                onClick={handleOpenEmailModal}
+              >
+                <Mail className="h-4 w-4" /> Send Email
+              </Button>
+
 
 
               <Select value={courseFilter} onValueChange={setCourseFilter}>
@@ -5931,25 +6124,9 @@ export default function CallHistoryPage() {
 
 
 
-                  {Array.from(new Set(Object.values(prospects).map(p => p.course_interest).filter(Boolean)))
-
-
-
-                    .sort()
-
-
-
-                    .map(course => (
-
-
-
-                      <SelectItem key={course} value={course}>{course}</SelectItem>
-
-
-
-                    ))}
-
-
+                  {courseOptions.map(course => (
+                    <SelectItem key={course} value={course}>{course}</SelectItem>
+                  ))}
 
                 </SelectContent>
 
@@ -5979,11 +6156,11 @@ export default function CallHistoryPage() {
 
 
 
-          <div className="rounded-lg border overflow-hidden" style={{ maxHeight: '600px' }}>
+          <div className="rounded-lg border overflow-x-auto">
 
 
 
-            <div className="overflow-x-auto h-full">
+            <div className="overflow-y-auto max-h-[calc(100vh-260px)]">
 
 
 
@@ -5991,7 +6168,7 @@ export default function CallHistoryPage() {
 
 
 
-              <Table>
+              <Table className="min-w-max">
 
 
 
@@ -6080,10 +6257,10 @@ export default function CallHistoryPage() {
 
 
                   <TableHead className="font-semibold">Postal Code</TableHead>
+                  {contactMode !== "college" && <TableHead className="font-semibold">Course</TableHead>}
 
 
 
-                  <TableHead className="font-semibold">Course</TableHead>
 
 
 
@@ -6092,10 +6269,6 @@ export default function CallHistoryPage() {
 
 
                   <TableHead className="font-semibold">Lead Type</TableHead>
-
-
-
-                  <TableHead className="font-semibold">Status</TableHead>
 
 
 
@@ -6112,10 +6285,6 @@ export default function CallHistoryPage() {
 
 
                   <TableHead className="font-semibold">Company</TableHead>
-
-
-
-                  <TableHead className="font-semibold">College Name</TableHead>
 
 
 
@@ -6163,7 +6332,7 @@ export default function CallHistoryPage() {
 
 
 
-              <TableBody className="overflow-y-auto" style={{ maxHeight: '500px' }}>
+              <TableBody>
 
 
 
@@ -6434,18 +6603,13 @@ export default function CallHistoryPage() {
 
 
                         </TableCell>
+                        {contactMode !== "college" && (
+                          <TableCell className="text-xs text-muted-foreground">
+                            {(log as any).displayCourse || (log.course_interest || prospect?.course_interest || "—").trim() || "—"}
+                          </TableCell>
+                        )}
 
 
-
-                        <TableCell className="text-muted-foreground">
-
-
-
-                          {prospect?.course_interest || "—"}
-
-
-
-                        </TableCell>
 
 
 
@@ -6466,18 +6630,6 @@ export default function CallHistoryPage() {
 
 
                           {leadType.length > 0 ? leadType.join(', ') : "—"}
-
-
-
-                        </TableCell>
-
-
-
-                        <TableCell className="text-xs text-muted-foreground">
-
-
-
-                          {prospect?.status || "—"}
 
 
 
@@ -6526,18 +6678,6 @@ export default function CallHistoryPage() {
 
 
                           {prospect?.company || "—"}
-
-
-
-                        </TableCell>
-
-
-
-                        <TableCell className="text-xs text-muted-foreground">
-
-
-
-                          {prospect?.college_name || "—"}
 
 
 
@@ -6985,7 +7125,215 @@ export default function CallHistoryPage() {
 
 
 
-    </div>
+          <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-foreground">Send Daily Report</DialogTitle>
+                <DialogDescription>
+                  Configure and send a filtered call history report to the company email.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-5 py-4 text-left">
+                {/* Report Type */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Report Type</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(["school", "college", "short_term_course"] as const).map((type) => {
+                      const isSelected = emailReportType === type;
+                      let label = "School Contact";
+                      let Icon = GraduationCap;
+                      if (type === "college") {
+                        label = "College Contact";
+                        Icon = Building2;
+                      } else if (type === "short_term_course") {
+                        label = "Short Term Course";
+                        Icon = BookOpen;
+                      }
+
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setEmailReportType(type);
+                            setEmailOutcome("all");
+                            setEmailCourse("all");
+                          }}
+                          className={cn(
+                            "relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 text-center transition-all cursor-pointer",
+                            isSelected
+                              ? "border-purple-600 bg-purple-50/50 text-purple-900 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-500"
+                              : "border-border bg-card hover:bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <div className="absolute top-2 left-2">
+                            <div className={cn(
+                              "h-4 w-4 rounded-full border flex items-center justify-center",
+                              isSelected ? "border-purple-600 text-purple-600" : "border-muted-foreground"
+                            )}>
+                              {isSelected && <div className="h-2 w-2 rounded-full bg-purple-600" />}
+                            </div>
+                          </div>
+                          <Icon className={cn("h-6 w-6 mt-2", isSelected ? "text-purple-600" : "text-muted-foreground")} />
+                          <span className="text-xs font-semibold">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Date Range */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">From</label>
+                    <Input
+                      type="date"
+                      value={emailFromDate}
+                      onChange={(e) => setEmailFromDate(e.target.value)}
+                      className="h-9 rounded-lg"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">To</label>
+                    <Input
+                      type="date"
+                      value={emailToDate}
+                      onChange={(e) => setEmailToDate(e.target.value)}
+                      className="h-9 rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                {/* Outcome and Course */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Outcome</label>
+                    <Select value={emailOutcome} onValueChange={setEmailOutcome}>
+                      <SelectTrigger className="h-9 rounded-lg">
+                        <SelectValue placeholder="All Outcomes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Outcomes</SelectItem>
+                        {getModalOutcomes(emailReportType).map((item) => (
+                          <SelectItem key={item.key} value={item.key}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Course</label>
+                    <Select value={emailCourse} onValueChange={setEmailCourse}>
+                      <SelectTrigger className="h-9 rounded-lg">
+                        <SelectValue placeholder="All Courses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Courses</SelectItem>
+                        {getModalCourses(emailReportType).map((course) => (
+                          <SelectItem key={course} value={course}>
+                            {course}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Recipient Email */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recipient Email</label>
+                  <Input
+                    value={emailRecipient}
+                    readOnly
+                    className="h-9 rounded-lg bg-muted text-muted-foreground cursor-not-allowed"
+                  />
+                  <span className="text-[10px] text-muted-foreground mt-0.5">(Read Only)</span>
+                </div>
+
+                {/* Subject */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Subject</label>
+                  <Input
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    className="h-9 rounded-lg"
+                  />
+                </div>
+
+                {/* Attachment Options */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Attachment Options</label>
+                  <div className="flex flex-col gap-3 mt-1">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={attachExcel}
+                        onChange={(e) => setAttachExcel(e.target.checked)}
+                        className="rounded border-input text-purple-600 focus:ring-purple-500 h-4.5 w-4.5 cursor-pointer accent-purple-600"
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">Attach Excel Report</span>
+                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="3" width="18" height="18" rx="2" fill="#107C41" />
+                          <path d="M8.5 7.5L11 12L8.5 16.5H10.5L12 13.5L13.5 16.5H15.5L13 12L15.5 7.5H13.5L12 10.5L10.5 7.5H8.5Z" fill="white" />
+                        </svg>
+                      </div>
+                    </label>
+                    
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={attachPdf}
+                        onChange={(e) => setAttachPdf(e.target.checked)}
+                        className="rounded border-input text-purple-600 focus:ring-purple-500 h-4.5 w-4.5 cursor-pointer accent-purple-600"
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">Attach PDF Report</span>
+                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="3" y="3" width="18" height="18" rx="2" fill="#E02424" />
+                          <path d="M7 6H13V8H7V6ZM7 10H17V12H7V10ZM7 14H17V16H7V14Z" fill="white" />
+                          <rect x="13" y="5" width="5" height="4" rx="0.5" fill="#F87171" />
+                        </svg>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="flex flex-row justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEmailDialogOpen(false)}
+                  className="h-9 rounded-lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isSendingEmail}
+                  onClick={handleSendReport}
+                  className="h-9 rounded-lg bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700 gap-2 border-none"
+                >
+                  {isSendingEmail ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Send Report
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
 
 

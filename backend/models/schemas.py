@@ -136,6 +136,7 @@ class Prospect(ProspectBase):
     created_by: Optional[int]
     created_at: datetime
     updated_at: datetime
+    course_statuses: Optional[Dict[str, str]] = None
 
     class Config:
         from_attributes = True
@@ -185,6 +186,7 @@ class ProspectListItem(BaseModel):
     is_imported: Optional[bool] = None
     lead_id: Optional[str] = None
     website: Optional[str] = None
+    course_statuses: Optional[Dict[str, str]] = None
     # Joined assignment info (latest assignment for this prospect)
     assigned_telecaller_name: Optional[str] = None
     assignment_date: Optional[date] = None
@@ -288,6 +290,22 @@ class CallLog(CallLogBase):
 
     class Config:
         from_attributes = True
+
+
+class EmailAttachment(BaseModel):
+    filename: str
+    content_base64: str
+    mime_type: str
+
+
+class SendReportEmailRequest(BaseModel):
+    to_email: str
+    subject: str
+    message: Optional[str] = None
+    filename: Optional[str] = None
+    csv_data: Optional[str] = None
+    attachments: Optional[List[EmailAttachment]] = None
+
 
 
 # ==================== spoc REPORTS ====================

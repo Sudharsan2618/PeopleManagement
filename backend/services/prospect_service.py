@@ -70,8 +70,25 @@ class ProspectService:
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                    city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website
-            FROM prospects
+                   lead_id, website,
+                   -- Compute per-course latest status for multi-course prospects.
+                   (
+                       SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
+                       FROM (
+                           SELECT DISTINCT trim(c_raw) AS course
+                           FROM unnest(string_to_array(COALESCE(p.course_interest, ''), ',')) AS c_raw
+                           WHERE trim(c_raw) <> ''
+                       ) c
+                       LEFT JOIN LATERAL (
+                           SELECT cl2.status_after_call
+                           FROM call_logs cl2
+                           WHERE cl2.prospect_id = p.id
+                             AND trim(COALESCE(cl2.course_interest, '')) = c.course
+                           ORDER BY cl2.called_at DESC, cl2.id DESC
+                           LIMIT 1
+                       ) cs ON TRUE
+                   ) AS course_statuses
+            FROM prospects p
             ORDER BY updated_at DESC
         """
         return execute_query(query, fetch="all")
@@ -249,7 +266,27 @@ class ProspectService:
                 p.is_imported, p.lead_id, p.website,
                 u.name AS assigned_telecaller_name,
                 la.assigned_date AS assignment_date,
-                la.dashboard AS assignment_dashboard
+                la.dashboard AS assignment_dashboard,
+                -- Compute per-course latest status for multi-course prospects.
+                -- For each course in the comma-separated course_interest, find the
+                -- most recent call log that has a matching course_interest, and use
+                -- its status_after_call. Falls back to prospect status if no call exists.
+                (
+                    SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
+                    FROM (
+                        SELECT DISTINCT trim(c_raw) AS course
+                        FROM unnest(string_to_array(COALESCE(p.course_interest, ''), ',')) AS c_raw
+                        WHERE trim(c_raw) <> ''
+                    ) c
+                    LEFT JOIN LATERAL (
+                        SELECT cl2.status_after_call
+                        FROM call_logs cl2
+                        WHERE cl2.prospect_id = p.id
+                          AND trim(COALESCE(cl2.course_interest, '')) = c.course
+                        ORDER BY cl2.called_at DESC, cl2.id DESC
+                        LIMIT 1
+                    ) cs ON TRUE
+                ) AS course_statuses
             FROM prospects p
             LEFT JOIN users u ON u.id = p.assigned_to
             LEFT JOIN LATERAL (

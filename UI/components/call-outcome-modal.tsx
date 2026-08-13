@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Phone,
   PhoneOff,
@@ -186,84 +186,84 @@ const leadOutcomeOptions: {
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
-  {
-    value: "New",
-    label: "New",
-    description: "Lead is newly added",
-    icon: Clock,
-    color: "text-primary",
-  },
-  {
-    value: "Interested",
-    label: "Interested",
-    description: "Lead has shown interest",
-    icon: ThumbsUp,
-    color: "text-success",
-  },
-  {
-    value: "Interested Followup",
-    label: "Interested Followup",
-    description: "Interested, requires follow-up",
-    icon: Clock,
-    color: "text-warning",
-  },
-  {
-    value: "Proposal To Be Sent",
-    label: "Proposal To Be Sent",
-    description: "Proposal needs to be sent to lead",
-    icon: BookOpen,
-    color: "text-primary",
-  },
-  {
-    value: "Proposal Sent",
-    label: "Proposal Sent",
-    description: "Proposal has been sent",
-    icon: CheckCircle2,
-    color: "text-primary",
-  },
-  {
-    value: "Training Date Followup",
-    label: "Training Date Followup",
-    description: "Following up on training date",
-    icon: GraduationCap,
-    color: "text-[#8a3ffc]",
-  },
-  {
-    value: "Qualified",
-    label: "Qualified",
-    description: "Lead is qualified and ready",
-    icon: CheckCircle2,
-    color: "text-success",
-  },
-  {
-    value: "Direct Visit",
-    label: "Direct Visit",
-    description: "Lead visited directly",
-    icon: MapPin,
-    color: "text-cyan-500",
-  },
-  {
-    value: "Invalid Contact",
-    label: "Invalid Contact",
-    description: "Contact information is invalid",
-    icon: XCircle,
-    color: "text-gray-500",
-  },
-  {
-    value: "Ringing / Not Reachable",
-    label: "Ringing / Not Reachable",
-    description: "Could not reach the lead",
-    icon: PhoneOff,
-    color: "text-warning",
-  },
-  {
-    value: "Not Interested",
-    label: "Not Interested",
-    description: "Lead has declined",
-    icon: Ban,
-    color: "text-destructive",
-  },
-]
+    {
+      value: "New",
+      label: "New",
+      description: "Lead is newly added",
+      icon: Clock,
+      color: "text-primary",
+    },
+    {
+      value: "Interested",
+      label: "Interested",
+      description: "Lead has shown interest",
+      icon: ThumbsUp,
+      color: "text-success",
+    },
+    {
+      value: "Interested Followup",
+      label: "Interested Followup",
+      description: "Interested, requires follow-up",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      value: "Proposal To Be Sent",
+      label: "Proposal To Be Sent",
+      description: "Proposal needs to be sent to lead",
+      icon: BookOpen,
+      color: "text-primary",
+    },
+    {
+      value: "Proposal Sent",
+      label: "Proposal Sent",
+      description: "Proposal has been sent",
+      icon: CheckCircle2,
+      color: "text-primary",
+    },
+    {
+      value: "Training Date Followup",
+      label: "Training Date Followup",
+      description: "Following up on training date",
+      icon: GraduationCap,
+      color: "text-[#8a3ffc]",
+    },
+    {
+      value: "Qualified",
+      label: "Qualified",
+      description: "Lead is qualified and ready",
+      icon: CheckCircle2,
+      color: "text-success",
+    },
+    {
+      value: "Direct Visit",
+      label: "Direct Visit",
+      description: "Lead visited directly",
+      icon: MapPin,
+      color: "text-cyan-500",
+    },
+    {
+      value: "Invalid Contact",
+      label: "Invalid Contact",
+      description: "Contact information is invalid",
+      icon: XCircle,
+      color: "text-gray-500",
+    },
+    {
+      value: "Ringing / Not Reachable",
+      label: "Ringing / Not Reachable",
+      description: "Could not reach the lead",
+      icon: PhoneOff,
+      color: "text-warning",
+    },
+    {
+      value: "Not Interested",
+      label: "Not Interested",
+      description: "Lead has declined",
+      icon: Ban,
+      color: "text-destructive",
+    },
+  ]
 
 // ─── Outcome options – Short Term Course MODE (Wedding Photography, Video Editing, Solar) ──
 const shortTermCourseOutcomeOptions: {
@@ -273,49 +273,49 @@ const shortTermCourseOutcomeOptions: {
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
-  {
-    value: "New",
-    label: "New",
-    description: "Lead is newly added",
-    icon: Clock,
-    color: "text-primary",
-  },
-  {
-    value: "Interested",
-    label: "Interested",
-    description: "Lead has shown interest",
-    icon: ThumbsUp,
-    color: "text-success",
-  },
-  {
-    value: "Interested-Followup",
-    label: "Interested-Followup",
-    description: "Interested, requires follow-up",
-    icon: Clock,
-    color: "text-warning",
-  },
-  {
-    value: "Qualified",
-    label: "Qualified",
-    description: "Lead is qualified and ready",
-    icon: CheckCircle2,
-    color: "text-success",
-  },
-  {
-    value: "Ringing / Not Reachable",
-    label: "Ringing / Not Reachable",
-    description: "Could not reach the lead",
-    icon: PhoneOff,
-    color: "text-warning",
-  },
-  {
-    value: "Not Interested",
-    label: "Not Interested",
-    description: "Lead has declined",
-    icon: Ban,
-    color: "text-destructive",
-  },
-]
+    {
+      value: "New",
+      label: "New",
+      description: "Lead is newly added",
+      icon: Clock,
+      color: "text-primary",
+    },
+    {
+      value: "Interested",
+      label: "Interested",
+      description: "Lead has shown interest",
+      icon: ThumbsUp,
+      color: "text-success",
+    },
+    {
+      value: "Interested-Followup",
+      label: "Interested-Followup",
+      description: "Interested, requires follow-up",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      value: "Qualified",
+      label: "Qualified",
+      description: "Lead is qualified and ready",
+      icon: CheckCircle2,
+      color: "text-success",
+    },
+    {
+      value: "Ringing / Not Reachable",
+      label: "Ringing / Not Reachable",
+      description: "Could not reach the lead",
+      icon: PhoneOff,
+      color: "text-warning",
+    },
+    {
+      value: "Not Interested",
+      label: "Not Interested",
+      description: "Lead has declined",
+      icon: Ban,
+      color: "text-destructive",
+    },
+  ]
 
 // ─── Outcome options – TATTI Course MODE ──
 const tattiOutcomeOptions: {
@@ -325,49 +325,49 @@ const tattiOutcomeOptions: {
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
-  {
-    value: "TATTI - New",
-    label: "TATTI - New",
-    description: "Lead is newly added",
-    icon: Clock,
-    color: "text-primary",
-  },
-  {
-    value: "TATTI - Interested",
-    label: "TATTI - Interested",
-    description: "Lead has shown interest",
-    icon: ThumbsUp,
-    color: "text-success",
-  },
-  {
-    value: "TATTI - Interested Followup",
-    label: "TATTI - Interested Followup",
-    description: "Interested, requires follow-up",
-    icon: Clock,
-    color: "text-warning",
-  },
-  {
-    value: "TATTI - Qualified",
-    label: "TATTI - Qualified",
-    description: "Lead is qualified and ready",
-    icon: CheckCircle2,
-    color: "text-success",
-  },
-  {
-    value: "TATTI - Ringing / Not Reachable",
-    label: "TATTI - Ringing / Not Reachable",
-    description: "Could not reach the lead",
-    icon: PhoneOff,
-    color: "text-warning",
-  },
-  {
-    value: "TATTI - Not Interested",
-    label: "TATTI - Not Interested",
-    description: "Lead has declined",
-    icon: Ban,
-    color: "text-destructive",
-  },
-]
+    {
+      value: "TATTI - New",
+      label: "TATTI - New",
+      description: "Lead is newly added",
+      icon: Clock,
+      color: "text-primary",
+    },
+    {
+      value: "TATTI - Interested",
+      label: "TATTI - Interested",
+      description: "Lead has shown interest",
+      icon: ThumbsUp,
+      color: "text-success",
+    },
+    {
+      value: "TATTI - Interested Followup",
+      label: "TATTI - Interested Followup",
+      description: "Interested, requires follow-up",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      value: "TATTI - Qualified",
+      label: "TATTI - Qualified",
+      description: "Lead is qualified and ready",
+      icon: CheckCircle2,
+      color: "text-success",
+    },
+    {
+      value: "TATTI - Ringing / Not Reachable",
+      label: "TATTI - Ringing / Not Reachable",
+      description: "Could not reach the lead",
+      icon: PhoneOff,
+      color: "text-warning",
+    },
+    {
+      value: "TATTI - Not Interested",
+      label: "TATTI - Not Interested",
+      description: "Lead has declined",
+      icon: Ban,
+      color: "text-destructive",
+    },
+  ]
 
 const notInterestedReasons = [
   "No response here",
@@ -477,6 +477,7 @@ export function CallOutcomeModal({
   const [institutionName, setInstitutionName] = useState("")
   const [courses, setCourses] = useState<Course[]>([])
   const [coursesLoading, setCoursesLoading] = useState(false)
+  const [selectedSpecificCourse, setSelectedSpecificCourse] = useState("")
 
   // Lead Source & Lead Type
   const [leadSource, setLeadSource] = useState<string[]>([])
@@ -492,8 +493,8 @@ export function CallOutcomeModal({
   const prospectLeadSourcesTop: string[] = Array.isArray((prospect as any)?.lead_source)
     ? (prospect as any).lead_source
     : typeof (prospect as any)?.lead_source === "string"
-    ? [(prospect as any).lead_source]
-    : []
+      ? [(prospect as any).lead_source]
+      : []
 
   // Normalize dashboard names (matches logic used elsewhere)
   const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "short_term_course" | "tatti_course" => {
@@ -542,15 +543,94 @@ export function CallOutcomeModal({
   // Lead mode is only active for college_contact dashboard
   const isLeadMode = localLeadMode && dashboard === "college_contact"
 
+  // Extract multiple courses robustly (handles comma-separated OR no commas if courses are loaded)
+  const rawCourseInterest = (prospect?.courseInterest || prospect?.course_interest || "") === "Unknown" 
+    ? "" 
+    : (prospect?.courseInterest || prospect?.course_interest || "")
+  
+  const multipleCourses = useMemo(() => {
+    if (!rawCourseInterest) return []
+    let parsed: string[] = []
+    
+    if (rawCourseInterest.includes(",")) {
+      parsed = rawCourseInterest.split(",").map(c => c.trim()).filter(Boolean)
+    } else {
+      // Hardcoded list of known courses (some aren't in DB yet)
+      const KNOWN_COURSES = [
+        "Wedding Photography & vide editing-July 2026",
+        "Wedding Photography and Videography-July 2026",
+        "Wedding Photography and Videography",
+        "Wedding Photography",
+        "Video Editing",
+        "vide editing",
+        "Solar",
+        "EDII Wind Solar",
+        "EDII - Solar Power Installation",
+        "Logistics & Supply Chain Management",
+        "AI-Powered Data & Business Analytics",
+        "B.Sc Renewable Energy",
+        "B.Com Fintech & Artificial Intelligence",
+        "B.Sc Film and TV Production"
+      ]
+      
+      // Combine API courses with known courses
+      const allPossibleCourses = Array.from(new Set([
+        ...KNOWN_COURSES.map(c => c.toLowerCase()),
+        ...courses.map(c => c.name?.toLowerCase() || "")
+      ]))
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length) // Sort longest first so we don't accidentally match substrings of larger courses
+
+      // Try to find known courses as substrings
+      const found = []
+      let remainingStr = rawCourseInterest.toLowerCase()
+      
+      for (const courseLower of allPossibleCourses) {
+        if (remainingStr.includes(courseLower)) {
+          // Find original casing from KNOWN_COURSES if possible
+          const originalCourse = KNOWN_COURSES.find(c => c.toLowerCase() === courseLower) 
+            || courses.find(c => c.name?.toLowerCase() === courseLower)?.name 
+            || courseLower
+            
+          found.push(originalCourse)
+          // Remove from string so we don't double count (e.g. "Wedding Photography" vs "Wedding Photography and Videography")
+          remainingStr = remainingStr.replace(courseLower, "")
+        }
+      }
+      
+      if (found.length > 1) {
+        parsed = found
+      } else {
+        parsed = [rawCourseInterest]
+      }
+    }
+    
+    return parsed
+  }, [rawCourseInterest, courses])
+
+  // DEBUGGING OUTPUT
+  useEffect(() => {
+    if (open && prospect) {
+      console.log("--- CALL OUTCOME MODAL MOUNT ---")
+      console.log("Prospect:", prospect.name)
+      console.log("rawCourseInterest:", rawCourseInterest)
+      console.log("Parsed multipleCourses:", multipleCourses)
+      console.log("courses.length:", courses.length)
+      console.log("hasMultipleCourses:", multipleCourses.length > 1)
+    }
+  }, [open, prospect, rawCourseInterest, multipleCourses, courses.length])
+
+  const hasMultipleCourses = multipleCourses.length > 1
+
   // Choose outcome options by dashboard
   const currentOutcomeOptions =
     dashboard === "tatti_course"
       ? tattiOutcomeOptions
       : dashboard === "short_term_course"
-      ? shortTermCourseOutcomeOptions
-      : dashboard === "college_contact"
-      ? leadOutcomeOptions
-      : defaultOutcomeOptions
+        ? shortTermCourseOutcomeOptions
+        : dashboard === "college_contact"
+          ? leadOutcomeOptions
+          : defaultOutcomeOptions
 
   // Reset outcome selection when mode changes
   // Keep dependency array shape stable across renders by using a single key
@@ -612,14 +692,15 @@ export function CallOutcomeModal({
     setInstitutionName("")
     setLeadSource([])
     setLeadType([])
+    setSelectedSpecificCourse("")
   }
 
   // For default mode, lead mode & Short Term Course mode – map selectedOutcome to callback-active logic
   const callbackSectionActive = isShortTermCourseModeOrTatti
     ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested" && selectedOutcome !== "Qualified")
     : isLeadMode
-    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
-    : (
+      ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+      : (
         selectedOutcome === "warm" ||
         selectedOutcome === "hot" ||
         selectedOutcome === "visit_scheduled"
@@ -627,6 +708,7 @@ export function CallOutcomeModal({
 
   const isFormValid = () => {
     if (!selectedOutcome) return false
+    if (hasMultipleCourses && !selectedSpecificCourse) return false
     if (callbackSectionActive) {
       return !!(callbackDate && callbackHour && callbackMinute && callbackPeriod)
     }
@@ -686,7 +768,11 @@ export function CallOutcomeModal({
       data.reason = reason
     }
 
-    onSubmit(selectedOutcome, data)
+    const finalOutcome = hasMultipleCourses && selectedSpecificCourse 
+      ? `${selectedOutcome} - ${selectedSpecificCourse}`
+      : selectedOutcome
+
+    onSubmit(finalOutcome, data)
     resetForm()
     onOpenChange(false)
   }
@@ -799,7 +885,7 @@ export function CallOutcomeModal({
                                 <TooltipTrigger asChild>
                                   <p className="text-[11px] text-muted-foreground line-clamp-2 italic cursor-help">&quot;{call.notes}&quot;</p>
                                 </TooltipTrigger>
-                                <TooltipContent 
+                                <TooltipContent
                                   className="bg-[#1F2937] text-white rounded-lg px-3 py-2.5 max-w-[360px] shadow-lg"
                                   side="top"
                                   sideOffset={8}
@@ -912,6 +998,7 @@ export function CallOutcomeModal({
                       key={option.value}
                       onClick={() => {
                         setSelectedOutcome(option.value)
+                        setSelectedSpecificCourse("")
                       }}
                       className={cn(
                         "flex items-start gap-3 rounded-sm border p-3 text-left transition-all hover:border-primary/50",
@@ -931,6 +1018,51 @@ export function CallOutcomeModal({
                   ))}
                 </div>
               </section>
+
+              {/* Course selector – appears right after status is picked if prospect has multiple courses */}
+              {hasMultipleCourses && selectedOutcome && (
+                <section className="animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="rounded-sm border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                      <Label className="text-xs font-bold uppercase tracking-wider text-primary">
+                        Which course are you calling about?
+                      </Label>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      This prospect has multiple courses. Select the one you discussed in this call.
+                    </p>
+                    <div className="grid gap-2">
+                      {multipleCourses.map((c: string) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setSelectedSpecificCourse(c)}
+                          className={cn(
+                            "flex items-center gap-3 rounded-sm border px-3 py-2 text-left text-sm transition-all",
+                            selectedSpecificCourse === c
+                              ? "border-primary bg-primary/10 font-semibold text-primary ring-1 ring-primary/20"
+                              : "border-border bg-background hover:border-primary/50 hover:bg-muted/30"
+                          )}
+                        >
+                          <div className={cn(
+                            "h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center",
+                            selectedSpecificCourse === c ? "border-primary" : "border-muted-foreground/40"
+                          )}>
+                            {selectedSpecificCourse === c && (
+                              <div className="h-2 w-2 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                    {!selectedSpecificCourse && (
+                      <p className="text-[10px] text-destructive font-medium">⚠ Please select a course to proceed.</p>
+                    )}
+                  </div>
+                </section>
+              )}
 
               {selectedOutcome && (
                 <>

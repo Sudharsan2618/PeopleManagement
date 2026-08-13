@@ -45,7 +45,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn, formatISTDateTime } from "@/lib/utils"
 import { type UserRole, mockNotifications } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import { dashboardApi, callLogsApi, whatsappApi } from "@/lib/api-client"
+import { dashboardApi, callLogsApi, whatsappApi, prospectsApi } from "@/lib/api-client"
 
 interface NavItem {
   title: string
@@ -187,16 +187,45 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         }
 
         const telecallerId = Number(user.id)
-        // To match the callbacks page, fetch all logs and then compute
-        // the latest log per prospect (callbacks page uses getByTelecaller)
-        const allLogs = await callLogsApi.getByTelecaller(telecallerId)
-        const latestLogByProspect = new Map<number, any>()
+        // To match the callbacks page, fetch all logs and prospects and then compute
+        // the latest log per prospect+course (split comma-separated courses)
+        const [allLogs, allProspects] = await Promise.all([
+          callLogsApi.getByTelecaller(telecallerId),
+          prospectsApi.getAll(),
+        ])
+        const prospectMap: Record<number, any> = {}
+        allProspects.forEach((p: any) => (prospectMap[p.id] = p))
+
+        const latestLogByProspect = new Map<string, any>()
         allLogs.forEach((log: any) => {
           const pid = log.prospect_id
           if (pid == null) return
-          const existing = latestLogByProspect.get(pid)
-          if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
-            latestLogByProspect.set(pid, log)
+          const prospect = prospectMap[pid]
+          const normalize = (s: string) => s.replace(/([0-9])([A-Z])/g, "$1, $2").replace(/([a-z])([A-Z])/g, "$1, $2")
+          const explicitCourse = (log.course_interest || "").trim()
+          let courses: string[] = []
+          if (explicitCourse) {
+            const norm = normalize(explicitCourse)
+            courses = norm.split(",").map((c: string) => c.trim()).filter(Boolean)
+          } else if (prospect && prospect.course_interest) {
+            const norm = normalize((prospect.course_interest || "").trim())
+            courses = norm.split(",").map((c: string) => c.trim()).filter(Boolean)
+          }
+
+          if (courses.length === 0) {
+            const key = `${pid}_default`
+            const existing = latestLogByProspect.get(key)
+            if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+              latestLogByProspect.set(key, { ...log, displayCourse: (log.course_interest || prospect?.course_interest || "").trim() })
+            }
+          } else {
+            courses.forEach((course) => {
+              const key = `${pid}_${course}`
+              const existing = latestLogByProspect.get(key)
+              if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+                latestLogByProspect.set(key, { ...log, course_interest: course, displayCourse: course })
+              }
+            })
           }
         })
 

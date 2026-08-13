@@ -183,19 +183,14 @@ class CallLogService:
     
     @staticmethod
     def get_call_logs_by_telecaller(telecaller_id: int) -> List[dict]:
-        """Get latest call log per prospect for a specific telecaller (one row per Lead ID).
+        """Get all call logs for a specific telecaller.
 
-        Uses DISTINCT ON (prospect_id) ordered by called_at DESC, id DESC so that
-        for each prospect only the most-recent call by this telecaller is returned.
-        Historical records in the database are never deleted — only this query changes.
-        get_call_logs_by_prospect is intentionally NOT changed (keeps full history for
-        the individual prospect detail page).
-        
-        Now returns ALL prospect fields to ensure Call History displays the latest
-        prospect data after edits.
+        Returns every call log made by the telecaller, ordered from newest to oldest.
+        This allows the UI to compute per-course status across multiple calls for the
+        same prospect.
         """
         query = """
-            SELECT DISTINCT ON (cl.prospect_id)
+            SELECT
                 cl.id,
                 cl.prospect_id,
                 cl.telecaller_id,
@@ -251,7 +246,7 @@ class CallLogService:
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
             WHERE cl.telecaller_id = %s
-            ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
+            ORDER BY cl.called_at DESC, cl.id DESC
         """
         return execute_query(query, (telecaller_id,), fetch="all")
     
