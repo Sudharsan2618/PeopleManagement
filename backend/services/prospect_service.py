@@ -70,7 +70,7 @@ class ProspectService:
                    lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                    city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website,
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year,
                    -- Compute per-course latest status for multi-course prospects.
                    (
                        SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
@@ -263,7 +263,7 @@ class ProspectService:
                 p.city, p.address, p.postal_code,
                 p.designation, p.created_by, p.created_at, p.updated_at,
                 p.prospect_type, p.company, p.comments, p.follow_up_date,
-                p.is_imported, p.lead_id, p.website,
+                p.is_imported, p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.transaction_id, p.batch, p.start_month, p.year,
                 u.name AS assigned_telecaller_name,
                 la.assigned_date AS assignment_date,
                 la.dashboard AS assignment_dashboard,
@@ -394,15 +394,44 @@ class ProspectService:
 
     @staticmethod
     def get_distinct_course_interests() -> List[str]:
-        """Distinct course_interest values across all prospects (for course filter dropdowns)."""
-        query = """
-            SELECT DISTINCT course_interest
-            FROM prospects
-            WHERE course_interest IS NOT NULL AND course_interest != ''
-            ORDER BY course_interest
+        """Return a unified, case-insensitive-deduped list of individual course names from:
+        1. The courses table (Admin Course page)
+        2. Each individual course inside the comma-separated course_interest field on prospects
         """
-        rows = execute_query(query, fetch="all")
-        return [r["course_interest"] for r in rows]
+        # 1. Courses from the admin courses table
+        courses_rows = execute_query(
+            "SELECT name FROM courses WHERE is_active = TRUE ORDER BY name",
+            fetch="all"
+        )
+        # 2. Distinct individual course names split from prospects.course_interest
+        prospect_rows = execute_query(
+            """
+            SELECT DISTINCT TRIM(elem) AS course
+            FROM prospects
+            CROSS JOIN LATERAL unnest(string_to_array(course_interest, ',')) AS elem
+            WHERE course_interest IS NOT NULL
+              AND course_interest != ''
+              AND TRIM(elem) != ''
+              AND LOWER(TRIM(elem)) != 'unknown'
+            ORDER BY course
+            """,
+            fetch="all"
+        )
+
+        # Build a case-insensitive dedup map: lowercase -> canonical display name
+        # Courses table has priority (cleaner names)
+        seen: dict = {}
+        for r in courses_rows:
+            name = r["name"].strip()
+            if name:
+                seen[name.lower()] = name
+
+        for r in prospect_rows:
+            name = r["course"].strip()
+            if name and name.lower() not in seen:
+                seen[name.lower()] = name
+
+        return sorted(seen.values(), key=lambda x: x.lower())
 
     @staticmethod
     def get_distinct_statuses() -> List[str]:
@@ -444,9 +473,9 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
             WHERE id = %s
         """
@@ -458,9 +487,9 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
             WHERE status = %s
             ORDER BY created_at DESC
@@ -473,9 +502,9 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
             WHERE created_by = %s
             ORDER BY created_at DESC
@@ -488,9 +517,9 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, city, address, postal_code, designation,
+                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
             WHERE assigned_to = %s
             ORDER BY created_at DESC
@@ -503,9 +532,9 @@ class ProspectService:
         query = """
             SELECT DISTINCT p.id, p.name, p.mobile, p.email, p.location, p.sourced_from, p.status, 
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
-                   p.lead_source, p.lead_type, p.alt_phone, p.alt_phone_2, p.secondary_email, p.city, p.address, p.postal_code, p.designation,
+                   p.lead_source, p.lead_type, p.alt_phone, p.alt_phone_2, p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
                    p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
-                   p.lead_id, p.website
+                   p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.transaction_id, p.batch, p.start_month, p.year
             FROM prospects p
             INNER JOIN prospect_assignments a ON p.id = a.prospect_id
             WHERE a.telecaller_id = %s
@@ -528,7 +557,11 @@ class ProspectService:
                         postal_code: Optional[str] = None, designation: Optional[str] = None,
                         company: Optional[str] = None, comments: Optional[str] = None,
                         follow_up_date: Optional[str] = None, is_imported: bool = False,
-                        lead_id: Optional[str] = None, website: Optional[str] = None) -> int:
+                        lead_id: Optional[str] = None, website: Optional[str] = None,
+                        course_fee: Optional[float] = 0.0, amount_paid: Optional[float] = 0.0,
+                        payment_status: Optional[str] = "Not Paid", payment_mode: Optional[str] = None,
+                        transaction_id: Optional[str] = None, batch: Optional[str] = None,
+                        start_month: Optional[str] = None, year: Optional[str] = None) -> int:
         """Create a new prospect."""
         query = """
             INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
@@ -536,8 +569,9 @@ class ProspectService:
                                  lead_source, lead_type, prospect_type, created_at, updated_at,
                                  alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                                  city, address, postal_code, designation,
-                                 company, comments, follow_up_date, is_imported, lead_id, website)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 company, comments, follow_up_date, is_imported, lead_id, website,
+                                 course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
@@ -552,7 +586,8 @@ class ProspectService:
             ist_now, ist_now,
             alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
             city, address, postal_code, designation,
-            company, comments, follow_up_date, is_imported, lead_id, website
+            company, comments, follow_up_date, is_imported, lead_id, website,
+            course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
         ))
     
     @staticmethod
@@ -570,7 +605,11 @@ class ProspectService:
                         postal_code: Optional[str] = _UNSET, designation: Optional[str] = _UNSET,
                         prospect_type: Optional[str] = _UNSET, company: Optional[str] = _UNSET,
                         comments: Optional[str] = _UNSET, follow_up_date: Optional[str] = _UNSET,
-                        lead_id: Optional[str] = _UNSET, website: Optional[str] = _UNSET) -> int:
+                        lead_id: Optional[str] = _UNSET, website: Optional[str] = _UNSET,
+                        course_fee: Optional[float] = _UNSET, amount_paid: Optional[float] = _UNSET,
+                        payment_status: Optional[str] = _UNSET, payment_mode: Optional[str] = _UNSET,
+                        transaction_id: Optional[str] = _UNSET, batch: Optional[str] = _UNSET,
+                        start_month: Optional[str] = _UNSET, year: Optional[str] = _UNSET) -> int:
         """Update prospect details."""
         updates = []
         params = []
@@ -665,6 +704,46 @@ class ProspectService:
         if website is not _UNSET:
             updates.append("website = %s")
             params.append(website)
+            
+        # Recalculate payment_status dynamically if course_fee or amount_paid is updated, but status is not explicitly passed
+        if (course_fee is not _UNSET or amount_paid is not _UNSET or payment_status is not _UNSET):
+            current_fee = 0.0
+            current_paid = 0.0
+            if course_fee is _UNSET or amount_paid is _UNSET:
+                curr = execute_query("SELECT course_fee, amount_paid FROM prospects WHERE id = %s", (prospect_id,), fetch="one")
+                if curr:
+                    current_fee = float(curr["course_fee"]) if curr["course_fee"] is not None else 0.0
+                    current_paid = float(curr["amount_paid"]) if curr["amount_paid"] is not None else 0.0
+            fee_val = float(course_fee) if course_fee is not _UNSET and course_fee is not None else current_fee
+            paid_val = float(amount_paid) if amount_paid is not _UNSET and amount_paid is not None else current_paid
+            if payment_status is _UNSET:
+                pending = fee_val - paid_val
+                payment_status = "Paid" if pending <= 0 and fee_val > 0 else "Payment Pending" if paid_val > 0 else "Not Paid"
+
+        if course_fee is not _UNSET:
+            updates.append("course_fee = %s")
+            params.append(course_fee)
+        if amount_paid is not _UNSET:
+            updates.append("amount_paid = %s")
+            params.append(amount_paid)
+        if payment_status is not _UNSET:
+            updates.append("payment_status = %s")
+            params.append(payment_status)
+        if payment_mode is not _UNSET:
+            updates.append("payment_mode = %s")
+            params.append(payment_mode)
+        if transaction_id is not _UNSET:
+            updates.append("transaction_id = %s")
+            params.append(transaction_id)
+        if batch is not _UNSET:
+            updates.append("batch = %s")
+            params.append(batch)
+        if start_month is not _UNSET:
+            updates.append("start_month = %s")
+            params.append(start_month)
+        if year is not _UNSET:
+            updates.append("year = %s")
+            params.append(year)
         
         if not updates:
             return 0

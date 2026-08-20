@@ -96,21 +96,46 @@ export default function CoursesPage() {
     )
   }, [courses, searchQuery])
 
-  const getCourseStats = (courseCode: string) => {
-    const interested = prospects.filter(p => p.course_interest === courseCode)
-    return {
-      totalInterested: interested.length,
-      enrolled: interested.filter(p => p.status === 'admission_done').length,
+  // A prospect is qualified for a course if:
+  // 1. Their course_statuses map has 'Qualified' for this specific course, OR
+  // 2. Their overall status is 'Qualified' and their course_interest matches this course
+  const isProspectQualifiedForCourse = (prospect: any, courseCode: string) => {
+    // Check course-level status first (most specific)
+    if (prospect.course_statuses && prospect.course_statuses[courseCode]) {
+      return prospect.course_statuses[courseCode] === 'Qualified';
     }
+    // Fall back to overall prospect status + course_interest match
+    const interest = prospect.course_interest || prospect.courseInterest || '';
+    return interest === courseCode && prospect.status === 'Qualified';
+  }
+
+  const getCourseStats = (courseCode: string) => {
+    const qualifiedCount = prospects.filter(p => isProspectQualifiedForCourse(p, courseCode)).length;
+    return { qualifiedCount }
   }
 
   const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast({ title: "Validation Error", description: "Course Name is required", variant: "destructive" })
+      return
+    }
+
+    // Generate a base code from the name, and append a short random string to guarantee uniqueness
+    const baseCode = formData.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const uniqueSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const generatedCode = `${baseCode}-${uniqueSuffix}`.substring(0, 50); // Ensure it doesn't exceed 50 chars
+
+    const payload = {
+      ...formData,
+      code: formData.code || generatedCode
+    }
+
     try {
       if (editingCourse) {
-        await coursesApi.update(Number(editingCourse.id), formData)
+        await coursesApi.update(Number(editingCourse.id), payload)
         toast({ title: "Course updated successfully" })
       } else {
-        await coursesApi.create(formData)
+        await coursesApi.create(payload)
         toast({ title: "Course created successfully" })
       }
       setIsDialogOpen(false)
@@ -137,9 +162,9 @@ export default function CoursesPage() {
     setIsDetailsDialogOpen(true)
   }
 
-  const selectedCourseProspects = useMemo(() => {
+  const qualifiedCourseProspects = useMemo(() => {
     if (!selectedCourse) return []
-    return prospects.filter(p => p.course_interest === selectedCourse.code)
+    return prospects.filter(p => isProspectQualifiedForCourse(p, selectedCourse.code))
   }, [prospects, selectedCourse])
 
   return (
@@ -174,15 +199,6 @@ export default function CoursesPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter course name" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="code">Course Code</Label>
-                <Input 
-                  id="code" 
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="e.g., ADSE, CPISM" 
                 />
               </div>
               <div className="space-y-2">
@@ -276,9 +292,9 @@ export default function CoursesPage() {
               </div>
               <div>
                 <div className="text-xl font-normal">
-                  {prospects.filter(p => p.course_interest).length}
+                  {prospects.filter(p => p.status === 'Qualified').length}
                 </div>
-                <p className="text-xs text-muted-foreground">Interested Prospects</p>
+                <p className="text-xs text-muted-foreground">Qualified Prospects</p>
               </div>
             </div>
           </CardContent>
@@ -326,9 +342,8 @@ export default function CoursesPage() {
                 <TableRow>
                   <TableHead>Course</TableHead>
                   <TableHead>Duration</TableHead>
-                  <TableHead>Fee</TableHead>
-                  <TableHead className="text-center">Interested</TableHead>
-                  <TableHead className="text-center">Enrolled</TableHead>
+                  <TableHead>Avg. Course Fee (₹)</TableHead>
+                  <TableHead className="text-center">Qualified Count</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -372,12 +387,7 @@ export default function CoursesPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline" className="bg-[#EDF5FF] text-blue-700">
-                            {stats.totalInterested}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-[#DEFBE6] text-green-700">
-                            {stats.enrolled}
+                            {stats.qualifiedCount}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -420,10 +430,7 @@ export default function CoursesPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit Course
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenDetails(course)}>
-                                <Users className="h-4 w-4 mr-2" />
-                                View Enrollments
-                              </DropdownMenuItem>
+
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
                                 className="text-destructive"
@@ -445,16 +452,12 @@ export default function CoursesPage() {
         </CardContent>
       </Card>
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{selectedCourse?.name ?? "Course Details"}</DialogTitle>
             <DialogDescription>View course information, enrollment status, and recent prospects.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4 text-sm">
-            <div className="grid gap-1">
-              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Course Code</span>
-              <p className="font-medium">{selectedCourse?.code ?? "-"}</p>
-            </div>
+          <div className="grid gap-4 py-4 text-sm overflow-y-auto flex-1">
             <div className="grid gap-1">
               <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Duration</span>
               <p>{selectedCourse?.duration ?? "-"}</p>
@@ -475,27 +478,25 @@ export default function CoursesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Interested</span>
-                <p className="font-medium">{selectedCourseProspects.length}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Enrolled</span>
-                <p className="font-medium">{selectedCourseProspects.filter(p => p.status === "admission_done").length}</p>
+                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Qualified</span>
+                <p className="font-medium">{qualifiedCourseProspects.length}</p>
               </div>
             </div>
             <div className="space-y-2">
-              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Recent Prospects</span>
-              {selectedCourseProspects.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No prospects are linked to this course yet.</p>
+              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Recent Qualified Prospects</span>
+              {qualifiedCourseProspects.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No qualified prospects found for this course.</p>
               ) : (
-                <ul className="space-y-2">
-                  {selectedCourseProspects.slice(0, 5).map((prospect: any) => (
+                <div className="max-h-64 overflow-y-auto pr-1">
+                  <ul className="space-y-2">
+                  {qualifiedCourseProspects.map((prospect: any) => (
                     <li key={prospect.id} className="rounded-md border p-3">
                       <p className="font-medium">{prospect.name || prospect.email || "Unnamed prospect"}</p>
-                      <p className="text-sm text-muted-foreground">{prospect.status === "admission_done" ? "Enrolled" : "Interested"}</p>
+                      <p className="text-sm text-muted-foreground">Qualified</p>
                     </li>
                   ))}
-                </ul>
+                  </ul>
+                </div>
               )}
             </div>
           </div>

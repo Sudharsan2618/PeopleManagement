@@ -43,7 +43,7 @@ export default function TelecallerStatusPage() {
           prospectsApi.getAll(),
           callLogsApi.getAll(),
         ])
-        
+
         setTelecallers(apiUsers.map(adaptApiUserToUiUser))
         setProspects(apiProspects)
         setCallLogs(apiCallLogs)
@@ -69,7 +69,7 @@ export default function TelecallerStatusPage() {
     const totalCalls = tcLogs.length
     const conversionRate = totalCalls > 0 ? Math.round((qualified / totalCalls) * 100) : 0
 
-    const lastActivity = tcLogs.length > 0 
+    const lastActivity = tcLogs.length > 0
       ? new Date(Math.max(...tcLogs.map((l: any) => new Date(l.called_at).getTime())))
       : null
 
@@ -120,7 +120,7 @@ export default function TelecallerStatusPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-normal text-success">
-              {telecallers.length > 0 
+              {telecallers.length > 0
                 ? Math.round(telecallers.reduce((acc, tc) => acc + getTelecallerStats(tc.id).conversionRate, 0) / telecallers.length)
                 : 0}%
             </div>
@@ -169,58 +169,58 @@ export default function TelecallerStatusPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredTelecallers.map((tc) => {
-                  const stats = getTelecallerStats(tc.id)
-                  return (
-                    <TableRow key={tc.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                            <span className="text-xs font-medium text-primary">
-                              {tc.name.split(" ").map((n: string) => n[0]).join("")}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{tc.name}</p>
-                            <p className="text-xs text-muted-foreground">{tc.email}</p>
-                          </div>
+              {filteredTelecallers.map((tc) => {
+                const stats = getTelecallerStats(tc.id)
+                return (
+                  <TableRow key={tc.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                          <span className="text-xs font-medium text-primary">
+                            {tc.name.split(" ").map((n: string) => n[0]).join("")}
+                          </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-[#DEFBE6] text-green-700 border-green-200">
-                          Active
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {stats.lastActivity ? (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {stats.lastActivity.toLocaleTimeString("en-IN", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                        ) : (
-                          "No calls yet"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">{stats.total}</TableCell>
-                      <TableCell className="text-right font-mono text-success">{stats.qualified}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
-                            <div 
-                              className="h-full bg-green-500" 
-                              style={{ width: `${stats.conversionRate}%` }}
-                            />
-                          </div>
-                          <span>{stats.conversionRate}%</span>
+                        <div>
+                          <p className="font-medium text-sm">{tc.name}</p>
+                          <p className="text-xs text-muted-foreground">{tc.email}</p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-[#DEFBE6] text-green-700 border-green-200">
+                        Active
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {stats.lastActivity ? (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {stats.lastActivity.toLocaleTimeString("en-IN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      ) : (
+                        "No calls yet"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">{stats.total}</TableCell>
+                    <TableCell className="text-right font-mono text-success">{stats.qualified}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden hidden sm:block">
+                          <div
+                            className="h-full bg-green-500"
+                            style={{ width: `${stats.conversionRate}%` }}
+                          />
+                        </div>
+                        <span>{stats.conversionRate}%</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
           </Table>
         </CardContent>
       </Card>

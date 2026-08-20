@@ -12,3 +12,4 @@ from . import followup_task_routes
 from . import course_routes
 from . import whatsapp_routes
 from . import dashboard_routes
+from . import conversion_routes

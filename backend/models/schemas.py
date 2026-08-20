@@ -43,11 +43,12 @@ class CourseBase(BaseModel):
     is_active: bool = True
 
 class CourseCreate(CourseBase):
-    pass
+    name: str = Field(..., min_length=1, max_length=150)
+    code: str = Field(..., min_length=1, max_length=50)
 
 class CourseUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=150)
-    code: Optional[str] = Field(None, max_length=50)
+    name: Optional[str] = Field(None, min_length=1, max_length=150)
+    code: Optional[str] = Field(None, min_length=1, max_length=50)
     description: Optional[str] = None
     duration: Optional[str] = Field(None, max_length=50)
     fees: Optional[float] = None
@@ -94,6 +95,15 @@ class ProspectBase(BaseModel):
     is_imported: bool = Field(default=False, description="Whether this prospect was imported from a lead sheet")
     lead_id: Optional[str] = Field(None, max_length=100)
     website: Optional[str] = Field(None, max_length=500)
+    converted: bool = Field(default=False)
+    course_fee: Optional[float] = Field(default=0.0)
+    amount_paid: Optional[float] = Field(default=0.0)
+    payment_status: Optional[str] = Field(default="Not Paid", max_length=50)
+    payment_mode: Optional[str] = Field(None, max_length=100)
+    transaction_id: Optional[str] = Field(None, max_length=100)
+    batch: Optional[str] = Field(None, max_length=100)
+    start_month: Optional[str] = Field(None, max_length=50)
+    year: Optional[str] = Field(None, max_length=50)
 
 class ProspectCreate(ProspectBase):
     created_by: int
@@ -130,6 +140,15 @@ class ProspectUpdate(BaseModel):
     is_imported: Optional[bool] = None
     lead_id: Optional[str] = Field(None, max_length=100)
     website: Optional[str] = Field(None, max_length=500)
+    converted: Optional[bool] = None
+    course_fee: Optional[float] = None
+    amount_paid: Optional[float] = None
+    payment_status: Optional[str] = None
+    payment_mode: Optional[str] = None
+    transaction_id: Optional[str] = None
+    batch: Optional[str] = None
+    start_month: Optional[str] = None
+    year: Optional[str] = None
 
 class Prospect(ProspectBase):
     id: int
@@ -186,6 +205,7 @@ class ProspectListItem(BaseModel):
     is_imported: Optional[bool] = None
     lead_id: Optional[str] = None
     website: Optional[str] = None
+    converted: Optional[bool] = None
     course_statuses: Optional[Dict[str, str]] = None
     # Joined assignment info (latest assignment for this prospect)
     assigned_telecaller_name: Optional[str] = None
@@ -472,3 +492,58 @@ class CampaignCreate(BaseModel):
     parameters: Optional[Dict[str, Any]] = None
     response_config: Optional[Dict[str, Any]] = None
     created_by: int = 1
+
+
+# ==================== CONVERSIONS & PAYMENTS ====================
+class PaymentHistoryBase(BaseModel):
+    amount: float
+    payment_date: date
+    payment_mode: str
+    transaction_id: Optional[str] = None
+    remarks: Optional[str] = None
+
+class PaymentHistoryCreate(PaymentHistoryBase):
+    converted_enquiry_id: int
+    created_by: int
+
+class PaymentHistory(PaymentHistoryBase):
+    id: int
+    converted_enquiry_id: int
+    created_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ConvertedEnquiryBase(BaseModel):
+    original_lead_id: Optional[str] = None
+    prospect_id: int
+    course_id: Optional[int] = None
+    course_name: Optional[str] = None
+    course_module: Optional[str] = None
+    telecaller_id: Optional[int] = None
+    lead_source: Optional[Any] = None
+    conversion_status: str = "Converted"
+    course_fee: float = 0.0
+    total_paid: float = 0.0
+    pending_amount: float = 0.0
+    payment_status: str = "Payment Pending"
+
+class ConvertedEnquiryCreate(ConvertedEnquiryBase):
+    converted_by: int
+    # Allow sending initial payment within the create payload
+    initial_payment: Optional[PaymentHistoryBase] = None
+
+class ConvertedEnquiry(ConvertedEnquiryBase):
+    id: int
+    converted_at: datetime
+    converted_by: int
+    
+    class Config:
+        from_attributes = True
+
+class ConvertedEnquiryDetails(ConvertedEnquiry):
+    prospect: Optional[Prospect] = None
+    payments: List[PaymentHistory] = []
+    telecaller_name: Optional[str] = None
+

@@ -302,6 +302,13 @@ const shortTermCourseOutcomeOptions: {
       color: "text-success",
     },
     {
+      value: "Alumni Batch",
+      label: "Alumni Batch",
+      description: "Lead is interested in an alumni batch",
+      icon: GraduationCap,
+      color: "text-primary",
+    },
+    {
       value: "Ringing / Not Reachable",
       label: "Ringing / Not Reachable",
       description: "Could not reach the lead",
@@ -697,7 +704,7 @@ export function CallOutcomeModal({
 
   // For default mode, lead mode & Short Term Course mode – map selectedOutcome to callback-active logic
   const callbackSectionActive = isShortTermCourseModeOrTatti
-    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested" && selectedOutcome !== "Qualified")
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested" && selectedOutcome !== "Qualified" && selectedOutcome !== "Alumni Batch")
     : isLeadMode
       ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
       : (
