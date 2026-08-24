@@ -109,11 +109,34 @@ export default function CallbacksPage() {
       })
       setProspects(prospectMap)
 
-      const latestLogByProspect = new Map<number, CallLog>()
+      const latestLogByProspect = new Map<string, CallLog & { displayCourse?: string }>()
       allLogs.forEach((log) => {
-        const existing = latestLogByProspect.get(log.prospect_id)
-        if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
-          latestLogByProspect.set(log.prospect_id, log)
+        const prospect = prospectMap[log.prospect_id]
+        const normalize = (s: string) => s.replace(/([0-9])([A-Z])/g, "$1, $2").replace(/([a-z])([A-Z])/g, "$1, $2")
+        const explicitCourse = (log.course_interest || "").trim()
+        let courses: string[] = []
+        if (explicitCourse) {
+          const norm = normalize(explicitCourse)
+          courses = norm.split(",").map((c) => c.trim()).filter(Boolean)
+        } else if (prospect && prospect.course_interest) {
+          const norm = normalize((prospect.course_interest || "").trim())
+          courses = norm.split(",").map((c) => c.trim()).filter(Boolean)
+        }
+
+        if (courses.length === 0) {
+          const key = `${log.prospect_id}_default`
+          const existing = latestLogByProspect.get(key)
+          if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+            latestLogByProspect.set(key, { ...log, displayCourse: (log.course_interest || prospect?.course_interest || "").trim() })
+          }
+        } else {
+          courses.forEach((course) => {
+            const key = `${log.prospect_id}_${course}`
+            const existing = latestLogByProspect.get(key)
+            if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+              latestLogByProspect.set(key, { ...log, course_interest: course, displayCourse: course })
+            }
+          })
         }
       })
 

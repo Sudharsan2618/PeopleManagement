@@ -160,17 +160,6 @@ export default function LoginPage() {
             </div>
           </form>
 
-          {/* Demo credentials helper */}
-          <div className="mt-6 rounded-lg border bg-muted/50 p-4">
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-              Demo Credentials:
-            </p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p><span className="font-medium">Admin:</span> admin@cems.in / admin123</p>
-              <p><span className="font-medium">Telecaller:</span> caller@cems.in / caller123</p>
-              <p><span className="font-medium">spoc:</span> spoc@cems.in / spoc123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

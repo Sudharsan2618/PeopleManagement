@@ -76,7 +76,7 @@ STATEMENTS = [
 # flag so a normal run never drops anything.
 DROP_DEAD_TABLES = [
     "DROP TABLE IF EXISTS student_admission_leads CASCADE",
-    "DROP TABLE IF EXISTS edii_leads CASCADE",
+    "DROP TABLE IF EXISTS short_term_course_leads CASCADE",
     "DROP TABLE IF EXISTS college_contact_leads CASCADE",
 ]
 
@@ -100,7 +100,7 @@ def migrate(drop_dead_tables: bool = False):
         _run(DROP_DEAD_TABLES)
     else:
         print("\nSkipped dead-table drops. Re-run with --drop-dead-tables to remove")
-        print("student_admission_leads, edii_leads, college_contact_leads.")
+        print("student_admission_leads, short_term_course_leads, college_contact_leads.")
 
     print("\nDone.")
 

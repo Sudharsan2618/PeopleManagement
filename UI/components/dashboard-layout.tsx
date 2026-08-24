@@ -29,6 +29,9 @@ import {
   Inbox,
   Layers,
   Send,
+  UserCheck,
+  CreditCard,
+  CheckCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +48,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn, formatISTDateTime } from "@/lib/utils"
 import { type UserRole, mockNotifications } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import { dashboardApi, callLogsApi, whatsappApi } from "@/lib/api-client"
+import { dashboardApi, callLogsApi, whatsappApi, prospectsApi } from "@/lib/api-client"
 
 interface NavItem {
   title: string
@@ -77,7 +80,17 @@ const spocNav: NavItem[] = [
 
 const adminNav: NavItem[] = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Prospects", href: "/admin/prospects", icon: Users },
+  {
+    title: "Prospects",
+    href: "/admin/prospects",
+    icon: Users,
+    children: [
+      { title: "All Prospects", href: "/admin/prospects", icon: Users },
+      { title: "Admission Students", href: "/admin/qualified-leads", icon: UserCheck },
+      { title: "Payment Pending", href: "/admin/payment-pending", icon: CreditCard },
+      { title: "Converted Enquiries", href: "/admin/converted-enquiries", icon: CheckCircle },
+    ]
+  },
   { title: "Assign Prospects", href: "/admin/assign", icon: ClipboardList },
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
@@ -139,6 +152,7 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [pendingCallbacks, setPendingCallbacks] = useState<any[]>([])
   const [counts, setCounts] = useState({ callbacks: 0, followups: 0, whatsappUnread: 0 })
+  const [adminStats, setAdminStats] = useState({ qualified_leads: 0, converted_enquiries: 0, payment_pending: 0 })
 
   useEffect(() => {
     if (!user) return
@@ -156,6 +170,15 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
           }
         }
         setCounts({ ...stats, whatsappUnread })
+
+        if (role === "admin") {
+          try {
+            const aStats = await dashboardApi.getAdminStats()
+            setAdminStats(aStats)
+          } catch {
+            // non-fatal
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch badge counts:", err)
       }
@@ -187,16 +210,45 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         }
 
         const telecallerId = Number(user.id)
-        // To match the callbacks page, fetch all logs and then compute
-        // the latest log per prospect (callbacks page uses getByTelecaller)
-        const allLogs = await callLogsApi.getByTelecaller(telecallerId)
-        const latestLogByProspect = new Map<number, any>()
+        // To match the callbacks page, fetch all logs and prospects and then compute
+        // the latest log per prospect+course (split comma-separated courses)
+        const [allLogs, allProspects] = await Promise.all([
+          callLogsApi.getByTelecaller(telecallerId),
+          prospectsApi.getAll(),
+        ])
+        const prospectMap: Record<number, any> = {}
+        allProspects.forEach((p: any) => (prospectMap[p.id] = p))
+
+        const latestLogByProspect = new Map<string, any>()
         allLogs.forEach((log: any) => {
           const pid = log.prospect_id
           if (pid == null) return
-          const existing = latestLogByProspect.get(pid)
-          if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
-            latestLogByProspect.set(pid, log)
+          const prospect = prospectMap[pid]
+          const normalize = (s: string) => s.replace(/([0-9])([A-Z])/g, "$1, $2").replace(/([a-z])([A-Z])/g, "$1, $2")
+          const explicitCourse = (log.course_interest || "").trim()
+          let courses: string[] = []
+          if (explicitCourse) {
+            const norm = normalize(explicitCourse)
+            courses = norm.split(",").map((c: string) => c.trim()).filter(Boolean)
+          } else if (prospect && prospect.course_interest) {
+            const norm = normalize((prospect.course_interest || "").trim())
+            courses = norm.split(",").map((c: string) => c.trim()).filter(Boolean)
+          }
+
+          if (courses.length === 0) {
+            const key = `${pid}_default`
+            const existing = latestLogByProspect.get(key)
+            if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+              latestLogByProspect.set(key, { ...log, displayCourse: (log.course_interest || prospect?.course_interest || "").trim() })
+            }
+          } else {
+            courses.forEach((course) => {
+              const key = `${pid}_${course}`
+              const existing = latestLogByProspect.get(key)
+              if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+                latestLogByProspect.set(key, { ...log, course_interest: course, displayCourse: course })
+              }
+            })
           }
         })
 
@@ -238,9 +290,18 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       if (item.title === "Messages") {
         return { ...item, badge: counts.whatsappUnread > 0 ? counts.whatsappUnread : undefined }
       }
+      if (item.title === "Prospects" && item.children) {
+        const updatedChildren = item.children.map(child => {
+          if (child.title === "Admission Students") return { ...child, badge: adminStats.qualified_leads > 0 ? adminStats.qualified_leads : undefined }
+          if (child.title === "Converted Enquiries") return { ...child, badge: adminStats.converted_enquiries > 0 ? adminStats.converted_enquiries : undefined }
+          if (child.title === "Payment Pending") return { ...child, badge: adminStats.payment_pending > 0 ? adminStats.payment_pending : undefined }
+          return child
+        })
+        return { ...item, children: updatedChildren }
+      }
       return item
     })
-  }, [role, counts, pendingCallbacks.length])
+  }, [role, counts, pendingCallbacks.length, adminStats])
 
   const allowedNotifications = useMemo(() => {
     return mockNotifications.filter(

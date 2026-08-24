@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from models.schemas import CallLog, CallLogCreate, CallLogUpdate
+from models.schemas import CallLog, CallLogCreate, CallLogUpdate, SendReportEmailRequest
 from services.call_log_service import CallLogService
+from utils.email_utils import send_email, send_email_multiple
+from config import Settings
 
 router = APIRouter(prefix="/call-logs", tags=["call-logs"])
 
@@ -105,6 +107,78 @@ def update_call_log(log_id: int, call_log: CallLogUpdate):
         return CallLogService.get_call_log_by_id(log_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/send-report-email")
+def send_report_email(request: SendReportEmailRequest):
+    """Send a filtered call history report as a CSV/Excel/PDF email attachment."""
+    settings = Settings()
+    
+    # Simulation fallback if SMTP is not configured
+    if not settings.SMTP_HOST or not settings.SMTP_FROM:
+        import base64
+        print(f"[SIMULATION] Sending report email to {request.to_email}...")
+        print(f"Subject: {request.subject}")
+        print(f"Message: {request.message or 'No message body'}")
+        
+        if request.attachments:
+            print("Attachments list:")
+            for idx, att in enumerate(request.attachments):
+                try:
+                    content_len = len(base64.b64decode(att.content_base64))
+                    print(f"  {idx+1}. {att.filename} ({att.mime_type}) - size: {content_len} bytes")
+                except Exception as e:
+                    print(f"  {idx+1}. {att.filename} ({att.mime_type}) - [Base64 decode error: {e}]")
+        else:
+            csv_len = len(request.csv_data) if request.csv_data else 0
+            print(f"  1. {request.filename or 'report.csv'} (text/csv) - size: {csv_len} bytes")
+            
+        return {"message": "Email sent successfully (simulation mode)"}
+
+    try:
+        if request.attachments:
+            import base64
+            email_attachments = []
+            for att in request.attachments:
+                try:
+                    att_bytes = base64.b64decode(att.content_base64)
+                    email_attachments.append((att.filename, att_bytes, att.mime_type))
+                except Exception as b64_err:
+                    raise Exception(f"Failed to decode base64 for attachment {att.filename}: {b64_err}")
+            
+            send_email_multiple(
+                smtp_host=settings.SMTP_HOST,
+                smtp_port=settings.SMTP_PORT,
+                smtp_user=settings.SMTP_USER or None,
+                smtp_password=settings.SMTP_PASSWORD or None,
+                use_tls=settings.SMTP_USE_TLS,
+                use_ssl=settings.SMTP_USE_SSL,
+                from_address=settings.SMTP_FROM,
+                to_address=str(request.to_email),
+                subject=request.subject,
+                body=request.message or "Please find the attached call history reports.",
+                attachments=email_attachments,
+            )
+        else:
+            # Fallback to legacy single attachment format
+            send_email(
+                smtp_host=settings.SMTP_HOST,
+                smtp_port=settings.SMTP_PORT,
+                smtp_user=settings.SMTP_USER or None,
+                smtp_password=settings.SMTP_PASSWORD or None,
+                use_tls=settings.SMTP_USE_TLS,
+                use_ssl=settings.SMTP_USE_SSL,
+                from_address=settings.SMTP_FROM,
+                to_address=str(request.to_email),
+                subject=request.subject,
+                body=request.message or "Please find the attached filtered call history report.",
+                attachment_name=request.filename or "FilteredCallHistory.csv",
+                attachment_bytes=(request.csv_data or "").encode("utf-8"),
+                attachment_mime_type="text/csv",
+            )
+        return {"message": "Email sent successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send report email: {e}")
 
 
 @router.delete("/{log_id}")

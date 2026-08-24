@@ -9,9 +9,50 @@ class CallLogService:
     
     @staticmethod
     def get_all_call_logs(start_date: str = None, end_date: str = None, telecaller_id: int = None, prospect_type: str = None) -> List[dict]:
-        """Get all call logs with prospect and telecaller details."""
-        query = """
-            SELECT
+        """Get latest call log per prospect (one row per Lead ID).
+
+        Uses DISTINCT ON (prospect_id) ordered by called_at DESC, id DESC so that
+        for each prospect only the most-recent call is returned.  All filters are
+        applied inside the inner query *before* deduplication, meaning the chosen
+        row is the latest call that satisfies the filter criteria.
+        Historical records in the database are never deleted — only this query changes.
+        
+        Now returns ALL prospect fields to ensure Reports display the latest
+        prospect data after edits.
+        """
+        # Build the inner WHERE filters
+        where_clauses = ["1=1"]
+        params: list = []
+
+        if start_date:
+            where_clauses.append("cl.called_at::date >= %s")
+            params.append(start_date)
+        if end_date:
+            where_clauses.append("cl.called_at::date <= %s")
+            params.append(end_date)
+        if telecaller_id is not None:
+            where_clauses.append("cl.telecaller_id = %s")
+            params.append(telecaller_id)
+        if prospect_type:
+            # Support both 'short_term_course' and legacy 'edii' values for backward compatibility
+            if prospect_type == 'short_term_course':
+                where_clauses.append("(p.prospect_type = %s OR p.prospect_type = 'edii')")
+                params.append(prospect_type)
+            elif prospect_type == 'college_contact':
+                where_clauses.append("p.prospect_type IS DISTINCT FROM 'short_term_course' AND p.prospect_type IS DISTINCT FROM 'edii'")
+            elif prospect_type == 'student_admission':
+                where_clauses.append("p.prospect_type IS DISTINCT FROM 'short_term_course' AND p.prospect_type IS DISTINCT FROM 'edii'")
+            else:
+                where_clauses.append("p.prospect_type = %s")
+                params.append(prospect_type)
+
+        where_sql = " AND ".join(where_clauses)
+
+        # DISTINCT ON (prospect_id) with ORDER BY prospect_id, called_at DESC, id DESC
+        # ensures PostgreSQL picks exactly one row per prospect — the latest call.
+        # Ties on called_at are broken by the highest id (most recently inserted row).
+        query = f"""
+            SELECT DISTINCT ON (cl.prospect_id)
                 cl.id,
                 cl.prospect_id,
                 cl.telecaller_id,
@@ -33,26 +74,42 @@ class CallLogService:
                 p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name,
+                -- All prospect fields for complete data sync
+                p.email,
+                p.location,
+                p.sourced_from,
+                p.status,
+                p.parent_name,
+                p.department,
+                p.assigned_to,
+                p.closing_reason,
+                p.tags,
+                p.lead_source,
+                p.lead_type,
+                p.alt_phone,
+                p.alt_phone_2,
+                p.alt_phone_3,
+                p.secondary_email,
+                p.alternative_email,
+                p.college_name,
+                p.city,
+                p.address,
+                p.postal_code,
+                p.designation,
+                p.prospect_type,
+                p.company,
+                p.comments,
+                p.follow_up_date,
+                p.is_imported,
+                p.created_at,
+                p.updated_at
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
-            WHERE 1=1
+            WHERE {where_sql}
+            ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
         """
-        params = []
-        if start_date:
-            query += " AND cl.called_at::date >= %s"
-            params.append(start_date)
-        if end_date:
-            query += " AND cl.called_at::date <= %s"
-            params.append(end_date)
-        if telecaller_id is not None:
-            query += " AND cl.telecaller_id = %s"
-            params.append(telecaller_id)
-        if prospect_type:
-            query += " AND p.prospect_type = %s"
-            params.append(prospect_type)
-        query += "\n            ORDER BY cl.called_at DESC\n        "
         return execute_query(query, tuple(params) if params else None, fetch="all")
     
     @staticmethod
@@ -126,7 +183,12 @@ class CallLogService:
     
     @staticmethod
     def get_call_logs_by_telecaller(telecaller_id: int) -> List[dict]:
-        """Get all call logs by a specific telecaller."""
+        """Get all call logs for a specific telecaller.
+
+        Returns every call log made by the telecaller, ordered from newest to oldest.
+        This allows the UI to compute per-course status across multiple calls for the
+        same prospect.
+        """
         query = """
             SELECT
                 cl.id,
@@ -150,12 +212,41 @@ class CallLogService:
                 p.company AS prospect_company,
                 u.name AS telecaller_name,
                 p.course_interest AS prospect_course_interest,
-                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name
+                COALESCE(p.department, p.designation, p.company, p.name) AS institution_name,
+                -- All prospect fields for complete data sync
+                p.email,
+                p.location,
+                p.sourced_from,
+                p.status,
+                p.parent_name,
+                p.department,
+                p.assigned_to,
+                p.closing_reason,
+                p.tags,
+                p.lead_source,
+                p.lead_type,
+                p.alt_phone,
+                p.alt_phone_2,
+                p.alt_phone_3,
+                p.secondary_email,
+                p.alternative_email,
+                p.college_name,
+                p.city,
+                p.address,
+                p.postal_code,
+                p.designation,
+                p.prospect_type,
+                p.company,
+                p.comments,
+                p.follow_up_date,
+                p.is_imported,
+                p.created_at,
+                p.updated_at
             FROM call_logs cl
             LEFT JOIN prospects p ON p.id = cl.prospect_id
             LEFT JOIN users u ON u.id = cl.telecaller_id
             WHERE cl.telecaller_id = %s
-            ORDER BY cl.called_at DESC
+            ORDER BY cl.called_at DESC, cl.id DESC
         """
         return execute_query(query, (telecaller_id,), fetch="all")
     

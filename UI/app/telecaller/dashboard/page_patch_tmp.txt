@@ -1,0 +1,10 @@
+
+      const courseNames = apiCourses.map((c: any) => c.name
+
+
+
+      const mergedCourses = Array.from(new Set([...courseNames, ...Array.from(prospectCourseSet)])).sort()
+
+
+
+      setCourseOptions(mergedCourses)

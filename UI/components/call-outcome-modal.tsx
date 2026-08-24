@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Phone,
   PhoneOff,
@@ -28,6 +28,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { Check, ChevronsUpDown } from "lucide-react"
 import {
   Sheet,
@@ -93,6 +99,23 @@ const LEAD_SOURCE_OPTIONS = [
   "Wedding Photography",
   "Video Editing",
   "Solar",
+]
+
+const SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS = [
+  "Chat",
+  "Direct",
+  "Email Campaign",
+  "Facebook",
+  "Give Lifes - Job Fair",
+  "Job Fair 2026",
+  "LinkedIn",
+  "Phone",
+  "VAC",
+  "Web",
+  "Webinar",
+  "Website",
+  "Website - ZForms",
+  "Website Visit",
 ]
 
 const LEAD_TYPE_OPTIONS = [
@@ -163,122 +186,195 @@ const leadOutcomeOptions: {
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
-  {
-    value: "New",
-    label: "New",
-    description: "Lead is newly added",
-    icon: Clock,
-    color: "text-primary",
-  },
-  {
-    value: "Interested",
-    label: "Interested",
-    description: "Lead has shown interest",
-    icon: ThumbsUp,
-    color: "text-success",
-  },
-  {
-    value: "Interested Followup",
-    label: "Interested Followup",
-    description: "Interested, requires follow-up",
-    icon: Clock,
-    color: "text-warning",
-  },
-  {
-    value: "Proposal To Be Sent",
-    label: "Proposal To Be Sent",
-    description: "Proposal needs to be sent to lead",
-    icon: BookOpen,
-    color: "text-primary",
-  },
-  {
-    value: "Proposal Sent",
-    label: "Proposal Sent",
-    description: "Proposal has been sent",
-    icon: CheckCircle2,
-    color: "text-primary",
-  },
-  {
-    value: "Training Date Followup",
-    label: "Training Date Followup",
-    description: "Following up on training date",
-    icon: GraduationCap,
-    color: "text-[#8a3ffc]",
-  },
-  {
-    value: "Qualified",
-    label: "Qualified",
-    description: "Lead is qualified and ready",
-    icon: CheckCircle2,
-    color: "text-success",
-  },
-  {
-    value: "Ringing / Not Reachable",
-    label: "Ringing / Not Reachable",
-    description: "Could not reach the lead",
-    icon: PhoneOff,
-    color: "text-warning",
-  },
-  {
-    value: "Not Interested",
-    label: "Not Interested",
-    description: "Lead has declined",
-    icon: Ban,
-    color: "text-destructive",
-  },
-]
+    {
+      value: "New",
+      label: "New",
+      description: "Lead is newly added",
+      icon: Clock,
+      color: "text-primary",
+    },
+    {
+      value: "Interested",
+      label: "Interested",
+      description: "Lead has shown interest",
+      icon: ThumbsUp,
+      color: "text-success",
+    },
+    {
+      value: "Interested Followup",
+      label: "Interested Followup",
+      description: "Interested, requires follow-up",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      value: "Proposal To Be Sent",
+      label: "Proposal To Be Sent",
+      description: "Proposal needs to be sent to lead",
+      icon: BookOpen,
+      color: "text-primary",
+    },
+    {
+      value: "Proposal Sent",
+      label: "Proposal Sent",
+      description: "Proposal has been sent",
+      icon: CheckCircle2,
+      color: "text-primary",
+    },
+    {
+      value: "Training Date Followup",
+      label: "Training Date Followup",
+      description: "Following up on training date",
+      icon: GraduationCap,
+      color: "text-[#8a3ffc]",
+    },
+    {
+      value: "Qualified",
+      label: "Qualified",
+      description: "Lead is qualified and ready",
+      icon: CheckCircle2,
+      color: "text-success",
+    },
+    {
+      value: "Direct Visit",
+      label: "Direct Visit",
+      description: "Lead visited directly",
+      icon: MapPin,
+      color: "text-cyan-500",
+    },
+    {
+      value: "Invalid Contact",
+      label: "Invalid Contact",
+      description: "Contact information is invalid",
+      icon: XCircle,
+      color: "text-gray-500",
+    },
+    {
+      value: "Ringing / Not Reachable",
+      label: "Ringing / Not Reachable",
+      description: "Could not reach the lead",
+      icon: PhoneOff,
+      color: "text-warning",
+    },
+    {
+      value: "Not Interested",
+      label: "Not Interested",
+      description: "Lead has declined",
+      icon: Ban,
+      color: "text-destructive",
+    },
+  ]
 
-// ─── Outcome options – EDII MODE (Wedding Photography, Video Editing, Solar) ──
-const ediiOutcomeOptions: {
+// ─── Outcome options – Short Term Course MODE (Wedding Photography, Video Editing, Solar) ──
+const shortTermCourseOutcomeOptions: {
   value: string
   label: string
   description: string
   icon: React.ComponentType<{ className?: string }>
   color: string
 }[] = [
-  {
-    value: "New",
-    label: "New",
-    description: "Lead is newly added",
-    icon: Clock,
-    color: "text-primary",
-  },
-  {
-    value: "Interested",
-    label: "Interested",
-    description: "Lead has shown interest",
-    icon: ThumbsUp,
-    color: "text-success",
-  },
-  {
-    value: "Interested-Followup",
-    label: "Interested-Followup",
-    description: "Interested, requires follow-up",
-    icon: Clock,
-    color: "text-warning",
-  },
-  {
-    value: "Qualified",
-    label: "Qualified",
-    description: "Lead is qualified and ready",
-    icon: CheckCircle2,
-    color: "text-success",
-  },
-  {
-    value: "Ringing / Not Reachable",
-    label: "Ringing / Not Reachable",
-    description: "Could not reach the lead",
-    icon: PhoneOff,
-    color: "text-warning",
-  },
-  {
-    value: "Not Interested",
-    label: "Not Interested",
-    description: "Lead has declined",
-    icon: Ban,
-    color: "text-destructive",
-  },
-]
+    {
+      value: "New",
+      label: "New",
+      description: "Lead is newly added",
+      icon: Clock,
+      color: "text-primary",
+    },
+    {
+      value: "Interested",
+      label: "Interested",
+      description: "Lead has shown interest",
+      icon: ThumbsUp,
+      color: "text-success",
+    },
+    {
+      value: "Interested-Followup",
+      label: "Interested-Followup",
+      description: "Interested, requires follow-up",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      value: "Qualified",
+      label: "Qualified",
+      description: "Lead is qualified and ready",
+      icon: CheckCircle2,
+      color: "text-success",
+    },
+    {
+      value: "Alumni Batch",
+      label: "Alumni Batch",
+      description: "Lead is interested in an alumni batch",
+      icon: GraduationCap,
+      color: "text-primary",
+    },
+    {
+      value: "Ringing / Not Reachable",
+      label: "Ringing / Not Reachable",
+      description: "Could not reach the lead",
+      icon: PhoneOff,
+      color: "text-warning",
+    },
+    {
+      value: "Not Interested",
+      label: "Not Interested",
+      description: "Lead has declined",
+      icon: Ban,
+      color: "text-destructive",
+    },
+  ]
+
+// ─── Outcome options – TATTI Course MODE ──
+const tattiOutcomeOptions: {
+  value: string
+  label: string
+  description: string
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+}[] = [
+    {
+      value: "TATTI - New",
+      label: "TATTI - New",
+      description: "Lead is newly added",
+      icon: Clock,
+      color: "text-primary",
+    },
+    {
+      value: "TATTI - Interested",
+      label: "TATTI - Interested",
+      description: "Lead has shown interest",
+      icon: ThumbsUp,
+      color: "text-success",
+    },
+    {
+      value: "TATTI - Interested Followup",
+      label: "TATTI - Interested Followup",
+      description: "Interested, requires follow-up",
+      icon: Clock,
+      color: "text-warning",
+    },
+    {
+      value: "TATTI - Qualified",
+      label: "TATTI - Qualified",
+      description: "Lead is qualified and ready",
+      icon: CheckCircle2,
+      color: "text-success",
+    },
+    {
+      value: "TATTI - Ringing / Not Reachable",
+      label: "TATTI - Ringing / Not Reachable",
+      description: "Could not reach the lead",
+      icon: PhoneOff,
+      color: "text-warning",
+    },
+    {
+      value: "TATTI - Not Interested",
+      label: "TATTI - Not Interested",
+      description: "Lead has declined",
+      icon: Ban,
+      color: "text-destructive",
+    },
+  ]
 
 const notInterestedReasons = [
   "No response here",
@@ -388,6 +484,7 @@ export function CallOutcomeModal({
   const [institutionName, setInstitutionName] = useState("")
   const [courses, setCourses] = useState<Course[]>([])
   const [coursesLoading, setCoursesLoading] = useState(false)
+  const [selectedSpecificCourse, setSelectedSpecificCourse] = useState("")
 
   // Lead Source & Lead Type
   const [leadSource, setLeadSource] = useState<string[]>([])
@@ -397,34 +494,17 @@ export function CallOutcomeModal({
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
-  // ─── Determine if we're in "lead mode" or "EDII mode" ────────────────────────
-  const EDII_LEAD_SOURCES = ["Wedding Photography", "Video Editing", "Solar"]
-  const EDII_COURSES = ["Wedding Photography", "Video Editing", "Solar"]
+  // ─── Determine if we're in "lead mode" or "Short Term Course mode" ────────────────────────
+  const shortTermCourseLeadSources = ["Wedding Photography", "Video Editing", "Solar"]
+  const shortTermCourseCourses = ["Wedding Photography", "Video Editing", "Solar"]
   const prospectLeadSourcesTop: string[] = Array.isArray((prospect as any)?.lead_source)
     ? (prospect as any).lead_source
     : typeof (prospect as any)?.lead_source === "string"
-    ? [(prospect as any).lead_source]
-    : []
-
-  const isEDIIMode =
-    leadSource.some((source: string) =>
-      EDII_LEAD_SOURCES.some((ediiSource) =>
-        source.toLowerCase().includes(ediiSource.toLowerCase())
-      )
-    ) ||
-    prospectLeadSourcesTop.some((source: string) =>
-      EDII_LEAD_SOURCES.some((ediiSource) =>
-        source.toLowerCase().includes(ediiSource.toLowerCase())
-      )
-    ) ||
-    (prospect?.courseInterest && prospect.courseInterest !== "Unknown" &&
-      EDII_COURSES.some((ediiCourse) =>
-        prospect.courseInterest.toLowerCase().includes(ediiCourse.toLowerCase())
-      ))
-  const localLeadMode = leadSource.length > 0 || leadType.length > 0
+      ? [(prospect as any).lead_source]
+      : []
 
   // Normalize dashboard names (matches logic used elsewhere)
-  const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "edii" => {
+  const normalizeDashboard = (value: unknown): "student_admission" | "college_contact" | "short_term_course" | "tatti_course" => {
     if (typeof value !== "string") return "student_admission"
 
     const normalized = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_")
@@ -433,31 +513,135 @@ export function CallOutcomeModal({
       return "college_contact"
     }
 
-    if (normalized === "edii" || normalized === "edii_leads" || normalized.includes("edii")) {
-      return "edii"
+    if (normalized === "short_term_course" || normalized === "short_term_course_leads" || normalized.includes("short_term_course") || normalized === "edii" || normalized === "edii_leads" || normalized.includes("edii")) {
+      return "short_term_course"
+    }
+
+    if (normalized === "tatti_course" || normalized === "tatti" || normalized.includes("tatti")) {
+      return "tatti_course"
     }
 
     return "student_admission"
   }
 
   const dashboard = normalizeDashboard(prospect?.dashboard || prospect?.prospect_type || prospect?.prospectType)
+
+  const isShortTermCourseModeOrTatti =
+    dashboard === "tatti_course" || dashboard === "short_term_course" ||
+    leadSource.some((source: string) =>
+      shortTermCourseLeadSources.some((shortTermCourseSource) =>
+        source.toLowerCase().includes(shortTermCourseSource.toLowerCase())
+      )
+    ) ||
+    prospectLeadSourcesTop.some((source: string) =>
+      shortTermCourseLeadSources.some((shortTermCourseSource) =>
+        source.toLowerCase().includes(shortTermCourseSource.toLowerCase())
+      )
+    ) ||
+    (prospect?.courseInterest && prospect.courseInterest !== "Unknown" &&
+      shortTermCourseCourses.some((shortTermCourseCourse) =>
+        prospect.courseInterest.toLowerCase().includes(shortTermCourseCourse.toLowerCase())
+      ))
+  const localLeadMode = leadSource.length > 0 || leadType.length > 0
+
   // Show Lead Type only for college_contact dashboard
   const showLeadType = dashboard === "college_contact"
 
   // Lead mode is only active for college_contact dashboard
   const isLeadMode = localLeadMode && dashboard === "college_contact"
 
+  // Extract multiple courses robustly (handles comma-separated OR no commas if courses are loaded)
+  const rawCourseInterest = (prospect?.courseInterest || prospect?.course_interest || "") === "Unknown" 
+    ? "" 
+    : (prospect?.courseInterest || prospect?.course_interest || "")
+  
+  const multipleCourses = useMemo(() => {
+    if (!rawCourseInterest) return []
+    let parsed: string[] = []
+    
+    if (rawCourseInterest.includes(",")) {
+      parsed = rawCourseInterest.split(",").map(c => c.trim()).filter(Boolean)
+    } else {
+      // Hardcoded list of known courses (some aren't in DB yet)
+      const KNOWN_COURSES = [
+        "Wedding Photography & vide editing-July 2026",
+        "Wedding Photography and Videography-July 2026",
+        "Wedding Photography and Videography",
+        "Wedding Photography",
+        "Video Editing",
+        "vide editing",
+        "Solar",
+        "EDII Wind Solar",
+        "EDII - Solar Power Installation",
+        "Logistics & Supply Chain Management",
+        "AI-Powered Data & Business Analytics",
+        "B.Sc Renewable Energy",
+        "B.Com Fintech & Artificial Intelligence",
+        "B.Sc Film and TV Production"
+      ]
+      
+      // Combine API courses with known courses
+      const allPossibleCourses = Array.from(new Set([
+        ...KNOWN_COURSES.map(c => c.toLowerCase()),
+        ...courses.map(c => c.name?.toLowerCase() || "")
+      ]))
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length) // Sort longest first so we don't accidentally match substrings of larger courses
+
+      // Try to find known courses as substrings
+      const found = []
+      let remainingStr = rawCourseInterest.toLowerCase()
+      
+      for (const courseLower of allPossibleCourses) {
+        if (remainingStr.includes(courseLower)) {
+          // Find original casing from KNOWN_COURSES if possible
+          const originalCourse = KNOWN_COURSES.find(c => c.toLowerCase() === courseLower) 
+            || courses.find(c => c.name?.toLowerCase() === courseLower)?.name 
+            || courseLower
+            
+          found.push(originalCourse)
+          // Remove from string so we don't double count (e.g. "Wedding Photography" vs "Wedding Photography and Videography")
+          remainingStr = remainingStr.replace(courseLower, "")
+        }
+      }
+      
+      if (found.length > 1) {
+        parsed = found
+      } else {
+        parsed = [rawCourseInterest]
+      }
+    }
+    
+    return parsed
+  }, [rawCourseInterest, courses])
+
+  // DEBUGGING OUTPUT
+  useEffect(() => {
+    if (open && prospect) {
+      console.log("--- CALL OUTCOME MODAL MOUNT ---")
+      console.log("Prospect:", prospect.name)
+      console.log("rawCourseInterest:", rawCourseInterest)
+      console.log("Parsed multipleCourses:", multipleCourses)
+      console.log("courses.length:", courses.length)
+      console.log("hasMultipleCourses:", multipleCourses.length > 1)
+    }
+  }, [open, prospect, rawCourseInterest, multipleCourses, courses.length])
+
+  const hasMultipleCourses = multipleCourses.length > 1
+
   // Choose outcome options by dashboard
   const currentOutcomeOptions =
-    dashboard === "edii"
-      ? ediiOutcomeOptions
-      : dashboard === "college_contact"
-      ? leadOutcomeOptions
-      : defaultOutcomeOptions
+    dashboard === "tatti_course"
+      ? tattiOutcomeOptions
+      : dashboard === "short_term_course"
+        ? shortTermCourseOutcomeOptions
+        : dashboard === "college_contact"
+          ? leadOutcomeOptions
+          : defaultOutcomeOptions
 
   // Reset outcome selection when mode changes
   // Keep dependency array shape stable across renders by using a single key
-  const modeKey = `${Number(isLeadMode)}-${Number(isEDIIMode)}-${dashboard || ""}`
+  const modeKey = `${Number(isLeadMode)}-${Number(isShortTermCourseModeOrTatti)}-${dashboard || ""}`
   useEffect(() => {
     setSelectedOutcome(null)
   }, [modeKey])
@@ -515,14 +699,15 @@ export function CallOutcomeModal({
     setInstitutionName("")
     setLeadSource([])
     setLeadType([])
+    setSelectedSpecificCourse("")
   }
 
-  // For default mode, lead mode & EDII mode – map selectedOutcome to callback-active logic
-  const callbackSectionActive = isEDIIMode
-    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+  // For default mode, lead mode & Short Term Course mode – map selectedOutcome to callback-active logic
+  const callbackSectionActive = isShortTermCourseModeOrTatti
+    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested" && selectedOutcome !== "Qualified" && selectedOutcome !== "Alumni Batch")
     : isLeadMode
-    ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
-    : (
+      ? (selectedOutcome !== null && selectedOutcome !== "New" && selectedOutcome !== "Not Interested")
+      : (
         selectedOutcome === "warm" ||
         selectedOutcome === "hot" ||
         selectedOutcome === "visit_scheduled"
@@ -530,6 +715,7 @@ export function CallOutcomeModal({
 
   const isFormValid = () => {
     if (!selectedOutcome) return false
+    if (hasMultipleCourses && !selectedSpecificCourse) return false
     if (callbackSectionActive) {
       return !!(callbackDate && callbackHour && callbackMinute && callbackPeriod)
     }
@@ -589,7 +775,11 @@ export function CallOutcomeModal({
       data.reason = reason
     }
 
-    onSubmit(selectedOutcome, data)
+    const finalOutcome = hasMultipleCourses && selectedSpecificCourse 
+      ? `${selectedOutcome} - ${selectedSpecificCourse}`
+      : selectedOutcome
+
+    onSubmit(finalOutcome, data)
     resetForm()
     onOpenChange(false)
   }
@@ -697,7 +887,20 @@ export function CallOutcomeModal({
                             <p className="text-xs font-medium text-foreground/80 mb-1">{call.reason}</p>
                           )}
                           {call.notes && (
-                            <p className="text-[11px] text-muted-foreground line-clamp-2 italic">&quot;{call.notes}&quot;</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-2 italic cursor-help">&quot;{call.notes}&quot;</p>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  className="bg-[#1F2937] text-white rounded-lg px-3 py-2.5 max-w-[360px] shadow-lg"
+                                  side="top"
+                                  sideOffset={8}
+                                >
+                                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{call.notes}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       </div>
@@ -717,17 +920,17 @@ export function CallOutcomeModal({
           <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* ── Step 1: Lead Information ── */}
-              {(isLeadMode || isEDIIMode) && (
+              {(isLeadMode || isShortTermCourseModeOrTatti) && (
                 <section>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">1</span>
                     Lead Information
-                    {isEDIIMode && (
+                    {isShortTermCourseModeOrTatti && (
                       <Badge variant="outline" className="ml-2 text-[9px] bg-emerald-100 text-emerald-600 border-none">
-                        EDII Mode Active
+                        Short Term Course Mode Active
                       </Badge>
                     )}
-                    {isLeadMode && !isEDIIMode && (
+                    {isLeadMode && !isShortTermCourseModeOrTatti && (
                       <Badge variant="outline" className="ml-2 text-[9px] bg-primary/10 text-primary border-none">
                         Lead Mode Active
                       </Badge>
@@ -739,7 +942,7 @@ export function CallOutcomeModal({
                         Lead Source
                       </Label>
                       <MultiSelect
-                        options={LEAD_SOURCE_OPTIONS}
+                        options={dashboard === "short_term_course" ? SHORT_TERM_COURSE_LEAD_SOURCE_OPTIONS : LEAD_SOURCE_OPTIONS}
                         selected={leadSource}
                         onChange={setLeadSource}
                         placeholder="Select lead source(s)..."
@@ -774,12 +977,12 @@ export function CallOutcomeModal({
                       </div>
                     )}
 
-                    {isEDIIMode && (
+                    {isShortTermCourseModeOrTatti && (
                       <p className="text-[11px] text-emerald-600 font-medium bg-emerald-50 rounded-sm p-2 border border-emerald-100">
-                        EDII mode active: Status options have been updated for EDII tracking.
+                        Short Term Course mode active: Status options have been updated for Short Term Course tracking.
                       </p>
                     )}
-                    {isLeadMode && !isEDIIMode && (
+                    {isLeadMode && !isShortTermCourseModeOrTatti && (
                       <p className="text-[11px] text-primary font-medium bg-primary/5 rounded-sm p-2 border border-primary/10">
                         Lead mode active: Status options have been updated for lead tracking.
                       </p>
@@ -792,7 +995,7 @@ export function CallOutcomeModal({
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                   <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
-                    {isLeadMode || isEDIIMode ? 2 : 1}
+                    {isLeadMode || isShortTermCourseModeOrTatti ? 2 : 1}
                   </span>
                   Select Status
                 </h3>
@@ -802,6 +1005,7 @@ export function CallOutcomeModal({
                       key={option.value}
                       onClick={() => {
                         setSelectedOutcome(option.value)
+                        setSelectedSpecificCourse("")
                       }}
                       className={cn(
                         "flex items-start gap-3 rounded-sm border p-3 text-left transition-all hover:border-primary/50",
@@ -822,6 +1026,51 @@ export function CallOutcomeModal({
                 </div>
               </section>
 
+              {/* Course selector – appears right after status is picked if prospect has multiple courses */}
+              {hasMultipleCourses && selectedOutcome && (
+                <section className="animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="rounded-sm border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                      <Label className="text-xs font-bold uppercase tracking-wider text-primary">
+                        Which course are you calling about?
+                      </Label>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      This prospect has multiple courses. Select the one you discussed in this call.
+                    </p>
+                    <div className="grid gap-2">
+                      {multipleCourses.map((c: string) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setSelectedSpecificCourse(c)}
+                          className={cn(
+                            "flex items-center gap-3 rounded-sm border px-3 py-2 text-left text-sm transition-all",
+                            selectedSpecificCourse === c
+                              ? "border-primary bg-primary/10 font-semibold text-primary ring-1 ring-primary/20"
+                              : "border-border bg-background hover:border-primary/50 hover:bg-muted/30"
+                          )}
+                        >
+                          <div className={cn(
+                            "h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center",
+                            selectedSpecificCourse === c ? "border-primary" : "border-muted-foreground/40"
+                          )}>
+                            {selectedSpecificCourse === c && (
+                              <div className="h-2 w-2 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                    {!selectedSpecificCourse && (
+                      <p className="text-[10px] text-destructive font-medium">⚠ Please select a course to proceed.</p>
+                    )}
+                  </div>
+                </section>
+              )}
+
               {selectedOutcome && (
                 <>
                   <div className="h-px bg-border" />
@@ -830,7 +1079,7 @@ export function CallOutcomeModal({
                   <section className="animate-in fade-in slide-in-from-top-4 duration-300">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                       <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold">
-                        {isLeadMode || isEDIIMode ? 3 : 2}
+                        {isLeadMode || isShortTermCourseModeOrTatti ? 3 : 2}
                       </span>
                       Status Details
                     </h3>

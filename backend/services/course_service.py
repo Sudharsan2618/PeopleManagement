@@ -82,3 +82,4 @@ class CourseService:
         """Delete a course."""
         query = "DELETE FROM courses WHERE id = %s"
         return execute_update_delete(query, (course_id,))
+

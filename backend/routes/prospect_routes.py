@@ -226,7 +226,16 @@ def create_prospect(prospect: ProspectCreate):
             comments=prospect.comments,
             follow_up_date=prospect.follow_up_date,
             is_imported=prospect.is_imported,
-            lead_id=prospect.lead_id
+            lead_id=prospect.lead_id,
+            website=prospect.website,
+            course_fee=prospect.course_fee,
+            amount_paid=prospect.amount_paid,
+            payment_status=prospect.payment_status,
+            payment_mode=prospect.payment_mode,
+            transaction_id=prospect.transaction_id,
+            batch=prospect.batch,
+            start_month=prospect.start_month,
+            year=prospect.year
         )
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
@@ -299,6 +308,24 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["follow_up_date"] = prospect.follow_up_date
         if prospect.lead_id is not None:
             update_kwargs["lead_id"] = prospect.lead_id
+        if prospect.website is not None:
+            update_kwargs["website"] = prospect.website
+        if prospect.course_fee is not None:
+            update_kwargs["course_fee"] = prospect.course_fee
+        if prospect.amount_paid is not None:
+            update_kwargs["amount_paid"] = prospect.amount_paid
+        if prospect.payment_status is not None:
+            update_kwargs["payment_status"] = prospect.payment_status
+        if prospect.payment_mode is not None:
+            update_kwargs["payment_mode"] = prospect.payment_mode
+        if prospect.transaction_id is not None:
+            update_kwargs["transaction_id"] = prospect.transaction_id
+        if prospect.batch is not None:
+            update_kwargs["batch"] = prospect.batch
+        if prospect.start_month is not None:
+            update_kwargs["start_month"] = prospect.start_month
+        if prospect.year is not None:
+            update_kwargs["year"] = prospect.year
         
         ProspectService.update_prospect(**update_kwargs)
         return ProspectService.get_prospect_by_id(prospect_id)

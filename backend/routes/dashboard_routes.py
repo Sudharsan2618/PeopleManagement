@@ -35,3 +35,35 @@ def get_dashboard_stats(user_id: int):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@router.get("/admin-stats")
+def get_admin_dashboard_stats():
+    """Get global counts for admin sidebar badges and dashboard."""
+    try:
+        qualified_leads_query = """
+            SELECT COUNT(*) as count 
+            FROM prospects 
+            WHERE status = 'Qualified' AND assigned_to IS NOT NULL AND converted = FALSE
+        """
+        qualified_count = execute_query(qualified_leads_query, fetch="one")["count"]
+
+        converted_query = """
+            SELECT COUNT(*) as count 
+            FROM converted_enquiries
+            WHERE prospect_id IS NOT NULL
+        """
+        converted_count = execute_query(converted_query, fetch="one")["count"]
+
+        payment_pending_query = """
+            SELECT COUNT(*) as count 
+            FROM converted_enquiries 
+            WHERE pending_amount > 0 AND prospect_id IS NOT NULL
+        """
+        payment_pending_count = execute_query(payment_pending_query, fetch="one")["count"]
+
+        return {
+            "qualified_leads": qualified_count,
+            "converted_enquiries": converted_count,
+            "payment_pending": payment_pending_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

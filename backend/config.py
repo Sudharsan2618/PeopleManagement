@@ -3,6 +3,7 @@ config.py — Pydantic settings (reads from .env or environment variables).
 All secrets injected via Cloud Run Secret Manager or .env locally.
 """
 
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,6 +38,15 @@ class Settings(BaseSettings):
     GCS_PROJECT_ID     : str = ""     # project that owns the bucket
     GCS_MEDIA_PREFIX   : str = "whatsapp-inbound"
     GCS_SIGNED_URL_TTL : int = 3600   # seconds
+
+    # SMTP email settings for report delivery
+    SMTP_HOST          : str = ""
+    SMTP_PORT          : int = 587
+    SMTP_USER          : str = ""
+    SMTP_PASSWORD      : str = ""
+    SMTP_USE_TLS       : bool = True
+    SMTP_USE_SSL       : bool = False
+    SMTP_FROM          : str = ""
 
     # MongoDB (legacy — no longer used, kept optional so old env files don't break)
     MONGO_URI          : str = ""

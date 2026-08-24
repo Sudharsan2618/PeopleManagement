@@ -49,6 +49,27 @@ export interface Prospect {
   is_imported?: boolean
   prospect_type?: string
   lead_id?: string
+  website?: string
+  // Payment & Conversion details
+  course_fee?: number
+  amount_paid?: number
+  payment_mode?: string
+  transaction_id?: string
+  batch?: string
+  start_month?: string
+  year?: string
+  converted?: boolean
+  gender?: string
+  dob?: string
+  state?: string
+  
+  // Per-course status map computed dynamically from call_logs.
+  // Key = course name (trimmed), Value = latest status_after_call (or prospect status if no call)
+  course_statuses?: Record<string, string>
+  // Assignment info joined from prospect_assignments
+  assigned_telecaller_name?: string
+  assignment_date?: string
+  assignment_dashboard?: string
 }
 
 export interface CallLog {
@@ -177,6 +198,7 @@ export interface ProspectListItem {
   follow_up_date?: string
   is_imported?: boolean
   lead_id?: string
+  website?: string
   // Joined assignment info
   assigned_telecaller_name?: string
   assignment_date?: string
@@ -316,6 +338,8 @@ export function adaptApiProspectToUiProspect(apiProspect: Prospect, assignments?
     is_imported: apiProspect.is_imported || false,
     prospect_type: apiProspect.prospect_type || "student_admission",
     lead_id: apiProspect.lead_id || "",
+    website: apiProspect.website || "",
+    course_statuses: apiProspect.course_statuses || {},
   }
 }
 
@@ -611,6 +635,22 @@ export const callLogsApi = {
   getById: (id: number) => apiRequest<CallLog>(`/call-logs/${id}`),
   getByProspect: (prospectId: number) => apiRequest<CallLog[]>(`/call-logs/prospect/${prospectId}`),
   getByTelecaller: (telecallerId: number) => apiRequest<CallLog[]>(`/call-logs/telecaller/${telecallerId}`),
+  sendReportEmail: (data: {
+    to_email: string
+    subject: string
+    message?: string
+    filename?: string
+    csv_data?: string
+    attachments?: Array<{
+      filename: string
+      content_base64: string
+      mime_type: string
+    }>
+  }) => apiRequest<{ message: string }>('/call-logs/send-report-email', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
   getPendingCallbacks: (telecallerId?: number) => {
     const params = new URLSearchParams()
     if (telecallerId) params.append("telecaller_id", telecallerId.toString())
@@ -866,6 +906,7 @@ export const whatsappApi = {
 // Dashboard API
 export const dashboardApi = {
   getStats: (userId: number) => apiRequest<{ callbacks: number, followups: number }>(`/dashboard/stats/${userId}`),
+  getAdminStats: () => apiRequest<{ qualified_leads: number, converted_enquiries: number, payment_pending: number }>(`/dashboard/admin-stats`),
 }
 
 // Admin API
@@ -925,4 +966,38 @@ export const collegeContactApi = {
       body: JSON.stringify(payload)
     })
   }
+}
+
+// Conversion API
+export const conversionApi = {
+  getQualifiedLeads: (params: any) => {
+    const qs = new URLSearchParams(params).toString()
+    return apiRequest<any[]>(`/conversions/qualified-leads${qs ? `?${qs}` : ''}`)
+  },
+  convertProspect: (data: any) => apiRequest<{ status: string, enquiry_id: number }>('/conversions/convert', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  getConvertedEnquiries: (params: any) => {
+    const qs = new URLSearchParams(params).toString()
+    return apiRequest<any[]>(`/conversions/converted-enquiries${qs ? `?${qs}` : ''}`)
+  },
+  getPaymentPending: (params: any) => {
+    const qs = new URLSearchParams(params).toString()
+    return apiRequest<any[]>(`/conversions/payment-pending${qs ? `?${qs}` : ''}`)
+  },
+  getConversionDetails: (id: number) => apiRequest<any>(`/conversions/${id}`),
+  getByProspect: (prospectId: number) => apiRequest<any>(`/conversions/by-prospect/${prospectId}`),
+  updatePaymentTotals: (enquiryId: number, totalPaid: number) => apiRequest<any>(`/conversions/${enquiryId}/update-payment`, {
+    method: 'PATCH',
+    body: JSON.stringify({ total_paid: totalPaid })
+  }),
+  addPayment: (id: number, data: any) => apiRequest<{ status: string, payment_id: number }>(`/conversions/${id}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  refundPayment: (id: number, data: any) => apiRequest<{ status: string, payment_id: number, payment_status: string }>(`/conversions/${id}/refund`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
 }

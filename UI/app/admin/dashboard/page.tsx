@@ -184,8 +184,8 @@ export default function AdminDashboard() {
       bgColor: "bg-emerald-500/10",
     },
     {
-      title: "Hot / Qualified",
-      value: stats.prospect_status_counts?.hot || 0,
+      title: "Admission Students",
+      value: (stats.prospect_status_counts?.hot || 0) + (stats.prospect_status_counts?.Qualified || 0),
       icon: CheckCircle2,
       color: "text-teal-600",
       bgColor: "bg-teal-500/10",
