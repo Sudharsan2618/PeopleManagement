@@ -1781,9 +1781,15 @@ export default function WhatsAppAdmin() {
                                 <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">+{msg.prospect_mobile}</TableCell>
                                 <TableCell><StatusPill status={msg.status} /></TableCell>
                                 <TableCell className="text-xs text-muted-foreground text-right whitespace-nowrap">
-                                  {msg.sent_at
-                                    ? new Date(msg.sent_at).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-                                    : 'Pending'}
+                                  {(() => {
+                                    // Show the most meaningful timestamp we have. The webhook only
+                                    // writes delivered_at/read_at (never sent_at), so a 'delivered'
+                                    // row would otherwise fall back to 'Pending' even though it has a time.
+                                    const ts = msg.read_at || msg.delivered_at || msg.sent_at || msg.created_at
+                                    return ts
+                                      ? new Date(ts).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                      : 'Pending'
+                                  })()}
                                 </TableCell>
                               </TableRow>
                             ))

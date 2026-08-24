@@ -5,6 +5,31 @@ from zoneinfo import ZoneInfo
 from utils.timezone_utils import get_ist_now
 from utils.phone_utils import clean_phone_number
 
+import threading
+
+
+def _offload_inbound_media(message: dict):
+    """Best-effort: download inbound media once and store it in GCS.
+
+    Runs in a daemon thread so it never blocks the webhook response and works
+    from either /webhook route. Safe no-op when GCS isn't configured.
+    """
+    media = (message.get("image") or message.get("video")
+             or message.get("audio") or message.get("document"))
+    if not media or not media.get("id"):
+        return
+
+    def _work():
+        try:
+            from services.whatsapp_service import WhatsAppService
+            data, _ = WhatsAppService.fetch_media(media["id"])
+            WhatsAppService.store_inbound_media(media["id"], data, media.get("mime_type"))
+        except Exception as exc:
+            print(f"Inbound media offload skipped for {media.get('id')}: {exc}")
+
+    threading.Thread(target=_work, daemon=True).start()
+
+
 class WebhookService:
     @staticmethod
     def process_event(data: dict):
@@ -159,6 +184,13 @@ class WebhookService:
             body = f"[Video] {caption}" if caption else "[Video]"
         elif msg_type == "audio":
             body = "[Voice Message]"
+
+        # Offload inbound media (voice note / image / video / doc) to GCS once,
+        # so it's later served via signed URL instead of proxied out of Cloud Run
+        # (this removes the egress cost). Best-effort + background thread so the
+        # webhook still returns 200 promptly.
+        if msg_type in ("image", "video", "audio", "document"):
+            _offload_inbound_media(message)
 
         with get_db_connection() as conn:
             cur = conn.cursor()

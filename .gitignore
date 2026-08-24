@@ -49,6 +49,11 @@ venv.bak
 .env.sample
 !.env.example
 
+# GCP service-account key (secret — never commit)
+gcp-service-account.json
+**/gcp-service-account.json
+*service-account*.json
+
 # OS files
 .DS_Store
 .DS_Store?

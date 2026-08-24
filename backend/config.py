@@ -27,6 +27,17 @@ class Settings(BaseSettings):
     WHATSAPP_PROSPECTUS_MEDIA_ID: str = "1981955689074811"
     WHATSAPP_WABA_ID: str
 
+    # Google Cloud Storage — inbound WhatsApp media offload.
+    # When GCS_BUCKET_NAME is set, inbound voice notes / images / videos / docs
+    # are uploaded to GCS once (at webhook time) and later served to the browser
+    # via a V4 signed URL. This moves that traffic off Cloud Run entirely,
+    # eliminating the egress cost that the /whatsapp/media proxy used to incur.
+    # Leave empty to keep the legacy Meta-proxy behaviour.
+    GCS_BUCKET_NAME    : str = ""
+    GCS_PROJECT_ID     : str = ""     # project that owns the bucket
+    GCS_MEDIA_PREFIX   : str = "whatsapp-inbound"
+    GCS_SIGNED_URL_TTL : int = 3600   # seconds
+
     # MongoDB (legacy — no longer used, kept optional so old env files don't break)
     MONGO_URI          : str = ""
 

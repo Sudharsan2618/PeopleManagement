@@ -11,3 +11,4 @@ pydantic-settings==2.7.0
 cryptography==44.0.0
 python-multipart==0.0.20
 tzdata==2025.2
+google-cloud-storage==2.18.0

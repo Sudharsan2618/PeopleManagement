@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter, HTTPException, Body, Request, Query, File, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse, RedirectResponse
 from services.whatsapp_service import WhatsAppService
 from typing import List, Optional
 
@@ -466,6 +466,22 @@ def stream_media(media_id: str, request: Request):
     "no supported sources" for containers like Ogg). Cached by media_id.
     """
     try:
+        # If the media was offloaded to GCS, serve it via a signed URL redirect
+        # so the browser fetches directly from GCS (or a Cloud CDN edge). This
+        # moves the bytes off Cloud Run and removes the egress cost.
+        gcs = WhatsAppService.get_inbound_media_gcs(media_id)
+        if gcs:
+            object_name, content_type = gcs
+            try:
+                return RedirectResponse(
+                    url=WhatsAppService.generate_signed_url(object_name, content_type),
+                    status_code=307,
+                )
+            except Exception as exc:
+                print(f"⚠️ Signed URL failed for {media_id}, falling back to Meta proxy: {exc}")
+
+        # Fallback: legacy Meta proxy (GCS not configured, or media received
+        # before the offload was enabled and no longer resolvable).
         data, content_type = WhatsAppService.fetch_media(media_id)
     except LookupError:
         raise HTTPException(status_code=404, detail="Media not found or expired")

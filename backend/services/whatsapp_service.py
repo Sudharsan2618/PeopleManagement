@@ -1,14 +1,24 @@
 import os
 import time
+import logging
 import requests
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
 import uuid
 
+log = logging.getLogger(__name__)
+
 # Cloud API number-health cache (5-min TTL) for the inbox connection badge.
 _phone_status_cache = {"data": None, "exp": 0.0}
+
+try:
+    from google.cloud import storage as _gcs
+    _GCS_AVAILABLE = True
+except Exception:  # pragma: no cover - optional dependency
+    _GCS_AVAILABLE = False
 
 from utils.phone_utils import format_for_meta
 from database.connection import execute_query, execute_insert
@@ -261,6 +271,109 @@ class WhatsAppService:
         """Retrieve all assets from the local Media Library."""
         from database.connection import execute_query
         return execute_query("SELECT * FROM whatsapp_media_assets ORDER BY created_at DESC")
+
+    # ── Inbound media offload to GCS (removes Cloud Run egress) ──────────────
+    @staticmethod
+    def _gcs_bucket():
+        if not _GCS_AVAILABLE:
+            return None
+        bucket_name = os.getenv("GCS_BUCKET_NAME", "")
+        if not bucket_name:
+            return None
+        project = os.getenv("GCS_PROJECT_ID") or None
+        creds = None
+        sa_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if sa_path:
+            from pathlib import Path
+            p = Path(sa_path)
+            if not p.is_absolute():
+                # Resolve relative to the backend/ directory.
+                p = Path(__file__).resolve().parent.parent / p
+            if p.exists():
+                from google.oauth2 import service_account
+                creds = service_account.Credentials.from_service_account_file(str(p))
+        return _gcs.Client(project=project, credentials=creds).bucket(bucket_name)
+
+    @staticmethod
+    def ensure_inbound_media_table():
+        """Create the mapping table if it doesn't exist (idempotent)."""
+        execute_query(
+            """
+            CREATE TABLE IF NOT EXISTS whatsapp_inbound_media (
+                media_id        TEXT PRIMARY KEY,
+                gcs_object_name TEXT NOT NULL,
+                content_type    TEXT,
+                file_size       BIGINT,
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+            )
+            """
+        )
+
+    @staticmethod
+    def store_inbound_media(media_id: str, data: bytes, content_type: str | None):
+        """Upload inbound WhatsApp media to GCS once and record the mapping.
+
+        Returns True if stored in GCS, False when GCS is not configured (so the
+        caller keeps the legacy Meta proxy). Failures are logged and swallowed
+        so the webhook still returns 200.
+        """
+        bucket = WhatsAppService._gcs_bucket()
+        if bucket is None or not media_id:
+            return False
+        try:
+            WhatsAppService.ensure_inbound_media_table()
+            prefix = os.getenv("GCS_MEDIA_PREFIX", "whatsapp-inbound")
+            object_name = f"{prefix}/{media_id}"
+            blob = bucket.blob(object_name)
+            blob.upload_from_string(data, content_type=content_type or "application/octet-stream")
+            execute_query(
+                """
+                INSERT INTO whatsapp_inbound_media (media_id, gcs_object_name, content_type, file_size)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (media_id) DO NOTHING
+                """,
+                (media_id, object_name, content_type, len(data)),
+            )
+            log.info("☁️ Stored inbound media %s in GCS (%d bytes)", media_id, len(data))
+            return True
+        except Exception as exc:
+            log.error("❌ Failed to store inbound media %s in GCS: %s", media_id, exc)
+            return False
+
+    @staticmethod
+    def get_inbound_media_gcs(media_id: str):
+        """Return (gcs_object_name, content_type) for a stored media id, or None."""
+        bucket = WhatsAppService._gcs_bucket()
+        if bucket is None or not media_id:
+            return None
+        try:
+            row = execute_query(
+                "SELECT gcs_object_name, content_type FROM whatsapp_inbound_media WHERE media_id = %s",
+                (media_id,),
+                fetch="one",
+            )
+            if not row:
+                return None
+            return row["gcs_object_name"], row.get("content_type")
+        except Exception as exc:
+            log.error("❌ Lookup of inbound media %s failed: %s", media_id, exc)
+            return None
+
+    @staticmethod
+    def generate_signed_url(object_name: str, content_type: str | None = None):
+        """V4 signed URL for a GCS object (default TTL from GCS_SIGNED_URL_TTL).
+
+        Requires the Cloud Run runtime service account to have
+        roles/storage.objectViewer on the bucket and iam.serviceAccounts.signBlob
+        (so it can sign the URL). The browser then fetches directly from GCS,
+        optionally cached at a Cloud CDN edge.
+        """
+        bucket = WhatsAppService._gcs_bucket()
+        if bucket is None:
+            raise RuntimeError("GCS bucket not configured")
+        blob = bucket.blob(object_name)
+        ttl = int(os.getenv("GCS_SIGNED_URL_TTL", "3600"))
+        return blob.generate_signed_url(expiration=timedelta(seconds=ttl), version="v4")
 
     @staticmethod
     def fetch_media(media_id: str):
