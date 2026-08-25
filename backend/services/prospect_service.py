@@ -70,7 +70,7 @@ class ProspectService:
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                    city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year,
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year,
                    -- Compute per-course latest status for multi-course prospects.
                    (
                        SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
@@ -265,7 +265,7 @@ class ProspectService:
                 p.city, p.address, p.postal_code,
                 p.designation, p.created_by, p.created_at, p.updated_at,
                 p.prospect_type, p.company, p.comments, p.follow_up_date,
-                p.is_imported, p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.transaction_id, p.batch, p.start_month, p.year,
+                p.is_imported, p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.payment_date, p.transaction_id, p.batch, p.start_month, p.year,
                 u.name AS assigned_telecaller_name,
                 la.assigned_date AS assignment_date,
                 la.dashboard AS assignment_dashboard,
@@ -478,7 +478,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
             FROM prospects
             WHERE id = %s
         """
@@ -492,7 +492,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
             FROM prospects
             WHERE status = %s
             ORDER BY created_at DESC
@@ -507,7 +507,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
             FROM prospects
             WHERE created_by = %s
             ORDER BY created_at DESC
@@ -522,7 +522,7 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
             FROM prospects
             WHERE assigned_to = %s
             ORDER BY created_at DESC
@@ -537,7 +537,7 @@ class ProspectService:
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
                    p.lead_source, p.lead_type, p.proposed_for, p.alt_phone, p.alt_phone_2, p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
                    p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
-                   p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.transaction_id, p.batch, p.start_month, p.year
+                   p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.payment_date, p.transaction_id, p.batch, p.start_month, p.year
             FROM prospects p
             INNER JOIN prospect_assignments a ON p.id = a.prospect_id
             WHERE a.telecaller_id = %s
@@ -563,6 +563,7 @@ class ProspectService:
                         lead_id: Optional[str] = None, website: Optional[str] = None,
                         course_fee: Optional[float] = 0.0, amount_paid: Optional[float] = 0.0,
                         payment_status: Optional[str] = "Not Paid", payment_mode: Optional[str] = None,
+                        payment_date: Optional[str] = None,
                         transaction_id: Optional[str] = None, batch: Optional[str] = None,
                         start_month: Optional[str] = None, year: Optional[str] = None) -> int:
         """Create a new prospect."""
@@ -573,8 +574,8 @@ class ProspectService:
                                  alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                                  city, address, postal_code, designation,
                                  company, comments, follow_up_date, is_imported, lead_id, website,
-                                 course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
@@ -591,7 +592,7 @@ class ProspectService:
             alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
             city, address, postal_code, designation,
             company, comments, follow_up_date, is_imported, lead_id, website,
-            course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
+            course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
         ))
     
     @staticmethod
@@ -613,6 +614,7 @@ class ProspectService:
                         lead_id: Optional[str] = _UNSET, website: Optional[str] = _UNSET,
                         course_fee: Optional[float] = _UNSET, amount_paid: Optional[float] = _UNSET,
                         payment_status: Optional[str] = _UNSET, payment_mode: Optional[str] = _UNSET,
+                        payment_date: Optional[str] = _UNSET,
                         transaction_id: Optional[str] = _UNSET, batch: Optional[str] = _UNSET,
                         start_month: Optional[str] = _UNSET, year: Optional[str] = _UNSET) -> int:
         """Update prospect details."""
@@ -741,6 +743,9 @@ class ProspectService:
         if payment_mode is not _UNSET:
             updates.append("payment_mode = %s")
             params.append(payment_mode)
+        if payment_date is not _UNSET:
+            updates.append("payment_date = %s")
+            params.append(payment_date)
         if transaction_id is not _UNSET:
             updates.append("transaction_id = %s")
             params.append(transaction_id)

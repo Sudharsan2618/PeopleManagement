@@ -101,6 +101,7 @@ class ProspectBase(BaseModel):
     amount_paid: Optional[float] = Field(default=0.0)
     payment_status: Optional[str] = Field(default="Not Paid", max_length=50)
     payment_mode: Optional[str] = Field(None, max_length=100)
+    payment_date: Optional[str] = Field(None, max_length=50)
     transaction_id: Optional[str] = Field(None, max_length=100)
     batch: Optional[str] = Field(None, max_length=100)
     start_month: Optional[str] = Field(None, max_length=50)
@@ -147,6 +148,7 @@ class ProspectUpdate(BaseModel):
     amount_paid: Optional[float] = None
     payment_status: Optional[str] = None
     payment_mode: Optional[str] = None
+    payment_date: Optional[str] = None
     transaction_id: Optional[str] = None
     batch: Optional[str] = None
     start_month: Optional[str] = None

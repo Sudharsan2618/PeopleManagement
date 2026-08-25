@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatISTDateTime } from "@/lib/utils"
+import { formatISTDate, formatISTDateTime } from "@/lib/utils"
 import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
@@ -104,7 +104,7 @@ export default function ConvertedEnquiriesPage() {
       Number(enq.pending_amount || 0),
       enq.payment_status || "",
       enq.telecaller_name || "",
-      formatISTDateTime(enq.converted_at).split(" ")[0],
+      formatISTDate(enq.converted_at),
     ])
     const csvContent = [headers, ...rows]
       .map(row => row.map((v: any) => `"${String(v).replace(/"/g, '""')}"`).join(","))
@@ -249,7 +249,7 @@ export default function ConvertedEnquiriesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                          {formatISTDateTime(enq.converted_at).split(" ")[0]}
+                          {formatISTDate(enq.converted_at)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Link href={`/admin/converted-enquiries/${enq.id}`}>
