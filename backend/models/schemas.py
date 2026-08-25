@@ -78,6 +78,7 @@ class ProspectBase(BaseModel):
     tags: Optional[Any] = None
     lead_source: Optional[List[str]] = Field(default=[])
     lead_type: Optional[List[str]] = Field(default=[])
+    proposed_for: Optional[List[str]] = Field(default=[])
     alt_phone: Optional[str] = Field(None, max_length=20)
     alt_phone_2: Optional[str] = Field(None, max_length=20)
     alt_phone_3: Optional[str] = Field(None, max_length=20)
@@ -123,6 +124,7 @@ class ProspectUpdate(BaseModel):
     tags: Optional[Any] = None
     lead_source: Optional[List[str]] = None
     lead_type: Optional[List[str]] = None
+    proposed_for: Optional[List[str]] = None
     alt_phone: Optional[str] = Field(None, max_length=20)
     alt_phone_2: Optional[str] = Field(None, max_length=20)
     alt_phone_3: Optional[str] = Field(None, max_length=20)

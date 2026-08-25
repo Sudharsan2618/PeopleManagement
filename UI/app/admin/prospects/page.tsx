@@ -1194,7 +1194,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_name" className="text-right">Name</Label>
               <Input
                 id="p_name"
-                value={prospectFormData.name}
+                value={prospectFormData.name || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, name: e.target.value })}
                 className="col-span-3"
               />
@@ -1203,7 +1203,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_lead_id" className="text-right">Lead ID</Label>
               <Input
                 id="p_lead_id"
-                value={prospectFormData.lead_id}
+                value={prospectFormData.lead_id || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, lead_id: e.target.value })}
                 className="col-span-3"
                 placeholder="e.g. LEAD-001"
@@ -1213,7 +1213,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_parent" className="text-right">Parent Name</Label>
               <Input
                 id="p_parent"
-                value={prospectFormData.parent_name}
+                value={prospectFormData.parent_name || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, parent_name: e.target.value })}
                 className="col-span-3"
               />
@@ -1222,7 +1222,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_department" className="text-right">Department</Label>
               <Input
                 id="p_department"
-                value={prospectFormData.department}
+                value={prospectFormData.department || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, department: e.target.value })}
                 className="col-span-3"
               />
@@ -1231,7 +1231,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_mobile" className="text-right">Mobile</Label>
               <Input
                 id="p_mobile"
-                value={prospectFormData.mobile}
+                value={prospectFormData.mobile || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, mobile: e.target.value })}
                 className="col-span-3"
               />
@@ -1240,7 +1240,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_email" className="text-right">Email</Label>
               <Input
                 id="p_email"
-                value={prospectFormData.email}
+                value={prospectFormData.email || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, email: e.target.value })}
                 className="col-span-3"
               />
@@ -1249,7 +1249,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_location" className="text-right">Location</Label>
               <Input
                 id="p_location"
-                value={prospectFormData.location}
+                value={prospectFormData.location || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, location: e.target.value })}
                 className="col-span-3"
               />
@@ -1258,7 +1258,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_course" className="text-right">Course</Label>
               <Input
                 id="p_course"
-                value={prospectFormData.course_interest}
+                value={prospectFormData.course_interest || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, course_interest: e.target.value })}
                 className="col-span-3"
               />
@@ -1267,7 +1267,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_status" className="text-right">Status</Label>
               <Input
                 id="p_status"
-                value={prospectFormData.status}
+                value={prospectFormData.status || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, status: e.target.value })}
                 className="col-span-3"
               />
@@ -1276,7 +1276,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_source" className="text-right">Source</Label>
               <Input
                 id="p_source"
-                value={prospectFormData.sourced_from}
+                value={prospectFormData.sourced_from || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, sourced_from: e.target.value })}
                 className="col-span-3"
               />
@@ -1285,7 +1285,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_lead_source" className="text-right">Lead Source</Label>
               <Input
                 id="p_lead_source"
-                value={prospectFormData.lead_source}
+                value={prospectFormData.lead_source || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, lead_source: e.target.value })}
                 className="col-span-3"
                 placeholder="Enter lead sources separated by commas"
@@ -1295,7 +1295,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_lead_type" className="text-right">Lead Type</Label>
               <Input
                 id="p_lead_type"
-                value={prospectFormData.lead_type}
+                value={prospectFormData.lead_type || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, lead_type: e.target.value })}
                 className="col-span-3"
                 placeholder="Enter lead types separated by commas"
@@ -1305,7 +1305,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_alt_phone" className="text-right">Alt Phone</Label>
               <Input
                 id="p_alt_phone"
-                value={prospectFormData.alt_phone}
+                value={prospectFormData.alt_phone || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, alt_phone: e.target.value })}
                 className="col-span-3"
               />
@@ -1314,7 +1314,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_secondary_email" className="text-right">Secondary Email</Label>
               <Input
                 id="p_secondary_email"
-                value={prospectFormData.secondary_email}
+                value={prospectFormData.secondary_email || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, secondary_email: e.target.value })}
                 className="col-span-3"
               />
@@ -1323,7 +1323,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_city" className="text-right">City</Label>
               <Input
                 id="p_city"
-                value={prospectFormData.city}
+                value={prospectFormData.city || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, city: e.target.value })}
                 className="col-span-3"
               />
@@ -1332,7 +1332,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_address" className="text-right">Address</Label>
               <Input
                 id="p_address"
-                value={prospectFormData.address}
+                value={prospectFormData.address || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, address: e.target.value })}
                 className="col-span-3"
               />
@@ -1341,7 +1341,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_postal_code" className="text-right">Postal Code</Label>
               <Input
                 id="p_postal_code"
-                value={prospectFormData.postal_code}
+                value={prospectFormData.postal_code || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, postal_code: e.target.value })}
                 className="col-span-3"
               />
@@ -1350,7 +1350,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_designation" className="text-right">Designation</Label>
               <Input
                 id="p_designation"
-                value={prospectFormData.designation}
+                value={prospectFormData.designation || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, designation: e.target.value })}
                 className="col-span-3"
               />
@@ -1359,7 +1359,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_company" className="text-right">Company</Label>
               <Input
                 id="p_company"
-                value={prospectFormData.company}
+                value={prospectFormData.company || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, company: e.target.value })}
                 className="col-span-3"
               />
@@ -1368,7 +1368,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_comments" className="text-right">Comments</Label>
               <Input
                 id="p_comments"
-                value={prospectFormData.comments}
+                value={prospectFormData.comments || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, comments: e.target.value })}
                 className="col-span-3"
               />
@@ -1378,7 +1378,7 @@ export default function AdminProspectsPage() {
               <Input
                 id="p_follow_up_date"
                 type="date"
-                value={prospectFormData.follow_up_date}
+                value={prospectFormData.follow_up_date || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, follow_up_date: e.target.value })}
                 className="col-span-3"
               />
@@ -1387,7 +1387,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_tags" className="text-right">Tags</Label>
               <Input
                 id="p_tags"
-                value={prospectFormData.tags}
+                value={prospectFormData.tags || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, tags: e.target.value })}
                 className="col-span-3"
                 placeholder="Enter tags separated by commas"
@@ -1397,7 +1397,7 @@ export default function AdminProspectsPage() {
               <Label htmlFor="p_website" className="text-right">Website</Label>
               <Input
                 id="p_website"
-                value={prospectFormData.website}
+                value={prospectFormData.website || ""}
                 onChange={(e) => setProspectFormData({ ...prospectFormData, website: e.target.value })}
                 className="col-span-3"
                 placeholder="https://example.com"

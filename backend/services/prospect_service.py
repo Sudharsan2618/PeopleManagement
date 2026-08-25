@@ -20,7 +20,7 @@ _NAME_PLACEHOLDERS = {"", "whatsapp contact", "wa contact", "unknown"}
 # Columns pre-loaded for merge targets: enough to union the list fields and to
 # decide which blank columns the incoming row can fill in.
 _MERGE_PRELOAD_COLS = (
-    "id, mobile, lead_id, name, course_interest, tags, lead_source, lead_type, "
+    "id, mobile, lead_id, name, course_interest, tags, lead_source, lead_type, proposed_for, "
     "email, sourced_from, location, city, parent_name, department, company, "
     "designation, college_name, address, postal_code, secondary_email, "
     "alternative_email, alt_phone, alt_phone_2, alt_phone_3, comments, follow_up_date, website"
@@ -67,7 +67,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
+                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                    city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year,
@@ -105,6 +105,7 @@ class ProspectService:
         department: Optional[str] = None,
         lead_source: Optional[str] = None,
         lead_type: Optional[str] = None,
+        proposed_for: Optional[str] = None,
         closing_reason: Optional[str] = None,
         campaign_id: Optional[int] = None,
     ):
@@ -214,6 +215,7 @@ class ProspectService:
         department: Optional[str] = None,
         lead_source: Optional[str] = None,
         lead_type: Optional[str] = None,
+        proposed_for: Optional[str] = None,
         closing_reason: Optional[str] = None,
         campaign_id: Optional[int] = None,
     ) -> dict:
@@ -244,7 +246,7 @@ class ProspectService:
 
         where_clause, params = ProspectService._build_prospect_filters(
             search, status, assignment, assigned_to, course_interest,
-            tags, exclude_campaign_id, department, lead_source, lead_type,
+            tags, exclude_campaign_id, department, lead_source, lead_type, proposed_for,
             closing_reason, campaign_id,
         )
 
@@ -258,7 +260,7 @@ class ProspectService:
             SELECT
                 p.id, p.name, p.mobile, p.email, p.location, p.sourced_from,
                 p.status, p.course_interest, p.parent_name, p.department,
-                p.assigned_to, p.closing_reason, p.tags, p.lead_source, p.lead_type,
+                p.assigned_to, p.closing_reason, p.tags, p.lead_source, p.lead_type, p.proposed_for,
                 p.alt_phone, p.alt_phone_2, p.alt_phone_3, p.secondary_email, p.alternative_email, p.college_name,
                 p.city, p.address, p.postal_code,
                 p.designation, p.created_by, p.created_at, p.updated_at,
@@ -332,6 +334,7 @@ class ProspectService:
         department: Optional[str] = None,
         lead_source: Optional[str] = None,
         lead_type: Optional[str] = None,
+        proposed_for: Optional[str] = None,
         closing_reason: Optional[str] = None,
         campaign_id: Optional[int] = None,
         limit: int = 100000,
@@ -342,7 +345,7 @@ class ProspectService:
         the whole prospect payload."""
         where_clause, params = ProspectService._build_prospect_filters(
             search, status, assignment, assigned_to, course_interest,
-            tags, exclude_campaign_id, department, lead_source, lead_type,
+            tags, exclude_campaign_id, department, lead_source, lead_type, proposed_for,
             closing_reason, campaign_id,
         )
         query = f"""
@@ -473,7 +476,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
+                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
@@ -487,7 +490,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
+                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
@@ -502,7 +505,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
+                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
@@ -517,7 +520,7 @@ class ProspectService:
         query = """
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
+                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id, website, course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year
             FROM prospects
@@ -532,7 +535,7 @@ class ProspectService:
         query = """
             SELECT DISTINCT p.id, p.name, p.mobile, p.email, p.location, p.sourced_from, p.status, 
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
-                   p.lead_source, p.lead_type, p.alt_phone, p.alt_phone_2, p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
+                   p.lead_source, p.lead_type, p.proposed_for, p.alt_phone, p.alt_phone_2, p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
                    p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
                    p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.transaction_id, p.batch, p.start_month, p.year
             FROM prospects p
@@ -548,7 +551,7 @@ class ProspectService:
                         created_by: int, parent_name: Optional[str] = None,
                         department: Optional[str] = None, assigned_to: Optional[int] = None,
                         closing_reason: Optional[str] = None, tags: Optional[any] = None,
-                        lead_source: Optional[List[str]] = None, lead_type: Optional[List[str]] = None,
+                        lead_source: Optional[List[str]] = None, lead_type: Optional[List[str]] = None, proposed_for: Optional[List[str]] = None,
                         prospect_type: Optional[str] = "student_admission",
                         alt_phone: Optional[str] = None, alt_phone_2: Optional[str] = None, alt_phone_3: Optional[str] = None,
                         secondary_email: Optional[str] = None, alternative_email: Optional[str] = None,
@@ -566,12 +569,12 @@ class ProspectService:
         query = """
             INSERT INTO prospects (name, mobile, email, location, sourced_from, status, course_interest, 
                                  created_by, parent_name, department, assigned_to, closing_reason, tags,
-                                 lead_source, lead_type, prospect_type, created_at, updated_at,
+                                 lead_source, lead_type, proposed_for, prospect_type, created_at, updated_at,
                                  alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                                  city, address, postal_code, designation,
                                  company, comments, follow_up_date, is_imported, lead_id, website,
                                  course_fee, amount_paid, payment_status, payment_mode, transaction_id, batch, start_month, year)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
         import json
@@ -582,6 +585,7 @@ class ProspectService:
             json.dumps(tags) if tags else None,
             json.dumps(lead_source) if lead_source else '[]',
             json.dumps(lead_type) if lead_type else '[]',
+            json.dumps(proposed_for) if proposed_for else '[]',
             prospect_type,
             ist_now, ist_now,
             alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
@@ -598,6 +602,7 @@ class ProspectService:
                         assigned_to: Optional[int] = _UNSET, closing_reason: Optional[str] = _UNSET,
                         tags: Optional[any] = _UNSET, lead_source: Optional[List[str]] = _UNSET,
                         lead_type: Optional[List[str]] = _UNSET,
+                        proposed_for: Optional[List[str]] = _UNSET,
                         alt_phone: Optional[str] = _UNSET, alt_phone_2: Optional[str] = _UNSET, alt_phone_3: Optional[str] = _UNSET,
                         secondary_email: Optional[str] = _UNSET, alternative_email: Optional[str] = _UNSET,
                         college_name: Optional[str] = _UNSET,
@@ -656,6 +661,10 @@ class ProspectService:
             updates.append("lead_type = %s")
             import json
             params.append(json.dumps(lead_type))
+        if proposed_for is not _UNSET:
+            updates.append("proposed_for = %s")
+            import json
+            params.append(json.dumps(proposed_for))
         if alt_phone is not _UNSET:
             updates.append("alt_phone = %s")
             params.append(alt_phone)
@@ -961,7 +970,7 @@ class ProspectService:
     _INSERT_COLUMNS = (
         "name, mobile, email, location, sourced_from, status, course_interest, "
         "created_by, parent_name, department, assigned_to, closing_reason, tags, "
-        "lead_source, lead_type, prospect_type, created_at, updated_at, "
+        "lead_source, lead_type, proposed_for, prospect_type, created_at, updated_at, "
         "alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, "
         "college_name, city, address, postal_code, designation, company, comments, "
         "follow_up_date, is_imported, lead_id, website"
@@ -980,6 +989,7 @@ class ProspectService:
             json.dumps(p.get("tags")) if p.get("tags") else None,
             json.dumps(p.get("lead_source")) if p.get("lead_source") else '[]',
             json.dumps(p.get("lead_type")) if p.get("lead_type") else '[]',
+            json.dumps(p.get("proposed_for")) if p.get("proposed_for") else '[]',
             p.get("prospect_type", "student_admission"),
             now, now,
             p.get("alt_phone"), p.get("alt_phone_2"), p.get("alt_phone_3"),
@@ -1102,7 +1112,7 @@ class ProspectService:
                 acc = merges_by_id.get(eid)
                 if acc is None:
                     acc = _acc_from(exrow.get("course_interest"), exrow.get("tags"),
-                                    exrow.get("lead_source"), exrow.get("lead_type"),
+                                    exrow.get("lead_source"), exrow.get("lead_type"), exrow.get("proposed_for"),
                                     existing=exrow)
                     merges_by_id[eid] = acc
                 _fold(acc, p)
@@ -1122,6 +1132,7 @@ class ProspectService:
                 rec["p"]["tags"] = rec["acc"]["tags"]
                 rec["p"]["lead_source"] = rec["acc"]["source"]
                 rec["p"]["lead_type"] = rec["acc"]["type"]
+                rec["p"]["proposed_for"] = rec["acc"].get("proposed_for", [])
                 detail_slots[i] = {"row": row, "name": name, "mobile": mobile or "",
                                    "status": "Merged", "action": "merge",
                                    "reason": f"Merged into row {rec['first_row']} (same file)"}
@@ -1133,7 +1144,7 @@ class ProspectService:
                 "p": p, "detail_i": i, "first_row": row, "mobile": mobile,
                 "lead_id": lead_id, "valid": item["valid"], "reason": item["reason"],
                 "acc": _acc_from(p.get("course_interest"), p.get("tags"),
-                                 p.get("lead_source"), p.get("lead_type")),
+                                 p.get("lead_source"), p.get("lead_type"), p.get("proposed_for")),
             })
             if mobile:
                 new_by_mobile[mobile] = idx_new
@@ -1145,7 +1156,7 @@ class ProspectService:
             with get_db_cursor() as cur:
                 for eid, acc in merges_by_id.items():
                     sets = ["course_interest=%s", "tags=%s", "lead_source=%s",
-                            "lead_type=%s", "updated_at=%s"]
+                            "lead_type=%s", "proposed_for=%s", "updated_at=%s"]
                     params = [acc["course"] or None,
                               json.dumps(acc["tags"]) if acc["tags"] else None,
                               json.dumps(acc["source"]) if acc["source"] else '[]',
