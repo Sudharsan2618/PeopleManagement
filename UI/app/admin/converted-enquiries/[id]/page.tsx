@@ -31,7 +31,7 @@ import { conversionApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
-import { formatISTDateTime } from "@/lib/utils"
+import { formatISTDate, formatISTDateTime } from "@/lib/utils"
 
 export default function ConvertedEnquiryDetailPage() {
   const params = useParams()
@@ -269,7 +269,7 @@ export default function ConvertedEnquiryDetailPage() {
                       {payments?.map((p: any, idx: number) => (
                         <TableRow key={p.id} className="border-b border-border">
                           <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                          <TableCell className="font-medium whitespace-nowrap">{formatISTDateTime(p.payment_date).split(" ")[0]}</TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">{formatISTDate(p.payment_date)}</TableCell>
                           <TableCell className={`font-bold ${p.payment_mode?.startsWith("Refund") ? "text-red-600" : "text-emerald-600"}`}>
                             {p.payment_mode?.startsWith("Refund") ? "-" : ""}₹{Math.abs(Number(p.amount)).toLocaleString()}
                           </TableCell>

@@ -792,6 +792,34 @@ export default function CallHistoryPage() {
   const [attachExcel, setAttachExcel] = useState(true)
   const [attachPdf, setAttachPdf] = useState(true)
 
+  // Column selector state
+  const ALL_EXPORT_COLUMNS = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<"excel" | "pdf">("excel")
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(ALL_EXPORT_COLUMNS))
+
+  const toggleColumn = (col: string) => {
+    setSelectedColumns(prev => {
+      const next = new Set(prev)
+      if (next.has(col)) { next.delete(col) } else { next.add(col) }
+      return next
+    })
+  }
+
+  const handleOpenColumnSelector = (format: "excel" | "pdf") => {
+    setExportFormat(format)
+    setIsColumnSelectorOpen(true)
+  }
+
+  const handleExportWithColumns = () => {
+    setIsColumnSelectorOpen(false)
+    if (exportFormat === "excel") {
+      handleExportFilteredCSV()
+    } else {
+      handleExportFilteredPDF()
+    }
+  }
+
   const formatToDDMMYYYY = (dateStr: string) => {
     if (!dateStr) return "";
     const parts = dateStr.split("-");
@@ -930,7 +958,7 @@ export default function CallHistoryPage() {
       return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-");
     };
 
-    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
+    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
 
     const rows = reportLogs.map(log => {
       const prospect = prospects[log.prospect_id] || log;
@@ -964,6 +992,18 @@ export default function CallHistoryPage() {
       } catch (e) {
         leadType = [];
       }
+      let proposedFor: string[] = [];
+      try {
+        if (prospect?.proposed_for) {
+          if (Array.isArray(prospect.proposed_for)) {
+            proposedFor = prospect.proposed_for;
+          } else if (typeof prospect.proposed_for === 'string') {
+            proposedFor = JSON.parse(prospect.proposed_for || '[]');
+          }
+        }
+      } catch (e) {
+        proposedFor = [];
+      }
 
       return [
         prospect ? cleanText(prospect.lead_id || "") : "",
@@ -984,6 +1024,7 @@ export default function CallHistoryPage() {
         cleanText((log as any).displayCourse || (log as any).displayCourse || (log as any).displayCourse || log.course_interest || prospect?.course_interest || ""),
         cleanText(leadSource.join(', ')),
         cleanText(leadType.join(', ')),
+        ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
         cleanText(prospect?.status || ""),
         cleanText(prospect?.parent_name || ""),
         cleanText(prospect?.department || ""),
@@ -1037,7 +1078,7 @@ export default function CallHistoryPage() {
     const toStr = emailToDate ? formatToDDMMYYYY(emailToDate) : "";
     doc.text(`Date range: ${fromStr} to ${toStr}`, 40, 72);
 
-    const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(emailReportType !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"];
+    const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(emailReportType !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"];
 
     const rows = reportLogs.map(log => {
       const prospect = prospects[log.prospect_id] || log;
@@ -1070,6 +1111,18 @@ export default function CallHistoryPage() {
         }
       } catch (e) {
         leadType = [];
+      }
+      let proposedFor: string[] = [];
+      try {
+        if (prospect?.proposed_for) {
+          if (Array.isArray(prospect.proposed_for)) {
+            proposedFor = prospect.proposed_for;
+          } else if (typeof prospect.proposed_for === 'string') {
+            proposedFor = JSON.parse(prospect.proposed_for || '[]');
+          }
+        }
+      } catch (e) {
+        proposedFor = [];
       }
 
       return [
@@ -1149,7 +1202,7 @@ export default function CallHistoryPage() {
       return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-");
     };
 
-    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
+    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
 
     const rows = filteredLogs.map(log => {
       const prospect = prospects[log.prospect_id] || log;
@@ -1183,6 +1236,18 @@ export default function CallHistoryPage() {
       } catch (e) {
         leadType = [];
       }
+      let proposedFor: string[] = [];
+      try {
+        if (prospect?.proposed_for) {
+          if (Array.isArray(prospect.proposed_for)) {
+            proposedFor = prospect.proposed_for;
+          } else if (typeof prospect.proposed_for === 'string') {
+            proposedFor = JSON.parse(prospect.proposed_for || '[]');
+          }
+        }
+      } catch (e) {
+        proposedFor = [];
+      }
 
       return [
         prospect ? cleanText(prospect.lead_id || "") : "",
@@ -1203,6 +1268,7 @@ export default function CallHistoryPage() {
         cleanText((log as any).displayCourse || (log as any).displayCourse || (log as any).displayCourse || log.course_interest || prospect?.course_interest || ""),
         cleanText(leadSource.join(', ')),
         cleanText(leadType.join(', ')),
+        ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
         cleanText(prospect?.status || ""),
         cleanText(prospect?.parent_name || ""),
         cleanText(prospect?.department || ""),
@@ -1729,7 +1795,7 @@ This is an automated report from the TATTI CRM System.
         return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
       }
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(exportContactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(exportContactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
 
       const rows = exportData.map(log => {
 
@@ -1880,6 +1946,7 @@ This is an automated report from the TATTI CRM System.
 
 
           cleanText(leadType.join(', ')),
+        ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
 
 
 
@@ -2559,7 +2626,8 @@ This is an automated report from the TATTI CRM System.
 
 
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const allHeaders = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const headers = allHeaders.filter(h => selectedColumns.has(h))
 
 
 
@@ -2686,89 +2754,28 @@ This is an automated report from the TATTI CRM System.
           cleanText(prospect?.alternative_email || ""),
 
 
-
           cleanText(prospect?.location || ""),
-
-
-
           cleanText(prospect?.city || ""),
-
-
-
           cleanText(prospect?.address || ""),
-
-
-
           cleanText(prospect?.postal_code || ""),
-
-
-
-          ...(contactMode !== "college" ? [cleanText(prospect?.course_interest || "")] : []),
-
-
-
+          cleanText(prospect?.course_interest || ""),
           cleanText(leadSource.join(', ')),
-
-
-
           cleanText(leadType.join(', ')),
-
-
-
+        ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
           cleanText(prospect?.status || ""),
-
-
-
           cleanText(prospect?.parent_name || ""),
-
-
-
           cleanText(prospect?.department || ""),
-
-
-
           cleanText(prospect?.designation || ""),
-
-
-
           cleanText(prospect?.company || ""),
-
-
-
           cleanText(prospect?.college_name || ""),
-
-
-
           cleanText(prospect?.website || ""),
-
-
-
           cleanText(prospect?.tags || ""),
-
-
-
           cleanText(prospect?.comments || ""),
-
-
-
           cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
-
-
-
           cleanText(outcomeLabel),
-
-
-
           cleanText(log.status_after_call || ""),
-
-
-
           log.notes ? cleanText(log.notes.replace(/\n/g, " ")) : ""
-
-
-
-        ]
-
+        ].filter((_, idx) => selectedColumns.has(allHeaders[idx]))
 
 
       })
@@ -2925,537 +2932,176 @@ This is an automated report from the TATTI CRM System.
 
 
 
-
-
-
-
   const handleExportFilteredPDF = async () => {
-
-
-
     setIsPdfExporting(true)
-
-
-
     try {
-
-
-
       if (filteredLogs.length === 0) {
-
-
-
-        toast({
-
-
-
-          title: "No data found",
-
-
-
-          description: "No call logs found matching the current filters.",
-
-
-
-          variant: "destructive"
-
-
-
-        })
-
-
-
+        toast({ title: "No data found", description: "No call logs found matching the current filters.", variant: "destructive" })
         return
-
-
-
       }
-
-
-
-
-
-
-
+      const allPdfHeaders = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const pdfHeaders = selectedColumns.size === 0 ? allPdfHeaders : allPdfHeaders.filter(h => selectedColumns.has(h))
       const rows = filteredLogs.map(log => {
-
-
-
         const prospect = prospects[log.prospect_id] || log
-
-
-
         const dt = new Date(log.called_at)
-
-
-
         const prospectName = prospect?.name || "ID: " + log.prospect_id
-
-
-
         const prospectMobile = prospect?.mobile || "—"
-
-
-
         const outcomeLabel = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
-
-
-
-        // Parse lead_source and lead_type
-
         let leadSource: string[] = []
-
-        try {
-
-          if (prospect?.lead_source) {
-
-            if (Array.isArray(prospect.lead_source)) {
-
-              leadSource = prospect.lead_source
-
-            } else if (typeof prospect.lead_source === 'string') {
-
-              leadSource = JSON.parse(prospect.lead_source || '[]')
-
-            }
-
-          }
-
-        } catch (e) {
-
-          leadSource = []
-
-        }
-
-        
-
+        try { if (prospect?.lead_source) leadSource = Array.isArray(prospect.lead_source) ? prospect.lead_source : JSON.parse(prospect.lead_source || '[]') } catch { leadSource = [] }
         let leadType: string[] = []
-
-        try {
-
-          if (prospect?.lead_type) {
-
-            if (Array.isArray(prospect.lead_type)) {
-
-              leadType = prospect.lead_type
-
-            } else if (typeof prospect.lead_type === 'string') {
-
-              leadType = JSON.parse(prospect.lead_type || '[]')
-
-            }
-
-          }
-
-        } catch (e) {
-
-          leadType = []
-
-        }
-
-
-
-        return [
-
-
-
+        try { if (prospect?.lead_type) leadType = Array.isArray(prospect.lead_type) ? prospect.lead_type : JSON.parse(prospect.lead_type || '[]') } catch { leadType = [] }
+        const allValues: string[] = [
           prospect ? (prospect.lead_id || "—") : "—",
-
-
-
           dt.toLocaleDateString('en-IN'),
-
-
-
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-
-
-
-          prospectName,
-
-
-
-          prospectMobile,
-
-
-
-          prospect?.alt_phone || "—",
-
-
-
-          prospect?.alt_phone_2 || "—",
-
-
-
-          prospect?.alt_phone_3 || "—",
-
-
-
-          prospect?.email || "—",
-
-
-
-          prospect?.secondary_email || "—",
-
-
-
-          prospect?.alternative_email || "—",
-
-
-
-          prospect?.location || "—",
-
-
-
-          prospect?.city || "—",
-
-
-
-          prospect?.address || "—",
-
-
-
-          prospect?.postal_code || "—",
-
-
-
+          prospectName, prospectMobile,
+          prospect?.alt_phone || "—", prospect?.alt_phone_2 || "—", prospect?.alt_phone_3 || "—",
+          prospect?.email || "—", prospect?.secondary_email || "—", prospect?.alternative_email || "—",
+          prospect?.location || "—", prospect?.city || "—", prospect?.address || "—", prospect?.postal_code || "—",
           prospect?.course_interest || "—",
-
-
-
-          leadSource.join(', '),
-
-
-
-          leadType.join(', '),
-
-
-
-          prospect?.status || "—",
-
-
-
-          prospect?.parent_name || "—",
-
-
-
-          prospect?.department || "—",
-
-
-
-          prospect?.designation || "—",
-
-
-
-          prospect?.company || "—",
-
-
-
-          prospect?.college_name || "—",
-
-
-
-          prospect?.tags || "—",
-
-
-
-          prospect?.comments || "—",
-
-
-
+          leadSource.join(', ') || "—", leadType.join(', ') || "—",
+          prospect?.status || "—", prospect?.parent_name || "—", prospect?.department || "—",
+          prospect?.designation || "—", prospect?.company || "—", prospect?.college_name || "—",
+          prospect?.website || "—", (Array.isArray(prospect?.tags) ? prospect.tags.join(', ') : prospect?.tags) || "—", prospect?.comments || "—",
           prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—",
-
-
-
-          outcomeLabel,
-
-
-
-          log.status_after_call || "—",
-
-
-
-          log.notes || "—"
-
-
-
+          outcomeLabel, log.status_after_call || "—", log.notes || "—"
         ]
-
-
-
+        return selectedColumns.size === 0 ? allValues : allValues.filter((_, idx) => selectedColumns.has(allPdfHeaders[idx]))
       })
-
-
-
-
-
-
-
-      // Calculate outcome counts for summary
-
       const outcomeCounts: Record<string, number> = {}
-
       filteredLogs.forEach(log => {
-
         const label = OUTCOME_CONFIG[log.outcome] ? OUTCOME_CONFIG[log.outcome].label : log.outcome
-
         outcomeCounts[label] = (outcomeCounts[label] || 0) + 1
-
       })
-
-
-
-      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
-
-
-
       try {
-
-
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-
-
-
         // @ts-ignore
-
-
-
         const { jsPDF } = await import('jspdf')
-
-
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-
-
-
         // @ts-ignore
-
-
-
         await import('jspdf-autotable')
-
-
-
-
-
-
-
-        // Create PDF (landscape for better column fit)
-
-
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-
-
-
+        const isLandscape = pdfHeaders.length > 7
         // @ts-ignore
-
-
-
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a3' })
-
-
-
+        const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' })
+        const pageW = doc.internal.pageSize.getWidth()
+        const pageH = doc.internal.pageSize.getHeight()
+        const margin = 36
+        // ── Header ─────────────────────────────────────
+        const circleX = margin + 18, circleY = 44
+        doc.setFillColor(237, 233, 254)
+        doc.circle(circleX, circleY, 18, 'F')
+        doc.setTextColor(109, 40, 217)
         doc.setFontSize(14)
-
-
-
-        doc.text('Filtered Call History Report', 40, 40)
-
-
-
-        doc.setFontSize(10)
-
-
-
-        const telecallerName = user?.name || user?.email || 'Unknown'
-
-        const displayName = telecallerName.length > 30 ? telecallerName.substring(0, 30) + '...' : telecallerName
-
-        doc.text(`Telecaller: ${displayName}`, 40, 58)
-
-
-
-        doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`, 40, 72)
-
-
-
-
-
-
-
-        // autoTable will paginate and repeat headers
-
-
-
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-
-
-
-        // @ts-ignore
-
-
-
-        doc.autoTable({
-
-
-
-          head: [headers],
-
-
-
-          body: rows,
-
-
-
-          startY: 90,
-
-
-
-          styles: { fontSize: 5, cellPadding: 2, overflow: 'linebreak' },
-
-
-
-          headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontSize: 6 },
-
-
-
-          theme: 'grid',
-
-
-
-          margin: { left: 15, right: 15 },
-
-
-
-          tableWidth: 'auto'
-
-
-
-        })
-
-
-
-
-
-
-
-        // Add summary section
-
-        const finalY = (doc as any).lastAutoTable.finalY || 90
-
-        doc.setFontSize(10)
-
+        doc.text('\u260E', circleX - 6, circleY + 5)
+        doc.setTextColor(20, 20, 20)
         doc.setFont('helvetica', 'bold')
-
-        doc.text('SUMMARY', 40, finalY + 20)
-
+        doc.setFontSize(16)
+        doc.text('Filtered Call History Report', circleX + 26, circleY - 4)
         doc.setFont('helvetica', 'normal')
-
-        doc.text(`Total Records: ${filteredLogs.length}`, 40, finalY + 35)
-
-
-
-        let summaryY = finalY + 50
-
-        Object.entries(outcomeCounts).forEach(([outcome, count]) => {
-
-          doc.text(`${outcome}: ${count}`, 40, summaryY)
-
-          summaryY += 12
-
+        doc.setFontSize(9)
+        doc.setTextColor(120, 120, 120)
+        doc.text('TATTI CRM - Telecaller', circleX + 26, circleY + 10)
+        // Right branding
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(14)
+        doc.setTextColor(30, 30, 30)
+        const tattiW = doc.getTextWidth('TATTI CRM')
+        const tattiX = pageW - margin - tattiW - 2
+        doc.text('TATTI', tattiX, circleY - 4)
+        doc.setTextColor(109, 40, 217)
+        doc.text(' CRM', tattiX + doc.getTextWidth('TATTI'), circleY - 4)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.setTextColor(120, 120, 120)
+        const brandLabel = 'TELECALLER'
+        doc.text(brandLabel, pageW - margin - doc.getTextWidth(brandLabel), circleY + 10)
+        // Purple divider line
+        const dividerY = circleY + 22
+        doc.setDrawColor(109, 40, 217)
+        doc.setLineWidth(1)
+        doc.line(margin, dividerY, pageW - margin, dividerY)
+        // ── Telecaller info ────────────────────────────
+        const infoY = dividerY + 18
+        const telecallerName = user?.name || user?.email || 'Unknown'
+        doc.setFontSize(9)
+        doc.setTextColor(30, 30, 30)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Telecaller:', margin, infoY)
+        doc.setFont('helvetica', 'normal')
+        doc.text(telecallerName, margin + 55, infoY)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Generated:', margin, infoY + 14)
+        doc.setFont('helvetica', 'normal')
+        const now = new Date()
+        doc.text(now.toLocaleDateString('en-IN') + '  ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), margin + 55, infoY + 14)
+        // ── Data table ─────────────────────────────────
+        const tableStartY = infoY + 32
+        const fontSize = pdfHeaders.length > 12 ? 5 : pdfHeaders.length > 8 ? 6 : 8
+        // @ts-ignore
+        doc.autoTable({
+          head: [['#', ...pdfHeaders]],
+          body: rows.map((row, i) => [(i + 1).toString(), ...row]),
+          startY: tableStartY,
+          styles: { fontSize, cellPadding: { top: 4, right: 4, bottom: 4, left: 4 }, overflow: 'linebreak', textColor: [30, 30, 30], lineColor: [220, 220, 220], lineWidth: 0.3 },
+          headStyles: { fillColor: [45, 45, 65], textColor: [255, 255, 255], fontStyle: 'bold', fontSize, halign: 'center' },
+          columnStyles: { 0: { halign: 'center', cellWidth: 18 } },
+          alternateRowStyles: { fillColor: [248, 248, 252] },
+          theme: 'grid',
+          margin: { left: margin, right: margin },
+          tableWidth: 'auto',
         })
-
-
-
-
-
-
-
-        doc.save(`FilteredCallHistory_${new Date().toLocaleDateString("en-CA")}.pdf`)
-
-
-
-        toast({ title: 'PDF Downloaded', description: `Downloaded ${filteredLogs.length} records.` })
-
-
-
+        // ── Summary card ────────────────────────────────
+        const finalY = (doc as any).lastAutoTable.finalY || tableStartY
+        let summaryY = finalY + 18
+        const cardH = 64
+        if (summaryY + cardH > pageH - margin) { doc.addPage(); summaryY = margin + 18 }
+        doc.setFillColor(248, 248, 252)
+        doc.setDrawColor(220, 220, 235)
+        doc.setLineWidth(0.5)
+        doc.roundedRect(margin, summaryY, pageW - margin * 2, cardH, 6, 6, 'FD')
+        doc.setFillColor(237, 233, 254)
+        doc.circle(margin + 26, summaryY + 32, 18, 'F')
+        doc.setTextColor(109, 40, 217)
+        doc.setFontSize(11)
+        doc.text('\u25AE', margin + 21, summaryY + 36)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.setTextColor(30, 30, 30)
+        doc.text('SUMMARY', margin + 50, summaryY + 35)
+        doc.setDrawColor(200, 200, 215)
+        doc.line(margin + 112, summaryY + 10, margin + 112, summaryY + 54)
+        const statItems: [string, string][] = [
+          ['Total Records', filteredLogs.length.toString()],
+          ...Object.entries(outcomeCounts).map(([k, v]) => [k, String(v)] as [string, string])
+        ]
+        const statAreaX = margin + 120
+        const statAreaW = pageW - margin * 2 - 120
+        const statColW = Math.min(100, statAreaW / Math.max(statItems.length, 1))
+        statItems.forEach((item, i) => {
+          const sx = statAreaX + i * statColW
+          if (i > 0) { doc.setDrawColor(200, 200, 215); doc.line(sx - 2, summaryY + 10, sx - 2, summaryY + 54) }
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(7)
+          doc.setTextColor(100, 100, 120)
+          doc.text(item[0], sx + statColW / 2, summaryY + 22, { align: 'center', maxWidth: statColW - 4 })
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(15)
+          doc.setTextColor(30, 30, 30)
+          doc.text(item[1], sx + statColW / 2, summaryY + 46, { align: 'center' })
+        })
+        doc.save('FilteredCallHistory_' + new Date().toLocaleDateString("en-CA") + '.pdf')
+        toast({ title: 'PDF Downloaded', description: 'Downloaded ' + filteredLogs.length + ' records.' })
         return
-
-
-
       } catch (e) {
-
-
-
         console.error('jsPDF export failed', e)
-
-        console.error('Error details:', JSON.stringify(e, null, 2))
-
-
-
-        toast({
-
-
-
-          title: "Export Failed",
-
-
-
-          description: `PDF generation failed: ${e instanceof Error ? e.message : 'Unknown error'}. Please try again.`,
-
-
-
-          variant: "destructive"
-
-
-
-        })
-
-
-
+        toast({ title: "Export Failed", description: 'PDF generation failed: ' + (e instanceof Error ? e.message : 'Unknown error') + '.', variant: "destructive" })
       }
-
-
-
     } catch (err) {
-
-
-
-      toast({
-
-
-
-        title: "Export Failed",
-
-
-
-        description: "An error occurred while generating the PDF.",
-
-
-
-        variant: "destructive"
-
-
-
-      })
-
-
-
+      toast({ title: "Export Failed", description: "An error occurred while generating the PDF.", variant: "destructive" })
     } finally {
-
-
-
       setIsPdfExporting(false)
-
-
-
     }
-
-
-
   }
+
 
 
 
@@ -3801,6 +3447,7 @@ This is an automated report from the TATTI CRM System.
 
 
           leadType.join(', '),
+          ...(contactMode === "college" ? [proposedFor.join(', ')] : []),
 
 
 
@@ -3878,7 +3525,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
 
 
 
@@ -6055,26 +5702,12 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                  <DropdownMenuItem onClick={handleExportFilteredCSV}>
-
-
-
+                  <DropdownMenuItem onClick={() => handleOpenColumnSelector("excel")}>
                     <Download className="h-4 w-4 mr-2" /> Download as Excel
-
-
-
                   </DropdownMenuItem>
 
-
-
-                  <DropdownMenuItem onClick={handleExportFilteredPDF} disabled={isPdfExporting}>
-
-
-
+                  <DropdownMenuItem onClick={() => handleOpenColumnSelector("pdf")} disabled={isPdfExporting}>
                     {isPdfExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-
-
-
                     Download as PDF
 
 
@@ -7329,6 +6962,70 @@ This is an automated report from the TATTI CRM System.
                       Send Report
                     </>
                   )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Column Selector Modal */}
+          <Dialog open={isColumnSelectorOpen} onOpenChange={setIsColumnSelectorOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Select Columns to Export</DialogTitle>
+                <DialogDescription>
+                  Choose which columns to include in your {exportFormat === "excel" ? "Excel" : "PDF"} download.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-2">
+                <div className="flex gap-3 mb-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setSelectedColumns(new Set(ALL_EXPORT_COLUMNS))}
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setSelectedColumns(new Set())}
+                  >
+                    Deselect All
+                  </Button>
+                  <span className="text-xs text-muted-foreground ml-auto self-center">{selectedColumns.size} selected</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+                  {ALL_EXPORT_COLUMNS.map(col => (
+                    <label key={col} className="flex items-center gap-2 cursor-pointer select-none rounded-md px-2 py-1.5 hover:bg-muted/60 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedColumns.has(col)}
+                        onChange={() => toggleColumn(col)}
+                        className="rounded border-input h-4 w-4 cursor-pointer accent-purple-600"
+                      />
+                      <span className="text-sm">{col}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <DialogFooter className="flex flex-row justify-end gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsColumnSelectorOpen(false)}
+                  className="h-9 rounded-lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleExportWithColumns}
+                  disabled={selectedColumns.size === 0}
+                  className="h-9 rounded-lg bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700 gap-2 border-none"
+                >
+                  <Download className="h-4 w-4" />
+                  Export {selectedColumns.size} Column{selectedColumns.size !== 1 ? "s" : ""}
                 </Button>
               </DialogFooter>
             </DialogContent>

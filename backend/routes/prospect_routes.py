@@ -211,6 +211,7 @@ def create_prospect(prospect: ProspectCreate):
             tags=prospect.tags,
             lead_source=prospect.lead_source,
             lead_type=prospect.lead_type,
+            proposed_for=prospect.proposed_for,
             prospect_type=prospect.prospect_type,
             alt_phone=prospect.alt_phone,
             alt_phone_2=prospect.alt_phone_2,
@@ -232,6 +233,7 @@ def create_prospect(prospect: ProspectCreate):
             amount_paid=prospect.amount_paid,
             payment_status=prospect.payment_status,
             payment_mode=prospect.payment_mode,
+            payment_date=prospect.payment_date,
             transaction_id=prospect.transaction_id,
             batch=prospect.batch,
             start_month=prospect.start_month,
@@ -278,6 +280,8 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["lead_source"] = prospect.lead_source
         if prospect.lead_type is not None:
             update_kwargs["lead_type"] = prospect.lead_type
+        if prospect.proposed_for is not None:
+            update_kwargs["proposed_for"] = prospect.proposed_for
         if prospect.alt_phone is not None:
             update_kwargs["alt_phone"] = prospect.alt_phone
         if prospect.alt_phone_2 is not None:
@@ -318,6 +322,8 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["payment_status"] = prospect.payment_status
         if prospect.payment_mode is not None:
             update_kwargs["payment_mode"] = prospect.payment_mode
+        if prospect.payment_date is not None:
+            update_kwargs["payment_date"] = prospect.payment_date
         if prospect.transaction_id is not None:
             update_kwargs["transaction_id"] = prospect.transaction_id
         if prospect.batch is not None:

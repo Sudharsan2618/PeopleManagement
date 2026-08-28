@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatISTDateTime } from "@/lib/utils"
+import { formatISTDate, formatISTDateTime } from "@/lib/utils"
 import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
@@ -85,6 +85,7 @@ export default function PaymentPendingPage() {
       "Total Fee",
       "Paid",
       "Pending",
+      "Payment Date",
       "Converted Date",
     ]
     const rows = enquiries.map((enq) => [
@@ -95,7 +96,8 @@ export default function PaymentPendingPage() {
       Number(enq.course_fee || 0),
       Number(enq.total_paid || 0),
       Number(enq.pending_amount || 0),
-      formatISTDateTime(enq.converted_at).split(" ")[0],
+      enq.payment_date ? formatISTDate(enq.payment_date) : "—",
+      formatISTDate(enq.converted_at),
     ])
     const csv = [headers, ...rows]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
@@ -208,6 +210,7 @@ export default function PaymentPendingPage() {
                   <TableHead className="text-muted-foreground font-medium text-right">Total Fee (₹)</TableHead>
                   <TableHead className="text-muted-foreground font-medium text-right">Paid (₹)</TableHead>
                   <TableHead className="text-muted-foreground font-medium text-right">Pending (₹)</TableHead>
+                  <TableHead className="text-muted-foreground font-medium whitespace-nowrap">Payment Date</TableHead>
                   <TableHead className="text-muted-foreground font-medium whitespace-nowrap">Converted Date</TableHead>
                   <TableHead className="text-right text-muted-foreground font-medium">Action</TableHead>
                 </TableRow>
@@ -215,7 +218,7 @@ export default function PaymentPendingPage() {
               <TableBody>
                 {enquiries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       No pending payments found matching your criteria.
                     </TableCell>
                   </TableRow>
@@ -234,7 +237,10 @@ export default function PaymentPendingPage() {
                         <TableCell className="text-right font-medium text-emerald-600">₹{Number(enq.total_paid).toLocaleString()}</TableCell>
                         <TableCell className="text-right font-medium text-red-600">₹{Number(enq.pending_amount).toLocaleString()}</TableCell>
                         <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                          {formatISTDateTime(enq.converted_at).split(" ")[0]}
+                          {enq.payment_date ? formatISTDate(enq.payment_date) : "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {formatISTDate(enq.converted_at)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Link href={`/admin/converted-enquiries/${enq.id}`}>

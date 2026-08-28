@@ -73,6 +73,7 @@ export default function QualifiedLeadDetailPage() {
   const [convertFee, setConvertFee] = useState("")
   const [hasInitPayment, setHasInitPayment] = useState(false)
   const [initAmount, setInitAmount] = useState("")
+  const [initPaymentDate, setInitPaymentDate] = useState(new Date().toISOString().split("T")[0])
   const [initPaymentMode, setInitPaymentMode] = useState("Online")
   const [initTxnId, setInitTxnId] = useState("")
   const [initRemarks, setInitRemarks] = useState("")
@@ -142,6 +143,7 @@ export default function QualifiedLeadDetailPage() {
           lead_type: lt || "",
           amount_paid: leadData.amount_paid || "",
           payment_mode: leadData.payment_mode || "",
+          payment_date: leadData.payment_date || "",
           transaction_id: leadData.transaction_id || "",
         })
 
@@ -186,7 +188,7 @@ export default function QualifiedLeadDetailPage() {
       if (hasInitPayment) {
         payload.initial_payment = {
           amount: Number(initAmount),
-          payment_date: new Date().toISOString().split("T")[0],
+          payment_date: initPaymentDate || new Date().toISOString().split("T")[0],
           payment_mode: initPaymentMode,
           transaction_id: initTxnId,
           remarks: initRemarks,
@@ -219,6 +221,7 @@ export default function QualifiedLeadDetailPage() {
         amount_paid: newPaid,
         payment_status: pending <= 0 ? "Paid" : "Payment Pending",
         payment_mode: payMode,
+        payment_date: payDate,
         transaction_id: payTxn,
       }
       if (!lead.course_fee && currentPayable > 0) {
@@ -262,7 +265,12 @@ export default function QualifiedLeadDetailPage() {
         payload.lead_type = editForm.lead_type ? [editForm.lead_type] : []
       } else if (editSection === "payment") {
         const newAmountPaid = editForm.amount_paid ? Number(editForm.amount_paid) : 0
-        Object.assign(payload, { amount_paid: newAmountPaid, payment_mode: editForm.payment_mode, transaction_id: editForm.transaction_id })
+        Object.assign(payload, {
+          amount_paid: newAmountPaid,
+          payment_mode: editForm.payment_mode,
+          payment_date: editForm.payment_date || null,
+          transaction_id: editForm.transaction_id
+        })
 
         // Also sync the converted_enquiries record so Converted Enquiries & Payment Pending pages stay accurate
         try {
@@ -470,6 +478,16 @@ export default function QualifiedLeadDetailPage() {
               </Badge>
             </div>
             <InfoRow label="Mode of Payment" value={lead.payment_mode} />
+            <InfoRow
+              label="Date of Payment"
+              value={
+                lead.payment_date
+                  ? (lead.payment_date.includes("T") || lead.payment_date.includes(" ")
+                      ? formatISTDateTime(lead.payment_date).split(" ")[0]
+                      : lead.payment_date)
+                  : undefined
+              }
+            />
             <InfoRow label="Transaction ID" value={lead.transaction_id} />
           </CardContent>
         </Card>
@@ -507,6 +525,10 @@ export default function QualifiedLeadDetailPage() {
                   <Input type="number" value={initAmount} onChange={e => setInitAmount(e.target.value)} required={hasInitPayment} />
                 </div>
                 <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Payment Date <span className="text-destructive">*</span></Label>
+                  <Input type="date" value={initPaymentDate} onChange={e => setInitPaymentDate(e.target.value)} required={hasInitPayment} />
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Payment Mode</Label>
                   <Select value={initPaymentMode} onValueChange={setInitPaymentMode}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -518,7 +540,7 @@ export default function QualifiedLeadDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5 col-span-2">
+                <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Transaction ID</Label>
                   <Input value={initTxnId} onChange={e => setInitTxnId(e.target.value)} />
                 </div>
@@ -686,7 +708,8 @@ export default function QualifiedLeadDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5 col-span-2"><Label className="text-xs font-medium">Transaction ID</Label><Input value={editForm.transaction_id} onChange={e => setEditForm({ ...editForm, transaction_id: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label className="text-xs font-medium">Date of Payment</Label><Input type="date" value={editForm.payment_date ? editForm.payment_date.split("T")[0] : ""} onChange={e => setEditForm({ ...editForm, payment_date: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label className="text-xs font-medium">Transaction ID</Label><Input value={editForm.transaction_id} onChange={e => setEditForm({ ...editForm, transaction_id: e.target.value })} /></div>
               </div>
             )}
             <DialogFooter className="pt-2 border-t border-border mt-4">

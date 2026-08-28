@@ -47,10 +47,11 @@ class ConversionService:
     def convert_prospect(data: ConvertedEnquiryCreate) -> int:
         with get_db_cursor() as cursor:
             # 1. Calculate totals, including any previously paid amount on the prospect
-            cursor.execute("SELECT amount_paid, payment_mode, transaction_id FROM prospects WHERE id = %s", (data.prospect_id,))
+            cursor.execute("SELECT amount_paid, payment_mode, payment_date, transaction_id FROM prospects WHERE id = %s", (data.prospect_id,))
             prospect_row = cursor.fetchone()
             existing_paid = float(prospect_row['amount_paid'] or 0.0) if prospect_row else 0.0
             existing_payment_mode = (prospect_row['payment_mode'] or "Not Specified") if prospect_row else "Not Specified"
+            existing_payment_date = (str(prospect_row['payment_date']) if prospect_row and prospect_row.get('payment_date') else datetime.now().strftime("%Y-%m-%d"))
             existing_transaction_id = (prospect_row['transaction_id'] or None) if prospect_row else None
             
             course_fee = float(data.course_fee)
@@ -58,6 +59,7 @@ class ConversionService:
             total_amount_paid = existing_paid + new_payment_amount
             pending_amount = max(0.0, round(course_fee - total_amount_paid, 2))
             payment_status = "Paid" if pending_amount <= 0 else "Payment Pending"
+            latest_pay_date = str(data.initial_payment.payment_date) if data.initial_payment and new_payment_amount > 0 else (existing_payment_date if existing_paid > 0 else None)
 
             # 2. Insert Converted Enquiry
             insert_enq_query = """
@@ -91,7 +93,7 @@ class ConversionService:
             # 3a. Insert record for amount paid BEFORE conversion (if any)
             if existing_paid > 0:
                 cursor.execute(insert_pay_query, (
-                    enquiry_id, existing_paid, datetime.now().strftime("%Y-%m-%d"),
+                    enquiry_id, existing_paid, existing_payment_date,
                     existing_payment_mode, existing_transaction_id, None, data.converted_by
                 ))
 
@@ -105,8 +107,10 @@ class ConversionService:
 
             # 4. Mark Prospect as Converted and update payment fields
             cursor.execute("""
-                UPDATE prospects SET converted = TRUE, amount_paid = %s, payment_status = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s
-            """, (total_amount_paid, payment_status, data.prospect_id,))
+                UPDATE prospects 
+                SET converted = TRUE, amount_paid = %s, payment_status = %s, payment_date = COALESCE(%s, payment_date), updated_at = CURRENT_TIMESTAMP 
+                WHERE id = %s
+            """, (total_amount_paid, payment_status, latest_pay_date, data.prospect_id,))
             
             return enquiry_id
 
@@ -124,6 +128,10 @@ class ConversionService:
                    p.name as student_name,
                    p.mobile,
                    p.email,
+                   COALESCE(
+                       to_char((SELECT ph.payment_date FROM payment_history ph WHERE ph.converted_enquiry_id = ce.id AND ph.amount > 0 ORDER BY ph.payment_date DESC, ph.created_at DESC LIMIT 1), 'YYYY-MM-DD'),
+                       p.payment_date
+                   ) as payment_date,
                    u.name as telecaller_name
             FROM converted_enquiries ce
             JOIN prospects p ON ce.prospect_id = p.id
@@ -220,10 +228,10 @@ class ConversionService:
             if enquiry.get('prospect_id'):
                 update_prospect_query = """
                     UPDATE prospects 
-                    SET amount_paid = %s, payment_status = %s, updated_at = CURRENT_TIMESTAMP
+                    SET amount_paid = %s, payment_status = %s, payment_date = %s, payment_mode = %s, transaction_id = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """
-                cursor.execute(update_prospect_query, (new_total_paid, new_payment_status, enquiry['prospect_id']))
+                cursor.execute(update_prospect_query, (new_total_paid, new_payment_status, str(data.payment_date), data.payment_mode, data.transaction_id, enquiry['prospect_id']))
             
             return payment_id
 

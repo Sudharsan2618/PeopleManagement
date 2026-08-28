@@ -994,6 +994,7 @@ import {
 
 
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 
 
 
@@ -3149,7 +3150,7 @@ function CourseSearchFilter({
 
 
 
-  courses: Course[]
+  courses: Array<{ id: number; name: string }>
 
 
 
@@ -7361,6 +7362,9 @@ export default function TelecallerDashboard() {
 
   const [isLoading, setIsLoading] = useState(true)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isExcelColumnDialogOpen, setIsExcelColumnDialogOpen] = useState(false)
+  const [selectedExcelColumns, setSelectedExcelColumns] = useState<string[]>([])
+  const [excelColumnSearch, setExcelColumnSearch] = useState("")
 
 
 
@@ -7473,6 +7477,7 @@ export default function TelecallerDashboard() {
 
 
   const [useSingleDate, setUseSingleDate] = useState<boolean>(false)
+  const [countMode, setCountMode] = useState<"today" | "all">("today")
 
 
 
@@ -8837,52 +8842,12 @@ export default function TelecallerDashboard() {
 
 
           const leadType = Array.isArray(p.lead_type)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             ? p.lead_type
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             : (typeof p.lead_type === "string" ? JSON.parse(p.lead_type || "[]") : [])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+          const proposedFor = Array.isArray(p.proposed_for)
+            ? p.proposed_for
+            : (typeof p.proposed_for === "string" ? JSON.parse(p.proposed_for || "[]") : [])
 
 
 
@@ -9142,36 +9107,8 @@ export default function TelecallerDashboard() {
 
 
             lead_source: leadSource,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             lead_type: leadType,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            proposed_for: proposedFor,
 
             outcome: lastLog?.status_after_call || lastLog?.outcome || p.outcome || "New",
             status_after_call: lastLog?.status_after_call || p.status || p.outcome || "New",
@@ -10652,6 +10589,7 @@ export default function TelecallerDashboard() {
 
 
 
+    const isAllCounts = countMode === "all"
     const targetDate = useSingleDate ? singleDate : new Date().toISOString().split("T")[0]
 
 
@@ -11962,14 +11900,8 @@ export default function TelecallerDashboard() {
 
     const collegeContactsOnDate = collegeContacts.filter((p) => {
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
-      const assignmentOnDate = assignment && assignment.assigned_date === targetDate
-      const calledOnDate = collegeContactCallLogs.some((cl: any) => {
-        if (cl.prospect_id !== p.numericId) return false
-        const logDate = new Date(cl.called_at).toISOString().split("T")[0]
-        return logDate === targetDate
-      })
-
-      return assignmentOnDate || calledOnDate
+      if (!assignment) return false
+      return assignment.assigned_date === targetDate
     })
 
     const getShortTermCourseStatusOnDate = (p: any) => {
@@ -12013,7 +11945,7 @@ export default function TelecallerDashboard() {
       return callDate === targetDate
     }).length
 
-    const collegePending = collegeContacts.filter((p) =>
+    const collegePending = collegeContactsOnDate.filter((p) =>
       (p.outcome === "New" || p.status === "New" ||
         (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) &&
       p.totalCalls === 0
@@ -12116,90 +12048,10 @@ export default function TelecallerDashboard() {
     }
 
     // shortTermCourse specific stats
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     const shortTermCourseProspectsOnDate = shortTermCourseProspects.filter((p) => {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       const assignment = assignments.find((a: any) => a.prospect_id === p.numericId)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      const assignmentOnDate = assignment?.assigned_date === targetDate
-      const calledOnDate = shortTermCourseCallLogs.some((cl: any) => {
-        if (cl.prospect_id !== p.numericId) return false
-        const logDate = new Date(cl.called_at).toISOString().split("T")[0]
-        return logDate === targetDate
-      })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      return assignmentOnDate || calledOnDate
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      if (!assignment) return false
+      return assignment.assigned_date === targetDate
     })
 
 
@@ -12870,615 +12722,54 @@ export default function TelecallerDashboard() {
 
 
     return {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      // Student admission stats
       totalProspects: studentAdmissionProspects.length,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      todaysProspects: todayStudentAssignmentCount,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      callsMade: todayStudentLogs.length,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      callbacksDue: callbackCount,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      admitted: studentProspectsOnDate.filter((p) => p.status === "admission_done").length,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      pending: studentProspectsOnDate.filter(
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        (p) =>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          p.status === "new" || p.status === "New" || (p.status === "contacted" && p.totalCalls === 0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      ).length,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      visitDone: studentProspectsOnDate.filter((p) => p.status === "visit_done").length,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      // Student admission status counts
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      todaysProspects: isAllCounts ? studentAdmissionProspects.length : todayStudentAssignmentCount,
+      callsMade: isAllCounts ? studentAdmissionCallLogs.length : todayStudentLogs.length,
+      callbacksDue: isAllCounts ? studentAdmissionCallLogs.filter((cl: any) => Boolean(cl.callback_scheduled_at)).length : callbackCount,
+      admitted: isAllCounts ? studentAdmissionProspects.filter((p) => p.status === "admission_done").length : studentProspectsOnDate.filter((p) => p.status === "admission_done").length,
+      pending: isAllCounts
+        ? studentAdmissionProspects.filter((p) => (p.status === "new" || p.status === "New" || p.status === "warm" || !p.status || (p.status === "contacted" && p.totalCalls === 0)) && (p.totalCalls === 0 || !p.totalCalls)).length
+        : studentProspectsOnDate.filter((p) => p.status === "new" || p.status === "New" || (p.status === "contacted" && p.totalCalls === 0)).length,
+      visitDone: isAllCounts ? studentAdmissionProspects.filter((p) => p.status === "visit_done").length : studentProspectsOnDate.filter((p) => p.status === "visit_done").length,
       studentStatusCounts,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       callsMadeByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       callbacksByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       interestedByCourse,
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       // College contact stats
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      collegeContactsToday,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      collegeInterested,
+      collegeContactsToday: isAllCounts ? collegeContacts.length : collegeContactsToday,
+      collegeInterested: isAllCounts
+        ? collegeContacts.filter((p) => matchesCollegeStatus(p.status_after_call ?? p.outcome ?? p.status ?? p.lastStatusAfterCall ?? p.lastOutcome ?? "", "Interested", "interested", "warm", "hot")).length
+        : collegeInterested,
       collegeInterestedIds,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      collegeCallbacks,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      collegePending,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      collegeCallsMade,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      collegeCallbacks: isAllCounts ? collegeContactCallLogs.filter((cl: any) => Boolean(cl.callback_scheduled_at)).length : collegeCallbacks,
+      collegePending: isAllCounts
+        ? collegeContacts.filter((p) => (p.outcome === "New" || p.status === "New" || (!p.outcome && !p.status) || (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) && (p.totalCalls === 0 || !p.totalCalls)).length
+        : collegePending,
+      collegeCallsMade: isAllCounts ? collegeContactCallLogs.length : collegeCallsMade,
       collegeCallsMadeByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       collegeCallbacksByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       collegeInterestedByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       collegeStatusCounts,
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       // shortTermCourse stats
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      shortTermCourseToday,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      shortTermCourseToday: isAllCounts ? shortTermCourseProspects.length : shortTermCourseToday,
       shortTermCourseTotal,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      shortTermCourseInterested,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      shortTermCourseCallbacks,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      shortTermCoursePending,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      shortTermCourseCallsMade,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      shortTermCourseInterested: isAllCounts
+        ? shortTermCourseProspects.filter((p) => normalizeStatus(p.outcome ?? p.status ?? "") === "interested").length
+        : shortTermCourseInterested,
+      shortTermCourseCallbacks: isAllCounts ? shortTermCourseCallLogs.filter((cl: any) => Boolean(cl.callback_scheduled_at)).length : shortTermCourseCallbacks,
+      shortTermCoursePending: isAllCounts
+        ? shortTermCourseProspects.filter((p) => (p.outcome === "New" || p.status === "New" || (!p.outcome && !p.status) || (p.lead_source && p.lead_source.length > 0 && (!p.outcome || p.outcome === "New"))) && (p.totalCalls === 0 || !p.totalCalls)).length
+        : shortTermCoursePending,
+      shortTermCourseCallsMade: isAllCounts ? shortTermCourseCallLogs.length : shortTermCourseCallsMade,
       shortTermCourseCallsMadeByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       shortTermCourseCallbacksByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       shortTermCourseInterestedByCourse,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       shortTermCourseStatusCounts,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  }, [prospects, todayAssignmentCount, callLogs, todayLogs, assignments, singleDate, useSingleDate, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, viewMode])
+  }, [prospects, todayAssignmentCount, callLogs, todayLogs, assignments, singleDate, useSingleDate, countMode, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, viewMode])
 
 
 
@@ -21462,427 +20753,88 @@ export default function TelecallerDashboard() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-        if (statCardFilter === "Total Leads") {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          matchesStatCard = true
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        } else if (statCardFilter.includes("Prospects")) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          matchesStatCard = assignment && assignment.assigned_date === targetDate
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        } else if (statCardFilter.includes("Calls Made")) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          matchesStatCard = callsOnDate.length > 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        } else if (statCardFilter === "Interested") {
-          // Use the exact set that was counted for the Interested stat when in college_contact view.
-          if (viewMode === "college_contact" && telecallerStats && Array.isArray(telecallerStats.collegeInterestedIds)) {
-            matchesStatCard = telecallerStats.collegeInterestedIds.includes(prospect.numericId)
-          } else {
-            // Fallback behaviour: match prospects assigned or called on date and whose latest status contains 'interested'
-            const assignedOnDate = Boolean(assignment && assignment.assigned_date === targetDate)
-            const calledOnDate = callsOnDate.length > 0
-            if (!assignedOnDate && !calledOnDate) {
-              matchesStatCard = false
+        if (countMode === "all") {
+          if (statCardFilter === "Total Leads" || statCardFilter.includes("Prospects")) {
+            matchesStatCard = true
+          } else if (statCardFilter.includes("Calls Made")) {
+            matchesStatCard = prospectCalls.length > 0
+          } else if (statCardFilter === "Interested") {
+            if (viewMode === "college_contact") {
+              const statusVal = (prospect.status_after_call ?? prospect.outcome ?? prospect.status ?? prospect.lastStatusAfterCall ?? prospect.lastOutcome ?? "").toString().toLowerCase()
+              matchesStatCard = statusVal.includes("interested") || statusVal === "warm" || statusVal === "hot"
+            } else if (viewMode === "short_term_course") {
+              matchesStatCard = normalizeStatus(prospect.status || prospect.outcome || "") === "interested"
             } else {
-              let statusValue = ""
-              if (callsOnDate.length > 0) {
-                const sorted = callsOnDate.slice().sort((a: any, b: any) => new Date(b.called_at).getTime() - new Date(a.called_at).getTime())
-                const latest = sorted[0]
-                statusValue = (latest.status_after_call ?? latest.outcome ?? prospect.status ?? prospect.outcome ?? "").toString()
-              } else {
-                statusValue = (prospect.status_after_call ?? prospect.outcome ?? prospect.status ?? prospect.outcome ?? "").toString()
-              }
-              const normalized = normalizeStatus(statusValue)
-              matchesStatCard = viewMode === "short_term_course"
-                ? normalized === "interested"
-                : normalized.includes("interested") && !normalized.includes("warm") && !normalized.includes("hot")
+              matchesStatCard = normalizeStatus(prospect.status || prospect.outcome || "").includes("interested") || prospect.status === "warm" || prospect.status === "hot"
             }
+          } else if (statCardFilter === "Callbacks") {
+            matchesStatCard = prospectCalls.some((cl: any) => Boolean(cl.callback_scheduled_at))
+          } else if (statCardFilter === "Pending") {
+            matchesStatCard =
+              (prospect.outcome === "New" ||
+                prospect.status === "New" ||
+                prospect.status === "new" ||
+                (!prospect.outcome && !prospect.status) ||
+                (prospect.lead_source && prospect.lead_source.length > 0 && (!prospect.outcome || prospect.outcome === "New"))) &&
+              (prospect.totalCalls === 0 || prospectCalls.length === 0)
+          } else if (statCardFilter === "Admitted") {
+            matchesStatCard = prospect.status === "admission_done"
+          } else if (statCardFilter === "Visit Done / Decision Pending") {
+            matchesStatCard = prospect.status === "visit_done"
           }
-
-        } else if (statCardFilter === "Callbacks") {
-
-
-
-
-
-
-
-          // Show prospects that had a callback scheduled on the target date
-
-
-
-
-
-
-
-          const prospectCallsOnDate = prospectCalls.filter((cl: any) => {
-
-
-
-
-
-
-
-            const callDate = new Date(cl.called_at).toISOString().split("T")[0]
-
-
-
-
-
-
-
-            return callDate === targetDate && cl.callback_scheduled_at
-
-
-
-
-
-
-
-          })
-
-
-
-
-
-
-
-          matchesStatCard = prospectCallsOnDate.length > 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        } else if (statCardFilter === "Pending") {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          matchesStatCard = assignment && assignment.assigned_date === targetDate &&
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            (prospectCalls.length === 0 ||
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-              (prospectCalls.length > 0 && prospectCalls[prospectCalls.length - 1].outcome === "New"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        } else if (statCardFilter === "Admitted") {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          matchesStatCard = assignment && assignment.assigned_date === targetDate &&
-
-
-
-
-
-
-
-            prospect.status === "admission_done"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        } else if (statCardFilter === "Visit Done / Decision Pending") {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          matchesStatCard = assignment && assignment.assigned_date === targetDate &&
-
-
-
-
-
-
-
-            prospect.status === "visit_done"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        } else {
+          if (statCardFilter === "Total Leads") {
+            matchesStatCard = true
+          } else if (statCardFilter.includes("Prospects")) {
+            matchesStatCard = assignment && assignment.assigned_date === targetDate
+          } else if (statCardFilter.includes("Calls Made")) {
+            matchesStatCard = callsOnDate.length > 0
+          } else if (statCardFilter === "Interested") {
+            if (viewMode === "college_contact" && telecallerStats && Array.isArray(telecallerStats.collegeInterestedIds)) {
+              matchesStatCard = telecallerStats.collegeInterestedIds.includes(prospect.numericId)
+            } else {
+              const assignedOnDate = Boolean(assignment && assignment.assigned_date === targetDate)
+              const calledOnDate = callsOnDate.length > 0
+              if (!assignedOnDate && !calledOnDate) {
+                matchesStatCard = false
+              } else {
+                let statusValue = ""
+                if (callsOnDate.length > 0) {
+                  const sorted = callsOnDate.slice().sort((a: any, b: any) => new Date(b.called_at).getTime() - new Date(a.called_at).getTime())
+                  const latest = sorted[0]
+                  statusValue = (latest.status_after_call ?? latest.outcome ?? prospect.status ?? prospect.outcome ?? "").toString()
+                } else {
+                  statusValue = (prospect.status_after_call ?? prospect.outcome ?? prospect.status ?? prospect.outcome ?? "").toString()
+                }
+                const normalized = normalizeStatus(statusValue)
+                matchesStatCard = viewMode === "short_term_course"
+                  ? normalized === "interested"
+                  : normalized.includes("interested") && !normalized.includes("warm") && !normalized.includes("hot")
+              }
+            }
+          } else if (statCardFilter === "Callbacks") {
+            const prospectCallsOnDate = prospectCalls.filter((cl: any) => {
+              const callDate = new Date(cl.called_at).toISOString().split("T")[0]
+              return callDate === targetDate && cl.callback_scheduled_at
+            })
+            matchesStatCard = prospectCallsOnDate.length > 0
+          } else if (statCardFilter === "Pending") {
+            matchesStatCard = assignment && assignment.assigned_date === targetDate &&
+              (prospectCalls.length === 0 ||
+                (prospectCalls.length > 0 && prospectCalls[prospectCalls.length - 1].outcome === "New"))
+          } else if (statCardFilter === "Admitted") {
+            matchesStatCard = assignment && assignment.assigned_date === targetDate &&
+              prospect.status === "admission_done"
+          } else if (statCardFilter === "Visit Done / Decision Pending") {
+            matchesStatCard = assignment && assignment.assigned_date === targetDate &&
+              prospect.status === "visit_done"
+          }
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesStatCard
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, telecallerStats])
+  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats])
 
 
 
@@ -22090,7 +21042,7 @@ export default function TelecallerDashboard() {
 
 
 
-      { key: "parentName", label: "Parent Name", hasData: false },
+      { key: "parentName", label: "Point of Contact", hasData: false },
 
 
 
@@ -22317,9 +21269,7 @@ export default function TelecallerDashboard() {
 
 
       ...(viewMode === "college_contact" ? [] : [
-        ...(viewMode === "college_contact" ? [] : [
-          { key: "courseInterest", label: "Course", hasData: true, alwaysVisible: true },
-        ]),
+        { key: "courseInterest", label: "Course", hasData: true, alwaysVisible: true },
       ]),
 
 
@@ -22354,19 +21304,9 @@ export default function TelecallerDashboard() {
 
       { key: "lead_type", label: "Lead Type", hasData: false },
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+      ...(viewMode === "college_contact" ? [
+        { key: "proposed_for", label: "Proposed For", hasData: false },
+      ] : []),
 
       { key: "status", label: "Status", hasData: true, alwaysVisible: true },
 
@@ -23464,6 +22404,7 @@ export default function TelecallerDashboard() {
 
 
         designation: editingProspect.designation,
+        parent_name: editingProspect.parentName,
 
 
 
@@ -24441,6 +23382,8 @@ export default function TelecallerDashboard() {
 
       const leadType = (data.lead_type as string[]) || selectedProspect.lead_type || []
 
+      const proposedFor = (data.proposed_for as string[]) || selectedProspect.proposed_for || []
+
 
 
 
@@ -24980,6 +23923,7 @@ export default function TelecallerDashboard() {
 
           lead_type: leadType,
 
+          proposed_for: proposedFor,
 
 
 
@@ -25049,6 +23993,7 @@ export default function TelecallerDashboard() {
         await prospectsApi.update(Number(selectedProspect.numericId), {
           lead_source: leadSource,
           lead_type: leadType,
+          proposed_for: proposedFor,
           ...(callbackScheduledAt ? { follow_up_date: (data.callbackDate as string) } : {}),
         })
       }
@@ -25437,6 +24382,7 @@ export default function TelecallerDashboard() {
     ...(viewMode !== "college_contact" ? [{ header: "Course", key: "courseInterest" }] : []),
     { header: "Lead Source", key: "lead_source" },
     { header: "Lead Type", key: "lead_type" },
+    ...(viewMode === "college_contact" ? [{ header: "Proposed For", key: "proposed_for" }] : []),
     { header: "Status", key: "status" },
     { header: "Follow-up Date", key: "follow_up_date" },
     { header: "Callback Date", key: "callbackDateTime" },
@@ -25445,16 +24391,20 @@ export default function TelecallerDashboard() {
     { header: "Notes", key: "lastNotes" },
     { header: "Website", key: "website" },
     { header: "Designation", key: "designation" },
-    { header: "Parent Name", key: "parentName" },
+    { header: "Point of Contact", key: "parentName" },
     { header: "Department", key: "department" },
     ...(viewMode === "college_contact" ? [{ header: "College Name", key: "collegeName" }] : []),
   ]
+
+  const uniqueExcelColumns = exportColumns.filter(
+    (column, index, columns) => columns.findIndex((item) => item.key === column.key) === index,
+  )
 
   const pdfExportColumns = [
     { header: "#", key: "index" },
     { header: "Lead ID", key: "lead_id" },
     { header: viewMode === "college_contact" ? "College Name" : "Student Name", key: viewMode === "college_contact" ? "collegeName" : "name" },
-    { header: "Parent Name", key: "parentName" },
+    { header: "Point of Contact", key: "parentName" },
     { header: "Mobile", key: "mobile" },
     { header: "Alt Phone 1", key: "altPhone" },
     { header: "Alt Phone 2", key: "altPhone2" },
@@ -25471,6 +24421,7 @@ export default function TelecallerDashboard() {
     ...(viewMode !== "college_contact" ? [{ header: "Course", key: "courseInterest" }] : []),
     { header: "Lead Source", key: "lead_source" },
     { header: "Lead Type", key: "lead_type" },
+    ...(viewMode === "college_contact" ? [{ header: "Proposed For", key: "proposed_for" }] : []),
     { header: "Status", key: "status" },
     { header: "Calls", key: "totalCalls" },
     { header: "Last Call", key: "lastCallAt" },
@@ -25526,10 +24477,10 @@ export default function TelecallerDashboard() {
     return row
   }
 
-  const getExportData = () => {
-    return filteredProspects.map((prospect, index) => {
-      const row: any = { "#": index + 1 }
-      exportColumns.forEach(col => {
+  const getExportData = (columns = exportColumns) => {
+    return filteredProspects.map((prospect) => {
+      const row: any = {}
+      columns.forEach(col => {
         let val = prospect[col.key]
         if (Array.isArray(val)) val = val.join(", ")
         if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
@@ -25587,7 +24538,12 @@ export default function TelecallerDashboard() {
   const handleDownloadExcel = () => {
     try {
       setIsDownloading(true)
-      const data = getExportData()
+      if (selectedExcelColumns.length === 0) {
+        toast({ title: "Please select at least one column.", variant: "destructive" })
+        return
+      }
+      const selectedColumns = uniqueExcelColumns.filter((column) => selectedExcelColumns.includes(column.key))
+      const data = getExportData(selectedColumns)
       if (data.length === 0) {
         toast({ title: "No data to export", variant: "destructive" })
         return
@@ -25598,12 +24554,19 @@ export default function TelecallerDashboard() {
       const dateStr = new Date().toISOString().split("T")[0]
       XLSX.writeFile(workbook, `Dashboard_Export_${dateStr}.xlsx`)
       toast({ title: "Excel downloaded successfully" })
+      setIsExcelColumnDialogOpen(false)
     } catch (err) {
       console.error(err)
       toast({ title: "Export failed", description: "Could not generate Excel file.", variant: "destructive" })
     } finally {
       setIsDownloading(false)
     }
+  }
+
+  const openExcelColumnDialog = () => {
+    setSelectedExcelColumns(uniqueExcelColumns.map((column) => column.key))
+    setExcelColumnSearch("")
+    setIsExcelColumnDialogOpen(true)
   }
 
   const handleDownloadPDF = () => {
@@ -25652,10 +24615,10 @@ export default function TelecallerDashboard() {
         const remaining = columns.filter((col) => !repeatKeys.includes(col.key))
         const sampleWidths = buildColumnWidths(columns, data)
         const columnWidthMap = new Map(columns.map((col, idx) => [col.key, sampleWidths[idx]]))
-        const sections: typeof tableColumns[][] = []
+        const sections: any[][] = []
         let cursor = 0
         while (cursor < remaining.length) {
-          const section: typeof tableColumns = [...repeatColumns]
+          const section: any[] = [...repeatColumns]
           let sectionWidth = repeatColumns.reduce((sum, col) => sum + (columnWidthMap.get(col.key) ?? 60), 0)
           while (cursor < remaining.length) {
             const nextCol = remaining[cursor]
@@ -25677,7 +24640,7 @@ export default function TelecallerDashboard() {
 
       const sections = tableColumns.length > 12 ? getColumnChunkSections(tableColumns) : [tableColumns]
 
-      const renderSection = (sectionColumns: typeof tableColumns, pageNumberOffset: number) => {
+      const renderSection = (sectionColumns: any[], pageNumberOffset: number) => {
         const sectionRows = data.map((row) => sectionColumns.map((col) => {
           const label = col.label ?? col.header ?? col.key
           return String(row[label] || "-")
@@ -25841,8 +24804,6 @@ export default function TelecallerDashboard() {
 
 
     <div className="space-y-6">
-
-
 
 
 
@@ -26161,10 +25122,6 @@ export default function TelecallerDashboard() {
 
 
         <div>
-
-
-
-
 
 
 
@@ -26960,7 +25917,7 @@ export default function TelecallerDashboard() {
 
 
 
-              onClick={() => setUseSingleDate(!useSingleDate)}
+              onClick={() => { setUseSingleDate(!useSingleDate); setCountMode("today"); }}
 
 
 
@@ -27042,19 +25999,13 @@ export default function TelecallerDashboard() {
 
             </Button>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+            <Button
+              onClick={() => { const next = countMode === "all" ? "today" : "all"; setCountMode(next); if (next === "all") setUseSingleDate(false); }}
+              variant={countMode === "all" ? "default" : "outline"}
+              size="sm"
+            >
+              All Counts
+            </Button>
 
             {useSingleDate && (
 
@@ -28769,7 +27720,7 @@ export default function TelecallerDashboard() {
                     </PopoverTrigger>
                     <PopoverContent className="w-48 p-1" align="end">
                       <div className="flex flex-col gap-1">
-                        <Button variant="ghost" className="justify-start gap-2 text-sm font-normal" onClick={handleDownloadExcel} disabled={isDownloading}>
+                        <Button variant="ghost" className="justify-start gap-2 text-sm font-normal" onClick={openExcelColumnDialog} disabled={isDownloading}>
                           <Download className="h-4 w-4 text-green-600" /> Download Excel
                         </Button>
                       </div>
@@ -33640,8 +32591,6 @@ export default function TelecallerDashboard() {
 
 
 
-
-
                             case "location":
 
 
@@ -34378,8 +33327,24 @@ export default function TelecallerDashboard() {
 
 
 
-                            case "status":
+                            case "proposed_for":
+                              return (
+                                <TableCell key="proposed_for">
+                                  {prospect.proposed_for && prospect.proposed_for.length > 0 ? (
+                                    <div className="flex flex-col gap-0.5">
+                                      {prospect.proposed_for.map((t: string) => (
+                                        <Badge key={t} variant="outline" className="text-[10px] w-fit border-amber-500/30 text-amber-600">
+                                          {t}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </TableCell>
+                              )
 
+                            case "status":
 
 
 
@@ -37004,6 +35969,92 @@ export default function TelecallerDashboard() {
 
 
 
+      <Dialog open={isExcelColumnDialogOpen} onOpenChange={setIsExcelColumnDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Download Excel</DialogTitle>
+            <DialogDescription>Select the columns you want to include in the Excel file.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search columns..."
+                value={excelColumnSearch}
+                onChange={(event) => setExcelColumnSearch(event.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <div className="flex items-center justify-between border-b pb-3 text-sm">
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0"
+                onClick={() => setSelectedExcelColumns(uniqueExcelColumns.map((column) => column.key))}
+              >
+                Select All
+              </Button>
+
+              <Button
+                onClick={() => setCountMode(countMode === "all" ? "today" : "all")}
+                variant={countMode === "all" ? "default" : "outline"}
+                size="sm"
+              >
+                All Counts
+              </Button>
+
+              <span className="text-muted-foreground">
+                {selectedExcelColumns.length} / {uniqueExcelColumns.length} selected
+              </span>
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0"
+                onClick={() => setSelectedExcelColumns([])}
+              >
+                Clear All
+              </Button>
+            </div>
+
+            <div className="grid max-h-64 grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2">
+              {uniqueExcelColumns
+                .filter((column) => column.header.toLowerCase().includes(excelColumnSearch.toLowerCase()))
+                .map((column) => (
+                  <label key={column.key} htmlFor={`excel-column-${column.key}`} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      id={`excel-column-${column.key}`}
+                      checked={selectedExcelColumns.includes(column.key)}
+                      onCheckedChange={(checked) => {
+                        setSelectedExcelColumns((current) =>
+                          checked
+                            ? [...current, column.key]
+                            : current.filter((key) => key !== column.key),
+                        )
+                      }}
+                    />
+                    <span>{column.header}</span>
+                  </label>
+                ))}
+            </div>
+
+            <DialogFooter className="items-center sm:justify-between">
+              <span className="text-sm text-muted-foreground">{selectedExcelColumns.length} columns selected</span>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsExcelColumnDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={handleDownloadExcel} disabled={isDownloading} className="gap-2">
+                  {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Download Excel
+                </Button>
+              </div>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Prospect Modal */}
 
 
@@ -38812,7 +37863,7 @@ export default function TelecallerDashboard() {
 
 
 
-                <Label htmlFor="edit-courseInterest">Course</Label>
+                <Label htmlFor="edit-parentName">Point of Contact</Label>
 
 
 
@@ -38844,7 +37895,7 @@ export default function TelecallerDashboard() {
 
 
 
-                  id="edit-courseInterest"
+                  id="edit-parentName"
 
 
 
@@ -38860,7 +37911,7 @@ export default function TelecallerDashboard() {
 
 
 
-                  value={editingProspect?.courseInterest || ""}
+                  value={editingProspect?.parentName || ""}
 
 
 
@@ -38876,7 +37927,7 @@ export default function TelecallerDashboard() {
 
 
 
-                  onChange={(e) => setEditingProspect({ ...editingProspect, courseInterest: e.target.value })}
+                  onChange={(e) => setEditingProspect({ ...editingProspect, parentName: e.target.value })}
 
 
 
@@ -39356,151 +38407,6 @@ export default function TelecallerDashboard() {
 
 
 
-            <div className="space-y-2">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-              <Label htmlFor="edit-comments">Comments</Label>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-              <Textarea
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                id="edit-comments"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                value={editingProspect?.comments || ""}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                onChange={(e) => setEditingProspect({ ...editingProspect, comments: e.target.value })}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                rows={4}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                placeholder="Add any notes or comments about this prospect..."
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-              />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            </div>
 
 
 

@@ -54,6 +54,7 @@ export interface Prospect {
   course_fee?: number
   amount_paid?: number
   payment_mode?: string
+  payment_date?: string
   transaction_id?: string
   batch?: string
   start_month?: string

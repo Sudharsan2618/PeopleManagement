@@ -126,6 +126,15 @@ const LEAD_TYPE_OPTIONS = [
   "Short Term Course Admission",
 ]
 
+const PROPOSED_FOR_OPTIONS = [
+  "Assist",
+  "Zoho YCP",
+  "FDP",
+  "VAC",
+  "Incubation center",
+  "global emertion",
+]
+
 const defaultOutcomeOptions = [
   {
     value: "warm",
@@ -486,9 +495,10 @@ export function CallOutcomeModal({
   const [coursesLoading, setCoursesLoading] = useState(false)
   const [selectedSpecificCourse, setSelectedSpecificCourse] = useState("")
 
-  // Lead Source & Lead Type
+  // Lead Source & Lead Type & Proposed For
   const [leadSource, setLeadSource] = useState<string[]>([])
   const [leadType, setLeadType] = useState<string[]>([])
+  const [proposedFor, setProposedFor] = useState<string[]>([])
 
   // Real call history from API
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
@@ -679,6 +689,7 @@ export function CallOutcomeModal({
     const parse = (v: any) => (Array.isArray(v) ? v : typeof v === "string" ? [v] : [])
     setLeadSource(parse((prospect as any).lead_source))
     setLeadType(parse((prospect as any).lead_type))
+    setProposedFor(parse((prospect as any).proposed_for))
   }, [prospect, open])
 
   const resetForm = () => {
@@ -699,6 +710,7 @@ export function CallOutcomeModal({
     setInstitutionName("")
     setLeadSource([])
     setLeadType([])
+    setProposedFor([])
     setSelectedSpecificCourse("")
   }
 
@@ -750,6 +762,7 @@ export function CallOutcomeModal({
       notes,
       lead_source: leadSource,
       lead_type: leadType,
+      proposed_for: proposedFor,
       status: selectedOutcome,
     }
 
@@ -831,8 +844,8 @@ export function CallOutcomeModal({
                         {prospect.courseInterest || "Interest not captured"}
                       </Badge>
                     </div>
-                    {/* Show existing lead source/type if any */}
-                    {(prospect.lead_source?.length > 0 || prospect.lead_type?.length > 0) && (
+                    {/* Show existing lead source/type/proposed_for if any */}
+                    {(prospect.lead_source?.length > 0 || prospect.lead_type?.length > 0 || prospect.proposed_for?.length > 0) && (
                       <div className="space-y-1">
                         {prospect.lead_source?.length > 0 && (
                           <div className="flex flex-wrap gap-1">
@@ -845,6 +858,13 @@ export function CallOutcomeModal({
                           <div className="flex flex-wrap gap-1">
                             {prospect.lead_type.map((t: string) => (
                               <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary">{t}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {prospect.proposed_for?.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {prospect.proposed_for.map((t: string) => (
+                              <Badge key={t} variant="outline" className="text-[10px] border-amber-500/30 text-amber-600">{t}</Badge>
                             ))}
                           </div>
                         )}
@@ -957,24 +977,45 @@ export function CallOutcomeModal({
                     </div>
 
                     {showLeadType && (
-                      <div className="space-y-2">
-                        <Label className="text-xs font-semibold uppercase text-muted-foreground">
-                          Lead Type
-                        </Label>
-                        <MultiSelect
-                          options={LEAD_TYPE_OPTIONS}
-                          selected={leadType}
-                          onChange={setLeadType}
-                          placeholder="Select lead type(s)..."
-                        />
-                        {leadType.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {leadType.map(t => (
-                              <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary rounded-sm">{t}</Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                            Lead Type
+                          </Label>
+                          <MultiSelect
+                            options={LEAD_TYPE_OPTIONS}
+                            selected={leadType}
+                            onChange={setLeadType}
+                            placeholder="Select lead type(s)..."
+                          />
+                          {leadType.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {leadType.map(t => (
+                                <Badge key={t} variant="outline" className="text-[10px] border-primary/30 text-primary rounded-sm">{t}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                            Proposed For
+                          </Label>
+                          <MultiSelect
+                            options={PROPOSED_FOR_OPTIONS}
+                            selected={proposedFor}
+                            onChange={setProposedFor}
+                            placeholder="Select proposed for..."
+                          />
+                          {proposedFor.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {proposedFor.map(t => (
+                                <Badge key={t} variant="outline" className="text-[10px] border-amber-500/30 text-amber-600 rounded-sm">{t}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
 
                     {isShortTermCourseModeOrTatti && (
