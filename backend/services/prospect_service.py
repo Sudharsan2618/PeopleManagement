@@ -1066,10 +1066,11 @@ class ProspectService:
         new_records: list = []       # ordered rows to insert
         new_by_mobile, new_by_lead = {}, {}
 
-        def _acc_from(course, tags, source, type_, existing=None):
+        def _acc_from(course, tags, source, type_, proposed_for=None, existing=None):
             return {"course": course, "tags": ProspectService._as_list(tags),
                     "source": ProspectService._as_list(source),
                     "type": ProspectService._as_list(type_),
+                    "proposed_for": ProspectService._as_list(proposed_for),
                     # `existing` is None for in-file (pending-insert) accumulators,
                     # which have no stored row to enrich.
                     "existing": existing, "fills": {}}
@@ -1081,6 +1082,7 @@ class ProspectService:
             acc["tags"] = ProspectService._union(acc["tags"], ProspectService._as_list(p.get("tags")) + course_tags)
             acc["source"] = ProspectService._union(acc["source"], ProspectService._as_list(p.get("lead_source")))
             acc["type"] = ProspectService._union(acc["type"], ProspectService._as_list(p.get("lead_type")))
+            acc["proposed_for"] = ProspectService._union(acc["proposed_for"], ProspectService._as_list(p.get("proposed_for")))
 
             ex = acc.get("existing")
             if not ex:
@@ -1166,6 +1168,7 @@ class ProspectService:
                               json.dumps(acc["tags"]) if acc["tags"] else None,
                               json.dumps(acc["source"]) if acc["source"] else '[]',
                               json.dumps(acc["type"]) if acc["type"] else '[]',
+                              json.dumps(acc["proposed_for"]) if acc["proposed_for"] else '[]',
                               now]
                     # Backfilled name + any columns the existing lead was missing.
                     # Field names come from a fixed allow-list, not user input.
