@@ -7705,7 +7705,9 @@ export default function TelecallerDashboard() {
 
 
 
-        prospectsApi.getAll(),
+        // Assigned-only: the dashboard filters to assignedProspectIds anyway, so
+        // fetch just this telecaller's prospects instead of the whole table.
+        prospectsApi.getByAssignee(telecallerId),
 
 
 

@@ -7,7 +7,6 @@ type CallbackReminderCallLog = CallLog & {
   prospect_phone?: string
 }
 
-const POLLING_INTERVAL = 30 * 1000 // 30 seconds
 const SNOOZE_DURATION_MS = 5 * 60 * 1000
 // Sentinel for "muted until this page is reloaded". The mute lives in component
 // state only, so a reload or a fresh login surfaces the reminder again.
@@ -177,7 +176,6 @@ export function useCallbackReminder(telecallerId: number | undefined) {
   const [isOpen, setIsOpen] = useState(false)
   const [mutedUntil, setMutedUntil] = useState(0)
   const muteTimer = useRef<number | null>(null)
-  const pollingTimer = useRef<number | null>(null)
 
   const fetchPendingCallbacks = useCallback(async () => {
     if (!telecallerId) {
@@ -197,15 +195,9 @@ export function useCallbackReminder(telecallerId: number | undefined) {
       return
     }
 
+    // Load once on mount / when the telecaller changes. No interval polling —
+    // the list refreshes on explicit actions (dismiss/complete) and page reloads.
     fetchPendingCallbacks()
-
-    pollingTimer.current = window.setInterval(fetchPendingCallbacks, POLLING_INTERVAL)
-
-    return () => {
-      if (pollingTimer.current) {
-        window.clearInterval(pollingTimer.current)
-      }
-    }
   }, [telecallerId, fetchPendingCallbacks])
 
   useEffect(() => {

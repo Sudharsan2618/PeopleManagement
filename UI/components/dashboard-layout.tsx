@@ -48,7 +48,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn, formatISTDateTime } from "@/lib/utils"
 import { type UserRole, mockNotifications } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import { dashboardApi, callLogsApi, whatsappApi, prospectsApi } from "@/lib/api-client"
+import { dashboardApi, callLogsApi, whatsappApi } from "@/lib/api-client"
 
 interface NavItem {
   title: string
@@ -58,7 +58,6 @@ interface NavItem {
   children?: NavItem[]
 }
 
-const CALLBACK_COUNT_POLL_INTERVAL = 30 * 1000
 
 const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
@@ -184,16 +183,16 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
       }
     }
 
+    // Load once on mount. No interval polling — badge counts refresh on the
+    // explicit "refreshBadgeCounts" event (fired after actions) and page reloads.
     fetchCounts()
 
-    const intervalId = window.setInterval(fetchCounts, CALLBACK_COUNT_POLL_INTERVAL)
     const refreshCounts = () => {
       fetchCounts()
     }
 
     window.addEventListener("refreshBadgeCounts", refreshCounts)
     return () => {
-      window.clearInterval(intervalId)
       window.removeEventListener("refreshBadgeCounts", refreshCounts)
     }
   }, [user])
@@ -210,66 +209,54 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         }
 
         const telecallerId = Number(user.id)
-        // To match the callbacks page, fetch all logs and prospects and then compute
-        // the latest log per prospect+course (split comma-separated courses)
-        const [allLogs, allProspects] = await Promise.all([
-          callLogsApi.getByTelecaller(telecallerId),
-          prospectsApi.getAll(),
-        ])
-        const prospectMap: Record<number, any> = {}
-        allProspects.forEach((p: any) => (prospectMap[p.id] = p))
+        // Lean, server-filtered pending callbacks for THIS telecaller. The
+        // endpoint already joins prospect name/phone/course and drops dismissed
+        // rows, so we no longer pull the entire prospects table + every call log
+        // into the browser on each 30s poll (that was the main Cloud Run egress).
+        const pending = await callLogsApi.getPendingCallbacks(telecallerId)
 
+        // Keep the latest scheduled callback per prospect+course (courses may be
+        // comma-separated), matching the callbacks page.
+        const normalize = (s: string) => s.replace(/([0-9])([A-Z])/g, "$1, $2").replace(/([a-z])([A-Z])/g, "$1, $2")
         const latestLogByProspect = new Map<string, any>()
-        allLogs.forEach((log: any) => {
+        pending.forEach((log: any) => {
           const pid = log.prospect_id
-          if (pid == null) return
-          const prospect = prospectMap[pid]
-          const normalize = (s: string) => s.replace(/([0-9])([A-Z])/g, "$1, $2").replace(/([a-z])([A-Z])/g, "$1, $2")
-          const explicitCourse = (log.course_interest || "").trim()
-          let courses: string[] = []
-          if (explicitCourse) {
-            const norm = normalize(explicitCourse)
-            courses = norm.split(",").map((c: string) => c.trim()).filter(Boolean)
-          } else if (prospect && prospect.course_interest) {
-            const norm = normalize((prospect.course_interest || "").trim())
-            courses = norm.split(",").map((c: string) => c.trim()).filter(Boolean)
+          if (pid == null || !log.callback_scheduled_at) return
+          const explicitCourse = (log.course_interest || log.prospect_course_interest || "").trim()
+          const courses = explicitCourse
+            ? normalize(explicitCourse).split(",").map((c: string) => c.trim()).filter(Boolean)
+            : []
+
+          const consider = (key: string, row: any) => {
+            const existing = latestLogByProspect.get(key)
+            if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
+              latestLogByProspect.set(key, row)
+            }
           }
 
           if (courses.length === 0) {
-            const key = `${pid}_default`
-            const existing = latestLogByProspect.get(key)
-            if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
-              latestLogByProspect.set(key, { ...log, displayCourse: (log.course_interest || prospect?.course_interest || "").trim() })
-            }
+            consider(`${pid}_default`, { ...log, displayCourse: explicitCourse })
           } else {
             courses.forEach((course) => {
-              const key = `${pid}_${course}`
-              const existing = latestLogByProspect.get(key)
-              if (!existing || new Date(log.called_at) > new Date(existing.called_at)) {
-                latestLogByProspect.set(key, { ...log, course_interest: course, displayCourse: course })
-              }
+              consider(`${pid}_${course}`, { ...log, course_interest: course, displayCourse: course })
             })
           }
         })
 
-        const callbacks = Array.from(latestLogByProspect.values()).filter(
-          (log: any) => log.callback_scheduled_at
-        )
-
-        setPendingCallbacks(callbacks || [])
+        setPendingCallbacks(Array.from(latestLogByProspect.values()))
       } catch (err) {
         console.error("Failed to fetch pending callbacks:", err)
       }
     }
 
+    // Load once on mount. No interval polling — the dropdown refreshes on the
+    // explicit "refreshPendingCallbacks" event (fired after actions) and reloads.
     fetchPending()
 
-    const intervalId = window.setInterval(fetchPending, CALLBACK_COUNT_POLL_INTERVAL)
     const refreshPending = () => fetchPending()
 
     window.addEventListener("refreshPendingCallbacks", refreshPending)
     return () => {
-      window.clearInterval(intervalId)
       window.removeEventListener("refreshPendingCallbacks", refreshPending)
     }
   }, [user, role])

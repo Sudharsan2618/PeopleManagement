@@ -81,11 +81,8 @@ export default function AdminTelecallersPage() {
   }
 
   useEffect(() => {
+    // Load once on mount. No interval polling — reload the page to refresh.
     fetchData()
-    
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchData, 60000)
-    return () => clearInterval(interval)
   }, [])
 
   const filteredTelecallers = useMemo(() => {

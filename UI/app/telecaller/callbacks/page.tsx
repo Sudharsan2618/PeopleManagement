@@ -100,7 +100,9 @@ export default function CallbacksPage() {
       setIsLoading(true)
       const [allLogs, allProspects] = await Promise.all([
         callLogsApi.getByTelecaller(telecallerId),
-        prospectsApi.getAll(),
+        // Assigned-only: this view only maps the telecaller's own callbacks, so
+        // fetch just their prospects instead of the entire table.
+        prospectsApi.getByAssignee(telecallerId),
       ])
 
       const prospectMap: Record<number, Prospect> = {}

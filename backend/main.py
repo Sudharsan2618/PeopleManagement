@@ -17,6 +17,7 @@ from arq.connections import RedisSettings
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from config import Settings
 from crypto import decrypt_flow_request, encrypt_flow_response
@@ -120,6 +121,13 @@ app = FastAPI(
     lifespan=lifespan,
     version="1.1.0"
 )
+
+# ── Compression ───────────────────────────────────────────────────────────────
+# Gzip every response >= 500 bytes. JSON list payloads (prospects, call logs,
+# reports) compress ~6-10x, which directly cuts Cloud Run "Data Transfer Out"
+# egress — the main billing driver. Browsers send Accept-Encoding: gzip and
+# decompress transparently, so no frontend change is required.
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 

@@ -129,9 +129,8 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => {
+    // Load on mount and when the date range changes. No interval polling.
     fetchData()
-    const interval = setInterval(fetchData, 60000)
-    return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate])
 

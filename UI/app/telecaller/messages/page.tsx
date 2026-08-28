@@ -41,8 +41,6 @@ interface Conversation {
   unread: boolean
 }
 
-const POLL_INTERVAL = 15 * 1000
-
 function windowLabel(expiresAt: string | null): string {
   if (!expiresAt) return ""
   const ms = new Date(expiresAt).getTime() - Date.now()
@@ -99,20 +97,12 @@ export default function TelecallerMessages() {
     }
   }, [])
 
-  // Initial load + poll: conversations always, thread only when one is open.
+  // Initial load only. No interval polling — the conversation list and the open
+  // thread refresh when you (re)select a chat or send a message, and on reload.
   useEffect(() => {
     if (!telecallerId) return
     fetchConversations()
     whatsappApi.getTemplates().then(setTemplates).catch(() => {})
-    const interval = setInterval(() => {
-      fetchConversations()
-      const chat = selectedChatRef.current
-      if (chat) {
-        fetchMessages(chat.id)
-        fetchSessionStatus(chat.id)
-      }
-    }, POLL_INTERVAL)
-    return () => clearInterval(interval)
   }, [telecallerId, fetchConversations, fetchMessages, fetchSessionStatus])
 
   // Pin thread to the latest message when it changes.

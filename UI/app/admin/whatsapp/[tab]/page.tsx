@@ -598,21 +598,12 @@ export default function WhatsAppAdmin() {
     })
 
     eventSource.onerror = (err) => {
-      console.warn("SSE connection error, falling back...", err)
+      console.warn("SSE connection error", err)
     }
 
-    // Fallback polling (15s) — also gated to the inbox tab.
-    const interval = setInterval(() => {
-      if (activeTabRef.current !== "inbox") return
-      refreshConversationsList()
-      if (selectedChatRef.current) {
-        fetchMessages(selectedChatRef.current.id)
-      }
-    }, 15000)
-
+    // Live updates come from SSE (push) above — no interval polling fallback.
     return () => {
       eventSource.close()
-      clearInterval(interval)
     }
   }, [])
 
