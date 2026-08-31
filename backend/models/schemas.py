@@ -113,6 +113,7 @@ class ProspectCreate(ProspectBase):
 
 class ProspectUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=150)
+    mobile: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
     location: Optional[str] = Field(None, max_length=150)
     sourced_from: Optional[str] = Field(None, max_length=100)
@@ -283,6 +284,8 @@ class CallLogBase(BaseModel):
     notification_shown: bool = False
     notification_dismissed: bool = False
     notification_last_shown_at: Optional[datetime] = None
+    call_duration: Optional[int] = None
+    recording_url: Optional[str] = None
 
 
 class CallLogCreate(CallLogBase):
@@ -301,6 +304,8 @@ class CallLogUpdate(BaseModel):
     notes: Optional[str] = None
     course_interest: Optional[str] = Field(None, max_length=100)
     callback_scheduled_at: Optional[datetime] = None
+    call_duration: Optional[int] = None
+    recording_url: Optional[str] = None
 
 
 class CallLog(CallLogBase):
@@ -314,6 +319,7 @@ class CallLog(CallLogBase):
 
     class Config:
         from_attributes = True
+
 
 
 class EmailAttachment(BaseModel):

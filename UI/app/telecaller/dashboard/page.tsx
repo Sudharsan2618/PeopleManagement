@@ -834,6 +834,7 @@ import {
 
 
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import { CallPanel } from "@/components/telephony/call-panel"
 
 
 
@@ -7249,6 +7250,8 @@ export default function TelecallerDashboard() {
 
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCallPanelOpen, setIsCallPanelOpen] = useState(false)
+  const [callSessionData, setCallSessionData] = useState<{ duration: number; recordingUrl?: string | null; callSid?: string } | null>(null)
 
 
 
@@ -21812,54 +21815,19 @@ export default function TelecallerDashboard() {
 
 
   const handleCall = (prospect: any) => {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     setSelectedProspect(prospect)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    setIsModalOpen(true)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    setIsCallPanelOpen(true)
+    setIsModalOpen(false)
   }
+
+  const handleCallPanelEnded = (result: { duration: number; recordingUrl?: string | null; callSid?: string }) => {
+    setCallSessionData(result)
+    setIsCallPanelOpen(false)
+    setIsModalOpen(true)
+  }
+
+
+
 
 
 
@@ -22211,407 +22179,41 @@ export default function TelecallerDashboard() {
 
 
 
-      await prospectsApi.update(editingProspect.numericId, {
+      const targetId = editingProspect.numericId ?? (typeof editingProspect.id === "number" ? editingProspect.id : parseInt(String(editingProspect.id).split('_')[0], 10))
+      if (!targetId || isNaN(targetId)) {
+        toast({ title: "Save failed", description: "Invalid prospect ID.", variant: "destructive" })
+        return
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      await prospectsApi.update(targetId, {
         name: editingProspect.name,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         mobile: editingProspect.mobile,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         email: editingProspect.email,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alt_phone: editingProspect.altPhone,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alt_phone_2: editingProspect.altPhone2,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alt_phone_3: editingProspect.altPhone3,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         secondary_email: editingProspect.secondaryEmail,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alternative_email: editingProspect.alternativeEmail,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         city: editingProspect.city,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         address: editingProspect.address,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         postal_code: editingProspect.postalCode,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         designation: editingProspect.designation,
         parent_name: editingProspect.parentName,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         college_name: editingProspect.collegeName,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         course_interest: editingProspect.courseInterest,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         comments: editingProspect.comments,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         website: editingProspect.website,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       })
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      toast({ title: "Saved ?", description: "Prospect details updated." })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      toast({ title: "Saved", description: "Prospect details updated." })
       await fetchData()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       setIsEditModalOpen(false)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       setEditingProspect(null)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    } catch (err) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      toast({ title: "Save failed", description: "Could not update prospect. Please try again.", variant: "destructive" })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    } catch (err: any) {
+      console.error("Save edit failed:", err)
+      const errorMsg = err?.message || "Could not update prospect. Please try again."
+      toast({ title: "Save failed", description: errorMsg, variant: "destructive" })
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   }
 
 
@@ -23756,21 +23358,8 @@ export default function TelecallerDashboard() {
 
 
         callback_scheduled_at: callbackScheduledAt,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        call_duration: (data.call_duration as number) || callSessionData?.duration || undefined,
+        recording_url: (data.recording_url as string) || callSessionData?.recordingUrl || undefined,
       })
 
 
@@ -35656,6 +35245,16 @@ export default function TelecallerDashboard() {
 
 
 
+
+      {/* Exotel / Telephony Live Call Panel */}
+      <CallPanel
+        isOpen={isCallPanelOpen}
+        prospect={selectedProspect}
+        telecallerId={user?.id ? Number(user.id) : undefined}
+        telecallerPhone={user?.mobile || user?.phone || ""}
+        onCallEnded={handleCallPanelEnded}
+        onClose={() => setIsCallPanelOpen(false)}
+      />
 
       {/* Call Outcome Modal */}
 

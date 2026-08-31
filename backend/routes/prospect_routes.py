@@ -256,6 +256,8 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
         update_kwargs = {"prospect_id": prospect_id}
         if prospect.name is not None:
             update_kwargs["name"] = prospect.name
+        if prospect.mobile is not None:
+            update_kwargs["mobile"] = prospect.mobile
         if prospect.email is not None:
             update_kwargs["email"] = prospect.email
         if prospect.location is not None:

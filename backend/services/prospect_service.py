@@ -30,7 +30,7 @@ _MERGE_PRELOAD_COLS = (
 # overwrites a value a human or earlier import already set. (Fixed list — safe to
 # interpolate into the UPDATE statement.)
 _MERGE_FILLABLE = (
-    "email", "sourced_from", "location", "city", "parent_name", "department",
+    "lead_id", "email", "sourced_from", "location", "city", "parent_name", "department",
     "company", "designation", "college_name", "address", "postal_code",
     "secondary_email", "alternative_email", "alt_phone", "alt_phone_2",
     "alt_phone_3", "comments", "follow_up_date", "website",
@@ -596,7 +596,8 @@ class ProspectService:
         ))
     
     @staticmethod
-    def update_prospect(prospect_id: int, name: Optional[str] = _UNSET, email: Optional[str] = _UNSET,
+    def update_prospect(prospect_id: int, name: Optional[str] = _UNSET, mobile: Optional[str] = _UNSET,
+                        email: Optional[str] = _UNSET,
                         location: Optional[str] = _UNSET, sourced_from: Optional[str] = _UNSET,
                         status: Optional[str] = _UNSET, course_interest: Optional[str] = _UNSET,
                         parent_name: Optional[str] = _UNSET, department: Optional[str] = _UNSET,
@@ -624,6 +625,9 @@ class ProspectService:
         if name is not _UNSET:
             updates.append("name = %s")
             params.append(name)
+        if mobile is not _UNSET:
+            updates.append("mobile = %s")
+            params.append(clean_phone_number(mobile) if mobile else None)
         if email is not _UNSET:
             updates.append("email = %s")
             params.append(email)
@@ -1066,10 +1070,11 @@ class ProspectService:
         new_records: list = []       # ordered rows to insert
         new_by_mobile, new_by_lead = {}, {}
 
-        def _acc_from(course, tags, source, type_, existing=None):
+        def _acc_from(course, tags, source, type_, proposed_for=None, existing=None):
             return {"course": course, "tags": ProspectService._as_list(tags),
                     "source": ProspectService._as_list(source),
                     "type": ProspectService._as_list(type_),
+                    "proposed_for": ProspectService._as_list(proposed_for),
                     # `existing` is None for in-file (pending-insert) accumulators,
                     # which have no stored row to enrich.
                     "existing": existing, "fills": {}}
@@ -1081,6 +1086,7 @@ class ProspectService:
             acc["tags"] = ProspectService._union(acc["tags"], ProspectService._as_list(p.get("tags")) + course_tags)
             acc["source"] = ProspectService._union(acc["source"], ProspectService._as_list(p.get("lead_source")))
             acc["type"] = ProspectService._union(acc["type"], ProspectService._as_list(p.get("lead_type")))
+            acc["proposed_for"] = ProspectService._union(acc.get("proposed_for", []), ProspectService._as_list(p.get("proposed_for")))
 
             ex = acc.get("existing")
             if not ex:
@@ -1138,6 +1144,10 @@ class ProspectService:
                 rec["p"]["lead_source"] = rec["acc"]["source"]
                 rec["p"]["lead_type"] = rec["acc"]["type"]
                 rec["p"]["proposed_for"] = rec["acc"].get("proposed_for", [])
+                if not rec.get("lead_id") and lead_id:
+                    rec["lead_id"] = lead_id
+                    rec["p"]["lead_id"] = lead_id
+                    new_by_lead[lead_id] = ni
                 detail_slots[i] = {"row": row, "name": name, "mobile": mobile or "",
                                    "status": "Merged", "action": "merge",
                                    "reason": f"Merged into row {rec['first_row']} (same file)"}
