@@ -9,13 +9,22 @@ import {
   Loader2,
   Send,
   ShieldCheck,
+  Download,
+  CalendarDays,
 } from "lucide-react"
+import * as XLSX from "xlsx"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -66,6 +75,10 @@ export default function TelecallerMessages() {
   const [isSendingTemplate, setIsSendingTemplate] = useState(false)
   const [replyText, setReplyText] = useState("")
   const [isSending, setIsSending] = useState(false)
+  // Report download (custom date range)
+  const [reportStart, setReportStart] = useState("")
+  const [reportEnd, setReportEnd] = useState("")
+  const [isDownloading, setIsDownloading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const selectedChatRef = useRef<Conversation | null>(null)
   selectedChatRef.current = selectedChat
@@ -184,6 +197,63 @@ export default function TelecallerMessages() {
     }
   }
 
+  const fmtTs = (ts: string | null) => {
+    if (!ts) return ""
+    const d = new Date(ts)
+    return isNaN(d.getTime())
+      ? ""
+      : d.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })
+  }
+
+  const handleDownloadReport = async () => {
+    if (!telecallerId) return
+    setIsDownloading(true)
+    try {
+      const data = await whatsappApi.getCallerReport(
+        telecallerId,
+        reportStart || undefined,
+        reportEnd || undefined
+      )
+      if (!data.rows.length) {
+        toast({
+          title: "Nothing to export",
+          description: "No WhatsApp activity for the selected dates.",
+        })
+        return
+      }
+      const sheetRows = data.rows.map((r) => ({
+        "Prospect Name": r.name || "",
+        Mobile: r.mobile ? `+${r.mobile}` : "",
+        "Current Status": r.status || "",
+        "Messages Sent": r.sent_total,
+        Delivered: r.delivered,
+        Read: r.read,
+        Failed: r.failed,
+        "Replies Received": r.replies_received,
+        "Templates Sent": r.templates_sent,
+        "Templates Used": r.templates_used || "",
+        "Last Msg Status": r.last_message_status || "",
+        "Last Direction": r.last_direction || "",
+        "First Contacted": fmtTs(r.first_message_at),
+        "Last Contacted": fmtTs(r.last_message_at),
+      }))
+      const ws = XLSX.utils.json_to_sheet(sheetRows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, "WhatsApp Report")
+      const range = `${reportStart || "all"}_to_${reportEnd || "all"}`
+      XLSX.writeFile(wb, `whatsapp-caller-report_${range}.xlsx`)
+      toast({ title: "Report downloaded", description: `${data.rows.length} prospect(s) exported.` })
+    } catch (err) {
+      toast({
+        title: "Download failed",
+        description: err instanceof Error ? err.message : "Could not build the report.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   const q = search.toLowerCase()
   const filtered = conversations.filter(
     (c) => c.name?.toLowerCase().includes(q) || c.mobile?.includes(search)
@@ -200,6 +270,67 @@ export default function TelecallerMessages() {
               <Badge variant="outline" className="bg-success/15 text-success border-none font-semibold text-[10px] px-2 py-0.5 rounded-sm">
                 {conversations.length}
               </Badge>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Download report"
+                    title="Download report"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-4 space-y-3">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      Download WhatsApp report
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Prospects you contacted, message status, templates &amp; times. Leave dates
+                      empty for all-time.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="rpt-start" className="text-xs">From</Label>
+                      <Input
+                        id="rpt-start"
+                        type="date"
+                        value={reportStart}
+                        max={reportEnd || undefined}
+                        onChange={(e) => setReportStart(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="rpt-end" className="text-xs">To</Label>
+                      <Input
+                        id="rpt-end"
+                        type="date"
+                        value={reportEnd}
+                        min={reportStart || undefined}
+                        onChange={(e) => setReportEnd(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleDownloadReport}
+                    disabled={isDownloading}
+                    className="w-full h-8 text-xs"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Download Excel
+                  </Button>
+                </PopoverContent>
+              </Popover>
               <Button
                 variant="ghost"
                 size="icon"

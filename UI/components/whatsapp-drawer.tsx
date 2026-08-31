@@ -23,6 +23,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { whatsappApi } from "@/lib/api-client"
@@ -96,6 +103,7 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
   const [replyText, setReplyText] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [sendingTemplateId, setSendingTemplateId] = useState<number | null>(null)
+  const [selectedQuickId, setSelectedQuickId] = useState("")
   const scrollBottomRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
@@ -124,6 +132,7 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
   useEffect(() => {
     if (open && prospect) {
       setReplyText("")
+      setSelectedQuickId("")
       load()
     }
   }, [open, prospect, load])
@@ -165,6 +174,7 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
     try {
       await whatsappApi.sendQuickTemplate(prospect.id, templateId)
       toast({ title: "Template sent" })
+      setSelectedQuickId("")
       await load()
       onSent?.()
     } catch (err) {
@@ -319,38 +329,36 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
                   No quick-send templates configured yet. Ask an admin to add one.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-56 overflow-y-auto">
-                  {quickTemplates.map((qt) => (
-                    <div
-                      key={qt.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{qt.label}</p>
-                        {qt.description && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {qt.description}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="shrink-0"
-                        onClick={() => handleSendTemplate(qt.id)}
-                        disabled={sendingTemplateId !== null}
-                      >
-                        {sendingTemplateId === qt.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Send className="h-3.5 w-3.5 mr-1" />
-                            Send
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={selectedQuickId}
+                    onValueChange={setSelectedQuickId}
+                    disabled={sendingTemplateId !== null}
+                  >
+                    <SelectTrigger className="h-10 flex-1 text-sm">
+                      <SelectValue placeholder="Select a template…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quickTemplates.map((qt) => (
+                        <SelectItem key={qt.id} value={String(qt.id)}>
+                          {qt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => selectedQuickId && handleSendTemplate(Number(selectedQuickId))}
+                    disabled={!selectedQuickId || sendingTemplateId !== null}
+                    size="icon"
+                    className="h-10 w-10 shrink-0"
+                    aria-label="Send template"
+                  >
+                    {sendingTemplateId !== null ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               )}
             </div>

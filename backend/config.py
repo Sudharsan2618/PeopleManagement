@@ -39,6 +39,18 @@ class Settings(BaseSettings):
     GCS_MEDIA_PREFIX   : str = "whatsapp-inbound"
     GCS_SIGNED_URL_TTL : int = 3600   # seconds
 
+    # Salesforce — Apex REST "lead-event" bridge (TATTI CRM public Site endpoint).
+    # SALESFORCE_LEAD_EVENT_URL fires events like {"event": "Send email",
+    # "leadIds": [...]} against Salesforce Leads. SALESFORCE_TEMPLATES_URL is an
+    # optional GET that returns the list of email templates to show the caller;
+    # leave it empty to fall back to "send default email (no template)".
+    # SALESFORCE_EMAIL_TEMPLATE_FIELD is the payload key the Apex reads the chosen
+    # template id from (defaults to "templateId" — change to match your Apex).
+    SALESFORCE_LEAD_EVENT_URL      : str = "https://tatti.my.salesforce-sites.com/TattiCrm/services/apexrest/lead-event"
+    SALESFORCE_TEMPLATES_URL       : str = ""
+    SALESFORCE_EMAIL_TEMPLATE_FIELD: str = "templateId"
+    SALESFORCE_TIMEOUT             : float = 30.0
+
     # SMTP email settings for report delivery
     SMTP_HOST          : str = ""
     SMTP_PORT          : int = 587

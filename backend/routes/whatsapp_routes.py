@@ -398,6 +398,86 @@ def get_flow_submissions(page: int = Query(1), page_size: int = Query(20)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/caller-report")
+def get_caller_report(
+    telecaller_id: int = Query(..., description="Telecaller whose assigned prospects to report on"),
+    start_date: Optional[str] = Query(None, description="ISO date (inclusive), e.g. 2026-08-01"),
+    end_date: Optional[str] = Query(None, description="ISO date (inclusive), e.g. 2026-08-31"),
+):
+    """Per-prospect WhatsApp activity for one caller over a date range.
+
+    Scoped to the prospects assigned to this telecaller. For each prospect that
+    had at least one message in the window it returns message counts by status,
+    replies received, the templates used, and first/last activity — everything
+    the caller needs to download a contact report.
+    """
+    try:
+        from database.connection import get_db_connection
+        from psycopg2.extras import RealDictCursor
+
+        # created_at is stored in IST-naive; treat end_date as inclusive of the whole day.
+        date_params = []
+        date_clause = ""
+        if start_date:
+            date_clause += " AND m.created_at >= %s"
+            date_params.append(f"{start_date} 00:00:00")
+        if end_date:
+            date_clause += " AND m.created_at <= %s"
+            date_params.append(f"{end_date} 23:59:59")
+
+        with get_db_connection() as conn:
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            try:
+                cur.execute(f"""
+                    SELECT
+                        p.id AS prospect_id,
+                        p.name,
+                        p.mobile,
+                        p.status,
+                        u.name AS telecaller_name,
+                        COUNT(m.id) AS total_messages,
+                        COUNT(m.id) FILTER (WHERE m.direction = 'outbound') AS sent_total,
+                        COUNT(m.id) FILTER (WHERE m.direction = 'outbound' AND m.status IN ('delivered','read')) AS delivered,
+                        COUNT(m.id) FILTER (WHERE m.direction = 'outbound' AND m.status = 'read') AS read,
+                        COUNT(m.id) FILTER (WHERE m.direction = 'outbound' AND m.status = 'failed') AS failed,
+                        COUNT(m.id) FILTER (WHERE m.direction = 'inbound') AS replies_received,
+                        COUNT(m.id) FILTER (WHERE m.message_type = 'template') AS templates_sent,
+                        STRING_AGG(DISTINCT COALESCE(m.template_name, wc.template_name), ', ')
+                            FILTER (WHERE COALESCE(m.template_name, wc.template_name) IS NOT NULL) AS templates_used,
+                        MIN(m.created_at) AS first_message_at,
+                        MAX(m.created_at) AS last_message_at,
+                        (SELECT direction FROM whatsapp_messages
+                           WHERE prospect_id = p.id ORDER BY created_at DESC LIMIT 1) AS last_direction,
+                        (SELECT status FROM whatsapp_messages
+                           WHERE prospect_id = p.id AND direction = 'outbound'
+                           ORDER BY created_at DESC LIMIT 1) AS last_message_status
+                    FROM prospects p
+                    JOIN whatsapp_messages m ON m.prospect_id = p.id
+                    LEFT JOIN whatsapp_campaigns wc ON wc.id = m.campaign_id
+                    LEFT JOIN users u ON u.id = %s
+                    -- Scope to THIS caller's assigned prospects. EXISTS (not JOIN)
+                    -- so a prospect with >1 assignment row can't inflate the counts.
+                    WHERE EXISTS (
+                        SELECT 1 FROM prospect_assignments pa
+                        WHERE pa.prospect_id = p.id AND pa.telecaller_id = %s
+                    ) {date_clause}
+                    GROUP BY p.id, p.name, p.mobile, p.status, u.name
+                    ORDER BY last_message_at DESC NULLS LAST
+                """, tuple([telecaller_id, telecaller_id] + date_params))
+                rows = cur.fetchall()
+                return {
+                    "telecaller_id": telecaller_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "total_prospects": len(rows),
+                    "rows": rows,
+                }
+            finally:
+                cur.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/campaigns/{campaign_id}")
 def get_campaign_details(campaign_id: int):
     """Get detailed information about a specific campaign."""

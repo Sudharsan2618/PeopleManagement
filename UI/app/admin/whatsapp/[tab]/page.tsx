@@ -43,6 +43,7 @@ import {
   X,
   ChevronsUpDown
 } from "lucide-react"
+import * as XLSX from "xlsx"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -905,6 +906,50 @@ export default function WhatsAppAdmin() {
     }
   }
 
+  const handleDownloadCampaignReport = () => {
+    if (!selectedCampaign || campaignMessages.length === 0) {
+      toast({ title: "Nothing to export", description: "This campaign has no recipients yet." })
+      return
+    }
+    const fmt = (ts: string | null | undefined) => {
+      if (!ts) return ""
+      const d = new Date(ts)
+      return isNaN(d.getTime()) ? "" : d.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })
+    }
+    // Response column = the raw Meta payload as JSON (delivery receipts, errors,
+    // ad referral, or any inbound response captured against the message).
+    const rows = campaignMessages.map((m: any) => {
+      let responseJson = ""
+      if (m.payload != null) {
+        try {
+          responseJson = typeof m.payload === "string" ? m.payload : JSON.stringify(m.payload)
+        } catch {
+          responseJson = String(m.payload)
+        }
+      }
+      return {
+        Name: m.prospect_name || "",
+        Number: m.prospect_mobile ? `+${m.prospect_mobile}` : "",
+        Email: m.prospect_email || "",
+        Status: m.status || "",
+        Type: m.message_type || "",
+        Direction: m.direction || "",
+        "Sent At": fmt(m.sent_at),
+        "Delivered At": fmt(m.delivered_at),
+        "Read At": fmt(m.read_at),
+        "Message Time": fmt(m.created_at),
+        "Meta Message Id": m.meta_message_id || "",
+        "Response (JSON)": responseJson,
+      }
+    })
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Recipients")
+    const safeName = String(selectedCampaign.name || "campaign").replace(/[^\w\-]+/g, "_").slice(0, 40)
+    XLSX.writeFile(wb, `campaign-report_${safeName}.xlsx`)
+    toast({ title: "Report downloaded", description: `${rows.length} recipient(s) exported.` })
+  }
+
   const handleResendFailed = async () => {
     if (!selectedCampaign) return
     try {
@@ -1650,6 +1695,16 @@ export default function WhatsAppAdmin() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleDownloadCampaignReport}
+                          className="h-9"
+                          title="Download recipient report (Excel)"
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1.5" />
+                          Download report
+                        </Button>
                         {failedMessagesCount > 0 && (
                           <Button
                             size="sm"

@@ -810,6 +810,37 @@ export const whatsappApi = {
   getCampaigns: (page: number = 1, pageSize: number = 10) => apiRequest<any>(`/whatsapp/campaigns?page=${page}&page_size=${pageSize}`),
   getCampaignDetails: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}`),
   getCampaignMessages: (campaignId: number) => apiRequest<any[]>(`/whatsapp/campaigns/${campaignId}/messages`),
+  // Per-prospect WhatsApp activity report for one caller over a date range.
+  getCallerReport: (telecallerId: number, startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ telecaller_id: String(telecallerId) })
+    if (startDate) params.append("start_date", startDate)
+    if (endDate) params.append("end_date", endDate)
+    return apiRequest<{
+      telecaller_id: number
+      start_date: string | null
+      end_date: string | null
+      total_prospects: number
+      rows: Array<{
+        prospect_id: number
+        name: string | null
+        mobile: string | null
+        status: string | null
+        telecaller_name: string | null
+        total_messages: number
+        sent_total: number
+        delivered: number
+        read: number
+        failed: number
+        replies_received: number
+        templates_sent: number
+        templates_used: string | null
+        first_message_at: string | null
+        last_message_at: string | null
+        last_direction: string | null
+        last_message_status: string | null
+      }>
+    }>(`/whatsapp/caller-report?${params.toString()}`)
+  },
   getConversations: (page: number = 1, pageSize: number = 20, telecallerId?: number, source?: string) => {
     const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
     if (telecallerId != null) params.append("telecaller_id", String(telecallerId))
@@ -902,6 +933,22 @@ export const whatsappApi = {
   resendFailed: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/resend-failed`, {
     method: "POST",
   }),
+}
+
+// Salesforce API — email via the TATTI CRM Apex "lead-event" bridge
+export const salesforceApi = {
+  getEmailTemplates: () => apiRequest<Array<{ id: string; name: string }>>("/salesforce/email-templates"),
+  sendEmail: (prospectIds: number[], templateId?: string) =>
+    apiRequest<{
+      sent_count: number
+      sent_to?: Array<{ prospect_id: number; name: string; lead_id: string }>
+      skipped: Array<{ prospect_id: number; name: string | null; reason: string }>
+      salesforce_response?: any
+      message: string
+    }>("/salesforce/send-email", {
+      method: "POST",
+      body: JSON.stringify({ prospect_ids: prospectIds, template_id: templateId ?? null }),
+    }),
 }
 
 // Dashboard API

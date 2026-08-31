@@ -288,6 +288,7 @@ import {
 
 
   MessageSquare,
+  Mail,
 
 
 
@@ -850,6 +851,7 @@ import { CallOutcomeModal } from "@/components/call-outcome-modal"
 
 
 import { WhatsAppDrawer } from "@/components/whatsapp-drawer"
+import { EmailDrawer } from "@/components/email-drawer"
 
 
 
@@ -3374,7 +3376,7 @@ function CourseSearchFilter({
 
 
 
-        <Button variant="outline" className="w-full sm:w-auto h-10 text-sm">
+        <Button variant="outline" size="sm" className="w-full sm:w-auto text-sm">
 
 
 
@@ -7281,6 +7283,8 @@ export default function TelecallerDashboard() {
 
 
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false)
+  const [emailProspect, setEmailProspect] = useState<any | null>(null)
+  const [isEmailOpen, setIsEmailOpen] = useState(false)
 
 
 
@@ -21891,6 +21895,17 @@ export default function TelecallerDashboard() {
 
 
 
+  // --- Handle Salesforce email send-and-go ----------------------
+  const handleEmail = (prospect: any) => {
+    setEmailProspect({
+      id: prospect.numericId,
+      name: prospect.name,
+      email: prospect.email,
+      leadId: prospect.lead_id,
+    })
+    setIsEmailOpen(true)
+  }
+
   // --- Handle WhatsApp send-and-go ------------------------------
 
 
@@ -25105,7 +25120,7 @@ export default function TelecallerDashboard() {
 
 
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
 
 
 
@@ -25213,7 +25228,7 @@ export default function TelecallerDashboard() {
 
 
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-3">
 
 
 
@@ -26487,7 +26502,7 @@ export default function TelecallerDashboard() {
 
 
 
-        "grid gap-4",
+        "grid gap-3 items-start",
 
 
 
@@ -26631,7 +26646,7 @@ export default function TelecallerDashboard() {
 
 
 
-              className={cn("cursor-pointer hover:shadow-md transition-shadow", statCardFilter === stat.title ? "ring-2 ring-primary" : "")}
+              className={cn("cursor-pointer hover:shadow-md transition-shadow p-3 gap-0", statCardFilter === stat.title ? "ring-2 ring-primary" : "")}
 
 
 
@@ -26679,811 +26694,9 @@ export default function TelecallerDashboard() {
 
 
 
-              <CardContent className="p-4">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                {isCallsMade && Object.keys(
-
-
-
-
-
-
-
-                  viewMode === "student_admission" ? telecallerStats.callsMadeByCourse || {} :
-
-
-
-
-
-
-
-                    viewMode === "college_contact" ? telecallerStats.collegeCallsMadeByCourse || {} :
-
-
-
-
-
-
-
-                      telecallerStats.shortTermCourseCallsMadeByCourse || {}
-
-
-
-
-
-
-
-                ).length > 0 ? (
-
-
-
-
-
-
-
-                  <div>
-
-
-
-
-
-
-
-                    <div className="flex items-center gap-3 mb-2">
-
-
-
-
-
-
-
-                      <div className={cn("rounded-lg p-2", stat.bgColor)}>
-
-
-
-
-
-
-
-                        <stat.icon className={cn("h-5 w-5", stat.color)} />
-
-
-
-
-
-
-
-                      </div>
-
-
-
-
-
-
-
-                      <p className="text-xs text-muted-foreground">{stat.title}</p>
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-                    <div className="ml-11 space-y-1">
-
-
-
-
-
-
-
-                      <p className="text-lg font-bold">{stat.value} total</p>
-
-
-
-
-
-
-
-                      {Object.entries(
-
-
-
-
-
-
-
-                        viewMode === "student_admission" ? telecallerStats.callsMadeByCourse || {} :
-
-
-
-
-
-
-
-                          viewMode === "college_contact" ? telecallerStats.collegeCallsMadeByCourse || {} :
-
-
-
-
-
-
-
-                            telecallerStats.shortTermCourseCallsMadeByCourse || {}
-
-
-
-
-
-
-
-                      ).map(([course, count]) => (
-
-
-
-
-
-
-
-                        <div key={course} className="flex justify-between text-xs">
-
-
-
-
-
-
-
-                          <span className="text-muted-foreground truncate max-w-[120px]" title={course}>{course}</span>
-
-
-
-
-
-
-
-                          <span className="font-semibold">{count}</span>
-
-
-
-
-
-
-
-                        </div>
-
-
-
-
-
-
-
-                      ))}
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-                  </div>
-
-
-
-
-
-
-
-                ) : isCallbacks && Object.keys(
-
-
-
-
-
-
-
-                  viewMode === "student_admission" ? telecallerStats.callbacksByCourse || {} :
-
-
-
-
-
-
-
-                    viewMode === "college_contact" ? telecallerStats.collegeCallbacksByCourse || {} :
-
-
-
-
-
-
-
-                      telecallerStats.shortTermCourseCallbacksByCourse || {}
-
-
-
-
-
-
-
-                ).length > 0 ? (
-
-
-
-
-
-
-
-                  <div>
-
-
-
-
-
-
-
-                    <div className="flex items-center gap-3 mb-2">
-
-
-
-
-
-
-
-                      <div className={cn("rounded-lg p-2", stat.bgColor)}>
-
-
-
-
-
-
-
-                        <stat.icon className={cn("h-5 w-5", stat.color)} />
-
-
-
-
-
-
-
-                      </div>
-
-
-
-
-
-
-
-                      <p className="text-xs text-muted-foreground">{stat.title}</p>
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-                    <div className="ml-11 space-y-1">
-
-
-
-
-
-
-
-                      <p className="text-lg font-bold">{stat.value} total</p>
-
-
-
-
-
-
-
-                      {Object.entries(
-
-
-
-
-
-
-
-                        viewMode === "student_admission" ? telecallerStats.callbacksByCourse || {} :
-
-
-
-
-
-
-
-                          viewMode === "college_contact" ? telecallerStats.collegeCallbacksByCourse || {} :
-
-
-
-
-
-
-
-                            telecallerStats.shortTermCourseCallbacksByCourse || {}
-
-
-
-
-
-
-
-                      ).map(([course, count]) => (
-
-
-
-
-
-
-
-                        <div key={course} className="flex justify-between text-xs">
-
-
-
-
-
-
-
-                          <span className="text-muted-foreground truncate max-w-[120px]" title={course}>{course}</span>
-
-
-
-
-
-
-
-                          <span className="font-semibold">{count}</span>
-
-
-
-
-
-
-
-                        </div>
-
-
-
-
-
-
-
-                      ))}
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-                  </div>
-
-
-
-
-
-
-
-                ) : isInterested && Object.keys(
-
-
-
-
-
-
-
-                  viewMode === "student_admission" ? telecallerStats.interestedByCourse || {} :
-
-
-
-
-
-
-
-                    viewMode === "college_contact" ? telecallerStats.collegeInterestedByCourse || {} :
-
-
-
-
-
-
-
-                      telecallerStats.shortTermCourseInterestedByCourse || {}
-
-
-
-
-
-
-
-                ).length > 0 ? (
-
-
-
-
-
-
-
-                  <div>
-
-
-
-
-
-
-
-                    <div className="flex items-center gap-3 mb-2">
-
-
-
-
-
-
-
-                      <div className={cn("rounded-lg p-2", stat.bgColor)}>
-
-
-
-
-
-
-
-                        <stat.icon className={cn("h-5 w-5", stat.color)} />
-
-
-
-
-
-
-
-                      </div>
-
-
-
-
-
-
-
-                      <p className="text-xs text-muted-foreground">{stat.title}</p>
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-                    <div className="ml-11 space-y-1">
-
-
-
-
-
-
-
-                      <p className="text-lg font-bold">{stat.value} total</p>
-
-
-
-
-
-
-
-                      {Object.entries(
-
-
-
-
-
-
-
-                        viewMode === "student_admission" ? telecallerStats.interestedByCourse || {} :
-
-
-
-
-
-
-
-                          viewMode === "college_contact" ? telecallerStats.collegeInterestedByCourse || {} :
-
-
-
-
-
-
-
-                            telecallerStats.shortTermCourseInterestedByCourse || {}
-
-
-
-
-
-
-
-                      ).map(([course, count]) => (
-
-
-
-
-
-
-
-                        <div key={course} className="flex justify-between text-xs">
-
-
-
-
-
-
-
-                          <span
-                            className="text-muted-foreground truncate max-w-[120px]"
-                            title={viewMode === "college_contact" && course === "Unknown" ? "" : course}
-                          >
-                            {viewMode === "college_contact" && course === "Unknown" ? "" : course}
-                          </span>
-
-
-
-
-
-
-
-                          <span className="font-semibold">{count}</span>
-
-
-
-
-
-
-
-                        </div>
-
-
-
-
-
-
-
-                      ))}
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-                  </div>
-
-
-
-
-
-
-
-                ) : (
-
-
-
-
-
-
-
-                  <div className="flex items-center gap-3">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    <div className={cn("rounded-lg p-2", stat.bgColor)}>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                      <stat.icon className={cn("h-5 w-5", stat.color)} />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    <div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                      <p className="text-xl font-normal">{stat.value}</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                      <p className="text-xs text-muted-foreground">{stat.title}</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  </div>
-
-
-
-
-
-
-
-                )}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+              <CardContent className="p-0">
+                <p className="text-lg font-semibold leading-tight">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{stat.title}</p>
               </CardContent>
 
 
@@ -34804,6 +34017,17 @@ export default function TelecallerDashboard() {
 
 
                                     </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 text-xs"
+                                      onClick={() => handleEmail(prospect)}
+                                      disabled={savingId !== null}
+                                      aria-label="Send Email"
+                                    >
+                                      <Mail className="h-3.5 w-3.5 mr-1" />
+                                      Email
+                                    </Button>
 
 
 
@@ -35937,6 +35161,12 @@ export default function TelecallerDashboard() {
 
 
 
+      />
+
+      <EmailDrawer
+        prospect={emailProspect}
+        open={isEmailOpen}
+        onOpenChange={setIsEmailOpen}
       />
 
 
