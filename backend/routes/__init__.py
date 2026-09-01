@@ -13,3 +13,4 @@ from . import course_routes
 from . import whatsapp_routes
 from . import dashboard_routes
 from . import conversion_routes
+from . import calls_routes

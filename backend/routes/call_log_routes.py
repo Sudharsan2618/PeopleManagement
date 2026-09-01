@@ -78,7 +78,9 @@ def create_call_log(call_log: CallLogCreate):
             reason=call_log.reason,
             notes=call_log.notes,
             course_interest=call_log.course_interest,
-            callback_scheduled_at=call_log.callback_scheduled_at
+            callback_scheduled_at=call_log.callback_scheduled_at,
+            call_duration=call_log.call_duration,
+            recording_url=call_log.recording_url
         )
         return CallLogService.get_call_log_by_id(log_id)
     except HTTPException:
@@ -102,11 +104,14 @@ def update_call_log(log_id: int, call_log: CallLogUpdate):
             reason=call_log.reason,
             notes=call_log.notes,
             course_interest=call_log.course_interest,
-            callback_scheduled_at=call_log.callback_scheduled_at
+            callback_scheduled_at=call_log.callback_scheduled_at,
+            call_duration=call_log.call_duration,
+            recording_url=call_log.recording_url
         )
         return CallLogService.get_call_log_by_id(log_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.post("/send-report-email")

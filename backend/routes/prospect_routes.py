@@ -6,8 +6,10 @@ from models.schemas import (
     ProspectUpdate,
     PaginatedProspects,
     ProspectStats,
+    ProspectActivity,
 )
 from services.prospect_service import ProspectService
+from services.activity_service import ActivityService
 
 router = APIRouter(prefix="/prospects", tags=["prospects"])
 
@@ -334,9 +336,22 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["start_month"] = prospect.start_month
         if prospect.year is not None:
             update_kwargs["year"] = prospect.year
+        if prospect.updated_by is not None:
+            update_kwargs["updated_by"] = prospect.updated_by
+        if prospect.updated_by_name is not None:
+            update_kwargs["updated_by_name"] = prospect.updated_by_name
         
         ProspectService.update_prospect(**update_kwargs)
         return ProspectService.get_prospect_by_id(prospect_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{prospect_id}/timeline", response_model=List[ProspectActivity])
+def get_prospect_timeline(prospect_id: int):
+    """Get complete activity timeline for a prospect."""
+    try:
+        return ActivityService.get_timeline(prospect_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -8,6 +8,7 @@ from psycopg2.extras import execute_values
 from database.connection import execute_query, execute_insert, execute_update_delete, get_db_cursor
 from utils.timezone_utils import get_ist_now
 from utils.phone_utils import clean_phone_number, normalize_indian_mobile
+from services.activity_service import ActivityService, FIELD_LABELS
 
 # Sentinel value to distinguish between "not provided" and "explicitly None"
 _UNSET = object()
@@ -617,8 +618,67 @@ class ProspectService:
                         payment_status: Optional[str] = _UNSET, payment_mode: Optional[str] = _UNSET,
                         payment_date: Optional[str] = _UNSET,
                         transaction_id: Optional[str] = _UNSET, batch: Optional[str] = _UNSET,
-                        start_month: Optional[str] = _UNSET, year: Optional[str] = _UNSET) -> int:
-        """Update prospect details."""
+                        start_month: Optional[str] = _UNSET, year: Optional[str] = _UNSET,
+                        updated_by: Optional[int] = None,
+                        updated_by_name: Optional[str] = None) -> int:
+        """Update prospect details and log timeline activities."""
+        # ── Capture changes and log activities ──
+        try:
+            existing = ProspectService.get_prospect_by_id(prospect_id)
+            if existing:
+                field_map = {
+                    "name": name,
+                    "mobile": clean_phone_number(mobile) if mobile and mobile is not _UNSET else (None if mobile is None else _UNSET),
+                    "email": email,
+                    "location": location,
+                    "sourced_from": sourced_from,
+                    "status": status,
+                    "course_interest": course_interest,
+                    "parent_name": parent_name,
+                    "department": department,
+                    "alt_phone": alt_phone,
+                    "alt_phone_2": alt_phone_2,
+                    "alt_phone_3": alt_phone_3,
+                    "secondary_email": secondary_email,
+                    "alternative_email": alternative_email,
+                    "college_name": college_name,
+                    "city": city,
+                    "address": address,
+                    "postal_code": postal_code,
+                    "designation": designation,
+                    "company": company,
+                    "comments": comments,
+                    "website": website,
+                }
+                for f_key, f_val in field_map.items():
+                    if f_val is not _UNSET:
+                        old_raw = existing.get(f_key)
+                        old_str = str(old_raw).strip() if old_raw is not None else ""
+                        new_str = str(f_val).strip() if f_val is not None else ""
+                        if old_str != new_str:
+                            label = FIELD_LABELS.get(f_key, f_key.replace("_", " ").title())
+                            old_disp = old_str if old_str else "blank"
+                            new_disp = new_str if new_str else "blank"
+                            if f_key == "status":
+                                desc = f"Status was updated from {old_disp} to {new_disp}"
+                                act_type = "status_change"
+                            else:
+                                desc = f"{label} was updated from {old_disp} to {new_disp}"
+                                act_type = "field_update"
+
+                            ActivityService.log_activity(
+                                prospect_id=prospect_id,
+                                activity_type=act_type,
+                                field_name=f_key,
+                                old_value=old_raw,
+                                new_value=f_val,
+                                description=desc,
+                                performed_by=updated_by,
+                                performed_by_name=updated_by_name
+                            )
+        except Exception as act_err:
+            log.warning("Failed to record timeline activity for prospect %s: %s", prospect_id, act_err)
+
         updates = []
         params = []
         

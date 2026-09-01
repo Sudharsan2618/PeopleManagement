@@ -40,7 +40,8 @@ from routes import (
     course_routes,
     whatsapp_routes,
     dashboard_routes,
-    conversion_routes
+    conversion_routes,
+    calls_routes
 )
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -163,6 +164,7 @@ app.include_router(course_routes.router)
 app.include_router(whatsapp_routes.router)
 app.include_router(dashboard_routes.router)
 app.include_router(conversion_routes.router)
+app.include_router(calls_routes.router)
 
 
 # ── /health ───────────────────────────────────────────────────────────────────

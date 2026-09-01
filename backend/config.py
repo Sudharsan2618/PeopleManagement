@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     REDIS_POLL_DELAY   : float = 30.0  # Poll Redis every 30s — reduces Upstash request count ~6x vs 5s
     RUN_WORKER_IN_WEB  : bool = False  # Whether to run an ARQ worker loop inside the web process
 
+    # Exotel Telephony / Click-to-Call
+    EXOTEL_SID         : str = ""
+    EXOTEL_API_KEY     : str = ""
+    EXOTEL_API_TOKEN   : str = ""
+    EXOTEL_CALLER_ID   : str = ""
+    EXOTEL_SUBDOMAIN   : str = "api.exotel.com"
+    EXOTEL_CALLBACK_URL: str = ""  # Webhook URL for call status/recording (e.g., https://your-domain.com/calls/complete)
+
     # Prospectus message body
     PROSPECTUS_MESSAGE : str = (
         "Hi 👋\n\n"
