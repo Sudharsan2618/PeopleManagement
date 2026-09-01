@@ -391,6 +391,11 @@ function unionInto(target: string[], incoming: string[]) {
 }
 
 function mergeInFile(target: ParsedRecord, incoming: ParsedRecord) {
+  // If target lead_id was blank but incoming has it, preserve it
+  if (!target.fields.lead_id && incoming.fields.lead_id) {
+    target.fields.lead_id = incoming.fields.lead_id
+  }
+
   // Append course (dedup, <=100 chars) and mirror it as a tag.
   const courses = splitList(target.fields.course_interest || "")
   const incomingCourses = splitList(incoming.fields.course_interest || "")

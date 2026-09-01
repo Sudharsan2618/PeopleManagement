@@ -9984,7 +9984,11 @@ export default function TelecallerDashboard() {
 
 
 
-      await prospectsApi.update(prospectNumericId, { [field]: value })
+      await prospectsApi.update(prospectNumericId, {
+        [field]: value,
+        updated_by: user?.id ? Number(user.id) : undefined,
+        updated_by_name: user?.name || "Telecaller",
+      })
 
 
 
@@ -22203,6 +22207,8 @@ export default function TelecallerDashboard() {
         course_interest: editingProspect.courseInterest,
         comments: editingProspect.comments,
         website: editingProspect.website,
+        updated_by: user?.id ? Number(user.id) : undefined,
+        updated_by_name: user?.name || "Telecaller",
       })
 
       toast({ title: "Saved", description: "Prospect details updated." })

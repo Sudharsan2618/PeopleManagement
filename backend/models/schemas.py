@@ -154,6 +154,24 @@ class ProspectUpdate(BaseModel):
     batch: Optional[str] = None
     start_month: Optional[str] = None
     year: Optional[str] = None
+    updated_by: Optional[int] = None
+    updated_by_name: Optional[str] = None
+
+class ProspectActivity(BaseModel):
+    id: Any
+    prospect_id: int
+    activity_type: str
+    field_name: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    description: str
+    performed_by: Optional[int] = None
+    performed_by_name: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+    created_at: Any
+
+    class Config:
+        from_attributes = True
 
 class Prospect(ProspectBase):
     id: int

@@ -565,6 +565,21 @@ const STATUS_SUMMARY_CONFIG: Record<string, { label: string; color: string }> = 
 
 
 
+const formatTags = (tags: any): string => {
+  if (!tags) return ""
+  if (Array.isArray(tags)) return tags.filter(Boolean).join(", ")
+  if (typeof tags === "string") {
+    try {
+      const parsed = JSON.parse(tags)
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).join(", ")
+    } catch {
+      // plain string
+    }
+    return tags
+  }
+  return String(tags)
+}
+
 const hasLeadInfo = (p: Prospect) => {
 
 
@@ -836,7 +851,7 @@ export default function CallHistoryPage() {
     setEmailOutcome("all");
     setEmailCourse("all");
     setEmailRecipient("thirshi7817@gmail.com");
-    
+
     const formattedFrom = formatToDDMMYYYY(today);
     const formattedTo = formatToDDMMYYYY(today);
     setEmailSubject(`Daily Telecaller Report (${formattedFrom} to ${formattedTo})`);
@@ -1006,7 +1021,7 @@ export default function CallHistoryPage() {
       }
 
       return [
-        prospect ? cleanText(prospect.lead_id || "") : "",
+        prospect ? cleanText(prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "") : "",
         dt.toLocaleDateString('en-IN'),
         dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         cleanText(prospectName),
@@ -1032,7 +1047,7 @@ export default function CallHistoryPage() {
         cleanText(prospect?.company || ""),
         cleanText(prospect?.college_name || ""),
         cleanText(prospect?.website || ""),
-        cleanText(prospect?.tags || ""),
+        cleanText(formatTags(prospect?.tags)),
         cleanText(prospect?.comments || ""),
         cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
         cleanText(outcomeLabel),
@@ -1069,11 +1084,11 @@ export default function CallHistoryPage() {
     doc.setFontSize(14);
     doc.text('Call History Report', 40, 40);
     doc.setFontSize(10);
-    
+
     const telecallerName = user?.name || user?.email || 'Unknown';
     const displayName = telecallerName.length > 30 ? telecallerName.substring(0, 30) + '...' : telecallerName;
     doc.text(`Telecaller: ${displayName}`, 40, 58);
-    
+
     const fromStr = emailFromDate ? formatToDDMMYYYY(emailFromDate) : "";
     const toStr = emailToDate ? formatToDDMMYYYY(emailToDate) : "";
     doc.text(`Date range: ${fromStr} to ${toStr}`, 40, 72);
@@ -1126,7 +1141,7 @@ export default function CallHistoryPage() {
       }
 
       return [
-        prospect?.lead_id || "—",
+        prospect?.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "—",
         dt.toLocaleDateString('en-IN'),
         dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         prospectName,
@@ -1150,7 +1165,7 @@ export default function CallHistoryPage() {
         prospect?.designation || "—",
         prospect?.company || "—",
         prospect?.college_name || "—",
-        prospect?.tags || "—",
+        formatTags(prospect?.tags) || "—",
         prospect?.comments || "—",
         prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—",
         outcomeLabel,
@@ -1223,7 +1238,7 @@ export default function CallHistoryPage() {
       } catch (e) {
         leadSource = [];
       }
-      
+
       let leadType: string[] = [];
       try {
         if (prospect?.lead_type) {
@@ -1250,7 +1265,7 @@ export default function CallHistoryPage() {
       }
 
       return [
-        prospect ? cleanText(prospect.lead_id || "") : "",
+        prospect ? cleanText(prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "") : "",
         dt.toLocaleDateString('en-IN'),
         dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         cleanText(prospectName),
@@ -1276,7 +1291,7 @@ export default function CallHistoryPage() {
         cleanText(prospect?.company || ""),
         cleanText(prospect?.college_name || ""),
         cleanText(prospect?.website || ""),
-        cleanText(prospect?.tags || ""),
+        cleanText(formatTags(prospect?.tags)),
         cleanText(prospect?.comments || ""),
         cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
         cleanText(outcomeLabel),
@@ -1302,7 +1317,7 @@ export default function CallHistoryPage() {
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Report");
-    
+
     // Write as base64
     return XLSX.write(wb, { type: "base64", bookType: "xlsx" });
   };
@@ -1358,9 +1373,9 @@ export default function CallHistoryPage() {
       const optionsDate: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
       const optionsTime: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
       const formattedSentAt = `${now.toLocaleDateString('en-IN', optionsDate)} ${now.toLocaleTimeString('en-US', optionsTime)}`;
-      
+
       const attachmentNames = attachmentsToSend.map(a => a.filename).join("\n- ");
-      
+
       const dynamicEmailBody = `
 Daily Telecaller Report
 
@@ -1502,7 +1517,7 @@ This is an automated report from the TATTI CRM System.
           latestLogByProspect.set(key, log)
         }
       })
-      
+
       const uniqueLogs = Array.from(latestLogByProspect.values()).sort(
         (a, b) => new Date(b.called_at).getTime() - new Date(a.called_at).getTime()
       )
@@ -1702,9 +1717,9 @@ This is an automated report from the TATTI CRM System.
 
 
         modeCallLogs = callLogs.filter(log => {
-        const prospect = prospects[log.prospect_id]
-        return prospect && getContactMode(prospect) === "school"
-      })
+          const prospect = prospects[log.prospect_id]
+          return prospect && getContactMode(prospect) === "school"
+        })
 
 
 
@@ -1845,7 +1860,7 @@ This is an automated report from the TATTI CRM System.
 
         }
 
-        
+
 
         let leadType: string[] = []
 
@@ -1877,7 +1892,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          prospect ? cleanText(prospect.lead_id || "") : "",
+          prospect ? cleanText(prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "") : "",
 
 
 
@@ -1946,7 +1961,7 @@ This is an automated report from the TATTI CRM System.
 
 
           cleanText(leadType.join(', ')),
-        ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
+          ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
 
 
 
@@ -1978,7 +1993,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          cleanText(prospect?.tags || ""),
+          cleanText(formatTags(prospect?.tags)),
 
 
 
@@ -2679,7 +2694,7 @@ This is an automated report from the TATTI CRM System.
 
         }
 
-        
+
 
         let leadType: string[] = []
 
@@ -2711,7 +2726,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          prospect ? cleanText(prospect.lead_id || "") : "",
+          prospect ? cleanText(prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "") : "",
 
 
 
@@ -2754,6 +2769,7 @@ This is an automated report from the TATTI CRM System.
           cleanText(prospect?.alternative_email || ""),
 
 
+
           cleanText(prospect?.location || ""),
           cleanText(prospect?.city || ""),
           cleanText(prospect?.address || ""),
@@ -2761,7 +2777,7 @@ This is an automated report from the TATTI CRM System.
           cleanText(prospect?.course_interest || ""),
           cleanText(leadSource.join(', ')),
           cleanText(leadType.join(', ')),
-        ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
+          ...(contactMode === "college" ? [cleanText(proposedFor.join(', '))] : []),
           cleanText(prospect?.status || ""),
           cleanText(prospect?.parent_name || ""),
           cleanText(prospect?.department || ""),
@@ -2769,7 +2785,7 @@ This is an automated report from the TATTI CRM System.
           cleanText(prospect?.company || ""),
           cleanText(prospect?.college_name || ""),
           cleanText(prospect?.website || ""),
-          cleanText(prospect?.tags || ""),
+          cleanText(formatTags(prospect?.tags)),
           cleanText(prospect?.comments || ""),
           cleanText(prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : ""),
           cleanText(outcomeLabel),
@@ -2952,7 +2968,7 @@ This is an automated report from the TATTI CRM System.
         let leadType: string[] = []
         try { if (prospect?.lead_type) leadType = Array.isArray(prospect.lead_type) ? prospect.lead_type : JSON.parse(prospect.lead_type || '[]') } catch { leadType = [] }
         const allValues: string[] = [
-          prospect ? (prospect.lead_id || "—") : "—",
+          prospect ? (prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "—") : "—",
           dt.toLocaleDateString('en-IN'),
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           prospectName, prospectMobile,
@@ -2963,7 +2979,7 @@ This is an automated report from the TATTI CRM System.
           leadSource.join(', ') || "—", leadType.join(', ') || "—",
           prospect?.status || "—", prospect?.parent_name || "—", prospect?.department || "—",
           prospect?.designation || "—", prospect?.company || "—", prospect?.college_name || "—",
-          prospect?.website || "—", (Array.isArray(prospect?.tags) ? prospect.tags.join(', ') : prospect?.tags) || "—", prospect?.comments || "—",
+          prospect?.website || "—", formatTags(prospect?.tags) || "—", prospect?.comments || "—",
           prospect?.follow_up_date ? new Date(prospect.follow_up_date).toLocaleDateString('en-IN') : "—",
           outcomeLabel, log.status_after_call || "—", log.notes || "—"
         ]
@@ -3234,9 +3250,9 @@ This is an automated report from the TATTI CRM System.
 
 
         modeCallLogs = callLogs.filter(log => {
-        const prospect = prospects[log.prospect_id]
-        return prospect && getContactMode(prospect) === "school"
-      })
+          const prospect = prospects[log.prospect_id]
+          return prospect && getContactMode(prospect) === "school"
+        })
 
 
 
@@ -3346,7 +3362,7 @@ This is an automated report from the TATTI CRM System.
 
         }
 
-        
+
 
         let leadType: string[] = []
 
@@ -3378,7 +3394,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          prospect ? (prospect.lead_id || "—") : "—",
+          prospect ? (prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "—") : "—",
 
 
 
@@ -3475,7 +3491,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          prospect?.tags || "—",
+          formatTags(prospect?.tags) || "—",
 
 
 
@@ -5395,29 +5411,29 @@ This is an automated report from the TATTI CRM System.
         {/* Status Breakdown - limited to requested categories */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-dashed border-muted-foreground/20">
           <div className="flex flex-wrap gap-2">
-          {(contactMode === "college" ? COLLEGE_STATUS_KEYS : contactMode === "short_term_course" ? SHORT_TERM_COURSE_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
+            {(contactMode === "college" ? COLLEGE_STATUS_KEYS : contactMode === "short_term_course" ? SHORT_TERM_COURSE_STATUS_KEYS : SCHOOL_STATUS_KEYS).map((status) => {
 
-            const count = statusCounts[status]
+              const count = statusCounts[status]
 
-            const config = STATUS_SUMMARY_CONFIG[status]
+              const config = STATUS_SUMMARY_CONFIG[status]
 
-            if (!summaryDate && count === 0) return null; // hide zeros only for all-time
+              if (!summaryDate && count === 0) return null; // hide zeros only for all-time
 
-            if (!config) return null; // fallback
+              if (!config) return null; // fallback
 
-            return (
+              return (
 
-              <Badge
-                key={status}
-                variant="outline"
-                className={cn("text-xs px-3 py-1 font-semibold", config.color, count === 0 && "opacity-50")}
-              >
-                {config.label}: {count}
-              </Badge>
+                <Badge
+                  key={status}
+                  variant="outline"
+                  className={cn("text-xs px-3 py-1 font-semibold", config.color, count === 0 && "opacity-50")}
+                >
+                  {config.label}: {count}
+                </Badge>
 
-            )
+              )
 
-          })}
+            })}
           </div>
 
           <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-lg border border-muted shrink-0">
@@ -5789,19 +5805,8 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          <div className="rounded-lg border overflow-x-auto">
-
-
-
-            <div className="overflow-y-auto max-h-[calc(100vh-260px)]">
-
-
-
-
-
-
-
-              <Table className="min-w-max">
+          <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 260px)' }} className="rounded-lg border">
+            <table style={{ minWidth: 'max-content', width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
 
 
 
@@ -5809,7 +5814,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                <TableHeader className="sticky top-0 z-10 bg-muted/50">
+              <TableHeader className="sticky top-0 z-10 bg-slate-50">
 
 
 
@@ -5817,7 +5822,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
 
 
 
@@ -5825,7 +5830,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                    <TableHead className="w-12 text-center font-semibold">#</TableHead>
+                  <TableHead className="w-10 text-center font-semibold sticky left-0 z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">#</TableHead>
 
 
 
@@ -5833,7 +5838,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                    <TableHead className="font-semibold">Lead ID</TableHead>
+                  <TableHead className="min-w-[100px] font-semibold sticky left-[40px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Lead ID</TableHead>
 
 
 
@@ -5841,7 +5846,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                    <TableHead className="font-semibold">Prospect</TableHead>
+                  <TableHead className="min-w-[160px] font-semibold sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Prospect</TableHead>
 
 
 
@@ -5849,7 +5854,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                    <TableHead className="font-semibold">Mobile</TableHead>
+                  <TableHead className="font-semibold">Mobile</TableHead>
 
 
 
@@ -6029,27 +6034,27 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                    
+
 
 
 
                     // Parse lead_source and lead_type from the call log (now includes prospect fields)
 
-                    const leadSource = prospect?.lead_source 
+                    const leadSource = prospect?.lead_source
 
-                      ? (Array.isArray(prospect.lead_source) ? prospect.lead_source : 
+                      ? (Array.isArray(prospect.lead_source) ? prospect.lead_source :
 
-                          (typeof prospect.lead_source === 'string' ? JSON.parse(prospect.lead_source || '[]') : []))
+                        (typeof prospect.lead_source === 'string' ? JSON.parse(prospect.lead_source || '[]') : []))
 
                       : []
 
-                    
+
 
                     const leadType = prospect?.lead_type
 
                       ? (Array.isArray(prospect.lead_type) ? prospect.lead_type :
 
-                          (typeof prospect.lead_type === 'string' ? JSON.parse(prospect.lead_type || '[]') : []))
+                        (typeof prospect.lead_type === 'string' ? JSON.parse(prospect.lead_type || '[]') : []))
 
                       : []
 
@@ -6059,50 +6064,24 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                      <TableRow key={log.id} className="hover:bg-muted/5 cursor-default group">
+                      <TableRow key={log.id} className="hover:bg-slate-50/80 cursor-default group">
 
 
 
-                        <TableCell className="text-center text-muted-foreground font-medium">
-
-
-
-
-
-
-
+                        <TableCell className="font-medium text-slate-400 text-xs w-10 sticky left-0 z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
                           {(currentPage - 1) * rowsPerPage + index + 1}
-
-
-
-
-
-
-
                         </TableCell>
 
 
 
-                        <TableCell className="font-mono text-xs text-slate-600">
-
-
-
-                          {prospect?.lead_id || "—"}
-
-
-
+                        <TableCell className="min-w-[100px] sticky left-[40px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
+                          <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">{prospect?.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "—"}</span>
                         </TableCell>
 
 
 
-                        <TableCell className="font-semibold text-slate-900">
-
-
-
-                          {prospect?.name || `Prospect #${log.prospect_id}`}
-
-
-
+                        <TableCell className="min-w-[160px] sticky left-[140px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
+                          <span className="font-semibold text-slate-800 text-sm">{prospect?.name || `Prospect #${log.prospect_id}`}</span>
                         </TableCell>
 
 
@@ -6322,7 +6301,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                          {prospect?.tags || "—"}
+                          {formatTags(prospect?.tags) || "—"}
 
 
 
@@ -6471,18 +6450,11 @@ This is an automated report from the TATTI CRM System.
 
 
               </TableBody>
-
-
-
-            </Table>
+            </table>
 
 
 
           </div>
-
-
-
-        </div>
 
 
 
@@ -6758,279 +6730,279 @@ This is an automated report from the TATTI CRM System.
 
 
 
-          <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-            <DialogContent className="sm:max-w-[480px]">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-foreground">Send Daily Report</DialogTitle>
-                <DialogDescription>
-                  Configure and send a filtered call history report to the company email.
-                </DialogDescription>
-              </DialogHeader>
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-foreground">Send Daily Report</DialogTitle>
+            <DialogDescription>
+              Configure and send a filtered call history report to the company email.
+            </DialogDescription>
+          </DialogHeader>
 
-              <div className="grid gap-5 py-4 text-left">
-                {/* Report Type */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Report Type</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(["school", "college", "short_term_course"] as const).map((type) => {
-                      const isSelected = emailReportType === type;
-                      let label = "School Contact";
-                      let Icon = GraduationCap;
-                      if (type === "college") {
-                        label = "College Contact";
-                        Icon = Building2;
-                      } else if (type === "short_term_course") {
-                        label = "Short Term Course";
-                        Icon = BookOpen;
-                      }
+          <div className="grid gap-5 py-4 text-left">
+            {/* Report Type */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Report Type</label>
+              <div className="grid grid-cols-3 gap-3">
+                {(["school", "college", "short_term_course"] as const).map((type) => {
+                  const isSelected = emailReportType === type;
+                  let label = "School Contact";
+                  let Icon = GraduationCap;
+                  if (type === "college") {
+                    label = "College Contact";
+                    Icon = Building2;
+                  } else if (type === "short_term_course") {
+                    label = "Short Term Course";
+                    Icon = BookOpen;
+                  }
 
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => {
-                            setEmailReportType(type);
-                            setEmailOutcome("all");
-                            setEmailCourse("all");
-                          }}
-                          className={cn(
-                            "relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 text-center transition-all cursor-pointer",
-                            isSelected
-                              ? "border-purple-600 bg-purple-50/50 text-purple-900 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-500"
-                              : "border-border bg-card hover:bg-muted text-muted-foreground"
-                          )}
-                        >
-                          <div className="absolute top-2 left-2">
-                            <div className={cn(
-                              "h-4 w-4 rounded-full border flex items-center justify-center",
-                              isSelected ? "border-purple-600 text-purple-600" : "border-muted-foreground"
-                            )}>
-                              {isSelected && <div className="h-2 w-2 rounded-full bg-purple-600" />}
-                            </div>
-                          </div>
-                          <Icon className={cn("h-6 w-6 mt-2", isSelected ? "text-purple-600" : "text-muted-foreground")} />
-                          <span className="text-xs font-semibold">{label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Date Range */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">From</label>
-                    <Input
-                      type="date"
-                      value={emailFromDate}
-                      onChange={(e) => setEmailFromDate(e.target.value)}
-                      className="h-9 rounded-lg"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">To</label>
-                    <Input
-                      type="date"
-                      value={emailToDate}
-                      onChange={(e) => setEmailToDate(e.target.value)}
-                      className="h-9 rounded-lg"
-                    />
-                  </div>
-                </div>
-
-                {/* Outcome and Course */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Outcome</label>
-                    <Select value={emailOutcome} onValueChange={setEmailOutcome}>
-                      <SelectTrigger className="h-9 rounded-lg">
-                        <SelectValue placeholder="All Outcomes" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Outcomes</SelectItem>
-                        {getModalOutcomes(emailReportType).map((item) => (
-                          <SelectItem key={item.key} value={item.key}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Course</label>
-                    <Select value={emailCourse} onValueChange={setEmailCourse}>
-                      <SelectTrigger className="h-9 rounded-lg">
-                        <SelectValue placeholder="All Courses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Courses</SelectItem>
-                        {getModalCourses(emailReportType).map((course) => (
-                          <SelectItem key={course} value={course}>
-                            {course}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Recipient Email */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recipient Email</label>
-                  <Input
-                    value={emailRecipient}
-                    readOnly
-                    className="h-9 rounded-lg bg-muted text-muted-foreground cursor-not-allowed"
-                  />
-                  <span className="text-[10px] text-muted-foreground mt-0.5">(Read Only)</span>
-                </div>
-
-                {/* Subject */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Subject</label>
-                  <Input
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    className="h-9 rounded-lg"
-                  />
-                </div>
-
-                {/* Attachment Options */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Attachment Options</label>
-                  <div className="flex flex-col gap-3 mt-1">
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={attachExcel}
-                        onChange={(e) => setAttachExcel(e.target.checked)}
-                        className="rounded border-input text-purple-600 focus:ring-purple-500 h-4.5 w-4.5 cursor-pointer accent-purple-600"
-                      />
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">Attach Excel Report</span>
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="3" y="3" width="18" height="18" rx="2" fill="#107C41" />
-                          <path d="M8.5 7.5L11 12L8.5 16.5H10.5L12 13.5L13.5 16.5H15.5L13 12L15.5 7.5H13.5L12 10.5L10.5 7.5H8.5Z" fill="white" />
-                        </svg>
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setEmailReportType(type);
+                        setEmailOutcome("all");
+                        setEmailCourse("all");
+                      }}
+                      className={cn(
+                        "relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 text-center transition-all cursor-pointer",
+                        isSelected
+                          ? "border-purple-600 bg-purple-50/50 text-purple-900 dark:bg-purple-950/20 dark:text-purple-300 dark:border-purple-500"
+                          : "border-border bg-card hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      <div className="absolute top-2 left-2">
+                        <div className={cn(
+                          "h-4 w-4 rounded-full border flex items-center justify-center",
+                          isSelected ? "border-purple-600 text-purple-600" : "border-muted-foreground"
+                        )}>
+                          {isSelected && <div className="h-2 w-2 rounded-full bg-purple-600" />}
+                        </div>
                       </div>
-                    </label>
-                    
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={attachPdf}
-                        onChange={(e) => setAttachPdf(e.target.checked)}
-                        className="rounded border-input text-purple-600 focus:ring-purple-500 h-4.5 w-4.5 cursor-pointer accent-purple-600"
-                      />
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">Attach PDF Report</span>
-                        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="3" y="3" width="18" height="18" rx="2" fill="#E02424" />
-                          <path d="M7 6H13V8H7V6ZM7 10H17V12H7V10ZM7 14H17V16H7V14Z" fill="white" />
-                          <rect x="13" y="5" width="5" height="4" rx="0.5" fill="#F87171" />
-                        </svg>
-                      </div>
-                    </label>
+                      <Icon className={cn("h-6 w-6 mt-2", isSelected ? "text-purple-600" : "text-muted-foreground")} />
+                      <span className="text-xs font-semibold">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Date Range */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">From</label>
+                <Input
+                  type="date"
+                  value={emailFromDate}
+                  onChange={(e) => setEmailFromDate(e.target.value)}
+                  className="h-9 rounded-lg"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">To</label>
+                <Input
+                  type="date"
+                  value={emailToDate}
+                  onChange={(e) => setEmailToDate(e.target.value)}
+                  className="h-9 rounded-lg"
+                />
+              </div>
+            </div>
+
+            {/* Outcome and Course */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Outcome</label>
+                <Select value={emailOutcome} onValueChange={setEmailOutcome}>
+                  <SelectTrigger className="h-9 rounded-lg">
+                    <SelectValue placeholder="All Outcomes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Outcomes</SelectItem>
+                    {getModalOutcomes(emailReportType).map((item) => (
+                      <SelectItem key={item.key} value={item.key}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Course</label>
+                <Select value={emailCourse} onValueChange={setEmailCourse}>
+                  <SelectTrigger className="h-9 rounded-lg">
+                    <SelectValue placeholder="All Courses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {getModalCourses(emailReportType).map((course) => (
+                      <SelectItem key={course} value={course}>
+                        {course}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Recipient Email */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recipient Email</label>
+              <Input
+                value={emailRecipient}
+                readOnly
+                className="h-9 rounded-lg bg-muted text-muted-foreground cursor-not-allowed"
+              />
+              <span className="text-[10px] text-muted-foreground mt-0.5">(Read Only)</span>
+            </div>
+
+            {/* Subject */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Subject</label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                className="h-9 rounded-lg"
+              />
+            </div>
+
+            {/* Attachment Options */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Attachment Options</label>
+              <div className="flex flex-col gap-3 mt-1">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={attachExcel}
+                    onChange={(e) => setAttachExcel(e.target.checked)}
+                    className="rounded border-input text-purple-600 focus:ring-purple-500 h-4.5 w-4.5 cursor-pointer accent-purple-600"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">Attach Excel Report</span>
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="2" fill="#107C41" />
+                      <path d="M8.5 7.5L11 12L8.5 16.5H10.5L12 13.5L13.5 16.5H15.5L13 12L15.5 7.5H13.5L12 10.5L10.5 7.5H8.5Z" fill="white" />
+                    </svg>
                   </div>
-                </div>
-              </div>
+                </label>
 
-              <DialogFooter className="flex flex-row justify-end gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEmailDialogOpen(false)}
-                  className="h-9 rounded-lg"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isSendingEmail}
-                  onClick={handleSendReport}
-                  className="h-9 rounded-lg bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700 gap-2 border-none"
-                >
-                  {isSendingEmail ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      Send Report
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Column Selector Modal */}
-          <Dialog open={isColumnSelectorOpen} onOpenChange={setIsColumnSelectorOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Select Columns to Export</DialogTitle>
-                <DialogDescription>
-                  Choose which columns to include in your {exportFormat === "excel" ? "Excel" : "PDF"} download.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-2">
-                <div className="flex gap-3 mb-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setSelectedColumns(new Set(ALL_EXPORT_COLUMNS))}
-                  >
-                    Select All
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setSelectedColumns(new Set())}
-                  >
-                    Deselect All
-                  </Button>
-                  <span className="text-xs text-muted-foreground ml-auto self-center">{selectedColumns.size} selected</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                  {ALL_EXPORT_COLUMNS.map(col => (
-                    <label key={col} className="flex items-center gap-2 cursor-pointer select-none rounded-md px-2 py-1.5 hover:bg-muted/60 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedColumns.has(col)}
-                        onChange={() => toggleColumn(col)}
-                        className="rounded border-input h-4 w-4 cursor-pointer accent-purple-600"
-                      />
-                      <span className="text-sm">{col}</span>
-                    </label>
-                  ))}
-                </div>
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={attachPdf}
+                    onChange={(e) => setAttachPdf(e.target.checked)}
+                    className="rounded border-input text-purple-600 focus:ring-purple-500 h-4.5 w-4.5 cursor-pointer accent-purple-600"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground">Attach PDF Report</span>
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="3" width="18" height="18" rx="2" fill="#E02424" />
+                      <path d="M7 6H13V8H7V6ZM7 10H17V12H7V10ZM7 14H17V16H7V14Z" fill="white" />
+                      <rect x="13" y="5" width="5" height="4" rx="0.5" fill="#F87171" />
+                    </svg>
+                  </div>
+                </label>
               </div>
-              <DialogFooter className="flex flex-row justify-end gap-2 mt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsColumnSelectorOpen(false)}
-                  className="h-9 rounded-lg"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleExportWithColumns}
-                  disabled={selectedColumns.size === 0}
-                  className="h-9 rounded-lg bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700 gap-2 border-none"
-                >
-                  <Download className="h-4 w-4" />
-                  Export {selectedColumns.size} Column{selectedColumns.size !== 1 ? "s" : ""}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-row justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEmailDialogOpen(false)}
+              className="h-9 rounded-lg"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isSendingEmail}
+              onClick={handleSendReport}
+              className="h-9 rounded-lg bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700 gap-2 border-none"
+            >
+              {isSendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  Send Report
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Column Selector Modal */}
+      <Dialog open={isColumnSelectorOpen} onOpenChange={setIsColumnSelectorOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Select Columns to Export</DialogTitle>
+            <DialogDescription>
+              Choose which columns to include in your {exportFormat === "excel" ? "Excel" : "PDF"} download.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <div className="flex gap-3 mb-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setSelectedColumns(new Set(ALL_EXPORT_COLUMNS))}
+              >
+                Select All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setSelectedColumns(new Set())}
+              >
+                Deselect All
+              </Button>
+              <span className="text-xs text-muted-foreground ml-auto self-center">{selectedColumns.size} selected</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+              {ALL_EXPORT_COLUMNS.map(col => (
+                <label key={col} className="flex items-center gap-2 cursor-pointer select-none rounded-md px-2 py-1.5 hover:bg-muted/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.has(col)}
+                    onChange={() => toggleColumn(col)}
+                    className="rounded border-input h-4 w-4 cursor-pointer accent-purple-600"
+                  />
+                  <span className="text-sm">{col}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="flex flex-row justify-end gap-2 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsColumnSelectorOpen(false)}
+              className="h-9 rounded-lg"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleExportWithColumns}
+              disabled={selectedColumns.size === 0}
+              className="h-9 rounded-lg bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700 gap-2 border-none"
+            >
+              <Download className="h-4 w-4" />
+              Export {selectedColumns.size} Column{selectedColumns.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
 
 
 

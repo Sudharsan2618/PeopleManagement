@@ -67,6 +67,8 @@ class CallLogService:
                 COALESCE(cl.notification_shown, FALSE) AS notification_shown,
                 COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
                 cl.notification_last_shown_at,
+                cl.call_duration,
+                cl.recording_url,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 p.lead_id AS prospect_lead_id,
@@ -131,6 +133,8 @@ class CallLogService:
                 COALESCE(cl.notification_shown, FALSE) AS notification_shown,
                 COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
                 cl.notification_last_shown_at,
+                cl.call_duration,
+                cl.recording_url,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 p.lead_id AS prospect_lead_id,
@@ -165,6 +169,8 @@ class CallLogService:
                 COALESCE(cl.notification_shown, FALSE) AS notification_shown,
                 COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
                 cl.notification_last_shown_at,
+                cl.call_duration,
+                cl.recording_url,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 p.lead_id AS prospect_lead_id,
@@ -183,12 +189,7 @@ class CallLogService:
     
     @staticmethod
     def get_call_logs_by_telecaller(telecaller_id: int) -> List[dict]:
-        """Get all call logs for a specific telecaller.
-
-        Returns every call log made by the telecaller, ordered from newest to oldest.
-        This allows the UI to compute per-course status across multiple calls for the
-        same prospect.
-        """
+        """Get all call logs for a specific telecaller."""
         query = """
             SELECT
                 cl.id,
@@ -205,6 +206,8 @@ class CallLogService:
                 COALESCE(cl.notification_shown, FALSE) AS notification_shown,
                 COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
                 cl.notification_last_shown_at,
+                cl.call_duration,
+                cl.recording_url,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 p.lead_id AS prospect_lead_id,
@@ -269,6 +272,8 @@ class CallLogService:
                 COALESCE(cl.notification_shown, FALSE) AS notification_shown,
                 COALESCE(cl.notification_dismissed, FALSE) AS notification_dismissed,
                 cl.notification_last_shown_at,
+                cl.call_duration,
+                cl.recording_url,
                 p.name AS prospect_name,
                 p.mobile AS prospect_phone,
                 u.name AS telecaller_name,
@@ -292,24 +297,56 @@ class CallLogService:
     def create_call_log(prospect_id: int, telecaller_id: int, assignment_id: Optional[int],
                         outcome: str, status_after_call: Optional[str], reason: Optional[str],
                         notes: Optional[str], course_interest: Optional[str],
-                        callback_scheduled_at: Optional[datetime]) -> int:
+                        callback_scheduled_at: Optional[datetime],
+                        call_duration: Optional[int] = None,
+                        recording_url: Optional[str] = None) -> int:
         """Create a new call log."""
         query = """
             INSERT INTO call_logs (prospect_id, telecaller_id, assignment_id, outcome, 
-                                   status_after_call, reason, notes, course_interest, callback_scheduled_at, called_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                   status_after_call, reason, notes, course_interest, callback_scheduled_at, called_at, call_duration, recording_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
-        return execute_insert(query, (prospect_id, telecaller_id, assignment_id, outcome, 
+        log_id = execute_insert(query, (prospect_id, telecaller_id, assignment_id, outcome, 
                                        status_after_call, reason, notes, course_interest, 
-                                       callback_scheduled_at, get_ist_now()))
+                                       callback_scheduled_at, get_ist_now(), call_duration, recording_url))
+        
+        try:
+            from services.activity_service import ActivityService
+            duration_sec = call_duration or 0
+            mins = duration_sec // 60
+            secs = duration_sec % 60
+            dur_str = f"{mins:02d}:{secs:02d}" if duration_sec > 0 else "00:00"
+            desc = f"Call made (Duration: {dur_str}) Outcome: {outcome}"
+            ActivityService.log_activity(
+                prospect_id=prospect_id,
+                activity_type="call",
+                field_name=None,
+                old_value=None,
+                new_value=outcome,
+                description=desc,
+                performed_by=telecaller_id,
+                meta={
+                    "duration": duration_sec,
+                    "recording_url": recording_url,
+                    "notes": notes,
+                    "reason": reason,
+                    "status_after_call": status_after_call,
+                }
+            )
+        except Exception as e:
+            pass
+
+        return log_id
     
     @staticmethod
     def update_call_log(log_id: int, outcome: Optional[str] = None, status_after_call: Optional[str] = None,
                         reason: Optional[str] = None, notes: Optional[str] = None,
                         course_interest: Optional[str] = None, callback_scheduled_at: Optional[datetime] = None,
                         notification_shown: Optional[bool] = None, notification_dismissed: Optional[bool] = None,
-                        notification_last_shown_at: Optional[datetime] = None) -> int:
+                        notification_last_shown_at: Optional[datetime] = None,
+                        call_duration: Optional[int] = None,
+                        recording_url: Optional[str] = None) -> int:
         """Update call log details."""
         updates = []
         params = []
@@ -341,6 +378,12 @@ class CallLogService:
         if notification_last_shown_at is not None:
             updates.append("notification_last_shown_at = %s")
             params.append(notification_last_shown_at)
+        if call_duration is not None:
+            updates.append("call_duration = %s")
+            params.append(call_duration)
+        if recording_url is not None:
+            updates.append("recording_url = %s")
+            params.append(recording_url)
         
         if not updates:
             return 0
@@ -352,6 +395,7 @@ class CallLogService:
             WHERE id = %s
         """
         return execute_update_delete(query, tuple(params))
+
     
     @staticmethod
     def delete_call_log(log_id: int) -> int:

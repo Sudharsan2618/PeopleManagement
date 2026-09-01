@@ -63,7 +63,7 @@ export interface Prospect {
   gender?: string
   dob?: string
   state?: string
-  
+
   // Per-course status map computed dynamically from call_logs.
   // Key = course name (trimmed), Value = latest status_after_call (or prospect status if no call)
   course_statuses?: Record<string, string>
@@ -71,6 +71,20 @@ export interface Prospect {
   assigned_telecaller_name?: string
   assignment_date?: string
   assignment_dashboard?: string
+}
+
+export interface ProspectActivity {
+  id: string | number
+  prospect_id: number
+  activity_type: string
+  field_name?: string
+  old_value?: string
+  new_value?: string
+  description: string
+  performed_by?: number
+  performed_by_name?: string
+  meta?: Record<string, any>
+  created_at: string
 }
 
 export interface CallLog {
@@ -90,7 +104,10 @@ export interface CallLog {
   called_at: string
   prospect_name?: string
   prospect_phone?: string
+  call_duration?: number
+  recording_url?: string
 }
+
 
 export interface SpocReport {
   id: number
@@ -538,6 +555,7 @@ export const prospectsApi = {
     method: "PUT",
     body: JSON.stringify(data),
   }),
+  getTimeline: (id: number) => apiRequest<ProspectActivity[]>(`/prospects/${id}/timeline`),
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
   }),
@@ -1002,3 +1020,47 @@ export const conversionApi = {
     body: JSON.stringify(data)
   })
 }
+
+// Calls / Click-to-Call Telephony API
+export interface CallStartPayload {
+  prospect_id?: number
+  telecaller_id?: number
+  from_number: string
+  to_number: string
+  custom_field?: string
+}
+
+export interface CallStartResponse {
+  success: boolean
+  call_sid: string
+  status: string
+  message: string
+  is_simulated?: boolean
+  error?: string
+}
+
+export interface CallSession {
+  call_sid: string
+  status: string
+  duration: number
+  recording_url?: string | null
+  from_number?: string
+  to_number?: string
+  is_simulated?: boolean
+  ended_at?: string
+}
+
+export const callsApi = {
+  start: (data: CallStartPayload) =>
+    apiRequest<CallStartResponse>("/calls/start", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  end: (call_sid: string, duration: number = 0) =>
+    apiRequest<{ status: string; session: CallSession }>("/calls/end", {
+      method: "POST",
+      body: JSON.stringify({ call_sid, duration }),
+    }),
+  getSession: (call_sid: string) =>
+    apiRequest<CallSession>(`/calls/session/${call_sid}`),
+}

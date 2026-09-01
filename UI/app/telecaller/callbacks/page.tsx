@@ -20,6 +20,7 @@ import { cn, parseISTDate } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { callLogsApi, prospectsApi, type CallLog, type Prospect } from "@/lib/api-client"
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import { CallPanel } from "@/components/telephony/call-panel"
 import { type CallOutcome } from "@/lib/mock-data"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -88,6 +89,7 @@ export default function CallbacksPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCallPanelOpen, setIsCallPanelOpen] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
   const { toast } = useToast()
 
@@ -159,8 +161,17 @@ export default function CallbacksPage() {
       ...prospect,
       numericId: prospect.id,
     })
+    setIsCallPanelOpen(true)
+    setIsModalOpen(false)
+  }
+
+
+
+  const handleCallPanelEnded = (result: { duration: number; recordingUrl?: string | null; callSid?: string }) => {
+    setIsCallPanelOpen(false)
     setIsModalOpen(true)
   }
+
 
   const parseCallbackTime = (time: string) => {
     const match = time.match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$/)
@@ -475,7 +486,17 @@ export default function CallbacksPage() {
         </div>
       </div>
 
+      <CallPanel
+        isOpen={isCallPanelOpen}
+        prospect={selectedProspect}
+        telecallerId={user?.id ? Number(user.id) : undefined}
+        telecallerPhone={user?.mobile || user?.phone || ""}
+        onCallEnded={handleCallPanelEnded}
+        onClose={() => setIsCallPanelOpen(false)}
+      />
+
       <CallOutcomeModal
+
         prospect={selectedProspect}
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
