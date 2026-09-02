@@ -512,6 +512,27 @@ class ProspectService:
             WHERE p.id = %s
         """
         return execute_query(query, (prospect_id,), fetch="one")
+
+    @staticmethod
+    def get_stats() -> dict:
+        """Get summary stats for prospects (total, assigned, qualified, pending)."""
+        query = """
+            SELECT 
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE assigned_to IS NOT NULL) AS assigned,
+                COUNT(*) FILTER (WHERE status ILIKE '%%qualified%%' OR status IN ('hot', 'admission_done', 'visit_done', 'visit_scheduled')) AS qualified,
+                COUNT(*) FILTER (WHERE status IS NULL OR status = '' OR status ILIKE '%%new%%' OR status ILIKE '%%pending%%') AS pending
+            FROM prospects
+        """
+        row = execute_query(query, fetch="one")
+        if not row:
+            return {"total": 0, "assigned": 0, "qualified": 0, "pending": 0}
+        return {
+            "total": row.get("total") or 0,
+            "assigned": row.get("assigned") or 0,
+            "qualified": row.get("qualified") or 0,
+            "pending": row.get("pending") or 0,
+        }
     
     @staticmethod
     def get_prospects_by_status(status: str) -> List[dict]:

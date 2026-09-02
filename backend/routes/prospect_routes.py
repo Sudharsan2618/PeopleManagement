@@ -172,6 +172,16 @@ def get_activities_feed(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/stats", response_model=ProspectStats)
+def get_prospect_stats():
+    """Get overall prospect summary statistics (total, assigned, qualified, pending).
+    Declared before /{prospect_id} so the literal path wins."""
+    try:
+        return ProspectService.get_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{prospect_id}", response_model=Prospect)
 def get_prospect(prospect_id: int):
     """Get prospect by ID."""
