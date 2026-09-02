@@ -7205,11 +7205,13 @@ export default function TelecallerDashboard() {
       prospect?.dashboard === "short_term_course" ||
       prospect?.prospect_type === "short_term_course" ||
       prospect?.prospectType === "short_term_course" ||
-      (typeof prospect?.courseInterest === "string" && (prospect.courseInterest.toLowerCase().includes("wind") || prospect.courseInterest.toLowerCase().includes("short"))) ||
-      (typeof prospect?.course_interest === "string" && (prospect.course_interest.toLowerCase().includes("wind") || prospect.course_interest.toLowerCase().includes("short")))
+      (typeof prospect?.courseInterest === "string" && (prospect.courseInterest.toLowerCase().includes("wind") || prospect.courseInterest.toLowerCase().includes("short") || prospect.courseInterest.toLowerCase().includes("wedding") || prospect.courseInterest.toLowerCase().includes("film") || prospect.courseInterest.toLowerCase().includes("solar") || prospect.courseInterest.toLowerCase().includes("logistics") || prospect.courseInterest.toLowerCase().includes("micro"))) ||
+      (typeof prospect?.course_interest === "string" && (prospect.course_interest.toLowerCase().includes("wind") || prospect.course_interest.toLowerCase().includes("short") || prospect.course_interest.toLowerCase().includes("wedding")))
 
-    const rawStatus = statusVal !== undefined ? statusVal : (prospect?.status || prospect?.outcome || "")
-    const normKey = normalizeStatus(String(rawStatus || ""))
+    const rawStatusFull: string = String(statusVal !== undefined ? statusVal : (prospect?.status || prospect?.outcome || ""))
+    // Strip any " - CourseName" suffix (e.g. "Interested - Wedding Photography" → "Interested")
+    const rawStatus = rawStatusFull.includes(" - ") ? rawStatusFull.split(" - ")[0].trim() : rawStatusFull
+    const normKey = normalizeStatus(rawStatus)
 
     if (isSTC) {
       if (SA_TO_STC[rawStatus]) return SA_TO_STC[rawStatus]
@@ -7222,6 +7224,7 @@ export default function TelecallerDashboard() {
       return statusConfig[normKey]?.label || rawStatus || "New"
     }
 
+    // For non-STC: strip course suffix and resolve label
     return statusConfig[normKey]?.label || statusConfig[rawStatus]?.label || rawStatus || "New"
   }
 
@@ -30175,10 +30178,16 @@ export default function TelecallerDashboard() {
                           lost: "Not Interested",
                         }
                         const isSTCMode = viewMode === "short_term_course"
-                        const resolvedStatus = (isSTCMode && SA_TO_STC[prospect.status])
-                          ? SA_TO_STC[prospect.status]
-                          : prospect.status
-                        const sc = statusConfig[resolvedStatus] || {
+                        // Strip any " - CourseName" suffix that may have been accidentally saved
+                        // (e.g. "Interested - Wedding Photography" → "Interested")
+                        const rawStatusStr: string = prospect.status || prospect.outcome || ""
+                        const strippedStatus = rawStatusStr.includes(" - ")
+                          ? rawStatusStr.split(" - ")[0].trim()
+                          : rawStatusStr
+                        const resolvedStatus = (isSTCMode && SA_TO_STC[strippedStatus])
+                          ? SA_TO_STC[strippedStatus]
+                          : strippedStatus
+                        const sc = statusConfig[resolvedStatus] || statusConfig[rawStatusStr] || {
 
 
 

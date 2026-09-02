@@ -811,9 +811,14 @@ export function CallOutcomeModal({
       data.reason = reason
     }
 
-    const finalOutcome = hasMultipleCourses && selectedSpecificCourse 
-      ? `${selectedOutcome} - ${selectedSpecificCourse}`
-      : selectedOutcome
+    // Store the selected specific course separately in data, NOT concatenated into the outcome value.
+    // Concatenating the course into the status (e.g. "Interested - Wedding Photography") causes
+    // the dashboard to show garbled status badges.
+    if (hasMultipleCourses && selectedSpecificCourse) {
+      data.course_interest = selectedSpecificCourse
+    }
+
+    const finalOutcome = selectedOutcome
 
     onSubmit(finalOutcome, data)
     resetForm()
