@@ -153,3 +153,130 @@ class ActivityService:
         except Exception as e:
             log.error("Failed to get timeline for prospect %s: %s", prospect_id, e)
             return []
+
+    @staticmethod
+    def get_activities_feed(
+        telecaller_id: Optional[int] = None,
+        activity_type: Optional[str] = None,
+        only_converted: bool = False,
+        search: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0
+    ) -> Dict[str, Any]:
+        """Retrieve aggregated activity feed with prospect & converted enquiry details and summary metrics."""
+        try:
+            where_clauses = ["1=1"]
+            params: List[Any] = []
+
+            if telecaller_id:
+                where_clauses.append("(pa.performed_by = %s OR p.assigned_to = %s OR ce.telecaller_id = %s)")
+                params.extend([telecaller_id, telecaller_id, telecaller_id])
+
+            if activity_type and activity_type != "all":
+                if activity_type == "payment":
+                    where_clauses.append("pa.activity_type IN ('payment', 'refund')")
+                else:
+                    where_clauses.append("pa.activity_type = %s")
+                    params.append(activity_type)
+
+            if only_converted:
+                where_clauses.append("(p.converted = TRUE OR ce.id IS NOT NULL)")
+
+            if start_date:
+                where_clauses.append("pa.created_at >= %s")
+                params.append(f"{start_date} 00:00:00")
+
+            if end_date:
+                where_clauses.append("pa.created_at <= %s")
+                params.append(f"{end_date} 23:59:59")
+
+            if search:
+                term = f"%{search.strip()}%"
+                where_clauses.append(
+                    "(p.name ILIKE %s OR p.mobile ILIKE %s OR p.lead_id ILIKE %s OR pa.description ILIKE %s OR ce.course_name ILIKE %s OR p.course_interest ILIKE %s)"
+                )
+                params.extend([term, term, term, term, term, term])
+
+            where_str = " AND ".join(where_clauses)
+
+            # Query items
+            query = f"""
+                SELECT 
+                    pa.id,
+                    pa.prospect_id,
+                    pa.activity_type,
+                    pa.field_name,
+                    pa.old_value,
+                    pa.new_value,
+                    pa.description,
+                    pa.performed_by,
+                    COALESCE(pa.performed_by_name, u.name, 'System') as performed_by_name,
+                    pa.meta,
+                    pa.created_at,
+                    p.name as prospect_name,
+                    p.mobile as prospect_mobile,
+                    COALESCE(ce.original_lead_id, p.lead_id, CONCAT('L-', p.id)) as lead_id,
+                    COALESCE(ce.course_name, p.course_interest) as course_name,
+                    p.converted as is_converted,
+                    ce.id as converted_enquiry_id,
+                    ce.payment_status as converted_payment_status,
+                    ce.course_fee,
+                    ce.total_paid,
+                    ce.pending_amount
+                FROM prospect_activities pa
+                LEFT JOIN prospects p ON pa.prospect_id = p.id
+                LEFT JOIN converted_enquiries ce ON ce.prospect_id = p.id
+                LEFT JOIN users u ON pa.performed_by = u.id
+                WHERE {where_str}
+                ORDER BY pa.created_at DESC
+                LIMIT %s OFFSET %s
+            """
+            
+            feed_params = list(params)
+            feed_params.extend([limit, offset])
+            items = execute_query(query, tuple(feed_params), fetch="all") or []
+
+            # Format items
+            formatted_items = []
+            for item in items:
+                meta = item.get("meta")
+                if isinstance(meta, str):
+                    try:
+                        meta = json.loads(meta)
+                    except Exception:
+                        meta = {}
+                item["meta"] = meta or {}
+                formatted_items.append(item)
+
+            # Calculate total count and breakdown stats
+            count_query = f"""
+                SELECT 
+                    COUNT(*) as total_count,
+                    COUNT(CASE WHEN pa.activity_type = 'conversion' THEN 1 END) as total_conversions,
+                    COUNT(CASE WHEN pa.activity_type IN ('payment', 'refund') THEN 1 END) as total_payments,
+                    COUNT(CASE WHEN pa.activity_type = 'call' THEN 1 END) as total_calls,
+                    COUNT(CASE WHEN pa.activity_type = 'status_change' THEN 1 END) as total_status_changes
+                FROM prospect_activities pa
+                LEFT JOIN prospects p ON pa.prospect_id = p.id
+                LEFT JOIN converted_enquiries ce ON ce.prospect_id = p.id
+                WHERE {where_str}
+            """
+            stats_row = execute_query(count_query, tuple(params), fetch="one") or {}
+
+            return {
+                "items": formatted_items,
+                "total": stats_row.get("total_count", 0),
+                "stats": {
+                    "total": stats_row.get("total_count", 0),
+                    "conversions": stats_row.get("total_conversions", 0),
+                    "payments": stats_row.get("total_payments", 0),
+                    "calls": stats_row.get("total_calls", 0),
+                    "status_changes": stats_row.get("total_status_changes", 0),
+                }
+            }
+        except Exception as e:
+            log.error("Failed to get activities feed: %s", e)
+            return {"items": [], "total": 0, "stats": {"total": 0, "conversions": 0, "payments": 0, "calls": 0, "status_changes": 0}}
+

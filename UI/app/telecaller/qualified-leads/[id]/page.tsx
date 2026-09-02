@@ -33,28 +33,10 @@ import { prospectsApi, conversionApi, usersApi, coursesApi } from "@/lib/api-cli
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
-import { formatISTDateTime } from "@/lib/utils"
+import { formatISTDateTime, formatISTDate } from "@/lib/utils"
 import { ProspectTimelineHistory } from "@/components/prospect-timeline-history"
 
-function InfoRow({ label, value, highlight }: { label: string; value?: any; highlight?: "green" | "red" }) {
-  const valClass = highlight === "green"
-    ? "text-emerald-600 font-medium"
-    : highlight === "red"
-      ? "text-red-600 font-medium"
-      : "text-foreground"
-
-  return (
-    <div className="flex items-start gap-2 py-1.5">
-      <span className="text-sm text-muted-foreground min-w-[130px] shrink-0">{label}</span>
-      <span className="text-sm text-muted-foreground">:</span>
-      <span className={`text-sm ${valClass} flex-1`}>{value || "-"}</span>
-    </div>
-  )
-}
-
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-
-export const PAYMENT_MODES = [
+const PAYMENT_MODES = [
   "Cash",
   "Cheque",
   "Paytm",
@@ -66,7 +48,24 @@ export const PAYMENT_MODES = [
   "EDII",
 ]
 
-export default function QualifiedLeadDetailPage() {
+function InfoRow({ label, value, highlight }: { label: string; value?: any; highlight?: "green" | "red" }) {
+  const valClass = highlight === "green"
+    ? "text-emerald-600 font-medium"
+    : highlight === "red"
+      ? "text-destructive font-medium"
+      : "text-foreground font-medium"
+  return (
+    <div className="flex items-start gap-2 py-1.5">
+      <span className="text-sm text-muted-foreground min-w-[130px] shrink-0">{label}</span>
+      <span className="text-sm text-muted-foreground">:</span>
+      <span className={`text-sm ${valClass} flex-1`}>{value || "-"}</span>
+    </div>
+  )
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+export default function TelecallerQualifiedLeadDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
@@ -117,9 +116,9 @@ export default function QualifiedLeadDetailPage() {
           coursesApi.getAll()
         ])
 
-        if (!leadData || leadData.status !== "Qualified" || leadData.converted) {
+        if (!leadData || (leadData.status !== "Qualified" && !leadData.status?.toLowerCase().includes("qualified")) || leadData.converted) {
           toast({ title: "Invalid Lead", description: "This lead is either not qualified or already converted.", variant: "destructive" })
-          router.push("/admin/qualified-leads")
+          router.push("/telecaller/qualified-leads")
           return
         }
 
@@ -162,7 +161,7 @@ export default function QualifiedLeadDetailPage() {
 
       } catch {
         toast({ title: "Error", description: "Failed to fetch lead details", variant: "destructive" })
-        router.push("/admin/qualified-leads")
+        router.push("/telecaller/qualified-leads")
       } finally {
         setIsLoading(false)
       }
@@ -193,7 +192,7 @@ export default function QualifiedLeadDetailPage() {
         course_name: lead.course_interest || "Unknown",
         course_id: null,
         course_module: lead.prospect_type || "Unknown",
-        telecaller_id: lead.assigned_to,
+        telecaller_id: lead.assigned_to || (user?.id ? Number(user.id) : null),
         lead_source: typeof lead.lead_source === "string" ? (() => { try { return JSON.parse(lead.lead_source) } catch { return [] } })() : (lead.lead_source || []),
         course_fee: Number(convertFee),
         converted_by: user?.id ? Number(user.id) : null,
@@ -201,17 +200,19 @@ export default function QualifiedLeadDetailPage() {
       if (hasInitPayment) {
         payload.initial_payment = {
           amount: Number(initAmount),
-          payment_date: initPaymentDate || new Date().toISOString().split("T")[0],
+          payment_date: initPaymentDate,
           payment_mode: initPaymentMode,
-          transaction_id: initTxnId,
-          remarks: initRemarks,
+          transaction_id: initTxnId || null,
+          remarks: initRemarks || null,
         }
       }
+
       await conversionApi.convertProspect(payload)
       toast({ title: "Success", description: "Lead converted to student successfully!" })
-      router.push("/admin/converted-enquiries")
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to convert lead.", variant: "destructive" })
+      window.dispatchEvent(new CustomEvent("refreshBadgeCounts"))
+      router.push("/telecaller/converted-enquiries")
+    } catch {
+      toast({ title: "Error", description: "Failed to convert lead.", variant: "destructive" })
     } finally {
       setIsConverting(false)
     }
@@ -220,44 +221,37 @@ export default function QualifiedLeadDetailPage() {
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!payAmount || isNaN(Number(payAmount)) || Number(payAmount) <= 0) {
-      toast({ title: "Validation Error", description: "Please enter a valid payment amount.", variant: "destructive" })
+      toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" })
       return
     }
+
     setIsPaying(true)
     try {
-      const currentPaid = Number(lead.amount_paid || 0)
       const courseMatch = courses.find((c: any) => c.name === lead.course_interest)
-      const currentPayable = Number(lead.course_fee || (courseMatch ? courseMatch.fees : 0))
+      const fee = Number(lead.course_fee || (courseMatch ? courseMatch.fees : 0))
+      const currentPaid = Number(lead.amount_paid || 0)
       const newPaid = currentPaid + Number(payAmount)
-      const pending = currentPayable - newPaid
-      const payload: any = {
+      const pending = Math.max(0, fee - newPaid)
+      const newStatus = pending <= 0 ? "Paid" : "Payment Pending"
+
+      const updatedLead = {
         amount_paid: newPaid,
-        payment_status: pending <= 0 ? "Paid" : "Payment Pending",
-        payment_mode: payMode,
+        payment_status: newStatus,
         payment_date: payDate,
-        transaction_id: payTxn,
-      }
-      if (!lead.course_fee && currentPayable > 0) {
-        payload.course_fee = currentPayable
-      }
-      await prospectsApi.update(lead.id, payload)
-      
-      // Also sync the converted_enquiries record so Converted Enquiries & Payment Pending pages stay accurate
-      try {
-        const enquiry = await conversionApi.getByProspect(Number(lead.id))
-        if (enquiry?.id) {
-          await conversionApi.updatePaymentTotals(enquiry.id, newPaid)
-        }
-      } catch {
-        // Prospect may not be converted yet — safe to ignore
+        payment_mode: payMode,
+        transaction_id: payTxn || null,
       }
 
-      setLead({ ...lead, ...payload })
+      await prospectsApi.update(lead.id, updatedLead)
+      setLead((prev: any) => ({ ...prev, ...updatedLead }))
       toast({ title: "Success", description: "Payment recorded successfully!" })
       setIsPaymentOpen(false)
-      setPayAmount(""); setPayTxn(""); setPayNotes("")
+      setPayAmount("")
+      setPayTxn("")
+      setPayNotes("")
+      window.dispatchEvent(new CustomEvent("refreshBadgeCounts"))
     } catch {
-      toast({ title: "Error", description: "Failed to save payment.", variant: "destructive" })
+      toast({ title: "Error", description: "Failed to record payment.", variant: "destructive" })
     } finally {
       setIsPaying(false)
     }
@@ -269,30 +263,41 @@ export default function QualifiedLeadDetailPage() {
     try {
       const payload: any = {}
       if (editSection === "student") {
-        Object.assign(payload, { name: editForm.name, mobile: editForm.mobile, email: editForm.email, gender: editForm.gender, dob: editForm.dob, city: editForm.city, state: editForm.state })
+        payload.name = editForm.name
+        payload.mobile = editForm.mobile
+        payload.email = editForm.email
+        payload.gender = editForm.gender
+        payload.dob = editForm.dob
+        payload.city = editForm.city
+        payload.state = editForm.state
       } else if (editSection === "course") {
-        Object.assign(payload, { prospect_type: editForm.prospect_type, course_interest: editForm.course_interest, course_fee: editForm.course_fee ? Number(editForm.course_fee) : null, batch: editForm.batch, start_month: editForm.start_month, year: editForm.year })
+        payload.prospect_type = editForm.prospect_type
+        payload.course_interest = editForm.course_interest
+        payload.course_fee = editForm.course_fee ? Number(editForm.course_fee) : null
+        payload.batch = editForm.batch
+        payload.start_month = editForm.start_month
+        payload.year = editForm.year
       } else if (editSection === "lead") {
         payload.assigned_to = editForm.assigned_to ? Number(editForm.assigned_to) : null
         payload.lead_source = editForm.lead_source ? [editForm.lead_source] : []
         payload.lead_type = editForm.lead_type ? [editForm.lead_type] : []
       } else if (editSection === "payment") {
-        const newAmountPaid = editForm.amount_paid ? Number(editForm.amount_paid) : 0
-        Object.assign(payload, {
-          amount_paid: newAmountPaid,
-          payment_mode: editForm.payment_mode,
-          payment_date: editForm.payment_date || null,
-          transaction_id: editForm.transaction_id
-        })
+        payload.amount_paid = editForm.amount_paid ? Number(editForm.amount_paid) : 0
+        payload.payment_mode = editForm.payment_mode
+        payload.payment_date = editForm.payment_date || null
+        payload.transaction_id = editForm.transaction_id || null
 
-        // Also sync the converted_enquiries record so Converted Enquiries & Payment Pending pages stay accurate
+        const currentFee = Number(lead.course_fee || 0)
+        const newAmountPaid = Number(payload.amount_paid)
+        payload.payment_status = newAmountPaid === 0 ? "Not Paid" : (currentFee > 0 && newAmountPaid >= currentFee ? "Paid" : "Payment Pending")
+
         try {
-          const enquiry = await conversionApi.getByProspect(Number(lead.id))
+          const enquiry = await conversionApi.getConversionByProspect(lead.id)
           if (enquiry?.id) {
             await conversionApi.updatePaymentTotals(enquiry.id, newAmountPaid)
           }
         } catch {
-          // Prospect may not be converted yet — safe to ignore
+          // safe to ignore
         }
       }
 
@@ -300,6 +305,7 @@ export default function QualifiedLeadDetailPage() {
       setLead((prev: any) => ({ ...prev, ...payload }))
       toast({ title: "Saved", description: "Details updated successfully!" })
       setIsEditOpen(false)
+      window.dispatchEvent(new CustomEvent("refreshBadgeCounts"))
     } catch {
       toast({ title: "Error", description: "Failed to update details.", variant: "destructive" })
     } finally {
@@ -322,6 +328,7 @@ export default function QualifiedLeadDetailPage() {
   const telecallerDisplay =
     lead.assigned_telecaller_name ||
     telecallers.find((t: any) => t.id === Number(lead.assigned_to))?.name ||
+    user?.name ||
     undefined
 
   const leadSourceDisplay = Array.isArray(lead.lead_source) && lead.lead_source.length > 0
@@ -345,7 +352,7 @@ export default function QualifiedLeadDetailPage() {
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-10">
       {/* Back link */}
-      <Link href="/admin/qualified-leads" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground gap-1">
+      <Link href="/telecaller/qualified-leads" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground gap-1">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to Admission Students
       </Link>
 
@@ -386,19 +393,41 @@ export default function QualifiedLeadDetailPage() {
       <Card className="bg-white border-border shadow-sm">
         <CardContent className="p-5">
           <div className="flex flex-col md:flex-row md:items-center gap-5">
-            {/* Name + subtitle */}
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-bold text-foreground">{lead.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {lead.course_interest || "No course"}
-                {lead.prospect_type ? ` · ${lead.prospect_type}` : ""}
-              </p>
+            <div className="h-16 w-16 rounded-full bg-primary/10 text-primary font-bold text-xl flex items-center justify-center shrink-0">
+              {initials}
+            </div>
+
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg font-semibold text-foreground">{lead.name}</h2>
+                <Badge variant="outline" className="text-xs">
+                  {lead.prospect_type ? lead.prospect_type.replace(/_/g, " ") : "Student Admission"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                {lead.mobile && (
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> {lead.mobile}
+                  </span>
+                )}
+                {lead.email && (
+                  <span className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> {lead.email}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 border-t md:border-t-0 md:border-l md:pl-5 pt-3 md:pt-0">
+              <Button size="sm" className="gap-1.5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-medium" onClick={() => setIsPaymentOpen(true)}>
+                <Plus className="h-4 w-4" /> Add Payment
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 2x2 Grid Cards */}
+      {/* 4 Information Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
         {/* Student Information */}
@@ -414,15 +443,27 @@ export default function QualifiedLeadDetailPage() {
           <CardContent className="px-5 pb-4">
             <Separator className="mb-3" />
             <InfoRow label="Student Name" value={lead.name} />
-            <InfoRow label="Mobile" value={
-              <span className="flex items-center gap-2">
+            <div className="flex items-start gap-2 py-1.5">
+              <span className="text-sm text-muted-foreground min-w-[130px] shrink-0">Mobile</span>
+              <span className="text-sm text-muted-foreground">:</span>
+              <span className="text-sm font-medium text-foreground flex items-center gap-2 flex-1">
                 {lead.mobile || "-"}
-                {lead.mobile && <MessageCircle className="h-3.5 w-3.5 text-green-500" />}
+                {lead.mobile && (
+                  <a
+                    href={`https://wa.me/${lead.mobile.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-green-600 hover:text-green-700"
+                    title="Chat on WhatsApp"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                  </a>
+                )}
               </span>
-            } />
+            </div>
             <InfoRow label="Email" value={lead.email} />
             <InfoRow label="Gender" value={lead.gender} />
-            <InfoRow label="Date of Birth" value={lead.dob} />
+            <InfoRow label="Date of Birth" value={lead.dob ? (lead.dob.includes("T") ? formatISTDateTime(lead.dob).split(" ")[0] : lead.dob) : undefined} />
             <InfoRow label="City" value={lead.city} />
             <InfoRow label="State" value={lead.state} />
           </CardContent>

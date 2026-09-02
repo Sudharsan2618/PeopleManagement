@@ -7187,6 +7187,44 @@ export default function TelecallerDashboard() {
 
   const [courseOptions, setCourseOptions] = useState<string[]>([])
 
+  const resolveStatusForExport = (prospect: any, statusVal?: any) => {
+    const SA_TO_STC: Record<string, string> = {
+      hot: "Interested",
+      warm: "Interested-Followup",
+      contacted: "Interested",
+      visit_scheduled: "Qualified",
+      visit_done: "Qualified",
+      admission_done: "Qualified",
+      cold: "Not Interested",
+      cold_not_interested: "Not Interested",
+      cold_no_response: "Ringing / Not Reachable",
+      lost: "Not Interested",
+    }
+    const isSTC =
+      viewMode === "short_term_course" ||
+      prospect?.dashboard === "short_term_course" ||
+      prospect?.prospect_type === "short_term_course" ||
+      prospect?.prospectType === "short_term_course" ||
+      (typeof prospect?.courseInterest === "string" && (prospect.courseInterest.toLowerCase().includes("wind") || prospect.courseInterest.toLowerCase().includes("short"))) ||
+      (typeof prospect?.course_interest === "string" && (prospect.course_interest.toLowerCase().includes("wind") || prospect.course_interest.toLowerCase().includes("short")))
+
+    const rawStatus = statusVal !== undefined ? statusVal : (prospect?.status || prospect?.outcome || "")
+    const normKey = normalizeStatus(String(rawStatus || ""))
+
+    if (isSTC) {
+      if (SA_TO_STC[rawStatus]) return SA_TO_STC[rawStatus]
+      if (SA_TO_STC[normKey]) return SA_TO_STC[normKey]
+      if (normKey === "hot" || normKey === "interested" || normKey.includes("strong interest")) return "Interested"
+      if (normKey === "warm" || normKey.includes("followup")) return "Interested-Followup"
+      if (normKey === "visit_scheduled" || normKey === "visit_done" || normKey === "admission_done" || normKey === "qualified") return "Qualified"
+      if (normKey.includes("not_interested") || normKey.includes("not interested") || normKey === "cold" || normKey === "lost") return "Not Interested"
+      if (normKey.includes("no_response") || normKey.includes("ringing")) return "Ringing / Not Reachable"
+      return statusConfig[normKey]?.label || rawStatus || "New"
+    }
+
+    return statusConfig[normKey]?.label || statusConfig[rawStatus]?.label || rawStatus || "New"
+  }
+
 
 
 
@@ -18860,7 +18898,7 @@ export default function TelecallerDashboard() {
 
 
 
-          p.status,
+          resolveStatusForExport(p, p.status),
 
 
 
@@ -24057,7 +24095,7 @@ export default function TelecallerDashboard() {
         val = prospect.collegeName || prospect.college_name || prospect.name || prospect.organization_name || prospect.institution_name || "-"
       }
       if (Array.isArray(val)) val = val.join(", ")
-      if (col.key === "status") val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+      if (col.key === "status") val = resolveStatusForExport(prospect, val)
       if (["callbackDateTime", "lastCallAt", "follow_up_date"].includes(col.key)) {
         if (val) {
           const date = new Date(val)
@@ -24078,7 +24116,7 @@ export default function TelecallerDashboard() {
       columns.forEach(col => {
         let val = prospect[col.key]
         if (Array.isArray(val)) val = val.join(", ")
-        if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+        if (col.key === 'status') val = resolveStatusForExport(prospect, val)
         if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
           if (val) {
             const date = new Date(val)
@@ -24102,7 +24140,7 @@ export default function TelecallerDashboard() {
           val = index + 1
         }
         if (Array.isArray(val)) val = val.join(", ")
-        if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+        if (col.key === 'status') val = resolveStatusForExport(prospect, val)
         if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
           if (val) {
             const date = new Date(val)

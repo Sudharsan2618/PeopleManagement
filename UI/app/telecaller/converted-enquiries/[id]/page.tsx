@@ -46,7 +46,7 @@ const PAYMENT_MODES = [
   "EDII",
 ]
 
-export default function ConvertedEnquiryDetailPage() {
+export default function TelecallerConvertedEnquiryDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
@@ -73,56 +73,53 @@ export default function ConvertedEnquiryDetailPage() {
       const data = await conversionApi.getConversionDetails(id)
       if (!data || !data.enquiry) {
         toast({ title: "Not Found", description: "Converted enquiry not found.", variant: "destructive" })
-        router.push("/admin/converted-enquiries")
+        router.push("/telecaller/converted-enquiries")
         return
       }
       setDetails(data)
-    } catch (err) {
-      toast({ title: "Error", description: "Failed to fetch conversion details", variant: "destructive" })
-      router.push("/admin/converted-enquiries")
+    } catch (err: any) {
+      toast({ title: "Error", description: "Failed to load conversion details", variant: "destructive" })
+      router.push("/telecaller/converted-enquiries")
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    if (!id) return
-    fetchDetails()
-  }, [id, router, toast])
+    if (id) fetchDetails()
+  }, [id])
 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      toast({ title: "Validation Error", description: "Please enter a valid amount.", variant: "destructive" })
+      toast({ title: "Validation Error", description: "Please enter a valid amount", variant: "destructive" })
       return
     }
 
     if (Number(amount) > Number(details.enquiry.pending_amount)) {
-      toast({ title: "Validation Error", description: "Amount cannot exceed pending amount.", variant: "destructive" })
+      toast({ title: "Validation Error", description: "Payment amount cannot exceed pending amount", variant: "destructive" })
       return
     }
 
     setIsSubmitting(true)
     try {
-      const payload = {
+      await conversionApi.addPayment(id, {
         amount: Number(amount),
         payment_date: paymentDate,
         payment_mode: paymentMode,
-        transaction_id: transactionId,
-        remarks: remarks,
+        transaction_id: transactionId || null,
+        remarks: remarks || null,
         created_by: user?.id ? Number(user.id) : null
-      }
-
-      await conversionApi.addPayment(id, payload)
-      toast({ title: "Success", description: "Payment added successfully!" })
+      })
+      toast({ title: "Success", description: "Payment recorded successfully" })
       setShowPaymentForm(false)
       setAmount("")
       setTransactionId("")
       setRemarks("")
-      fetchDetails() // refresh data
+      window.dispatchEvent(new CustomEvent("refreshBadgeCounts"))
+      fetchDetails()
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Failed to add payment.", variant: "destructive" })
+      toast({ title: "Error", description: err.message || "Failed to record payment", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -130,27 +127,33 @@ export default function ConvertedEnquiryDetailPage() {
 
   const handleRefund = async (e: React.FormEvent) => {
     e.preventDefault()
-    const value = Number(refundAmount)
-    const paid = Number(details.enquiry.total_paid || 0)
-    if (!refundAmount || isNaN(value) || value <= 0 || value > paid) {
-      toast({ title: "Validation Error", description: `Refund amount must be between ₹1 and ₹${paid.toLocaleString()}.`, variant: "destructive" })
+    if (!refundAmount || isNaN(Number(refundAmount)) || Number(refundAmount) <= 0) {
+      toast({ title: "Validation Error", description: "Please enter a valid refund amount", variant: "destructive" })
+      return
+    }
+
+    if (Number(refundAmount) > Number(details.enquiry.total_paid)) {
+      toast({ title: "Validation Error", description: "Refund amount cannot exceed total amount paid", variant: "destructive" })
       return
     }
 
     setIsSubmitting(true)
     try {
-      await conversionApi.refundPayment(id, {
-        amount: value,
-        refund_mode: refundMode,
-        refund_date: refundDate,
-        created_by: user?.id ? Number(user.id) : null,
+      await conversionApi.addPayment(id, {
+        amount: -Math.abs(Number(refundAmount)),
+        payment_date: refundDate,
+        payment_mode: `Refund (${refundMode})`,
+        transaction_id: null,
+        remarks: "Refund processed",
+        created_by: user?.id ? Number(user.id) : null
       })
-      toast({ title: "Refund saved", description: "The enquiry payment status is now Refunded." })
+      toast({ title: "Success", description: "Refund recorded successfully" })
       setShowRefundForm(false)
       setRefundAmount("")
-      await fetchDetails()
+      window.dispatchEvent(new CustomEvent("refreshBadgeCounts"))
+      fetchDetails()
     } catch (err: any) {
-      toast({ title: "Refund failed", description: err.message || "Failed to save refund.", variant: "destructive" })
+      toast({ title: "Error", description: err.message || "Failed to process refund", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -159,142 +162,164 @@ export default function ConvertedEnquiryDetailPage() {
   if (isLoading || !details) return <PageSkeleton />
 
   const { enquiry, prospect, payments } = details
-  const isPaid = enquiry.payment_status === "Paid"
-  const isRefunded = enquiry.payment_status === "Refunded"
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-4 mb-2">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              Converted Enquiry Details
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      <Link
+        href="/telecaller/converted-enquiries"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground gap-1"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Converted Enquiries
+      </Link>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {prospect.name}
             </h1>
-            <p className="text-sm text-muted-foreground">Lead ID: {enquiry.original_lead_id}</p>
-          </div>
-          <div className="flex gap-2">
-            <Badge className={isRefunded ? "bg-red-100 text-red-800 border-red-200 text-sm px-3 py-1" : isPaid ? "bg-emerald-100 text-emerald-800 border-emerald-200 text-sm px-3 py-1" : "bg-orange-100 text-orange-800 border-orange-200 text-sm px-3 py-1"}>
-              {enquiry.payment_status}
+            <Badge className={`border-none ${enquiry.payment_status === "Paid" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+              {enquiry.payment_status?.toUpperCase()}
             </Badge>
           </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Lead ID: <span className="font-medium text-foreground">{enquiry.original_lead_id || `QL-${prospect.id}`}</span>
+            &nbsp;•&nbsp; Converted on <span className="font-medium text-foreground">{formatISTDate(enquiry.converted_at)}</span>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {Number(enquiry.pending_amount) > 0 && (
+            <Button onClick={() => setShowPaymentForm(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="h-4 w-4" /> Add Payment
+            </Button>
+          )}
+          {Number(enquiry.total_paid) > 0 && (
+            <Button variant="outline" onClick={() => setShowRefundForm(true)} className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800">
+              <RotateCcw className="h-4 w-4" /> Refund
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* Left Column: Details */}
-        <div className="md:col-span-1 space-y-6">
-          <Card className="shadow-sm border-border">
-            <CardHeader className="bg-muted/30 pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Student Profile
+        {/* Left Column: Student Details */}
+        <div className="space-y-6">
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" /> Student Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4">
+            <CardContent className="pt-4 space-y-3">
               <div>
-                <p className="text-sm font-medium text-foreground">{prospect.name}</p>
-                <p className="text-xs text-muted-foreground">Student Name</p>
-              </div>
-              <Separator />
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-foreground flex items-center gap-1.5"><Phone className="h-3 w-3 text-muted-foreground" /> {prospect.mobile || "-"}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Mobile</p>
-                </div>
-                <div>
-                  <p className="text-sm text-foreground flex items-center gap-1.5"><Mail className="h-3 w-3 text-muted-foreground" /> {prospect.email || "-"}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Email</p>
-                </div>
-              </div>
-              <Separator />
-              <div>
-                <p className="text-sm text-foreground">{enquiry.course_name || "-"}</p>
-                <p className="text-xs text-muted-foreground">Enrolled Course</p>
+                <p className="text-xs text-muted-foreground">Mobile</p>
+                <p className="font-medium text-sm text-foreground">{prospect.mobile || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-foreground">{enquiry.course_module || "-"}</p>
-                <p className="text-xs text-muted-foreground">Module</p>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="font-medium text-sm text-foreground">{prospect.email || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-foreground">{enquiry.telecaller_name || "-"}</p>
-                <p className="text-xs text-muted-foreground">Telecaller</p>
+                <p className="text-xs text-muted-foreground">City / Location</p>
+                <p className="font-medium text-sm text-foreground">{prospect.location || prospect.city || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Lead Source</p>
+                <p className="font-medium text-sm text-foreground">
+                  {typeof enquiry.lead_source === "string" ? (() => { try { return JSON.parse(enquiry.lead_source).join(", ") } catch { return enquiry.lead_source } })() : (enquiry.lead_source?.join(", ") || "-")}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Assigned Telecaller</p>
+                <p className="font-medium text-sm text-foreground">{enquiry.telecaller_name || user?.name || "-"}</p>
               </div>
             </CardContent>
           </Card>
 
-        </div>
-
-        {/* Right Column: Payments & Actions */}
-        <div className="md:col-span-2 space-y-6">
-          <Card className="shadow-sm border-border">
-            <CardHeader className="bg-muted/30 pb-4">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  Payment History
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8"
-                    onClick={() => setShowRefundForm(true)}
-                    disabled={isRefunded || Number(enquiry.total_paid || 0) <= 0}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-1" />
-                    Request Refund
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    onClick={() => setShowPaymentForm(true)}
-                    disabled={isPaid || isRefunded}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Payment
-                  </Button>
-                </div>
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" /> Admission Course
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-4">
-              {payments?.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  No payments recorded yet.
+            <CardContent className="pt-4 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Course Name</p>
+                <p className="font-medium text-sm text-foreground">{enquiry.course_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Module</p>
+                <p className="font-medium text-sm text-foreground capitalize">{enquiry.course_module?.replace(/_/g, " ")}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Batch / Year</p>
+                <p className="font-medium text-sm text-foreground">{prospect.batch ? `${prospect.batch} (${prospect.year || ""})` : "-"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Payments & Timeline */}
+        <div className="md:col-span-2 space-y-6">
+          {/* Payment Progress Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Course Fee</p>
+                <p className="text-2xl font-bold text-foreground mt-1">₹{Number(enquiry.course_fee).toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Amount Paid</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">₹{Number(enquiry.total_paid).toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Pending Amount</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">₹{Number(enquiry.pending_amount).toLocaleString()}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Payment History Table */}
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-muted-foreground" /> Payment Records
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {payments.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  No payment records found.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="w-12 text-muted-foreground font-medium">#</TableHead>
-                        <TableHead className="text-muted-foreground font-medium">Date</TableHead>
-                        <TableHead className="text-muted-foreground font-medium">Amount</TableHead>
-                        <TableHead className="text-muted-foreground font-medium">Mode</TableHead>
-                        <TableHead className="text-muted-foreground font-medium">Txn ID</TableHead>
-                        <TableHead className="text-muted-foreground font-medium">Remarks</TableHead>
+                      <TableRow className="border-border">
+                        <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Date</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Amount</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Mode</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Txn ID</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Remarks</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {payments?.map((p: any, idx: number) => (
-                        <TableRow key={p.id} className="border-b border-border">
-                          <TableCell className="text-muted-foreground text-sm">{idx + 1}</TableCell>
-                          <TableCell className="font-medium whitespace-nowrap">{formatISTDate(p.payment_date)}</TableCell>
+                      {payments.map((p: any) => (
+                        <TableRow key={p.id} className="border-border">
+                          <TableCell className="text-xs">{formatISTDate(p.payment_date)}</TableCell>
                           <TableCell className={`font-bold ${p.payment_mode?.startsWith("Refund") ? "text-red-600" : "text-emerald-600"}`}>
                             {p.payment_mode?.startsWith("Refund") ? "-" : ""}₹{Math.abs(Number(p.amount)).toLocaleString()}
                           </TableCell>
-                          <TableCell>
-                            {p.payment_mode === "Prior Payment" ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground border border-border">
-                                Prior Payment
-                              </span>
-                            ) : (p.payment_mode || "-")}
+                          <TableCell className="text-xs font-medium">
+                            {p.payment_mode || "-"}
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{p.transaction_id || "-"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={p.remarks || ""}>{p.remarks || "-"}</TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">{p.transaction_id || "-"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{p.remarks || "-"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -373,9 +398,6 @@ export default function ConvertedEnquiryDetailPage() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                 />
-                <p className="text-[10px] text-muted-foreground">
-                  Amount cannot exceed pending amount (₹{Number(enquiry.pending_amount).toLocaleString()})
-                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">
@@ -429,20 +451,7 @@ export default function ConvertedEnquiryDetailPage() {
                 onChange={(e) => setRemarks(e.target.value)}
                 maxLength={200}
               />
-              <div className="text-right text-[10px] text-muted-foreground">
-                {remarks?.length || 0} / 200
-              </div>
             </div>
-
-            {amount && Number(amount) > 0 && (
-              <div className="bg-blue-50 text-blue-800 p-3 rounded text-xs flex items-start gap-2">
-                <CreditCard className="h-4 w-4 shrink-0 mt-0.5" />
-                <p>
-                  After saving payment of ₹{Number(amount).toLocaleString()}, this record will be marked as 
-                  {Number(amount) === Number(enquiry.pending_amount) ? " fully paid and pending amount will be ₹0." : ` partially paid with ₹${(Number(enquiry.pending_amount) - Number(amount)).toLocaleString()} remaining.`}
-                </p>
-              </div>
-            )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button
@@ -462,10 +471,7 @@ export default function ConvertedEnquiryDetailPage() {
 
       {/* Refund Modal */}
       <Dialog open={showRefundForm} onOpenChange={setShowRefundForm}>
-        <DialogContent
-          className="w-[calc(100%-2rem)] max-w-[440px]"
-          style={{ width: "calc(100% - 2rem)", maxWidth: "440px" }}
-        >
+        <DialogContent className="w-[calc(100%-2rem)] max-w-[440px]">
           <DialogHeader>
             <DialogTitle>Request Refund</DialogTitle>
           </DialogHeader>

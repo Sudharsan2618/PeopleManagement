@@ -87,10 +87,37 @@ export interface ProspectActivity {
   created_at: string
 }
 
+export interface ActivityFeedItem extends ProspectActivity {
+  prospect_name?: string
+  prospect_mobile?: string
+  lead_id?: string
+  course_name?: string
+  is_converted?: boolean
+  converted_enquiry_id?: number
+  converted_payment_status?: string
+  course_fee?: number
+  total_paid?: number
+  pending_amount?: number
+}
+
+export interface ActivityFeedResponse {
+  items: ActivityFeedItem[]
+  total: number
+  stats: {
+    total: number
+    conversions: number
+    payments: number
+    calls: number
+    status_changes: number
+  }
+}
+
+
 export interface CallLog {
   id: number
   prospect_id: number
   telecaller_id: number
+  telecaller_name?: string
   assignment_id?: number
   outcome: string
   status_after_call?: string
@@ -556,6 +583,28 @@ export const prospectsApi = {
     body: JSON.stringify(data),
   }),
   getTimeline: (id: number) => apiRequest<ProspectActivity[]>(`/prospects/${id}/timeline`),
+  getActivitiesFeed: (params: {
+    telecaller_id?: number | string
+    activity_type?: string
+    only_converted?: boolean
+    search?: string
+    start_date?: string
+    end_date?: string
+    limit?: number
+    offset?: number
+  } = {}) => {
+    const query = new URLSearchParams()
+    if (params.telecaller_id) query.append("telecaller_id", String(params.telecaller_id))
+    if (params.activity_type && params.activity_type !== "all") query.append("activity_type", params.activity_type)
+    if (params.only_converted) query.append("only_converted", "true")
+    if (params.search) query.append("search", params.search)
+    if (params.start_date) query.append("start_date", params.start_date)
+    if (params.end_date) query.append("end_date", params.end_date)
+    if (params.limit) query.append("limit", String(params.limit))
+    if (params.offset) query.append("offset", String(params.offset))
+    const qStr = query.toString()
+    return apiRequest<ActivityFeedResponse>(`/prospects/activities/feed${qStr ? `?${qStr}` : ''}`)
+  },
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
   }),

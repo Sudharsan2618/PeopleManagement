@@ -575,70 +575,48 @@ export function CallOutcomeModal({
   // Lead mode is only active for college_contact dashboard
   const isLeadMode = localLeadMode && dashboard === "college_contact"
 
-  // Extract multiple courses robustly (handles comma-separated OR no commas if courses are loaded)
+  // Extract multiple courses only if separately imported (comma, semicolon, pipe separated or JSON array)
   const rawCourseInterest = (prospect?.courseInterest || prospect?.course_interest || "") === "Unknown" 
     ? "" 
     : (prospect?.courseInterest || prospect?.course_interest || "")
   
   const multipleCourses = useMemo(() => {
     if (!rawCourseInterest) return []
-    let parsed: string[] = []
-    
-    if (rawCourseInterest.includes(",")) {
-      parsed = rawCourseInterest.split(",").map(c => c.trim()).filter(Boolean)
-    } else {
-      // Hardcoded list of known courses (some aren't in DB yet)
-      const KNOWN_COURSES = [
-        "Wedding Photography & vide editing-July 2026",
-        "Wedding Photography and Videography-July 2026",
-        "Wedding Photography and Videography",
-        "Wedding Photography",
-        "Video Editing",
-        "vide editing",
-        "Solar",
-        "EDII Wind Solar",
-        "EDII - Solar Power Installation",
-        "Logistics & Supply Chain Management",
-        "AI-Powered Data & Business Analytics",
-        "B.Sc Renewable Energy",
-        "B.Com Fintech & Artificial Intelligence",
-        "B.Sc Film and TV Production"
-      ]
-      
-      // Combine API courses with known courses
-      const allPossibleCourses = Array.from(new Set([
-        ...KNOWN_COURSES.map(c => c.toLowerCase()),
-        ...courses.map(c => c.name?.toLowerCase() || "")
-      ]))
-      .filter(Boolean)
-      .sort((a, b) => b.length - a.length) // Sort longest first so we don't accidentally match substrings of larger courses
 
-      // Try to find known courses as substrings
-      const found = []
-      let remainingStr = rawCourseInterest.toLowerCase()
-      
-      for (const courseLower of allPossibleCourses) {
-        if (remainingStr.includes(courseLower)) {
-          // Find original casing from KNOWN_COURSES if possible
-          const originalCourse = KNOWN_COURSES.find(c => c.toLowerCase() === courseLower) 
-            || courses.find(c => c.name?.toLowerCase() === courseLower)?.name 
-            || courseLower
-            
-          found.push(originalCourse)
-          // Remove from string so we don't double count (e.g. "Wedding Photography" vs "Wedding Photography and Videography")
-          remainingStr = remainingStr.replace(courseLower, "")
+    // If already an array
+    if (Array.isArray(rawCourseInterest)) {
+      return rawCourseInterest.map(c => String(c).trim()).filter(Boolean)
+    }
+
+    if (typeof rawCourseInterest === "string") {
+      const trimmed = rawCourseInterest.trim()
+
+      // If JSON string array like '["Course 1", "Course 2"]'
+      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+        try {
+          const parsed = JSON.parse(trimmed)
+          if (Array.isArray(parsed)) {
+            return parsed.map(c => String(c).trim()).filter(Boolean)
+          }
+        } catch {
+          // not valid JSON, proceed
         }
       }
-      
-      if (found.length > 1) {
-        parsed = found
-      } else {
-        parsed = [rawCourseInterest]
+
+      // If separately imported with comma, semicolon, or pipe
+      if (trimmed.includes(",") || trimmed.includes(";") || trimmed.includes("|")) {
+        return trimmed
+          .split(/[,;|]/)
+          .map(c => c.trim())
+          .filter(Boolean)
       }
+
+      // Otherwise it is a single combined course
+      return [trimmed]
     }
-    
-    return parsed
-  }, [rawCourseInterest, courses])
+
+    return [String(rawCourseInterest).trim()]
+  }, [rawCourseInterest])
 
   // DEBUGGING OUTPUT
   useEffect(() => {

@@ -32,6 +32,7 @@ import {
   UserCheck,
   CreditCard,
   CheckCircle,
+  Clock,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -61,6 +62,17 @@ interface NavItem {
 
 const telecallerNav: NavItem[] = [
   { title: "Dashboard", href: "/telecaller/dashboard", icon: LayoutDashboard },
+  {
+    title: "Prospects",
+    href: "/telecaller/qualified-leads",
+    icon: Users,
+    children: [
+      { title: "Admission Students", href: "/telecaller/qualified-leads", icon: UserCheck },
+      { title: "Payment Pending", href: "/telecaller/payment-pending", icon: CreditCard },
+      { title: "Converted Enquiries", href: "/telecaller/converted-enquiries", icon: CheckCircle },
+    ]
+  },
+  { title: "Activity Timeline", href: "/telecaller/timeline", icon: Clock },
   { title: "Callbacks", href: "/telecaller/callbacks", icon: Calendar },
   { title: "Messages", href: "/telecaller/messages", icon: MessageSquare },
   { title: "Bulk Message", href: "/telecaller/bulk-message", icon: Megaphone },
@@ -90,6 +102,7 @@ const adminNav: NavItem[] = [
       { title: "Converted Enquiries", href: "/admin/converted-enquiries", icon: CheckCircle },
     ]
   },
+  { title: "Activity Timeline", href: "/admin/timeline", icon: Clock },
   { title: "Assign Prospects", href: "/admin/assign", icon: ClipboardList },
   { title: "Telecallers", href: "/admin/telecallers", icon: Phone },
   { title: "Courses", href: "/admin/courses", icon: BookOpen },
@@ -278,10 +291,11 @@ export function DashboardLayout({ children, role, userName }: DashboardLayoutPro
         return { ...item, badge: counts.whatsappUnread > 0 ? counts.whatsappUnread : undefined }
       }
       if (item.title === "Prospects" && item.children) {
+        const stats = role === "admin" ? adminStats : counts
         const updatedChildren = item.children.map(child => {
-          if (child.title === "Admission Students") return { ...child, badge: adminStats.qualified_leads > 0 ? adminStats.qualified_leads : undefined }
-          if (child.title === "Converted Enquiries") return { ...child, badge: adminStats.converted_enquiries > 0 ? adminStats.converted_enquiries : undefined }
-          if (child.title === "Payment Pending") return { ...child, badge: adminStats.payment_pending > 0 ? adminStats.payment_pending : undefined }
+          if (child.title === "Admission Students") return { ...child, badge: (stats as any).qualified_leads > 0 ? (stats as any).qualified_leads : undefined }
+          if (child.title === "Converted Enquiries") return { ...child, badge: (stats as any).converted_enquiries > 0 ? (stats as any).converted_enquiries : undefined }
+          if (child.title === "Payment Pending") return { ...child, badge: (stats as any).payment_pending > 0 ? (stats as any).payment_pending : undefined }
           return child
         })
         return { ...item, children: updatedChildren }

@@ -29,9 +29,47 @@ def get_dashboard_stats(user_id: int):
         """
         followup_count = execute_query(followup_query, (user_id,), fetch="one")["count"]
 
+        # 3. Telecaller Qualified Leads (Admission Students)
+        qualified_query = """
+            SELECT COUNT(*) as count 
+            FROM prospects p
+            LEFT JOIN LATERAL (
+                SELECT a.telecaller_id
+                FROM prospect_assignments a
+                WHERE a.prospect_id = p.id
+                ORDER BY a.assigned_date DESC, a.created_at DESC
+                LIMIT 1
+            ) la ON TRUE
+            WHERE (p.status = 'Qualified' OR p.status ILIKE '%%qualified%%')
+              AND p.converted = FALSE
+              AND (p.assigned_to = %s OR la.telecaller_id = %s)
+        """
+        qualified_count = execute_query(qualified_query, (user_id, user_id), fetch="one")["count"]
+
+        # 4. Telecaller Converted Enquiries
+        converted_query = """
+            SELECT COUNT(*) as count 
+            FROM converted_enquiries ce
+            JOIN prospects p ON ce.prospect_id = p.id
+            WHERE (ce.telecaller_id = %s OR p.assigned_to = %s)
+        """
+        converted_count = execute_query(converted_query, (user_id, user_id), fetch="one")["count"]
+
+        # 5. Telecaller Payment Pending
+        payment_pending_query = """
+            SELECT COUNT(*) as count 
+            FROM converted_enquiries ce
+            JOIN prospects p ON ce.prospect_id = p.id
+            WHERE ce.pending_amount > 0 AND (ce.telecaller_id = %s OR p.assigned_to = %s)
+        """
+        payment_pending_count = execute_query(payment_pending_query, (user_id, user_id), fetch="one")["count"]
+
         return {
             "callbacks": callback_count,
-            "followups": followup_count
+            "followups": followup_count,
+            "qualified_leads": qualified_count,
+            "converted_enquiries": converted_count,
+            "payment_pending": payment_pending_count
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -473,15 +473,43 @@ class ProspectService:
 
     @staticmethod
     def get_prospect_by_id(prospect_id: int) -> Optional[dict]:
-        """Get prospect by ID."""
+        """Get prospect by ID with assigned telecaller and call statistics."""
         query = """
-            SELECT id, name, mobile, email, location, sourced_from, status, 
-                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
-            FROM prospects
-            WHERE id = %s
+            SELECT 
+                p.id, p.name, p.mobile, p.email, p.location, p.sourced_from, p.status, 
+                p.course_interest, p.parent_name, p.department, 
+                COALESCE(p.assigned_to, la.telecaller_id, cl.telecaller_id) AS assigned_to,
+                p.closing_reason, p.tags,
+                p.lead_source, p.lead_type, p.proposed_for, p.alt_phone, p.alt_phone_2, p.alt_phone_3, 
+                p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
+                p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
+                p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.payment_date, p.transaction_id, p.batch, p.start_month, p.year,
+                COALESCE(u_assigned.name, u_la.name, u_cl.name) AS assigned_telecaller_name,
+                (SELECT COUNT(*) FROM call_logs cl_count WHERE cl_count.prospect_id = p.id) AS total_calls,
+                (SELECT MAX(called_at) FROM call_logs cl_max WHERE cl_max.prospect_id = p.id) AS last_call_date,
+                COALESCE(
+                    (SELECT MIN(called_at) FROM call_logs cl_q WHERE cl_q.prospect_id = p.id AND (cl_q.status_after_call ILIKE '%%qualified%%' OR cl_q.outcome ILIKE '%%qualified%%')),
+                    p.updated_at
+                ) AS qualified_date
+            FROM prospects p
+            LEFT JOIN users u_assigned ON u_assigned.id = p.assigned_to
+            LEFT JOIN LATERAL (
+                SELECT a.telecaller_id, a.assigned_date, a.dashboard
+                FROM prospect_assignments a
+                WHERE a.prospect_id = p.id
+                ORDER BY a.assigned_date DESC, a.created_at DESC
+                LIMIT 1
+            ) la ON TRUE
+            LEFT JOIN users u_la ON u_la.id = la.telecaller_id
+            LEFT JOIN LATERAL (
+                SELECT c.telecaller_id, c.called_at
+                FROM call_logs c
+                WHERE c.prospect_id = p.id AND c.telecaller_id IS NOT NULL
+                ORDER BY c.called_at DESC, c.id DESC
+                LIMIT 1
+            ) cl ON TRUE
+            LEFT JOIN users u_cl ON u_cl.id = cl.telecaller_id
+            WHERE p.id = %s
         """
         return execute_query(query, (prospect_id,), fetch="one")
     
