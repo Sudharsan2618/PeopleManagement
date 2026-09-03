@@ -957,10 +957,10 @@ export const whatsappApi = {
   // Curated quick-send templates (caller-safe)
   getQuickSendTemplates: (includeInactive: boolean = false) =>
     apiRequest<any[]>(`/whatsapp/quick-send-templates${includeInactive ? "?include_inactive=true" : ""}`),
-  sendQuickTemplate: (prospect_id: number, quick_template_id: number) =>
+  sendQuickTemplate: (prospect_id: number, quick_template_id: number, to?: string) =>
     apiRequest<any>("/whatsapp/send-quick-template", {
       method: "POST",
-      body: JSON.stringify({ prospect_id, quick_template_id }),
+      body: JSON.stringify({ prospect_id, quick_template_id, to: to ?? null }),
     }),
   createQuickSendTemplate: (data: any) => apiRequest<any>("/whatsapp/quick-send-templates", {
     method: "POST",

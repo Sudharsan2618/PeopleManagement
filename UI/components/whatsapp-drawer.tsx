@@ -38,6 +38,30 @@ export interface WhatsAppDrawerProspect {
   id: number
   name: string
   mobile: string
+  /** Alternate numbers (from prospects.alt_phone / alt_phone_2 / alt_phone_3).
+   *  When a prospect has more than one, the drawer shows a number picker. */
+  altPhone?: string | null
+  altPhone2?: string | null
+  altPhone3?: string | null
+}
+
+/** Collect a prospect's numbers, trimmed and de-duplicated by their digits.
+ *  Handles the real-data edge cases: null/empty mobile, duplicates across the
+ *  alt columns, and stray formatting. */
+function collectNumbers(p: WhatsAppDrawerProspect | null): string[] {
+  if (!p) return []
+  const raw = [p.mobile, p.altPhone, p.altPhone2, p.altPhone3]
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const n of raw) {
+    const val = (n ?? "").toString().trim()
+    if (!val) continue
+    const digits = val.replace(/\D/g, "")
+    if (!digits || seen.has(digits)) continue
+    seen.add(digits)
+    out.push(val)
+  }
+  return out
 }
 
 interface WhatsAppDrawerProps {
@@ -104,7 +128,11 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
   const [isSending, setIsSending] = useState(false)
   const [sendingTemplateId, setSendingTemplateId] = useState<number | null>(null)
   const [selectedQuickId, setSelectedQuickId] = useState("")
+  const [selectedNumber, setSelectedNumber] = useState("")
   const scrollBottomRef = useRef<HTMLDivElement>(null)
+
+  const numbers = collectNumbers(prospect)
+  const activeNumber = selectedNumber || numbers[0] || ""
 
   const load = useCallback(async () => {
     if (!prospect) return
@@ -133,6 +161,7 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
     if (open && prospect) {
       setReplyText("")
       setSelectedQuickId("")
+      setSelectedNumber(collectNumbers(prospect)[0] || "")
       load()
     }
   }, [open, prospect, load])
@@ -145,11 +174,11 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
   const windowOpen = session?.window_open ?? false
 
   const handleSendText = async () => {
-    if (!prospect || !replyText.trim()) return
+    if (!prospect || !replyText.trim() || !activeNumber) return
     setIsSending(true)
     try {
       await whatsappApi.sendTextMessage({
-        to: prospect.mobile,
+        to: activeNumber,
         text: replyText.trim(),
         prospect_id: prospect.id,
       })
@@ -169,10 +198,10 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
   }
 
   const handleSendTemplate = async (templateId: number) => {
-    if (!prospect) return
+    if (!prospect || !activeNumber) return
     setSendingTemplateId(templateId)
     try {
-      await whatsappApi.sendQuickTemplate(prospect.id, templateId)
+      await whatsappApi.sendQuickTemplate(prospect.id, templateId, activeNumber)
       toast({ title: "Template sent" })
       setSelectedQuickId("")
       await load()
@@ -201,9 +230,15 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
               <SheetTitle className="text-sm font-semibold truncate">
                 {prospect?.name || "Prospect"}
               </SheetTitle>
-              <SheetDescription className="text-xs text-muted-foreground font-mono">
-                {prospect?.mobile}
-              </SheetDescription>
+              {numbers.length <= 1 ? (
+                <SheetDescription className="text-xs text-muted-foreground font-mono">
+                  {numbers[0] || "No number on file"}
+                </SheetDescription>
+              ) : (
+                <SheetDescription className="text-xs text-muted-foreground">
+                  {numbers.length} numbers on file
+                </SheetDescription>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -216,6 +251,26 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
               <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
             </Button>
           </div>
+
+          {/* Number picker — only when the prospect has more than one number. */}
+          {numbers.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground shrink-0">Send to</span>
+              <Select value={activeNumber} onValueChange={setSelectedNumber}>
+                <SelectTrigger className="h-8 text-xs font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)]">
+                  {numbers.map((n, i) => (
+                    <SelectItem key={n} value={n} className="text-xs font-mono">
+                      {n}
+                      {i === 0 && <span className="ml-2 font-sans text-[10px] text-muted-foreground">primary</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {session && (
             windowOpen ? (
               <Badge variant="green" className="gap-1">
@@ -289,7 +344,11 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
 
         {/* Composer */}
         <div className="border-t border-border p-4 shrink-0">
-          {windowOpen ? (
+          {numbers.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic py-2 text-center">
+              No phone number on file for this prospect — can't send.
+            </p>
+          ) : windowOpen ? (
             <div className="flex items-end gap-2">
               <Textarea
                 value={replyText}

@@ -154,11 +154,15 @@ def list_quick_send_templates(include_inactive: bool = Query(False)):
 @router.post("/send-quick-template")
 def send_quick_template(
     prospect_id: int = Body(..., embed=True),
-    quick_template_id: int = Body(..., embed=True)
+    quick_template_id: int = Body(..., embed=True),
+    to: Optional[str] = Body(None, embed=True)
 ):
-    """Resolve a curated quick-send template against the prospect and send it."""
+    """Resolve a curated quick-send template against the prospect and send it.
+
+    Pass `to` to target a specific one of the prospect's numbers (validated
+    server-side against the prospect's own mobile/alt_phone columns)."""
     try:
-        return WhatsAppService.send_quick_template(prospect_id, quick_template_id)
+        return WhatsAppService.send_quick_template(prospect_id, quick_template_id, to)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

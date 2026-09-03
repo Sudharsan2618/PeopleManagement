@@ -22000,6 +22000,9 @@ export default function TelecallerDashboard() {
 
 
       mobile: prospect.mobile,
+      altPhone: prospect.altPhone,
+      altPhone2: prospect.altPhone2,
+      altPhone3: prospect.altPhone3,
 
 
 

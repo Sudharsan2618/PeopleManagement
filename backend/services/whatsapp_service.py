@@ -526,8 +526,14 @@ class WhatsAppService:
         return components
 
     @staticmethod
-    def send_quick_template(prospect_id: int, quick_template_id: int):
-        """Resolve a curated quick-send template against the prospect and send it."""
+    def send_quick_template(prospect_id: int, quick_template_id: int, to: str = None):
+        """Resolve a curated quick-send template against the prospect and send it.
+
+        `to` optionally overrides which of the prospect's numbers to send to
+        (mobile / alt_phone / alt_phone_2 / alt_phone_3). It is validated against
+        the prospect's own numbers so a caller can't send to an arbitrary number.
+        """
+        import re
         from database.connection import execute_query
         qt = execute_query(
             "SELECT * FROM whatsapp_quick_send_templates WHERE id = %s AND is_active = true",
@@ -539,16 +545,33 @@ class WhatsAppService:
 
         prospect = execute_query(
             "SELECT id, name, mobile, email, location, course_interest, sourced_from, "
-            "parent_name, department FROM prospects WHERE id = %s",
+            "parent_name, department, alt_phone, alt_phone_2, alt_phone_3 "
+            "FROM prospects WHERE id = %s",
             (prospect_id,),
             fetch="one",
         )
         if not prospect:
             raise Exception("Prospect not found")
 
+        own_numbers = [
+            str(prospect.get(c) or "").strip()
+            for c in ("mobile", "alt_phone", "alt_phone_2", "alt_phone_3")
+            if str(prospect.get(c) or "").strip()
+        ]
+        recipient = own_numbers[0] if own_numbers else None
+        if to:
+            digits = lambda s: re.sub(r"\D", "", s or "")
+            allowed = {digits(n) for n in own_numbers}
+            if digits(to) in allowed:
+                recipient = to
+            else:
+                raise Exception("Selected number does not belong to this prospect")
+        if not recipient:
+            raise Exception("Prospect has no phone number on file")
+
         components = WhatsAppService._resolve_components(qt.get("variable_mapping"), prospect)
         return WhatsAppService.send_template_message(
-            to=prospect["mobile"],
+            to=recipient,
             template_name=qt["template_name"],
             language_code=qt.get("language_code") or "en_US",
             components=components if components else None,
