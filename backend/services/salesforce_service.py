@@ -350,14 +350,28 @@ class SalesforceService:
         if template_id:
             payload[settings.SALESFORCE_EMAIL_TEMPLATE_FIELD] = template_id
 
-        url = settings.SALESFORCE_LEAD_EVENT_URL
+        # Prefer the AUTHENTICATED apexrest endpoint so the Apex runs as the OAuth
+        # user (salesforce@tatti.com) — that user can see EmailTemplate. The public
+        # Site endpoint runs as the guest user, which cannot, and returns
+        # "Email template not found". Fall back to the Site URL only when OAuth
+        # isn't configured.
+        headers = {"Content-Type": "application/json"}
+        if settings.SALESFORCE_CLIENT_ID and settings.SALESFORCE_CLIENT_SECRET:
+            token = SalesforceService._get_access_token()
+            url = f"{token['instance_url']}/services/apexrest/lead-event"
+            headers["Authorization"] = f"Bearer {token['access_token']}"
+        else:
+            url = settings.SALESFORCE_LEAD_EVENT_URL
+
         try:
             with httpx.Client(timeout=settings.SALESFORCE_TIMEOUT) as client:
-                resp = client.post(
-                    url,
-                    headers={"Content-Type": "application/json"},
-                    content=json.dumps(payload),
-                )
+                resp = client.post(url, headers=headers, content=json.dumps(payload))
+                # A revoked/expired token → refresh once and retry.
+                if resp.status_code == 401 and "Authorization" in headers:
+                    token = SalesforceService._get_access_token(force_refresh=True)
+                    headers["Authorization"] = f"Bearer {token['access_token']}"
+                    url = f"{token['instance_url']}/services/apexrest/lead-event"
+                    resp = client.post(url, headers=headers, content=json.dumps(payload))
         except Exception as exc:
             logger.error("Salesforce send-email request failed: %s", exc)
             raise RuntimeError(f"Salesforce request failed: {exc}")
