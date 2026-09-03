@@ -130,6 +130,7 @@ import { useAuth } from "@/lib/auth-context"
 import { callLogsApi, prospectsApi, assignmentsApi, type CallLog, type Prospect } from "@/lib/api-client"
 
 import { normalizeCourseInterest } from "../utils"
+import { CourseMultiSelect } from "@/components/ui/course-multi-select"
 
 
 
@@ -714,7 +715,7 @@ export default function CallHistoryPage() {
 
 
 
-  const [courseFilter, setCourseFilter] = useState("all")
+  const [courseFilter, setCourseFilter] = useState<string[]>([])
 
 
 
@@ -4249,10 +4250,12 @@ This is an automated report from the TATTI CRM System.
       expandLogByCourse(log, prospects[log.prospect_id])
     )
 
-    if (courseFilter === "all") return expandedLogs
+    const isAllCourses = !courseFilter || courseFilter.length === 0 || (courseFilter.length === 1 && courseFilter[0] === "all")
+    if (isAllCourses) return expandedLogs
     return expandedLogs.filter((log) => {
       const courseName = ((log as any).displayCourse || log.course_interest || "").trim()
-      return courseName === courseFilter
+      if (courseFilter.includes("Unknown") && (!courseName || courseName === "Unknown")) return true
+      return courseFilter.includes(courseName)
     })
   }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange])
 
@@ -4294,10 +4297,12 @@ This is an automated report from the TATTI CRM System.
     const expandedStatsLogs = filteredCallLogsForStats.flatMap((log) =>
       expandLogByCourse(log, prospects[log.prospect_id])
     )
-    if (courseFilter === "all") return expandedStatsLogs
+    const isAllCourses = !courseFilter || courseFilter.length === 0 || (courseFilter.length === 1 && courseFilter[0] === "all")
+    if (isAllCourses) return expandedStatsLogs
     return expandedStatsLogs.filter((log) => {
       const courseName = ((log as any).displayCourse || log.course_interest || "").trim()
-      return courseName === courseFilter
+      if (courseFilter.includes("Unknown") && (!courseName || courseName === "Unknown")) return true
+      return courseFilter.includes(courseName)
     })
   }, [filteredCallLogsForStats, courseFilter, prospects])
 
@@ -5749,39 +5754,13 @@ This is an automated report from the TATTI CRM System.
 
 
 
-              <Select value={courseFilter} onValueChange={setCourseFilter}>
-
-
-
-                <SelectTrigger className="w-full sm:w-40 h-9 rounded-lg">
-
-
-
-                  <SelectValue placeholder="Course" />
-
-
-
-                </SelectTrigger>
-
-
-
-                <SelectContent>
-
-
-
-                  <SelectItem value="all">All Courses</SelectItem>
-
-
-
-                  {courseOptions.map(course => (
-                    <SelectItem key={course} value={course}>{course}</SelectItem>
-                  ))}
-
-                </SelectContent>
-
-
-
-              </Select>
+              <CourseMultiSelect
+              courses={courseOptions}
+              selected={courseFilter}
+              onChange={setCourseFilter}
+              placeholder="All Courses"
+              className="w-full sm:w-40 h-9 rounded-lg"
+            />
 
 
 
