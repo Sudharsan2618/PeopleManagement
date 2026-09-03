@@ -48,7 +48,7 @@ interface EmailDrawerProps {
 
 export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawerProps) {
   const { toast } = useToast()
-  const [templates, setTemplates] = useState<Array<{ id: string; name: string }>>([])
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; subject?: string }>>([])
   const [templateId, setTemplateId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
@@ -190,7 +190,14 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
               <SelectContent>
                 {templates.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
-                    {t.name}
+                    <span className="flex flex-col">
+                      <span>{t.name}</span>
+                      {t.subject ? (
+                        <span className="text-[11px] text-muted-foreground truncate max-w-[280px]">
+                          {t.subject}
+                        </span>
+                      ) : null}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

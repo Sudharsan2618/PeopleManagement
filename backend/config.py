@@ -39,16 +39,26 @@ class Settings(BaseSettings):
     GCS_MEDIA_PREFIX   : str = "whatsapp-inbound"
     GCS_SIGNED_URL_TTL : int = 3600   # seconds
 
-    # Salesforce — Apex REST "lead-event" bridge (TATTI CRM public Site endpoint).
-    # SALESFORCE_LEAD_EVENT_URL fires events like {"event": "Send email",
-    # "leadIds": [...]} against Salesforce Leads. SALESFORCE_TEMPLATES_URL is an
-    # optional GET that returns the list of email templates to show the caller;
-    # leave it empty to fall back to "send default email (no template)".
-    # SALESFORCE_EMAIL_TEMPLATE_FIELD is the payload key the Apex reads the chosen
-    # template id from (defaults to "templateId" — change to match your Apex).
+    # ── Salesforce (TATTI CRM) ───────────────────────────────────────────────
+    # SEND: the public Site Apex REST "lead-event" endpoint (no auth). The chosen
+    # template is passed under SALESFORCE_EMAIL_TEMPLATE_FIELD ("emailTemplateId"):
+    #   {"event": "Send email", "emailTemplateId": "00X…", "leadIds": ["00Q…"]}
     SALESFORCE_LEAD_EVENT_URL      : str = "https://tatti.my.salesforce-sites.com/TattiCrm/services/apexrest/lead-event"
+    SALESFORCE_EMAIL_TEMPLATE_FIELD: str = "emailTemplateId"
+
+    # TEMPLATES: the OAuth Data API on the org. We fetch a token via the
+    # client-credentials flow (External Client App "TattiCrm") and SOQL-query
+    # EmailTemplate. NOTE: the app's Client-Credentials "Run As" user must be a
+    # full user (salesforce@tatti.com) — the API-only integration license can't
+    # see EmailTemplate and returns INVALID_TYPE.
+    SALESFORCE_LOGIN_URL           : str = "https://tatti.my.salesforce.com"
+    SALESFORCE_CLIENT_ID           : str = ""   # External Client App consumer key
+    SALESFORCE_CLIENT_SECRET       : str = ""   # consumer secret (keep in .env only)
+    SALESFORCE_API_VERSION         : str = "v67.0"
+
+    # Optional legacy override: a plain GET that already returns a template list.
+    # Leave empty to use the OAuth Data API path above.
     SALESFORCE_TEMPLATES_URL       : str = ""
-    SALESFORCE_EMAIL_TEMPLATE_FIELD: str = "templateId"
     SALESFORCE_TIMEOUT             : float = 30.0
 
     # SMTP email settings for report delivery
