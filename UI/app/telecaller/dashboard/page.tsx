@@ -835,6 +835,7 @@ import {
 
 
 import { CallOutcomeModal } from "@/components/call-outcome-modal"
+import { CallPanel } from "@/components/telephony/call-panel"
 
 
 
@@ -7188,6 +7189,47 @@ export default function TelecallerDashboard() {
 
   const [courseOptions, setCourseOptions] = useState<string[]>([])
 
+  const resolveStatusForExport = (prospect: any, statusVal?: any) => {
+    const SA_TO_STC: Record<string, string> = {
+      hot: "Interested",
+      warm: "Interested-Followup",
+      contacted: "Interested",
+      visit_scheduled: "Qualified",
+      visit_done: "Qualified",
+      admission_done: "Qualified",
+      cold: "Not Interested",
+      cold_not_interested: "Not Interested",
+      cold_no_response: "Ringing / Not Reachable",
+      lost: "Not Interested",
+    }
+    const isSTC =
+      viewMode === "short_term_course" ||
+      prospect?.dashboard === "short_term_course" ||
+      prospect?.prospect_type === "short_term_course" ||
+      prospect?.prospectType === "short_term_course" ||
+      (typeof prospect?.courseInterest === "string" && (prospect.courseInterest.toLowerCase().includes("wind") || prospect.courseInterest.toLowerCase().includes("short") || prospect.courseInterest.toLowerCase().includes("wedding") || prospect.courseInterest.toLowerCase().includes("film") || prospect.courseInterest.toLowerCase().includes("solar") || prospect.courseInterest.toLowerCase().includes("logistics") || prospect.courseInterest.toLowerCase().includes("micro"))) ||
+      (typeof prospect?.course_interest === "string" && (prospect.course_interest.toLowerCase().includes("wind") || prospect.course_interest.toLowerCase().includes("short") || prospect.course_interest.toLowerCase().includes("wedding")))
+
+    const rawStatusFull: string = String(statusVal !== undefined ? statusVal : (prospect?.status || prospect?.outcome || ""))
+    // Strip any " - CourseName" suffix (e.g. "Interested - Wedding Photography" → "Interested")
+    const rawStatus = rawStatusFull.includes(" - ") ? rawStatusFull.split(" - ")[0].trim() : rawStatusFull
+    const normKey = normalizeStatus(rawStatus)
+
+    if (isSTC) {
+      if (SA_TO_STC[rawStatus]) return SA_TO_STC[rawStatus]
+      if (SA_TO_STC[normKey]) return SA_TO_STC[normKey]
+      if (normKey === "hot" || normKey === "interested" || normKey.includes("strong interest")) return "Interested"
+      if (normKey === "warm" || normKey.includes("followup")) return "Interested-Followup"
+      if (normKey === "visit_scheduled" || normKey === "visit_done" || normKey === "admission_done" || normKey === "qualified") return "Qualified"
+      if (normKey.includes("not_interested") || normKey.includes("not interested") || normKey === "cold" || normKey === "lost") return "Not Interested"
+      if (normKey.includes("no_response") || normKey.includes("ringing")) return "Ringing / Not Reachable"
+      return statusConfig[normKey]?.label || rawStatus || "New"
+    }
+
+    // For non-STC: strip course suffix and resolve label
+    return statusConfig[normKey]?.label || statusConfig[rawStatus]?.label || rawStatus || "New"
+  }
+
 
 
 
@@ -7251,6 +7293,8 @@ export default function TelecallerDashboard() {
 
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isCallPanelOpen, setIsCallPanelOpen] = useState(false)
+  const [callSessionData, setCallSessionData] = useState<{ duration: number; recordingUrl?: string | null; callSid?: string } | null>(null)
 
 
 
@@ -9985,7 +10029,11 @@ export default function TelecallerDashboard() {
 
 
 
-      await prospectsApi.update(prospectNumericId, { [field]: value })
+      await prospectsApi.update(prospectNumericId, {
+        [field]: value,
+        updated_by: user?.id ? Number(user.id) : undefined,
+        updated_by_name: user?.name || "Telecaller",
+      })
 
 
 
@@ -18857,7 +18905,7 @@ export default function TelecallerDashboard() {
 
 
 
-          p.status,
+          resolveStatusForExport(p, p.status),
 
 
 
@@ -21816,54 +21864,19 @@ export default function TelecallerDashboard() {
 
 
   const handleCall = (prospect: any) => {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     setSelectedProspect(prospect)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    setIsModalOpen(true)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    setIsCallPanelOpen(true)
+    setIsModalOpen(false)
   }
+
+  const handleCallPanelEnded = (result: { duration: number; recordingUrl?: string | null; callSid?: string }) => {
+    setCallSessionData(result)
+    setIsCallPanelOpen(false)
+    setIsModalOpen(true)
+  }
+
+
+
 
 
 
@@ -22226,407 +22239,43 @@ export default function TelecallerDashboard() {
 
 
 
-      await prospectsApi.update(editingProspect.numericId, {
+      const targetId = editingProspect.numericId ?? (typeof editingProspect.id === "number" ? editingProspect.id : parseInt(String(editingProspect.id).split('_')[0], 10))
+      if (!targetId || isNaN(targetId)) {
+        toast({ title: "Save failed", description: "Invalid prospect ID.", variant: "destructive" })
+        return
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      await prospectsApi.update(targetId, {
         name: editingProspect.name,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         mobile: editingProspect.mobile,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         email: editingProspect.email,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alt_phone: editingProspect.altPhone,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alt_phone_2: editingProspect.altPhone2,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alt_phone_3: editingProspect.altPhone3,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         secondary_email: editingProspect.secondaryEmail,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         alternative_email: editingProspect.alternativeEmail,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         city: editingProspect.city,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         address: editingProspect.address,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         postal_code: editingProspect.postalCode,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         designation: editingProspect.designation,
         parent_name: editingProspect.parentName,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         college_name: editingProspect.collegeName,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         course_interest: editingProspect.courseInterest,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         comments: editingProspect.comments,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         website: editingProspect.website,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        updated_by: user?.id ? Number(user.id) : undefined,
+        updated_by_name: user?.name || "Telecaller",
       })
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      toast({ title: "Saved ?", description: "Prospect details updated." })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      toast({ title: "Saved", description: "Prospect details updated." })
       await fetchData()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       setIsEditModalOpen(false)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
       setEditingProspect(null)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    } catch (err) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      toast({ title: "Save failed", description: "Could not update prospect. Please try again.", variant: "destructive" })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    } catch (err: any) {
+      console.error("Save edit failed:", err)
+      const errorMsg = err?.message || "Could not update prospect. Please try again."
+      toast({ title: "Save failed", description: errorMsg, variant: "destructive" })
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   }
 
 
@@ -23771,21 +23420,8 @@ export default function TelecallerDashboard() {
 
 
         callback_scheduled_at: callbackScheduledAt,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        call_duration: (data.call_duration as number) || callSessionData?.duration || undefined,
+        recording_url: (data.recording_url as string) || callSessionData?.recordingUrl || undefined,
       })
 
 
@@ -24477,7 +24113,7 @@ export default function TelecallerDashboard() {
         val = prospect.collegeName || prospect.college_name || prospect.name || prospect.organization_name || prospect.institution_name || "-"
       }
       if (Array.isArray(val)) val = val.join(", ")
-      if (col.key === "status") val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+      if (col.key === "status") val = resolveStatusForExport(prospect, val)
       if (["callbackDateTime", "lastCallAt", "follow_up_date"].includes(col.key)) {
         if (val) {
           const date = new Date(val)
@@ -24498,7 +24134,7 @@ export default function TelecallerDashboard() {
       columns.forEach(col => {
         let val = prospect[col.key]
         if (Array.isArray(val)) val = val.join(", ")
-        if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+        if (col.key === 'status') val = resolveStatusForExport(prospect, val)
         if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
           if (val) {
             const date = new Date(val)
@@ -24522,7 +24158,7 @@ export default function TelecallerDashboard() {
           val = index + 1
         }
         if (Array.isArray(val)) val = val.join(", ")
-        if (col.key === 'status') val = statusConfig[normalizeStatus(val)]?.label || val || "New"
+        if (col.key === 'status') val = resolveStatusForExport(prospect, val)
         if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
           if (val) {
             const date = new Date(val)
@@ -29755,10 +29391,16 @@ export default function TelecallerDashboard() {
                           lost: "Not Interested",
                         }
                         const isSTCMode = viewMode === "short_term_course"
-                        const resolvedStatus = (isSTCMode && SA_TO_STC[prospect.status])
-                          ? SA_TO_STC[prospect.status]
-                          : prospect.status
-                        const sc = statusConfig[resolvedStatus] || {
+                        // Strip any " - CourseName" suffix that may have been accidentally saved
+                        // (e.g. "Interested - Wedding Photography" → "Interested")
+                        const rawStatusStr: string = prospect.status || prospect.outcome || ""
+                        const strippedStatus = rawStatusStr.includes(" - ")
+                          ? rawStatusStr.split(" - ")[0].trim()
+                          : rawStatusStr
+                        const resolvedStatus = (isSTCMode && SA_TO_STC[strippedStatus])
+                          ? SA_TO_STC[strippedStatus]
+                          : strippedStatus
+                        const sc = statusConfig[resolvedStatus] || statusConfig[rawStatusStr] || {
 
 
 
@@ -34880,6 +34522,16 @@ export default function TelecallerDashboard() {
 
 
 
+
+      {/* Exotel / Telephony Live Call Panel */}
+      <CallPanel
+        isOpen={isCallPanelOpen}
+        prospect={selectedProspect}
+        telecallerId={user?.id ? Number(user.id) : undefined}
+        telecallerPhone={user?.mobile || user?.phone || ""}
+        onCallEnded={handleCallPanelEnded}
+        onClose={() => setIsCallPanelOpen(false)}
+      />
 
       {/* Call Outcome Modal */}
 

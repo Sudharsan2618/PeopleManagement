@@ -63,7 +63,7 @@ export interface Prospect {
   gender?: string
   dob?: string
   state?: string
-  
+
   // Per-course status map computed dynamically from call_logs.
   // Key = course name (trimmed), Value = latest status_after_call (or prospect status if no call)
   course_statuses?: Record<string, string>
@@ -73,10 +73,51 @@ export interface Prospect {
   assignment_dashboard?: string
 }
 
+export interface ProspectActivity {
+  id: string | number
+  prospect_id: number
+  activity_type: string
+  field_name?: string
+  old_value?: string
+  new_value?: string
+  description: string
+  performed_by?: number
+  performed_by_name?: string
+  meta?: Record<string, any>
+  created_at: string
+}
+
+export interface ActivityFeedItem extends ProspectActivity {
+  prospect_name?: string
+  prospect_mobile?: string
+  lead_id?: string
+  course_name?: string
+  is_converted?: boolean
+  converted_enquiry_id?: number
+  converted_payment_status?: string
+  course_fee?: number
+  total_paid?: number
+  pending_amount?: number
+}
+
+export interface ActivityFeedResponse {
+  items: ActivityFeedItem[]
+  total: number
+  stats: {
+    total: number
+    conversions: number
+    payments: number
+    calls: number
+    status_changes: number
+  }
+}
+
+
 export interface CallLog {
   id: number
   prospect_id: number
   telecaller_id: number
+  telecaller_name?: string
   assignment_id?: number
   outcome: string
   status_after_call?: string
@@ -90,7 +131,10 @@ export interface CallLog {
   called_at: string
   prospect_name?: string
   prospect_phone?: string
+  call_duration?: number
+  recording_url?: string
 }
+
 
 export interface SpocReport {
   id: number
@@ -538,6 +582,29 @@ export const prospectsApi = {
     method: "PUT",
     body: JSON.stringify(data),
   }),
+  getTimeline: (id: number) => apiRequest<ProspectActivity[]>(`/prospects/${id}/timeline`),
+  getActivitiesFeed: (params: {
+    telecaller_id?: number | string
+    activity_type?: string
+    only_converted?: boolean
+    search?: string
+    start_date?: string
+    end_date?: string
+    limit?: number
+    offset?: number
+  } = {}) => {
+    const query = new URLSearchParams()
+    if (params.telecaller_id) query.append("telecaller_id", String(params.telecaller_id))
+    if (params.activity_type && params.activity_type !== "all") query.append("activity_type", params.activity_type)
+    if (params.only_converted) query.append("only_converted", "true")
+    if (params.search) query.append("search", params.search)
+    if (params.start_date) query.append("start_date", params.start_date)
+    if (params.end_date) query.append("end_date", params.end_date)
+    if (params.limit) query.append("limit", String(params.limit))
+    if (params.offset) query.append("offset", String(params.offset))
+    const qStr = query.toString()
+    return apiRequest<ActivityFeedResponse>(`/prospects/activities/feed${qStr ? `?${qStr}` : ''}`)
+  },
   delete: (id: number) => apiRequest<{ message: string }>(`/prospects/${id}`, {
     method: "DELETE",
   }),
@@ -1049,3 +1116,47 @@ export const conversionApi = {
     body: JSON.stringify(data)
   })
 }
+
+// Calls / Click-to-Call Telephony API
+export interface CallStartPayload {
+  prospect_id?: number
+  telecaller_id?: number
+  from_number: string
+  to_number: string
+  custom_field?: string
+}
+
+export interface CallStartResponse {
+  success: boolean
+  call_sid: string
+  status: string
+  message: string
+  is_simulated?: boolean
+  error?: string
+}
+
+export interface CallSession {
+  call_sid: string
+  status: string
+  duration: number
+  recording_url?: string | null
+  from_number?: string
+  to_number?: string
+  is_simulated?: boolean
+  ended_at?: string
+}
+
+export const callsApi = {
+  start: (data: CallStartPayload) =>
+    apiRequest<CallStartResponse>("/calls/start", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  end: (call_sid: string, duration: number = 0) =>
+    apiRequest<{ status: string; session: CallSession }>("/calls/end", {
+      method: "POST",
+      body: JSON.stringify({ call_sid, duration }),
+    }),
+  getSession: (call_sid: string) =>
+    apiRequest<CallSession>(`/calls/session/${call_sid}`),
+}

@@ -16,6 +16,12 @@ import {
   School,
   BookOpen,
   Loader2,
+  Volume2,
+  Play,
+  Pause,
+  Edit2,
+  Mail,
+  MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+
 import {
   Popover,
   PopoverContent,
@@ -60,7 +67,7 @@ import { cn } from "@/lib/utils"
 import {
   type CallOutcome,
 } from "@/lib/mock-data"
-import { callLogsApi, coursesApi, type CallLog, type Course } from "@/lib/api-client"
+import { callLogsApi, coursesApi, prospectsApi, type CallLog, type Course, type ProspectActivity } from "@/lib/api-client"
 
 // ─── DB outcome → UI label mapping ─────────────────────────────
 const DB_OUTCOME_LABELS: Record<string, string> = {
@@ -467,6 +474,8 @@ interface CallOutcomeModalProps {
   onOpenChange: (open: boolean) => void
   onSubmit: (outcome: string, data: Record<string, unknown>) => void
   onLeadModeActivate?: () => void
+  callDuration?: number
+  recordingUrl?: string | null
 }
 
 export function CallOutcomeModal({
@@ -475,8 +484,11 @@ export function CallOutcomeModal({
   onOpenChange,
   onSubmit,
   onLeadModeActivate,
+  callDuration,
+  recordingUrl,
 }: CallOutcomeModalProps) {
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null)
+
   const [notes, setNotes] = useState("")
   const [callbackDate, setCallbackDate] = useState("")
   const [callbackDateError, setCallbackDateError] = useState("")
@@ -500,9 +512,12 @@ export function CallOutcomeModal({
   const [leadType, setLeadType] = useState<string[]>([])
   const [proposedFor, setProposedFor] = useState<string[]>([])
 
-  // Real call history from API
+  // Real call history & Timeline from API
   const [callHistory, setCallHistory] = useState<CallLog[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [activeSideTab, setActiveSideTab] = useState<"history" | "timeline">("timeline")
+  const [timelineEvents, setTimelineEvents] = useState<ProspectActivity[]>([])
+  const [timelineLoading, setTimelineLoading] = useState(false)
 
   // ─── Determine if we're in "lead mode" or "Short Term Course mode" ────────────────────────
   const shortTermCourseLeadSources = ["Wedding Photography", "Video Editing", "Solar"]
@@ -560,70 +575,48 @@ export function CallOutcomeModal({
   // Lead mode is only active for college_contact dashboard
   const isLeadMode = localLeadMode && dashboard === "college_contact"
 
-  // Extract multiple courses robustly (handles comma-separated OR no commas if courses are loaded)
+  // Extract multiple courses only if separately imported (comma, semicolon, pipe separated or JSON array)
   const rawCourseInterest = (prospect?.courseInterest || prospect?.course_interest || "") === "Unknown" 
     ? "" 
     : (prospect?.courseInterest || prospect?.course_interest || "")
   
   const multipleCourses = useMemo(() => {
     if (!rawCourseInterest) return []
-    let parsed: string[] = []
-    
-    if (rawCourseInterest.includes(",")) {
-      parsed = rawCourseInterest.split(",").map(c => c.trim()).filter(Boolean)
-    } else {
-      // Hardcoded list of known courses (some aren't in DB yet)
-      const KNOWN_COURSES = [
-        "Wedding Photography & vide editing-July 2026",
-        "Wedding Photography and Videography-July 2026",
-        "Wedding Photography and Videography",
-        "Wedding Photography",
-        "Video Editing",
-        "vide editing",
-        "Solar",
-        "EDII Wind Solar",
-        "EDII - Solar Power Installation",
-        "Logistics & Supply Chain Management",
-        "AI-Powered Data & Business Analytics",
-        "B.Sc Renewable Energy",
-        "B.Com Fintech & Artificial Intelligence",
-        "B.Sc Film and TV Production"
-      ]
-      
-      // Combine API courses with known courses
-      const allPossibleCourses = Array.from(new Set([
-        ...KNOWN_COURSES.map(c => c.toLowerCase()),
-        ...courses.map(c => c.name?.toLowerCase() || "")
-      ]))
-      .filter(Boolean)
-      .sort((a, b) => b.length - a.length) // Sort longest first so we don't accidentally match substrings of larger courses
 
-      // Try to find known courses as substrings
-      const found = []
-      let remainingStr = rawCourseInterest.toLowerCase()
-      
-      for (const courseLower of allPossibleCourses) {
-        if (remainingStr.includes(courseLower)) {
-          // Find original casing from KNOWN_COURSES if possible
-          const originalCourse = KNOWN_COURSES.find(c => c.toLowerCase() === courseLower) 
-            || courses.find(c => c.name?.toLowerCase() === courseLower)?.name 
-            || courseLower
-            
-          found.push(originalCourse)
-          // Remove from string so we don't double count (e.g. "Wedding Photography" vs "Wedding Photography and Videography")
-          remainingStr = remainingStr.replace(courseLower, "")
+    // If already an array
+    if (Array.isArray(rawCourseInterest)) {
+      return rawCourseInterest.map(c => String(c).trim()).filter(Boolean)
+    }
+
+    if (typeof rawCourseInterest === "string") {
+      const trimmed = rawCourseInterest.trim()
+
+      // If JSON string array like '["Course 1", "Course 2"]'
+      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+        try {
+          const parsed = JSON.parse(trimmed)
+          if (Array.isArray(parsed)) {
+            return parsed.map(c => String(c).trim()).filter(Boolean)
+          }
+        } catch {
+          // not valid JSON, proceed
         }
       }
-      
-      if (found.length > 1) {
-        parsed = found
-      } else {
-        parsed = [rawCourseInterest]
+
+      // If separately imported with comma, semicolon, or pipe
+      if (trimmed.includes(",") || trimmed.includes(";") || trimmed.includes("|")) {
+        return trimmed
+          .split(/[,;|]/)
+          .map(c => c.trim())
+          .filter(Boolean)
       }
+
+      // Otherwise it is a single combined course
+      return [trimmed]
     }
-    
-    return parsed
-  }, [rawCourseInterest, courses])
+
+    return [String(rawCourseInterest).trim()]
+  }, [rawCourseInterest])
 
   // DEBUGGING OUTPUT
   useEffect(() => {
@@ -638,6 +631,26 @@ export function CallOutcomeModal({
   }, [open, prospect, rawCourseInterest, multipleCourses, courses.length])
 
   const hasMultipleCourses = multipleCourses.length > 1
+
+  // Group timeline activities by date
+  const groupedTimeline = useMemo(() => {
+    const groups: { dateStr: string; items: ProspectActivity[] }[] = []
+    const map = new Map<string, ProspectActivity[]>()
+
+    timelineEvents.forEach((ev) => {
+      const dt = new Date(ev.created_at)
+      const dateStr = !isNaN(dt.getTime())
+        ? dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : "Recent"
+      if (!map.has(dateStr)) {
+        map.set(dateStr, [])
+        groups.push({ dateStr, items: map.get(dateStr)! })
+      }
+      map.get(dateStr)!.push(ev)
+    })
+
+    return groups
+  }, [timelineEvents])
 
   // Choose outcome options by dashboard
   const currentOutcomeOptions =
@@ -676,6 +689,13 @@ export function CallOutcomeModal({
         .then((logs) => setCallHistory(logs))
         .catch(() => setCallHistory([]))
         .finally(() => setHistoryLoading(false))
+
+      setTimelineLoading(true)
+      prospectsApi
+        .getTimeline(prospectId)
+        .then((events) => setTimelineEvents(events))
+        .catch(() => setTimelineEvents([]))
+        .finally(() => setTimelineLoading(false))
     }
 
     setCoursesLoading(true)
@@ -764,7 +784,10 @@ export function CallOutcomeModal({
       lead_type: leadType,
       proposed_for: proposedFor,
       status: selectedOutcome,
+      call_duration: callDuration,
+      recording_url: recordingUrl,
     }
+
 
     if (callbackSectionActive && callbackDate) {
       data.callbackDate = callbackDate
@@ -788,9 +811,14 @@ export function CallOutcomeModal({
       data.reason = reason
     }
 
-    const finalOutcome = hasMultipleCourses && selectedSpecificCourse 
-      ? `${selectedOutcome} - ${selectedSpecificCourse}`
-      : selectedOutcome
+    // Store the selected specific course separately in data, NOT concatenated into the outcome value.
+    // Concatenating the course into the status (e.g. "Interested - Wedding Photography") causes
+    // the dashboard to show garbled status badges.
+    if (hasMultipleCourses && selectedSpecificCourse) {
+      data.course_interest = selectedSpecificCourse
+    }
+
+    const finalOutcome = selectedOutcome
 
     onSubmit(finalOutcome, data)
     resetForm()
@@ -874,63 +902,230 @@ export function CallOutcomeModal({
                 </div>
               </section>
 
-              {/* Call History */}
-              <section>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-                  History ({callHistory.length})
-                </h3>
-                {historyLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : callHistory.length > 0 ? (
-                  <div className="space-y-4 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-border">
-                    {callHistory.map((call) => (
-                      <div key={call.id} className="relative pl-8">
-                        <div className={cn(
-                          "absolute left-0 top-1.5 h-5 w-5 rounded-full border-4 border-background shadow-sm",
-                          DB_OUTCOME_COLORS[call.outcome]?.replace('text-', 'bg-') || "bg-muted"
-                        )} />
-                        <div className="bg-background border rounded-lg p-3 shadow-sm">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className={cn(
-                              "text-xs font-bold",
-                              DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
-                            )}>
-                              {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">
-                              {new Date(call.called_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          {call.reason && (
-                            <p className="text-xs font-medium text-foreground/80 mb-1">{call.reason}</p>
-                          )}
-                          {call.notes && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <p className="text-[11px] text-muted-foreground line-clamp-2 italic cursor-help">&quot;{call.notes}&quot;</p>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  className="bg-[#1F2937] text-white rounded-lg px-3 py-2.5 max-w-[360px] shadow-lg"
-                                  side="top"
-                                  sideOffset={8}
-                                >
-                                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{call.notes}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+              {/* Call Duration & Recording Section */}
+              <section className="p-4 rounded-xl border bg-card/60 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Volume2 className="w-3.5 h-3.5 text-primary" />
+                    Recent Call Recording
+                  </span>
+                  {callDuration ? (
+                    <Badge variant="outline" className="font-mono text-xs font-bold text-primary border-primary/30 bg-primary/5">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {Math.floor(callDuration / 60).toString().padStart(2, '0')}:{(callDuration % 60).toString().padStart(2, '0')}
+                    </Badge>
+                  ) : null}
+                </div>
+
+                {recordingUrl ? (
+                  <div className="space-y-2 pt-1">
+                    <audio controls src={recordingUrl} className="w-full h-9 rounded-lg" />
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Audio Ready
+                      </span>
+                      <a
+                        href={recordingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-bold"
+                      >
+                        Download Audio
+                      </a>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
-                    <PhoneOff className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
-                    <p className="text-xs text-muted-foreground">No previous calls recorded</p>
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 text-xs text-muted-foreground border">
+                    <Volume2 className="w-4 h-4 text-primary shrink-0" />
+                    <span>
+                      {callDuration
+                        ? `Call ended (${callDuration}s) — recording audio synced with Exotel`
+                        : "Call recording is automatically captured and attached"}
+                    </span>
                   </div>
+                )}
+              </section>
+
+              {/* Tab Switcher: History vs Timeline */}
+              <section className="space-y-4">
+                <div className="grid grid-cols-2 p-0.5 bg-muted/60 rounded-lg border">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSideTab("history")}
+                    className={cn(
+                      "py-1.5 px-3 text-xs font-semibold rounded-md transition-all text-center",
+                      activeSideTab === "history"
+                        ? "bg-background shadow-xs text-foreground font-bold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    History ({callHistory.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSideTab("timeline")}
+                    className={cn(
+                      "py-1.5 px-3 text-xs font-semibold rounded-md transition-all text-center",
+                      activeSideTab === "timeline"
+                        ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Timeline ({timelineEvents.length})
+                  </button>
+                </div>
+
+                {activeSideTab === "history" ? (
+                  /* Call History */
+                  historyLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : callHistory.length > 0 ? (
+                    <div className="space-y-4 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-border">
+                      {callHistory.map((call) => (
+                        <div key={call.id} className="relative pl-8">
+                          <div className={cn(
+                            "absolute left-0 top-1.5 h-5 w-5 rounded-full border-4 border-background shadow-sm",
+                            DB_OUTCOME_COLORS[call.outcome]?.replace('text-', 'bg-') || "bg-muted"
+                          )} />
+                          <div className="bg-background border rounded-lg p-3 shadow-sm space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className={cn(
+                                "text-xs font-bold",
+                                DB_OUTCOME_COLORS[call.outcome] || "text-muted-foreground"
+                              )}>
+                                {DB_OUTCOME_LABELS[call.outcome] || call.outcome}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                {call.call_duration ? (
+                                  <span className="text-[10px] font-mono font-semibold text-muted-foreground">
+                                    {Math.floor(call.call_duration / 60)}m {call.call_duration % 60}s
+                                  </span>
+                                ) : null}
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(call.called_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            {call.reason && (
+                              <p className="text-xs font-medium text-foreground/80">{call.reason}</p>
+                            )}
+                            {call.notes && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <p className="text-[11px] text-muted-foreground line-clamp-2 italic cursor-help">&quot;{call.notes}&quot;</p>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    className="bg-[#1F2937] text-white rounded-lg px-3 py-2.5 max-w-[360px] shadow-lg"
+                                    side="top"
+                                    sideOffset={8}
+                                  >
+                                    <p className="text-xs leading-relaxed whitespace-pre-wrap">{call.notes}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {call.recording_url && (
+                              <div className="pt-1">
+                                <audio controls src={call.recording_url} className="w-full h-7 rounded" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
+                      <PhoneOff className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                      <p className="text-xs text-muted-foreground">No previous calls recorded</p>
+                    </div>
+                  )
+                ) : (
+                  /* Activity Timeline */
+                  timelineLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : timelineEvents.length > 0 ? (
+                    <div className="space-y-6">
+                      {groupedTimeline.map((group, gIdx) => (
+                        <div key={gIdx} className="space-y-3">
+                          {/* Date Header */}
+                          <div>
+                            <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md border inline-block">
+                              {group.dateStr}
+                            </span>
+                          </div>
+
+                          {/* Events under this date */}
+                          <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/80">
+                            {group.items.map((item, iIdx) => {
+                              const dt = new Date(item.created_at)
+                              const timeStr = !isNaN(dt.getTime())
+                                ? dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+                                : ""
+
+                              // Icon & colors based on activity type
+                              let IconComp = Edit2
+                              let iconClass = "bg-blue-100 text-blue-600 border-blue-200"
+                              if (item.activity_type === "call") {
+                                IconComp = Phone
+                                iconClass = "bg-emerald-100 text-emerald-600 border-emerald-200"
+                              } else if (item.activity_type === "email") {
+                                IconComp = Mail
+                                iconClass = "bg-purple-100 text-purple-600 border-purple-200"
+                              } else if (item.activity_type === "whatsapp") {
+                                IconComp = MessageSquare
+                                iconClass = "bg-emerald-100 text-emerald-600 border-emerald-200"
+                              } else if (item.activity_type === "status_change") {
+                                IconComp = User
+                                iconClass = "bg-amber-100 text-amber-600 border-amber-200"
+                              }
+
+                              return (
+                                <div key={item.id || iIdx} className="relative flex items-start gap-3">
+                                  {/* Icon node */}
+                                  <div className={cn(
+                                    "absolute -left-6 top-1 h-4 w-4 rounded-full border flex items-center justify-center shadow-xs",
+                                    iconClass
+                                  )}>
+                                    <IconComp className="w-2.5 h-2.5" />
+                                  </div>
+
+                                  <div className="flex-1 min-w-0 bg-background border rounded-lg p-2.5 shadow-xs">
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                      <span className="text-[10px] font-semibold text-muted-foreground">
+                                        {timeStr}
+                                      </span>
+                                      {item.activity_type === "call" && item.meta?.duration ? (
+                                        <span className="text-[10px] font-mono font-medium text-muted-foreground">
+                                          {Math.floor(item.meta.duration / 60)}m {item.meta.duration % 60}s
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <p className="text-xs font-semibold text-foreground leading-snug break-words">
+                                      {item.description}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground mt-1">
+                                      by <span className="font-medium text-foreground/80">{item.performed_by_name || "Presitha"}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
+                      <Clock className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                      <p className="text-xs text-muted-foreground">No timeline activity recorded yet</p>
+                    </div>
+                  )
                 )}
               </section>
             </div>

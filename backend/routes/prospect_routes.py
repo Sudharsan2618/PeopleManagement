@@ -6,8 +6,10 @@ from models.schemas import (
     ProspectUpdate,
     PaginatedProspects,
     ProspectStats,
+    ProspectActivity,
 )
 from services.prospect_service import ProspectService
+from services.activity_service import ActivityService
 
 router = APIRouter(prefix="/prospects", tags=["prospects"])
 
@@ -143,11 +145,39 @@ def get_distinct_statuses():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/activities/feed")
+def get_activities_feed(
+    telecaller_id: Optional[int] = Query(None),
+    activity_type: Optional[str] = Query(None),
+    only_converted: bool = Query(False),
+    search: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0)
+):
+    """Retrieve combined activities feed with prospect details and stats."""
+    try:
+        return ActivityService.get_activities_feed(
+            telecaller_id=telecaller_id,
+            activity_type=activity_type,
+            only_converted=only_converted,
+            search=search,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stats", response_model=ProspectStats)
 def get_prospect_stats():
-    """Global prospect counters for stat cards (single aggregate query)."""
+    """Get overall prospect summary statistics (total, assigned, qualified, pending).
+    Declared before /{prospect_id} so the literal path wins."""
     try:
-        return ProspectService.get_prospect_stats()
+        return ProspectService.get_stats()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -256,6 +286,8 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
         update_kwargs = {"prospect_id": prospect_id}
         if prospect.name is not None:
             update_kwargs["name"] = prospect.name
+        if prospect.mobile is not None:
+            update_kwargs["mobile"] = prospect.mobile
         if prospect.email is not None:
             update_kwargs["email"] = prospect.email
         if prospect.location is not None:
@@ -332,9 +364,22 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["start_month"] = prospect.start_month
         if prospect.year is not None:
             update_kwargs["year"] = prospect.year
+        if prospect.updated_by is not None:
+            update_kwargs["updated_by"] = prospect.updated_by
+        if prospect.updated_by_name is not None:
+            update_kwargs["updated_by_name"] = prospect.updated_by_name
         
         ProspectService.update_prospect(**update_kwargs)
         return ProspectService.get_prospect_by_id(prospect_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{prospect_id}/timeline", response_model=List[ProspectActivity])
+def get_prospect_timeline(prospect_id: int):
+    """Get complete activity timeline for a prospect."""
+    try:
+        return ActivityService.get_timeline(prospect_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

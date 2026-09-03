@@ -113,6 +113,7 @@ class ProspectCreate(ProspectBase):
 
 class ProspectUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=150)
+    mobile: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
     location: Optional[str] = Field(None, max_length=150)
     sourced_from: Optional[str] = Field(None, max_length=100)
@@ -153,6 +154,24 @@ class ProspectUpdate(BaseModel):
     batch: Optional[str] = None
     start_month: Optional[str] = None
     year: Optional[str] = None
+    updated_by: Optional[int] = None
+    updated_by_name: Optional[str] = None
+
+class ProspectActivity(BaseModel):
+    id: Any
+    prospect_id: int
+    activity_type: str
+    field_name: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    description: str
+    performed_by: Optional[int] = None
+    performed_by_name: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+    created_at: Any
+
+    class Config:
+        from_attributes = True
 
 class Prospect(ProspectBase):
     id: int
@@ -283,6 +302,8 @@ class CallLogBase(BaseModel):
     notification_shown: bool = False
     notification_dismissed: bool = False
     notification_last_shown_at: Optional[datetime] = None
+    call_duration: Optional[int] = None
+    recording_url: Optional[str] = None
 
 
 class CallLogCreate(CallLogBase):
@@ -301,6 +322,8 @@ class CallLogUpdate(BaseModel):
     notes: Optional[str] = None
     course_interest: Optional[str] = Field(None, max_length=100)
     callback_scheduled_at: Optional[datetime] = None
+    call_duration: Optional[int] = None
+    recording_url: Optional[str] = None
 
 
 class CallLog(CallLogBase):
@@ -314,6 +337,7 @@ class CallLog(CallLogBase):
 
     class Config:
         from_attributes = True
+
 
 
 class EmailAttachment(BaseModel):

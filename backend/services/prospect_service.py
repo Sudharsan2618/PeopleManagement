@@ -8,6 +8,7 @@ from psycopg2.extras import execute_values
 from database.connection import execute_query, execute_insert, execute_update_delete, get_db_cursor
 from utils.timezone_utils import get_ist_now
 from utils.phone_utils import clean_phone_number, normalize_indian_mobile
+from services.activity_service import ActivityService, FIELD_LABELS
 
 # Sentinel value to distinguish between "not provided" and "explicitly None"
 _UNSET = object()
@@ -30,7 +31,7 @@ _MERGE_PRELOAD_COLS = (
 # overwrites a value a human or earlier import already set. (Fixed list — safe to
 # interpolate into the UPDATE statement.)
 _MERGE_FILLABLE = (
-    "email", "sourced_from", "location", "city", "parent_name", "department",
+    "lead_id", "email", "sourced_from", "location", "city", "parent_name", "department",
     "company", "designation", "college_name", "address", "postal_code",
     "secondary_email", "alternative_email", "alt_phone", "alt_phone_2",
     "alt_phone_3", "comments", "follow_up_date", "website",
@@ -472,17 +473,66 @@ class ProspectService:
 
     @staticmethod
     def get_prospect_by_id(prospect_id: int) -> Optional[dict]:
-        """Get prospect by ID."""
+        """Get prospect by ID with assigned telecaller and call statistics."""
         query = """
-            SELECT id, name, mobile, email, location, sourced_from, status, 
-                   course_interest, parent_name, department, assigned_to, closing_reason, tags,
-                   lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
-                   created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
-            FROM prospects
-            WHERE id = %s
+            SELECT 
+                p.id, p.name, p.mobile, p.email, p.location, p.sourced_from, p.status, 
+                p.course_interest, p.parent_name, p.department, 
+                COALESCE(p.assigned_to, la.telecaller_id, cl.telecaller_id) AS assigned_to,
+                p.closing_reason, p.tags,
+                p.lead_source, p.lead_type, p.proposed_for, p.alt_phone, p.alt_phone_2, p.alt_phone_3, 
+                p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
+                p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
+                p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.payment_date, p.transaction_id, p.batch, p.start_month, p.year,
+                COALESCE(u_assigned.name, u_la.name, u_cl.name) AS assigned_telecaller_name,
+                (SELECT COUNT(*) FROM call_logs cl_count WHERE cl_count.prospect_id = p.id) AS total_calls,
+                (SELECT MAX(called_at) FROM call_logs cl_max WHERE cl_max.prospect_id = p.id) AS last_call_date,
+                COALESCE(
+                    (SELECT MIN(called_at) FROM call_logs cl_q WHERE cl_q.prospect_id = p.id AND (cl_q.status_after_call ILIKE '%%qualified%%' OR cl_q.outcome ILIKE '%%qualified%%')),
+                    p.updated_at
+                ) AS qualified_date
+            FROM prospects p
+            LEFT JOIN users u_assigned ON u_assigned.id = p.assigned_to
+            LEFT JOIN LATERAL (
+                SELECT a.telecaller_id, a.assigned_date, a.dashboard
+                FROM prospect_assignments a
+                WHERE a.prospect_id = p.id
+                ORDER BY a.assigned_date DESC, a.created_at DESC
+                LIMIT 1
+            ) la ON TRUE
+            LEFT JOIN users u_la ON u_la.id = la.telecaller_id
+            LEFT JOIN LATERAL (
+                SELECT c.telecaller_id, c.called_at
+                FROM call_logs c
+                WHERE c.prospect_id = p.id AND c.telecaller_id IS NOT NULL
+                ORDER BY c.called_at DESC, c.id DESC
+                LIMIT 1
+            ) cl ON TRUE
+            LEFT JOIN users u_cl ON u_cl.id = cl.telecaller_id
+            WHERE p.id = %s
         """
         return execute_query(query, (prospect_id,), fetch="one")
+
+    @staticmethod
+    def get_stats() -> dict:
+        """Get summary stats for prospects (total, assigned, qualified, pending)."""
+        query = """
+            SELECT 
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE assigned_to IS NOT NULL) AS assigned,
+                COUNT(*) FILTER (WHERE status ILIKE '%%qualified%%' OR status IN ('hot', 'admission_done', 'visit_done', 'visit_scheduled')) AS qualified,
+                COUNT(*) FILTER (WHERE status IS NULL OR status = '' OR status ILIKE '%%new%%' OR status ILIKE '%%pending%%') AS pending
+            FROM prospects
+        """
+        row = execute_query(query, fetch="one")
+        if not row:
+            return {"total": 0, "assigned": 0, "qualified": 0, "pending": 0}
+        return {
+            "total": row.get("total") or 0,
+            "assigned": row.get("assigned") or 0,
+            "qualified": row.get("qualified") or 0,
+            "pending": row.get("pending") or 0,
+        }
     
     @staticmethod
     def get_prospects_by_status(status: str) -> List[dict]:
@@ -596,7 +646,8 @@ class ProspectService:
         ))
     
     @staticmethod
-    def update_prospect(prospect_id: int, name: Optional[str] = _UNSET, email: Optional[str] = _UNSET,
+    def update_prospect(prospect_id: int, name: Optional[str] = _UNSET, mobile: Optional[str] = _UNSET,
+                        email: Optional[str] = _UNSET,
                         location: Optional[str] = _UNSET, sourced_from: Optional[str] = _UNSET,
                         status: Optional[str] = _UNSET, course_interest: Optional[str] = _UNSET,
                         parent_name: Optional[str] = _UNSET, department: Optional[str] = _UNSET,
@@ -616,14 +667,76 @@ class ProspectService:
                         payment_status: Optional[str] = _UNSET, payment_mode: Optional[str] = _UNSET,
                         payment_date: Optional[str] = _UNSET,
                         transaction_id: Optional[str] = _UNSET, batch: Optional[str] = _UNSET,
-                        start_month: Optional[str] = _UNSET, year: Optional[str] = _UNSET) -> int:
-        """Update prospect details."""
+                        start_month: Optional[str] = _UNSET, year: Optional[str] = _UNSET,
+                        updated_by: Optional[int] = None,
+                        updated_by_name: Optional[str] = None) -> int:
+        """Update prospect details and log timeline activities."""
+        # ── Capture changes and log activities ──
+        try:
+            existing = ProspectService.get_prospect_by_id(prospect_id)
+            if existing:
+                field_map = {
+                    "name": name,
+                    "mobile": clean_phone_number(mobile) if mobile and mobile is not _UNSET else (None if mobile is None else _UNSET),
+                    "email": email,
+                    "location": location,
+                    "sourced_from": sourced_from,
+                    "status": status,
+                    "course_interest": course_interest,
+                    "parent_name": parent_name,
+                    "department": department,
+                    "alt_phone": alt_phone,
+                    "alt_phone_2": alt_phone_2,
+                    "alt_phone_3": alt_phone_3,
+                    "secondary_email": secondary_email,
+                    "alternative_email": alternative_email,
+                    "college_name": college_name,
+                    "city": city,
+                    "address": address,
+                    "postal_code": postal_code,
+                    "designation": designation,
+                    "company": company,
+                    "comments": comments,
+                    "website": website,
+                }
+                for f_key, f_val in field_map.items():
+                    if f_val is not _UNSET:
+                        old_raw = existing.get(f_key)
+                        old_str = str(old_raw).strip() if old_raw is not None else ""
+                        new_str = str(f_val).strip() if f_val is not None else ""
+                        if old_str != new_str:
+                            label = FIELD_LABELS.get(f_key, f_key.replace("_", " ").title())
+                            old_disp = old_str if old_str else "blank"
+                            new_disp = new_str if new_str else "blank"
+                            if f_key == "status":
+                                desc = f"Status was updated from {old_disp} to {new_disp}"
+                                act_type = "status_change"
+                            else:
+                                desc = f"{label} was updated from {old_disp} to {new_disp}"
+                                act_type = "field_update"
+
+                            ActivityService.log_activity(
+                                prospect_id=prospect_id,
+                                activity_type=act_type,
+                                field_name=f_key,
+                                old_value=old_raw,
+                                new_value=f_val,
+                                description=desc,
+                                performed_by=updated_by,
+                                performed_by_name=updated_by_name
+                            )
+        except Exception as act_err:
+            log.warning("Failed to record timeline activity for prospect %s: %s", prospect_id, act_err)
+
         updates = []
         params = []
         
         if name is not _UNSET:
             updates.append("name = %s")
             params.append(name)
+        if mobile is not _UNSET:
+            updates.append("mobile = %s")
+            params.append(clean_phone_number(mobile) if mobile else None)
         if email is not _UNSET:
             updates.append("email = %s")
             params.append(email)
@@ -1082,7 +1195,7 @@ class ProspectService:
             acc["tags"] = ProspectService._union(acc["tags"], ProspectService._as_list(p.get("tags")) + course_tags)
             acc["source"] = ProspectService._union(acc["source"], ProspectService._as_list(p.get("lead_source")))
             acc["type"] = ProspectService._union(acc["type"], ProspectService._as_list(p.get("lead_type")))
-            acc["proposed_for"] = ProspectService._union(acc["proposed_for"], ProspectService._as_list(p.get("proposed_for")))
+            acc["proposed_for"] = ProspectService._union(acc.get("proposed_for", []), ProspectService._as_list(p.get("proposed_for")))
 
             ex = acc.get("existing")
             if not ex:
@@ -1140,6 +1253,10 @@ class ProspectService:
                 rec["p"]["lead_source"] = rec["acc"]["source"]
                 rec["p"]["lead_type"] = rec["acc"]["type"]
                 rec["p"]["proposed_for"] = rec["acc"].get("proposed_for", [])
+                if not rec.get("lead_id") and lead_id:
+                    rec["lead_id"] = lead_id
+                    rec["p"]["lead_id"] = lead_id
+                    new_by_lead[lead_id] = ni
                 detail_slots[i] = {"row": row, "name": name, "mobile": mobile or "",
                                    "status": "Merged", "action": "merge",
                                    "reason": f"Merged into row {rec['first_row']} (same file)"}

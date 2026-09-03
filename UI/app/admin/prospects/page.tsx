@@ -67,6 +67,7 @@ import {
 import { prospectsApi, assignmentsApi, usersApi, coursesApi, adaptApiProspectToUiProspect, adaptApiUserToUiUser, type ProspectListItem } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
+import { ProspectTimelineHistory } from "@/components/prospect-timeline-history"
 
 const statusColors: Record<ProspectStatus, string> = {
   Pending: "bg-[#FCF4D6] text-yellow-800 border-yellow-200",
@@ -994,130 +995,137 @@ export default function AdminProspectsPage() {
 
       {/* Prospect Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               Prospect Details
+              {selectedProspect && (
+                <Badge variant="outline" className={cn("ml-2", statusColors[selectedProspect.status as ProspectStatus])}>
+                  {selectedProspect.status}
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
           {selectedProspect && (
-            <ScrollArea className="max-h-[calc(90vh-100px)]">
-              <div className="space-y-6 pr-4">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="font-semibold mb-3">Basic Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Name:</span>
-                      <p className="font-medium">{selectedProspect.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Age:</span>
-                      <p className="font-medium">{selectedProspect.age || "N/A"} years</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Mobile:</span>
-                      <p className="font-medium font-mono">{selectedProspect.mobile}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Email:</span>
-                      <p className="font-medium">{selectedProspect.email || "N/A"}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Location:</span>
-                      <p className="font-medium">{selectedProspect.location}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">School:</span>
-                      <p className="font-medium">{selectedProspect.schoolLastAttended}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Parent Name:</span>
-                      <p className="font-medium">{selectedProspect.parentName || "N/A"}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Department:</span>
-                      <p className="font-medium">{selectedProspect.department || "N/A"}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Course Interest:</span>
-                      <Badge variant="secondary" className="ml-2">
-                        {selectedProspect.courseInterest}
-                      </Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Source:</span>
-                      <p className="font-medium">{selectedProspect.source}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Website:</span>
-                      {selectedProspect.website ? (
-                        <a
-                          href={selectedProspect.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {selectedProspect.website}
-                        </a>
-                      ) : (
-                        <p className="font-medium">N/A</p>
+            <ScrollArea className="flex-1 overflow-y-auto">
+              <div className="space-y-6 pr-2 pb-4">
+                {/* Basic Info + Assignment side-by-side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Basic Info */}
+                  <div className="border border-border rounded-lg p-4 bg-muted/20">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Basic Information</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Name</span>
+                        <span className="font-medium">{selectedProspect.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Mobile</span>
+                        <span className="font-medium font-mono">{selectedProspect.mobile}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Email</span>
+                        <span className="font-medium truncate max-w-[180px]">{selectedProspect.email || "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Location</span>
+                        <span className="font-medium">{selectedProspect.location || "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">City</span>
+                        <span className="font-medium">{selectedProspect.city || "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Course Interest</span>
+                        <Badge variant="secondary" className="text-xs">{selectedProspect.courseInterest || "N/A"}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Lead Source</span>
+                        <span className="font-medium text-right">
+                          {Array.isArray(selectedProspect.lead_source) ? selectedProspect.lead_source.join(", ") : selectedProspect.lead_source || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Source</span>
+                        <span className="font-medium">{selectedProspect.source || "N/A"}</span>
+                      </div>
+                      {selectedProspect.parentName && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Parent Name</span>
+                          <span className="font-medium">{selectedProspect.parentName}</span>
+                        </div>
+                      )}
+                      {selectedProspect.website && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Website</span>
+                          <a href={selectedProspect.website} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline text-xs truncate max-w-[160px]">
+                            {selectedProspect.website}
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
 
-                <Separator />
-
-                {/* Assignment Info */}
-                <div>
-                  <h3 className="font-semibold mb-3">Assignment</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Assigned To:</span>
-                      <p className="font-medium">
-                        {getAssignedTelecaller(selectedProspect.assignedTo)?.name ||
-                          "Unassigned"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Assigned Date:</span>
-                      <p className="font-medium">
-                        {selectedProspect.assignedDate
-                          ? new Date(selectedProspect.assignedDate).toLocaleDateString(
-                              "en-IN"
-                            )
-                          : "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Current Status:</span>
-                      <Badge
-                        variant="outline"
-                        className={cn(statusColors[selectedProspect.status as ProspectStatus], "ml-2")}
-                      >
-                        {selectedProspect.status}
-                      </Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Created:</span>
-                      <p className="font-medium">
-                        {new Date(selectedProspect.createdAt).toLocaleDateString("en-IN")}
-                      </p>
+                  {/* Assignment Info */}
+                  <div className="border border-border rounded-lg p-4 bg-muted/20">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Assignment & Status</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Assigned To</span>
+                        <span className="font-medium">
+                          {getAssignedTelecaller(selectedProspect.assignedTo)?.name || "Unassigned"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Assigned Date</span>
+                        <span className="font-medium">
+                          {selectedProspect.assignedDate
+                            ? new Date(selectedProspect.assignedDate).toLocaleDateString("en-IN")
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Dashboard</span>
+                        <span className="font-medium capitalize">
+                          {selectedProspect.dashboard?.replace(/_/g, " ") || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Current Status</span>
+                        <Badge variant="outline" className={cn("text-xs", statusColors[selectedProspect.status as ProspectStatus])}>
+                          {selectedProspect.status}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Call</span>
+                        <span className="font-medium">
+                          {selectedProspect.lastCallAt
+                            ? new Date(selectedProspect.lastCallAt).toLocaleDateString("en-IN")
+                            : "No calls yet"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Created</span>
+                        <span className="font-medium">
+                          {selectedProspect.createdAt
+                            ? new Date(selectedProspect.createdAt).toLocaleDateString("en-IN")
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Lead ID</span>
+                        <span className="font-medium font-mono text-xs">{selectedProspect.lead_id || selectedProspect.leadId || "N/A"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Call History */}
-                <div>
-                  <h3 className="font-semibold mb-3">Call History</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Call history not yet implemented with backend
-                  </p>
-                </div>
+                {/* Full Timeline & Activity History */}
+                <ProspectTimelineHistory
+                  prospectId={Number(selectedProspect.id)}
+                  className="border-0 shadow-none"
+                />
               </div>
             </ScrollArea>
           )}

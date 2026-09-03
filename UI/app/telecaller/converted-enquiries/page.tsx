@@ -23,20 +23,20 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatISTDate, formatISTDateTime } from "@/lib/utils"
-import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
+import { conversionApi, coursesApi } from "@/lib/api-client"
+import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 
-export default function ConvertedEnquiriesPage() {
+export default function TelecallerConvertedEnquiriesPage() {
+  const { user } = useAuth()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
-  const [telecallerFilter, setTelecallerFilter] = useState<string>("all")
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all")
   
   const [enquiries, setEnquiries] = useState<any[]>([])
-  const [telecallers, setTelecallers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -48,11 +48,7 @@ export default function ConvertedEnquiriesPage() {
 
   const fetchFilters = async () => {
     try {
-      const [tData, cData] = await Promise.all([
-        usersApi.getAll(),
-        coursesApi.getAll()
-      ])
-      setTelecallers(tData.filter((u: any) => u.role === "telecaller"))
+      const cData = await coursesApi.getAll()
       setCourses(cData)
     } catch (err) {
       console.error("Failed to load filters", err)
@@ -60,11 +56,11 @@ export default function ConvertedEnquiriesPage() {
   }
 
   const fetchEnquiries = async () => {
+    if (!user) return
     setIsLoading(true)
     try {
-      const params: any = {}
+      const params: any = { telecaller_id: user.id }
       if (searchQuery) params.search = searchQuery
-      if (telecallerFilter !== "all") params.telecaller_id = telecallerFilter
       if (courseFilter !== "all") params.course = courseFilter
       if (moduleFilter !== "all") params.module = moduleFilter
       if (paymentStatusFilter !== "all") params.payment_status = paymentStatusFilter
@@ -80,18 +76,23 @@ export default function ConvertedEnquiriesPage() {
 
   useEffect(() => {
     fetchFilters()
-    fetchEnquiries()
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (user) {
       fetchEnquiries()
+    }
+  }, [user, courseFilter, moduleFilter, paymentStatusFilter])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (user) fetchEnquiries()
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, paymentStatusFilter])
+  }, [searchQuery])
 
   const exportToCSV = () => {
-    const headers = ["#", "Lead ID", "Student Name", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Telecaller", "Converted Date"]
+    const headers = ["#", "Lead ID", "Student Name", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Converted Date"]
     const rows = enquiries.map((enq: any, idx: number) => [
       idx + 1,
       enq.original_lead_id || "",
@@ -103,7 +104,6 @@ export default function ConvertedEnquiriesPage() {
       Number(enq.total_paid || 0),
       Number(enq.pending_amount || 0),
       enq.payment_status || "",
-      enq.telecaller_name || "",
       formatISTDate(enq.converted_at),
     ])
     const csvContent = [headers, ...rows]
@@ -113,7 +113,7 @@ export default function ConvertedEnquiriesPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `converted-enquiries-${new Date().toISOString().split("T")[0]}.csv`
+    a.download = `my-converted-enquiries-${new Date().toISOString().split("T")[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -134,7 +134,7 @@ export default function ConvertedEnquiriesPage() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Link href="/admin/timeline">
+          <Link href="/telecaller/timeline">
             <Button variant="outline" size="sm" className="h-9 gap-1.5">
               <Clock className="h-4 w-4" />
               Activity Timeline
@@ -160,14 +160,14 @@ export default function ConvertedEnquiriesPage() {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={telecallerFilter} onValueChange={setTelecallerFilter}>
+              <Select value={moduleFilter} onValueChange={setModuleFilter}>
                 <SelectTrigger className="w-[160px] h-9 border-input bg-background text-foreground">
-                  <SelectValue placeholder="All Telecallers" />
+                  <SelectValue placeholder="All Modules" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Telecallers</SelectItem>
-                  {telecallers.map(t => (
-                    <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  {modules.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -184,93 +184,88 @@ export default function ConvertedEnquiriesPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={moduleFilter} onValueChange={setModuleFilter}>
-                <SelectTrigger className="w-[160px] h-9 border-input bg-background text-foreground">
-                  <SelectValue placeholder="All Modules" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Modules</SelectItem>
-                  {modules.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
                 <SelectTrigger className="w-[160px] h-9 border-input bg-background text-foreground">
-                  <SelectValue placeholder="Payment Status" />
+                  <SelectValue placeholder="All Payment Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">All Payment Status</SelectItem>
                   <SelectItem value="Paid">Paid</SelectItem>
                   <SelectItem value="Payment Pending">Payment Pending</SelectItem>
-                  <SelectItem value="Refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="border-t border-border overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow className="border-b border-border hover:bg-transparent">
-                  <TableHead className="w-12 text-muted-foreground font-medium">#</TableHead>
-                  <TableHead className="text-muted-foreground font-medium whitespace-nowrap">Lead ID</TableHead>
-                  <TableHead className="text-muted-foreground font-medium min-w-[150px]">Student Name</TableHead>
-                  <TableHead className="text-muted-foreground font-medium">Mobile</TableHead>
-                  <TableHead className="text-muted-foreground font-medium min-w-[150px]">Course</TableHead>
-                  <TableHead className="text-muted-foreground font-medium text-right">Total Fee (₹)</TableHead>
-                  <TableHead className="text-muted-foreground font-medium text-right">Paid (₹)</TableHead>
-                  <TableHead className="text-muted-foreground font-medium">Payment Status</TableHead>
-                  <TableHead className="text-muted-foreground font-medium whitespace-nowrap">Converted Date</TableHead>
-                  <TableHead className="text-right text-muted-foreground font-medium">Action</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="w-[60px] text-xs font-semibold uppercase text-muted-foreground">#</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Lead ID</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Student Name</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Mobile</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Course</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Module</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Total Fee</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Paid</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Pending</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Payment Status</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Converted Date</TableHead>
+                <TableHead className="text-right text-xs font-semibold uppercase text-muted-foreground">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {enquiries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground text-sm">
+                    No converted enquiries found.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {enquiries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                      No converted enquiries found matching your criteria.
+              ) : (
+                enquiries.map((enq, idx) => (
+                  <TableRow key={enq.id} className="border-border hover:bg-muted/50">
+                    <TableCell className="text-xs text-muted-foreground">{idx + 1}</TableCell>
+                    <TableCell className="font-mono text-xs font-medium">
+                      {enq.original_lead_id || `QL-${enq.prospect_id}`}
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">
+                      <Link href={`/telecaller/converted-enquiries/${enq.id}`} className="hover:underline text-primary">
+                        {enq.student_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{enq.mobile || "—"}</TableCell>
+                    <TableCell className="text-xs font-medium">{enq.course_name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      <span className="capitalize">{enq.course_module?.replace(/_/g, " ") || "Student Admission"}</span>
+                    </TableCell>
+                    <TableCell className="text-xs font-medium">₹{Number(enq.course_fee).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-emerald-600 font-semibold">₹{Number(enq.total_paid).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-red-600 font-bold">₹{Number(enq.pending_amount).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge className={`border-none text-[10px] font-semibold tracking-wider px-2 py-0.5 pointer-events-none ${
+                        enq.payment_status === "Paid" 
+                          ? "bg-green-100 text-green-800" 
+                          : "bg-red-100 text-red-800"
+                      }`}>
+                        {enq.payment_status?.toUpperCase() || "PAYMENT PENDING"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatISTDate(enq.converted_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/telecaller/converted-enquiries/${enq.id}`}>
+                        <Button variant="outline" size="sm" className="h-8 text-xs font-medium">
+                          View Details
+                        </Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  enquiries.map((enq, index) => {
-                    const isPaid = enq.payment_status === "Paid"
-                    const isRefunded = enq.payment_status === "Refunded"
-                    return (
-                      <TableRow key={enq.id} className="border-b border-border group hover:bg-muted/30">
-                        <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
-                        <TableCell className="font-medium text-foreground whitespace-nowrap">{enq.original_lead_id}</TableCell>
-                        <TableCell className="font-medium text-foreground">{enq.student_name}</TableCell>
-                        <TableCell className="text-muted-foreground">{enq.mobile || "-"}</TableCell>
-                        <TableCell>
-                          <span className="text-sm text-foreground">{enq.course_name || "-"}</span>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">₹{Number(enq.course_fee).toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-medium text-emerald-600">₹{Number(enq.total_paid).toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={isRefunded ? "bg-red-100 text-red-800 border-red-200" : isPaid ? "bg-emerald-100 text-emerald-800 border-emerald-200" : "bg-orange-100 text-orange-800 border-orange-200"}>
-                            {enq.payment_status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                          {formatISTDate(enq.converted_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Link href={`/admin/converted-enquiries/${enq.id}`}>
-                            <Button variant="outline" size="sm" className="h-8 shadow-none border-border hover:bg-muted text-xs">
-                              View Details
-                            </Button>
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

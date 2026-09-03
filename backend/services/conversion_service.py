@@ -4,6 +4,8 @@ from datetime import datetime
 from database.connection import execute_query, execute_insert, execute_update_delete, get_db_cursor
 from models.schemas import ConvertedEnquiryCreate, PaymentHistoryCreate
 
+from services.activity_service import ActivityService
+
 class ConversionService:
 
     @staticmethod
@@ -16,15 +18,32 @@ class ConversionService:
     ) -> List[Dict]:
         query = """
             SELECT p.*,
-                   u.name as telecaller_name
+                   COALESCE(u.name, u_la.name, u_cl.name) as telecaller_name,
+                   COALESCE(p.assigned_to, la.telecaller_id, cl.telecaller_id) as assigned_to
             FROM prospects p
             LEFT JOIN users u ON p.assigned_to = u.id
-            WHERE p.status = 'Qualified' AND p.assigned_to IS NOT NULL AND p.converted = FALSE
+            LEFT JOIN LATERAL (
+                SELECT a.telecaller_id
+                FROM prospect_assignments a
+                WHERE a.prospect_id = p.id
+                ORDER BY a.assigned_date DESC, a.created_at DESC
+                LIMIT 1
+            ) la ON TRUE
+            LEFT JOIN users u_la ON u_la.id = la.telecaller_id
+            LEFT JOIN LATERAL (
+                SELECT c.telecaller_id
+                FROM call_logs c
+                WHERE c.prospect_id = p.id AND c.telecaller_id IS NOT NULL
+                ORDER BY c.called_at DESC, c.id DESC
+                LIMIT 1
+            ) cl ON TRUE
+            LEFT JOIN users u_cl ON u_cl.id = cl.telecaller_id
+            WHERE (p.status = 'Qualified' OR p.status ILIKE '%%qualified%%') AND p.converted = FALSE
         """
         params = []
         if telecaller_id:
-            query += " AND p.assigned_to = %s"
-            params.append(telecaller_id)
+            query += " AND (p.assigned_to = %s OR la.telecaller_id = %s OR cl.telecaller_id = %s)"
+            params.extend([telecaller_id, telecaller_id, telecaller_id])
         if course:
             query += " AND p.course_interest = %s"
             params.append(course)
@@ -32,8 +51,8 @@ class ConversionService:
             query += " AND p.prospect_type = %s"
             params.append(module)
         if lead_source:
-            query += " AND p.lead_source ? %s"
-            params.append(lead_source)
+            query += " AND (p.lead_source::text ILIKE %s OR p.lead_source ? %s)"
+            params.extend([f"%{lead_source}%", lead_source])
         if search:
             query += " AND (p.name ILIKE %s OR p.mobile ILIKE %s OR p.lead_id ILIKE %s)"
             search_term = f"%{search}%"
@@ -112,6 +131,18 @@ class ConversionService:
                 WHERE id = %s
             """, (total_amount_paid, payment_status, latest_pay_date, data.prospect_id,))
             
+            # 5. Log Activity in Timeline
+            try:
+                ActivityService.log_activity(
+                    prospect_id=data.prospect_id,
+                    activity_type="conversion",
+                    description=f"Converted to Student for '{data.course_name}' (Total Fee: ₹{course_fee:,.0f}, Paid: ₹{total_amount_paid:,.0f})",
+                    performed_by=data.converted_by,
+                    meta={"enquiry_id": enquiry_id, "course_fee": course_fee, "total_paid": total_amount_paid}
+                )
+            except Exception:
+                pass
+
             return enquiry_id
 
     @staticmethod
@@ -132,16 +163,17 @@ class ConversionService:
                        to_char((SELECT ph.payment_date FROM payment_history ph WHERE ph.converted_enquiry_id = ce.id AND ph.amount > 0 ORDER BY ph.payment_date DESC, ph.created_at DESC LIMIT 1), 'YYYY-MM-DD'),
                        p.payment_date
                    ) as payment_date,
-                   u.name as telecaller_name
+                   COALESCE(u.name, u_p.name) as telecaller_name
             FROM converted_enquiries ce
             JOIN prospects p ON ce.prospect_id = p.id
             LEFT JOIN users u ON ce.telecaller_id = u.id
+            LEFT JOIN users u_p ON p.assigned_to = u_p.id
             WHERE 1=1
         """
         params = []
         if telecaller_id:
-            query += " AND ce.telecaller_id = %s"
-            params.append(telecaller_id)
+            query += " AND (ce.telecaller_id = %s OR p.assigned_to = %s)"
+            params.extend([telecaller_id, telecaller_id])
         if course:
             query += " AND ce.course_name = %s"
             params.append(course)
@@ -232,6 +264,20 @@ class ConversionService:
                     WHERE id = %s
                 """
                 cursor.execute(update_prospect_query, (new_total_paid, new_payment_status, str(data.payment_date), data.payment_mode, data.transaction_id, enquiry['prospect_id']))
+                
+                try:
+                    is_refund = float(data.amount) < 0 or (data.payment_mode and "refund" in data.payment_mode.lower())
+                    act_type = "refund" if is_refund else "payment"
+                    act_desc = f"Recorded {'Refund' if is_refund else 'Payment'} of ₹{abs(float(data.amount)):,.0f} via {data.payment_mode or 'Cash'} (Total Paid: ₹{new_total_paid:,.0f}, Pending: ₹{new_pending_amount:,.0f})"
+                    ActivityService.log_activity(
+                        prospect_id=enquiry['prospect_id'],
+                        activity_type=act_type,
+                        description=act_desc,
+                        performed_by=data.created_by,
+                        meta={"enquiry_id": enquiry_id, "amount": float(data.amount), "payment_mode": data.payment_mode, "transaction_id": data.transaction_id}
+                    )
+                except Exception:
+                    pass
             
             return payment_id
 
