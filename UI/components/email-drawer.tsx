@@ -9,6 +9,8 @@ import {
   RefreshCw,
   FileText,
   CheckCircle2,
+  Info,
+  Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -46,26 +48,36 @@ interface EmailDrawerProps {
   onSent?: () => void
 }
 
+interface Preview {
+  template_name: string
+  subject: string
+  body_html: string
+  merged: boolean
+}
+
 export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawerProps) {
   const { toast } = useToast()
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; subject?: string }>>([])
   const [templateId, setTemplateId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
   const [lastResult, setLastResult] = useState<
     | { ok: boolean; summary: string; detail?: string }
     | null
   >(null)
 
   const hasLead = !!(prospect?.leadId && String(prospect.leadId).trim())
+  const selectedTemplate = templates.find((t) => t.id === templateId)
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true)
     try {
       const list = await salesforceApi.getEmailTemplates()
       setTemplates(Array.isArray(list) ? list : [])
-    } catch (err) {
-      // Non-fatal: caller can still send the default email.
+    } catch {
       setTemplates([])
     } finally {
       setIsLoading(false)
@@ -75,10 +87,39 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
   useEffect(() => {
     if (open && prospect) {
       setTemplateId("")
+      setPreview(null)
+      setPreviewError(null)
       setLastResult(null)
       loadTemplates()
     }
   }, [open, prospect, loadTemplates])
+
+  // Fetch a merged preview whenever a template is chosen.
+  useEffect(() => {
+    if (!open || !prospect || !hasLead || !templateId) {
+      setPreview(null)
+      setPreviewError(null)
+      return
+    }
+    let cancelled = false
+    setIsPreviewLoading(true)
+    setPreviewError(null)
+    setPreview(null)
+    salesforceApi
+      .getEmailPreview(prospect.id, templateId)
+      .then((p) => {
+        if (!cancelled) setPreview(p)
+      })
+      .catch((err) => {
+        if (!cancelled) setPreviewError(err instanceof Error ? err.message : "Preview failed")
+      })
+      .finally(() => {
+        if (!cancelled) setIsPreviewLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, prospect, hasLead, templateId])
 
   const handleSend = async () => {
     if (!prospect || !hasLead) return
@@ -87,7 +128,6 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
     try {
       const res = await salesforceApi.sendEmail([prospect.id], templateId || undefined)
       const stamp = new Date().toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })
-      // Surface exactly what Salesforce returned so you can verify the send.
       let sfDetail = ""
       if (res.salesforce_response != null) {
         try {
@@ -100,7 +140,7 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
         }
       }
       if (res.sent_count > 0) {
-        const tplName = templates.find((t) => t.id === templateId)?.name
+        const tplName = selectedTemplate?.name
         toast({
           title: "Email triggered",
           description: tplName
@@ -131,13 +171,16 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col h-full gap-0">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-xl lg:max-w-2xl p-0 flex flex-col h-full gap-0"
+      >
         {/* Header */}
-        <SheetHeader className="p-4 pr-12 border-b border-border space-y-2">
+        <SheetHeader className="p-4 pr-12 border-b border-border space-y-2 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <SheetTitle className="text-sm font-semibold truncate flex items-center gap-1.5">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                 {prospect?.name || "Prospect"}
               </SheetTitle>
               <SheetDescription className="text-xs text-muted-foreground truncate">
@@ -170,13 +213,14 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
 
         {/* Body */}
         <div className="flex-1 min-h-0 overflow-y-auto bg-secondary/40 p-4 space-y-4">
+          {/* Template picker */}
           <div className="rounded-lg border border-border bg-card p-4 space-y-3">
             <p className="text-sm font-medium flex items-center gap-1.5">
               <FileText className="h-4 w-4 text-muted-foreground" />
               Email template
             </p>
-            <Select value={templateId} onValueChange={setTemplateId} disabled={!hasLead}>
-              <SelectTrigger className="h-9 text-sm">
+            <Select value={templateId} onValueChange={setTemplateId} disabled={!hasLead || isLoading}>
+              <SelectTrigger className="h-10 text-sm">
                 <SelectValue
                   placeholder={
                     isLoading
@@ -187,28 +231,93 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
+              {/* Constrain to the trigger's width so long names can't blow out the layout */}
+              <SelectContent
+                position="popper"
+                className="max-h-[320px] w-[var(--radix-select-trigger-width)]"
+              >
                 {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    <span className="flex flex-col">
-                      <span>{t.name}</span>
+                  <SelectItem key={t.id} value={t.id} className="pr-8">
+                    <div className="flex flex-col min-w-0 max-w-full">
+                      <span className="truncate">{t.name}</span>
                       {t.subject ? (
-                        <span className="text-[11px] text-muted-foreground truncate max-w-[280px]">
+                        <span className="truncate text-[11px] text-muted-foreground">
                           {t.subject}
                         </span>
                       ) : null}
-                    </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Auto-merge explainer — answers "do I need to give inputs?" */}
+            {hasLead && (
+              <p className="text-[11px] text-muted-foreground flex items-start gap-1.5 leading-relaxed">
+                <Info className="h-3.5 w-3.5 shrink-0 mt-px" />
+                No inputs needed — Salesforce fills the lead's details
+                (name, company, etc.) into the template automatically. Pick a
+                template to preview the exact email below.
+              </p>
+            )}
             {templates.length === 0 && !isLoading && (
               <p className="text-xs text-muted-foreground">
-                No Salesforce templates configured — the default email will be sent.
+                No Salesforce templates found — the default email will be sent.
               </p>
             )}
           </div>
 
+          {/* Preview */}
+          {templateId && (
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-border flex items-center gap-1.5">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">Preview</p>
+                {preview && !preview.merged && (
+                  <Badge variant="amber" className="ml-auto text-[10px]">
+                    unmerged — actual send will merge
+                  </Badge>
+                )}
+              </div>
+
+              {isPreviewLoading ? (
+                <div className="flex items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              ) : previewError ? (
+                <div className="p-4 text-xs text-rose-600 dark:text-rose-400 flex items-start gap-2">
+                  <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Couldn't load the preview: {previewError}. You can still send —
+                    Salesforce will merge and deliver it.
+                  </span>
+                </div>
+              ) : preview ? (
+                <div className="divide-y divide-border">
+                  <div className="px-4 py-2 text-xs">
+                    <span className="text-muted-foreground">To: </span>
+                    <span className="font-medium">
+                      {prospect?.email || "the lead's email in Salesforce"}
+                    </span>
+                  </div>
+                  <div className="px-4 py-2 text-xs">
+                    <span className="text-muted-foreground">Subject: </span>
+                    <span className="font-medium break-words">{preview.subject || "(no subject)"}</span>
+                  </div>
+                  <iframe
+                    title="Email body preview"
+                    /* Fully sandboxed: no scripts, no network, no forms — safe to
+                       render whatever HTML the template contains. */
+                    sandbox=""
+                    srcDoc={preview.body_html || "<p style='font-family:sans-serif;color:#666'>(empty body)</p>"}
+                    className="w-full h-[380px] bg-white"
+                  />
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* Send result */}
           {lastResult && (
             <div
               className={cn(
@@ -235,8 +344,8 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
           )}
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            The email is delivered by Salesforce to this lead. Delivery tracking lives in
-            Salesforce — this panel only triggers the send.
+            The email is delivered by Salesforce to this lead's email address.
+            Delivery tracking lives in Salesforce — this panel only triggers the send.
           </p>
         </div>
 
@@ -244,7 +353,7 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
         <div className="border-t border-border p-4 shrink-0">
           <Button
             onClick={handleSend}
-            disabled={!hasLead || isSending}
+            disabled={!hasLead || isSending || isPreviewLoading}
             className="w-full h-10"
           >
             {isSending ? (
@@ -252,8 +361,8 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
             ) : (
               <Send className="h-4 w-4 mr-2" />
             )}
-            {templateId
-              ? `Send "${templates.find((t) => t.id === templateId)?.name || "template"}"`
+            {selectedTemplate
+              ? `Send "${selectedTemplate.name}"`
               : "Send default email"}
           </Button>
         </div>

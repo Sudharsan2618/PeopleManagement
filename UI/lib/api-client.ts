@@ -1005,6 +1005,17 @@ export const whatsappApi = {
 // Salesforce API — email via the TATTI CRM Apex "lead-event" bridge
 export const salesforceApi = {
   getEmailTemplates: () => apiRequest<Array<{ id: string; name: string; subject?: string; folder?: string }>>("/salesforce/email-templates"),
+  getEmailPreview: (prospectId: number, templateId: string) => {
+    const params = new URLSearchParams({ prospect_id: String(prospectId), template_id: templateId })
+    return apiRequest<{
+      template_id: string
+      template_name: string
+      subject: string
+      body_html: string
+      merged: boolean
+      lead_id: string
+    }>(`/salesforce/email-preview?${params.toString()}`)
+  },
   sendEmail: (prospectIds: number[], templateId?: string) =>
     apiRequest<{
       sent_count: number

@@ -20,8 +20,10 @@ If SALESFORCE_TEMPLATES_URL is set it overrides the OAuth path (a plain GET that
 already returns a list). If OAuth creds are absent, templates come back empty and
 the UI offers "default email (no template)".
 """
+import html
 import json
 import logging
+import re
 import threading
 import time
 from typing import Any, Dict, List, Optional
@@ -226,6 +228,107 @@ class SalesforceService:
             if p_id not in found_ids:
                 skipped.append({"prospect_id": p_id, "name": None, "reason": "Prospect not found"})
         return {"resolved": resolved, "skipped": skipped}
+
+    # ── Preview (merge fields rendered against the lead) ─────────────────────
+    @staticmethod
+    def _get_template_detail(template_id: str) -> Dict[str, Any]:
+        """Fetch a template's Subject + HtmlValue/Body via the Data API."""
+        def _do(token: Dict[str, str]) -> httpx.Response:
+            url = (
+                f"{token['instance_url']}/services/data/"
+                f"{settings.SALESFORCE_API_VERSION}/sobjects/EmailTemplate/{template_id}"
+            )
+            with httpx.Client(timeout=settings.SALESFORCE_TIMEOUT) as client:
+                return client.get(
+                    url,
+                    params={"fields": "Id,Name,Subject,HtmlValue,Body"},
+                    headers={"Authorization": f"Bearer {token['access_token']}"},
+                )
+
+        token = SalesforceService._get_access_token()
+        resp = _do(token)
+        if resp.status_code == 401:
+            token = SalesforceService._get_access_token(force_refresh=True)
+            resp = _do(token)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not load template ({resp.status_code}): {resp.text[:300]}")
+        return resp.json()
+
+    @staticmethod
+    def _render_against_lead(bodies: List[str], who_id: str) -> List[str]:
+        """SOAP renderEmailTemplate — merge {!...} fields against a Lead (whoId).
+
+        The REST render action is disabled on this org, so we use the Partner
+        SOAP endpoint (same OAuth token as the session id). Returns the merged
+        bodies in the same order they were passed.
+        """
+        token = SalesforceService._get_access_token()
+        ver_num = settings.SALESFORCE_API_VERSION.lstrip("v")
+
+        def _cdata(s: str) -> str:
+            # Guard against a literal ]]> inside the template breaking the CDATA.
+            return (s or "").replace("]]>", "]]]]><![CDATA[>")
+
+        body_xml = "".join(
+            f"<urn:templateBodies><![CDATA[{_cdata(b)}]]></urn:templateBodies>" for b in bodies
+        )
+        envelope = (
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" '
+            'xmlns:urn="urn:partner.soap.sforce.com">'
+            f"<soapenv:Header><urn:SessionHeader><urn:sessionId>{token['access_token']}"
+            "</urn:sessionId></urn:SessionHeader></soapenv:Header>"
+            "<soapenv:Body><urn:renderEmailTemplate><urn:renderRequests>"
+            f"{body_xml}<urn:whoId>{who_id}</urn:whoId>"
+            "</urn:renderRequests></urn:renderEmailTemplate></soapenv:Body></soapenv:Envelope>"
+        )
+        url = f"{token['instance_url']}/services/Soap/u/{ver_num}"
+        with httpx.Client(timeout=settings.SALESFORCE_TIMEOUT) as client:
+            resp = client.post(
+                url,
+                content=envelope.encode("utf-8"),
+                headers={"Content-Type": "text/xml; charset=UTF-8", "SOAPAction": '""'},
+            )
+        if resp.status_code != 200:
+            raise RuntimeError(f"Preview render failed ({resp.status_code})")
+        errs = re.findall(r"<errors>(.*?)</errors>", resp.text, re.S)
+        if errs:
+            raise RuntimeError(f"Preview render error: {html.unescape(errs[0])[:200]}")
+        merged = re.findall(r"<mergedBody>(.*?)</mergedBody>", resp.text, re.S)
+        return [html.unescape(m) for m in merged]
+
+    @staticmethod
+    def preview_email(prospect_id: int, template_id: str) -> Dict[str, Any]:
+        """Return the merged {subject, body_html, to_email, template_name} that
+        WOULD be sent to this prospect's lead — so the caller can eyeball it."""
+        mapping = SalesforceService._resolve_lead_ids([prospect_id])
+        if not mapping["resolved"]:
+            reason = (mapping["skipped"][0]["reason"] if mapping["skipped"] else "No Salesforce Lead Id")
+            raise RuntimeError(reason)
+        lead = mapping["resolved"][0]
+        detail = SalesforceService._get_template_detail(template_id)
+        raw_subject = detail.get("Subject") or ""
+        raw_body = detail.get("HtmlValue") or detail.get("Body") or ""
+
+        merged_subject, merged_body, merged_ok = raw_subject, raw_body, False
+        try:
+            rendered = SalesforceService._render_against_lead([raw_subject, raw_body], lead["lead_id"])
+            if rendered:
+                merged_subject = rendered[0] if len(rendered) > 0 else raw_subject
+                merged_body = rendered[1] if len(rendered) > 1 else raw_body
+                merged_ok = True
+        except Exception as exc:
+            # Fall back to the raw (unmerged) template — better than nothing.
+            logger.warning("Salesforce preview render failed, showing raw template: %s", exc)
+
+        return {
+            "template_id": template_id,
+            "template_name": detail.get("Name") or "",
+            "subject": merged_subject,
+            "body_html": merged_body,
+            "merged": merged_ok,
+            "lead_id": lead["lead_id"],
+        }
 
     # ── Send ─────────────────────────────────────────────────────────────────
     @staticmethod

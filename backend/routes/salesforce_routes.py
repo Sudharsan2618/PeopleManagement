@@ -1,10 +1,23 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from services.salesforce_service import SalesforceService
 
 router = APIRouter(prefix="/salesforce", tags=["salesforce"])
+
+
+@router.get("/email-preview")
+def preview_email(
+    prospect_id: int = Query(...),
+    template_id: str = Query(...),
+):
+    """Render the chosen template's merged subject + body for this prospect's
+    lead, so the caller can preview exactly what Salesforce will send."""
+    try:
+        return SalesforceService.preview_email(prospect_id, template_id)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.get("/email-templates")
