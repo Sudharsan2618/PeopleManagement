@@ -33,6 +33,45 @@ def list_email_templates():
         raise HTTPException(status_code=502, detail=str(e))
 
 
+@router.get("/quick-templates")
+def list_curated_email_templates(include_inactive: bool = Query(False)):
+    """Curated email templates the admin has granted to callers.
+
+    Callers call it plain (active only); the admin manager passes
+    include_inactive=true to see everything it has curated."""
+    try:
+        return SalesforceService.list_curated_email_templates(include_inactive)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.post("/quick-templates")
+def add_curated_email_template(payload: dict = Body(...)):
+    """Admin: grant a Salesforce email template to callers."""
+    try:
+        return SalesforceService.add_curated_email_template(payload)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.patch("/quick-templates/{row_id}")
+def update_curated_email_template(row_id: int, payload: dict = Body(...)):
+    """Admin: update a curated template (label / active / order)."""
+    try:
+        return SalesforceService.update_curated_email_template(row_id, payload)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.delete("/quick-templates/{row_id}")
+def delete_curated_email_template(row_id: int):
+    """Admin: revoke a curated template from callers."""
+    try:
+        return SalesforceService.delete_curated_email_template(row_id)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
 @router.post("/send-email")
 def send_email(
     prospect_ids: List[int] = Body(..., embed=True),

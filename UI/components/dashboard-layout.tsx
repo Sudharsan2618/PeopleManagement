@@ -22,6 +22,7 @@ import {
   MapPin,
   BarChart3,
   BookOpen,
+  Mail,
   FolderOpen,
   MessageSquare,
   Megaphone,
@@ -118,6 +119,7 @@ const adminNav: NavItem[] = [
       { title: "Submissions", href: "/admin/whatsapp/submissions", icon: ClipboardList },
     ],
   },
+  { title: "Email Templates", href: "/admin/email-templates", icon: Mail },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
   { title: "SPOC Reports", href: "/admin/spoc-reports", icon: FileText },
 ]

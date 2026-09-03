@@ -75,8 +75,15 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
   const loadTemplates = useCallback(async () => {
     setIsLoading(true)
     try {
-      const list = await salesforceApi.getEmailTemplates()
-      setTemplates(Array.isArray(list) ? list : [])
+      // Only the templates an admin has granted to callers (active ones).
+      const list = await salesforceApi.getCuratedEmailTemplates()
+      setTemplates(
+        (Array.isArray(list) ? list : []).map((t) => ({
+          id: t.sf_template_id,
+          name: t.label || t.name,
+          subject: t.subject || undefined,
+        }))
+      )
     } catch {
       setTemplates([])
     } finally {
@@ -220,7 +227,7 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
               Email template
             </p>
             <Select value={templateId} onValueChange={setTemplateId} disabled={!hasLead || isLoading}>
-              <SelectTrigger className="h-10 text-sm">
+              <SelectTrigger className="h-10 w-full text-sm">
                 <SelectValue
                   placeholder={
                     isLoading
@@ -262,7 +269,8 @@ export function EmailDrawer({ prospect, open, onOpenChange, onSent }: EmailDrawe
             )}
             {templates.length === 0 && !isLoading && (
               <p className="text-xs text-muted-foreground">
-                No Salesforce templates found — the default email will be sent.
+                No email templates available yet — ask an admin to grant templates
+                to callers. You can still send the default email.
               </p>
             )}
           </div>

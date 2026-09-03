@@ -197,6 +197,124 @@ class SalesforceService:
                         })
         return out
 
+    # ── Curated email templates (admin grants access to callers) ─────────────
+    @staticmethod
+    def _ensure_curated_table() -> None:
+        from database.connection import get_db_connection
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS public.email_quick_send_templates (
+                        id serial PRIMARY KEY,
+                        sf_template_id varchar(40) NOT NULL UNIQUE,
+                        name varchar(255) NOT NULL,
+                        subject text,
+                        label varchar(255),
+                        description text,
+                        is_active boolean NOT NULL DEFAULT true,
+                        sort_order integer NOT NULL DEFAULT 0,
+                        created_at timestamp without time zone NOT NULL DEFAULT now()
+                    );
+                    """
+                )
+                conn.commit()
+            finally:
+                cur.close()
+
+    @staticmethod
+    def list_curated_email_templates(include_inactive: bool = False) -> List[Dict[str, Any]]:
+        """Curated templates the admin has granted to callers.
+
+        Admin (include_inactive=True) gets full rows; callers get active ones.
+        """
+        from database.connection import execute_query
+        SalesforceService._ensure_curated_table()
+        where = "" if include_inactive else "WHERE is_active = true"
+        rows = execute_query(
+            f"""
+            SELECT id, sf_template_id, name, subject, label, description,
+                   is_active, sort_order
+            FROM email_quick_send_templates
+            {where}
+            ORDER BY sort_order ASC, name ASC
+            """,
+            fetch="all",
+        )
+        return rows or []
+
+    @staticmethod
+    def add_curated_email_template(data: Dict[str, Any]) -> Dict[str, Any]:
+        """Admin: grant a Salesforce template to callers (idempotent on sf id)."""
+        from database.connection import execute_query
+        SalesforceService._ensure_curated_table()
+        sf_id = (data.get("sf_template_id") or "").strip()
+        if not sf_id:
+            raise RuntimeError("sf_template_id is required")
+        row = execute_query(
+            """
+            INSERT INTO email_quick_send_templates
+                (sf_template_id, name, subject, label, description, is_active, sort_order)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (sf_template_id) DO UPDATE SET
+                name = EXCLUDED.name,
+                subject = EXCLUDED.subject,
+                label = EXCLUDED.label,
+                description = EXCLUDED.description,
+                is_active = EXCLUDED.is_active,
+                sort_order = EXCLUDED.sort_order
+            RETURNING id, sf_template_id, name, subject, label, description, is_active, sort_order
+            """,
+            (
+                sf_id,
+                data.get("name") or sf_id,
+                data.get("subject"),
+                data.get("label"),
+                data.get("description"),
+                bool(data.get("is_active", True)),
+                int(data.get("sort_order") or 0),
+            ),
+            fetch="one",
+        )
+        return row
+
+    @staticmethod
+    def update_curated_email_template(row_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        from database.connection import execute_query
+        SalesforceService._ensure_curated_table()
+        row = execute_query(
+            """
+            UPDATE email_quick_send_templates
+            SET label = COALESCE(%s, label),
+                description = COALESCE(%s, description),
+                is_active = COALESCE(%s, is_active),
+                sort_order = COALESCE(%s, sort_order)
+            WHERE id = %s
+            RETURNING id, sf_template_id, name, subject, label, description, is_active, sort_order
+            """,
+            (
+                data.get("label"),
+                data.get("description"),
+                data.get("is_active"),
+                data.get("sort_order"),
+                row_id,
+            ),
+            fetch="one",
+        )
+        if not row:
+            raise RuntimeError("Curated template not found")
+        return row
+
+    @staticmethod
+    def delete_curated_email_template(row_id: int) -> Dict[str, Any]:
+        from database.connection import execute_update_delete
+        SalesforceService._ensure_curated_table()
+        execute_update_delete(
+            "DELETE FROM email_quick_send_templates WHERE id = %s", (row_id,)
+        )
+        return {"deleted": True}
+
     # ── Lead-id resolution ───────────────────────────────────────────────────
     @staticmethod
     def _resolve_lead_ids(prospect_ids: List[int]) -> Dict[str, Any]:

@@ -1027,6 +1027,25 @@ export const salesforceApi = {
       method: "POST",
       body: JSON.stringify({ prospect_ids: prospectIds, template_id: templateId ?? null }),
     }),
+
+  // Curated email templates — admin grants a subset of the org's templates to callers.
+  getCuratedEmailTemplates: (includeInactive: boolean = false) =>
+    apiRequest<Array<{
+      id: number
+      sf_template_id: string
+      name: string
+      subject?: string | null
+      label?: string | null
+      description?: string | null
+      is_active: boolean
+      sort_order: number
+    }>>(`/salesforce/quick-templates${includeInactive ? "?include_inactive=true" : ""}`),
+  addCuratedEmailTemplate: (data: any) =>
+    apiRequest<any>("/salesforce/quick-templates", { method: "POST", body: JSON.stringify(data) }),
+  updateCuratedEmailTemplate: (id: number, data: any) =>
+    apiRequest<any>(`/salesforce/quick-templates/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteCuratedEmailTemplate: (id: number) =>
+    apiRequest<any>(`/salesforce/quick-templates/${id}`, { method: "DELETE" }),
 }
 
 // Dashboard API

@@ -257,7 +257,7 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground shrink-0">Send to</span>
               <Select value={activeNumber} onValueChange={setSelectedNumber}>
-                <SelectTrigger className="h-8 text-xs font-mono">
+                <SelectTrigger className="h-8 w-full text-xs font-mono">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)]">
