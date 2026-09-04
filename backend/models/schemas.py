@@ -79,9 +79,9 @@ class ProspectBase(BaseModel):
     lead_source: Optional[List[str]] = Field(default=[])
     lead_type: Optional[List[str]] = Field(default=[])
     proposed_for: Optional[List[str]] = Field(default=[])
-    alt_phone: Optional[str] = Field(None, max_length=20)
-    alt_phone_2: Optional[str] = Field(None, max_length=20)
-    alt_phone_3: Optional[str] = Field(None, max_length=20)
+    alt_phone: Optional[str] = Field(None, max_length=100)
+    alt_phone_2: Optional[str] = Field(None, max_length=100)
+    alt_phone_3: Optional[str] = Field(None, max_length=100)
     secondary_email: Optional[str] = Field(None, max_length=255)
     alternative_email: Optional[str] = Field(None, max_length=255)
     college_name: Optional[str] = Field(None, max_length=255)
@@ -127,9 +127,9 @@ class ProspectUpdate(BaseModel):
     lead_source: Optional[List[str]] = None
     lead_type: Optional[List[str]] = None
     proposed_for: Optional[List[str]] = None
-    alt_phone: Optional[str] = Field(None, max_length=20)
-    alt_phone_2: Optional[str] = Field(None, max_length=20)
-    alt_phone_3: Optional[str] = Field(None, max_length=20)
+    alt_phone: Optional[str] = Field(None, max_length=100)
+    alt_phone_2: Optional[str] = Field(None, max_length=100)
+    alt_phone_3: Optional[str] = Field(None, max_length=100)
     secondary_email: Optional[str] = Field(None, max_length=255)
     alternative_email: Optional[str] = Field(None, max_length=255)
     college_name: Optional[str] = Field(None, max_length=255)
@@ -574,4 +574,3 @@ class ConvertedEnquiryDetails(ConvertedEnquiry):
     prospect: Optional[Prospect] = None
     payments: List[PaymentHistory] = []
     telecaller_name: Optional[str] = None
-
