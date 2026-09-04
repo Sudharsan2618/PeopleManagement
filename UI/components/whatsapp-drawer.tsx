@@ -83,6 +83,21 @@ interface WaMessage {
   sent_at: string | null
   delivered_at: string | null
   read_at: string | null
+  payload?: any
+}
+
+/** Pull a human-readable failure reason out of the stored Meta error payload. */
+function failureReason(msg: WaMessage): string | null {
+  if (msg.status !== "failed") return null
+  let p = msg.payload
+  if (typeof p === "string") {
+    try { p = JSON.parse(p) } catch { return null }
+  }
+  const err = p?.errors?.[0] || p?.error
+  if (!err) return null
+  const code = err.code ? `[${err.code}] ` : ""
+  const title = err.title || err.message || err.error_data?.details || "Delivery failed"
+  return `${code}${title}`
 }
 
 interface SessionStatus {
@@ -333,6 +348,11 @@ export function WhatsAppDrawer({ prospect, open, onOpenChange, onSent }: WhatsAp
                         <span>{formatTime(msg.created_at)}</span>
                         <StatusTicks msg={msg} />
                       </div>
+                      {failureReason(msg) && (
+                        <p className="mt-1 text-[10px] text-red-300 leading-snug max-w-[240px]">
+                          {failureReason(msg)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )

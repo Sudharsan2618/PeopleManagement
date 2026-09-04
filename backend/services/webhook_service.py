@@ -75,12 +75,23 @@ class WebhookService:
                         "UPDATE whatsapp_messages SET status = %s, read_at = %s WHERE meta_message_id = %s",
                         (status, timestamp, meta_id)
                     )
+                elif status == "failed":
+                    # Meta puts the delivery-failure reason in `errors` (code +
+                    # title + details). Persist it so the UI/report can show WHY
+                    # a template failed (e.g. 131049 marketing frequency cap,
+                    # 131026 undeliverable, 130472 experiment) instead of a bare
+                    # "failed" with no explanation.
+                    errors = update.get("errors") or []
+                    cur.execute(
+                        "UPDATE whatsapp_messages SET status = %s, payload = %s WHERE meta_message_id = %s",
+                        (status, json.dumps({"errors": errors, "status_update": update}), meta_id)
+                    )
                 else:
                     cur.execute(
                         "UPDATE whatsapp_messages SET status = %s WHERE meta_message_id = %s",
                         (status, meta_id)
                     )
-                
+
                 # If part of a campaign, update campaign counters
                 cur.execute(
                     """
