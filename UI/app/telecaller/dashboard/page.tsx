@@ -32,6 +32,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { normalizeCourseInterest } from "../utils"
+import { CourseMultiSelect } from "@/components/ui/course-multi-select"
 
 
 
@@ -7131,7 +7132,7 @@ export default function TelecallerDashboard() {
 
 
 
-  const [courseFilter, setCourseFilter] = useState<string>("all")
+  const [courseFilter, setCourseFilter] = useState<string[]>([])
 
 
 
@@ -10730,21 +10731,22 @@ export default function TelecallerDashboard() {
 
 
 
+        const isAllCourses = !courseFilter || courseFilter.length === 0 || (courseFilter.length === 1 && courseFilter[0] === "all")
         const matchesCourse =
-
-
-
-
-
-
-
-          courseFilter === "all" ||
-          prospect.courseInterest === courseFilter ||
-          normalizeCourseInterest(prospect.courseInterest || "")
-            .split(",")
-            .map((c: string) => c.trim())
-            .filter(Boolean)
-            .includes(courseFilter)
+          isAllCourses ||
+          courseFilter.some((cf) => {
+            if (cf === "Unknown") {
+              return !prospect.courseInterest || prospect.courseInterest.trim() === "" || prospect.courseInterest === "Unknown"
+            }
+            return (
+              prospect.courseInterest === cf ||
+              normalizeCourseInterest(prospect.courseInterest || "")
+                .split(",")
+                .map((c: string) => c.trim())
+                .filter(Boolean)
+                .includes(cf)
+            )
+          })
 
 
 
@@ -20425,29 +20427,22 @@ export default function TelecallerDashboard() {
 
 
 
-      const matchesCourse =
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        courseFilter === "all" ||
-        prospect.courseInterest === courseFilter ||
-        normalizeCourseInterest(prospect.courseInterest || "")
-          .split(",")
-          .map((c: string) => c.trim())
-          .filter(Boolean)
-          .includes(courseFilter)
+      const isAllCourses = !courseFilter || courseFilter.length === 0 || (courseFilter.length === 1 && courseFilter[0] === "all")
+        const matchesCourse =
+          isAllCourses ||
+          courseFilter.some((cf) => {
+            if (cf === "Unknown") {
+              return !prospect.courseInterest || prospect.courseInterest.trim() === "" || prospect.courseInterest === "Unknown"
+            }
+            return (
+              prospect.courseInterest === cf ||
+              normalizeCourseInterest(prospect.courseInterest || "")
+                .split(",")
+                .map((c: string) => c.trim())
+                .filter(Boolean)
+                .includes(cf)
+            )
+          })
 
 
 
@@ -24183,7 +24178,7 @@ export default function TelecallerDashboard() {
     const filters = []
     if (searchQuery) filters.push(`Search: ${searchQuery}`)
     if (statusFilter !== "all") filters.push(`Status: ${statusFilter}`)
-    if (courseFilter !== "all") filters.push(`Course: ${courseFilter}`)
+    if (courseFilter && courseFilter.length > 0 && !(courseFilter.length === 1 && courseFilter[0] === "all")) filters.push(`Course: ${courseFilter.join(", ")}`)
     if (leadSourceFilter.length > 0) filters.push(`Lead Source: ${leadSourceFilter.join(", ")}`)
     if (leadTypeFilter.length > 0) filters.push(`Lead Type: ${leadTypeFilter.join(", ")}`)
     return filters.length > 0 ? filters.join(" | ") : "No filters applied"
@@ -25837,7 +25832,7 @@ export default function TelecallerDashboard() {
 
 
 
-            <CourseSearchFilter courses={courseOptions.map((name, index) => ({ id: index, name }))} selected={courseFilter} onChange={(v) => setCourseFilter(v)} />
+            
 
 
 
@@ -27416,230 +27411,39 @@ export default function TelecallerDashboard() {
 
 
                 {/* Course Filter */}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                <Select value={courseFilter} onValueChange={setCourseFilter}>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  <SelectTrigger className="w-full sm:w-40">
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    <SelectValue placeholder="Course" />
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  </SelectTrigger>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  <SelectContent>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    <SelectItem value="all">All Courses</SelectItem>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    {courseOptions.map((name, idx) => (
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                      <SelectItem key={`${name}-${idx}`} value={name}>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                        {name}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                      </SelectItem>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                <CourseMultiSelect
+                  courses={courseOptions}
+                  selected={courseFilter}
+                  onChange={setCourseFilter}
+                  placeholder="All Courses"
+                  className="w-full sm:w-40"
+                />
+                {courseFilter.length > 0 && !courseFilter.includes("all") && (
+                  <div className="flex flex-wrap gap-1">
+                    {courseFilter.map((c) => (
+                      <span
+                        key={c}
+                        className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full"
+                      >
+                        {c}
+                        <button
+                          type="button"
+                          onClick={() => setCourseFilter(courseFilter.filter((x) => x !== c))}
+                          className="hover:text-destructive cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
                     ))}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    <SelectItem value="Unknown">Unknown</SelectItem>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  </SelectContent>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                </Select>
+                    <button
+                      type="button"
+                      onClick={() => setCourseFilter([])}
+                      className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer ml-1"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
 
 
 
