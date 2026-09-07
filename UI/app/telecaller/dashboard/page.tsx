@@ -9086,22 +9086,10 @@ export default function TelecallerDashboard() {
 
 
 
-            status: p.status,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            status:
+              lastLog?.status_after_call && (p.status === "new" || p.status === "New" || !p.status)
+                ? lastLog.status_after_call
+                : (p.status || lastLog?.status_after_call || "New"),
             source: p.sourced_from || "Unknown",
 
 
@@ -9616,7 +9604,6 @@ export default function TelecallerDashboard() {
         if (courses.length <= 1) return [p]
         // Multiple courses — create one row per course with INDEPENDENT call history
         return courses.map((course: string, idx: number) => {
-          const courseStatus = p.courseStatuses?.[course] || p.status || "New"
           // Filter call logs to only those for this specific prospect + course combination
           const courseLogs = apiCallLogs
             .filter((cl: any) => {
@@ -9626,6 +9613,16 @@ export default function TelecallerDashboard() {
             })
             .sort((a: any, b: any) => new Date(a.called_at).getTime() - new Date(b.called_at).getTime())
           const courseLastLog = courseLogs[courseLogs.length - 1] || null
+          const matchedDbStatus =
+            p.courseStatuses?.[course] ||
+            (p.courseStatuses && Object.keys(p.courseStatuses).find((k: string) => k.trim().toLowerCase() === course.trim().toLowerCase())
+              ? p.courseStatuses[Object.keys(p.courseStatuses).find((k: string) => k.trim().toLowerCase() === course.trim().toLowerCase())!]
+              : null)
+          const courseStatus =
+            courseLastLog?.status_after_call ||
+            courseLastLog?.outcome ||
+            matchedDbStatus ||
+            (courseLogs.length === 0 ? "New" : (p.status || "New"))
           return {
             ...p,
             // Unique synthetic ID so React keys don't collide
@@ -9634,6 +9631,7 @@ export default function TelecallerDashboard() {
             courseInterest: course,
             status: courseStatus,
             outcome: courseStatus,
+            status_after_call: courseStatus,
             // Per-course call info — override the prospect-level values
             lastCallAt: courseLastLog?.called_at || null,
             lastOutcome: courseLastLog?.outcome || null,
@@ -23504,10 +23502,9 @@ export default function TelecallerDashboard() {
 
 
 
-      // For multi-course rows, do NOT update the top-level prospect status — it would
-      // overwrite the status for all courses. Per-course status is tracked via call_logs
-      // (course_interest + status_after_call) and computed dynamically in course_statuses.
-      // Only update non-status fields (lead_source, lead_type, follow_up_date).
+      // 3. Update prospect — status + lead_source + lead_type + follow_up_date (if callback set)
+      // Per-course status is tracked via call_logs and computed dynamically in course_statuses / expandedProspects.
+      // Top-level prospect status is also updated so the lead does not remain stuck on "new".
       if (!selectedProspect._isMultiCourseRow) {
         await prospectsApi.update(Number(selectedProspect.numericId), {
           status: status,
@@ -23674,14 +23671,42 @@ export default function TelecallerDashboard() {
             : {}),
         })
       } else {
-        // Multi-course row: still update non-status fields (lead_source, lead_type, follow_up_date)
+        // Multi-course row: also update top-level status in DB so the lead does not remain "new"
         await prospectsApi.update(Number(selectedProspect.numericId), {
+          status: status,
           lead_source: leadSource,
           lead_type: leadType,
           proposed_for: proposedFor,
           ...(callbackScheduledAt ? { follow_up_date: (data.callbackDate as string) } : {}),
         })
       }
+
+      // Optimistic update for immediate feedback in UI
+      setProspects((prev: any[]) =>
+        prev.map((p: any) => {
+          if (p.id === selectedProspect.id) {
+            return {
+              ...p,
+              status: status,
+              outcome: status,
+              status_after_call: status,
+              lastOutcome: status,
+              totalCalls: (p.totalCalls || 0) + 1,
+              lastCallAt: new Date().toISOString(),
+              notes: fullNotes.trim() || p.notes,
+              lastNotes: fullNotes.trim() || p.lastNotes,
+              lastReason: (data.reason as string) || p.lastReason,
+              ...(callbackScheduledAt
+                ? {
+                    follow_up_date: (data.callbackDate as string),
+                    callbackDateTime: callbackScheduledAt,
+                  }
+                : {}),
+            }
+          }
+          return p
+        })
+      )
 
       toast({
 

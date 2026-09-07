@@ -604,8 +604,24 @@ class ProspectService:
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name, city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
-                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year
-            FROM prospects
+                   lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year,
+                   (
+                       SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
+                       FROM (
+                           SELECT DISTINCT trim(c_raw) AS course
+                           FROM unnest(string_to_array(COALESCE(p.course_interest, ''), ',')) AS c_raw
+                           WHERE trim(c_raw) <> ''
+                       ) c
+                       LEFT JOIN LATERAL (
+                           SELECT cl2.status_after_call
+                           FROM call_logs cl2
+                           WHERE cl2.prospect_id = p.id
+                             AND trim(COALESCE(cl2.course_interest, '')) = c.course
+                           ORDER BY cl2.called_at DESC, cl2.id DESC
+                           LIMIT 1
+                       ) cs ON TRUE
+                   ) AS course_statuses
+            FROM prospects p
             WHERE assigned_to = %s
             ORDER BY created_at DESC
         """
@@ -619,7 +635,23 @@ class ProspectService:
                    p.course_interest, p.parent_name, p.department, p.assigned_to, p.closing_reason, p.tags,
                    p.lead_source, p.lead_type, p.proposed_for, p.alt_phone, p.alt_phone_2, p.secondary_email, p.alternative_email, p.college_name, p.city, p.address, p.postal_code, p.designation,
                    p.created_by, p.created_at, p.updated_at, p.prospect_type, p.company, p.comments, p.follow_up_date, p.is_imported,
-                   p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.payment_date, p.transaction_id, p.batch, p.start_month, p.year
+                   p.lead_id, p.website, p.course_fee, p.amount_paid, p.payment_status, p.payment_mode, p.payment_date, p.transaction_id, p.batch, p.start_month, p.year,
+                   (
+                       SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
+                       FROM (
+                           SELECT DISTINCT trim(c_raw) AS course
+                           FROM unnest(string_to_array(COALESCE(p.course_interest, ''), ',')) AS c_raw
+                           WHERE trim(c_raw) <> ''
+                       ) c
+                       LEFT JOIN LATERAL (
+                           SELECT cl2.status_after_call
+                           FROM call_logs cl2
+                           WHERE cl2.prospect_id = p.id
+                             AND trim(COALESCE(cl2.course_interest, '')) = c.course
+                           ORDER BY cl2.called_at DESC, cl2.id DESC
+                           LIMIT 1
+                       ) cs ON TRUE
+                   ) AS course_statuses
             FROM prospects p
             INNER JOIN prospect_assignments a ON p.id = a.prospect_id
             WHERE a.telecaller_id = %s
