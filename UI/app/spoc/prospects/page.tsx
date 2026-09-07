@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   Edit,
   Trash2,
+  Clock,
+  ArrowUpDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,7 +56,7 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+import { cn, formatCreatedDateTime } from "@/lib/utils"
 import {
   type ProspectStatus,
   mockCourses,
@@ -84,6 +86,11 @@ export default function spocProspectsPage() {
   const [assignedFilter, setAssignedFilter] = useState<string>("all")
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
+  const [createdTimeSortOrder, setCreatedTimeSortOrder] = useState<"desc" | "asc">("desc")
+
+  const toggleCreatedTimeSort = () => {
+    setCreatedTimeSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+  }
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [selectedProspectIds, setSelectedProspectIds] = useState<number[]>([])
@@ -139,21 +146,27 @@ export default function spocProspectsPage() {
 
   // Filter prospects
   const filteredProspects = useMemo(() => {
-    return prospects.filter((prospect) => {
-      const matchesSearch =
-        prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prospect.mobile.includes(searchQuery) ||
-        prospect.location.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === "all" || prospect.status === statusFilter
-      const matchesAssigned =
-        assignedFilter === "all" ||
-        (assignedFilter === "unassigned" && !prospect.assignedTo) ||
-        prospect.assignedTo === assignedFilter
-      const matchesCourse =
-        courseFilter === "all" || prospect.courseInterest === courseFilter
-      return matchesSearch && matchesStatus && matchesAssigned && matchesCourse
-    })
-  }, [searchQuery, statusFilter, assignedFilter, courseFilter, prospects])
+    return prospects
+      .filter((prospect) => {
+        const matchesSearch =
+          prospect.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          prospect.mobile.includes(searchQuery) ||
+          prospect.location.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesStatus = statusFilter === "all" || prospect.status === statusFilter
+        const matchesAssigned =
+          assignedFilter === "all" ||
+          (assignedFilter === "unassigned" && !prospect.assignedTo) ||
+          prospect.assignedTo === assignedFilter
+        const matchesCourse =
+          courseFilter === "all" || prospect.courseInterest === courseFilter
+        return matchesSearch && matchesStatus && matchesAssigned && matchesCourse
+      })
+      .sort((a, b) => {
+        const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        return createdTimeSortOrder === "asc" ? aCreated - bCreated : bCreated - aCreated
+      })
+  }, [searchQuery, statusFilter, assignedFilter, courseFilter, prospects, createdTimeSortOrder])
 
   // Pagination
   const totalPages = Math.ceil(filteredProspects.length / ITEMS_PER_PAGE)
@@ -179,6 +192,86 @@ export default function spocProspectsPage() {
     } else {
       setSelectedProspectIds(paginatedProspects.map((p) => p.id))
     }
+  }
+
+  const handleDownloadCSV = () => {
+    const listToExport = selectedProspectIds.length > 0
+      ? prospects.filter((p) => selectedProspectIds.includes(p.id))
+      : filteredProspects
+
+    if (listToExport.length === 0) {
+      toast({
+        title: "No prospects to download",
+        description: "There are no prospects available to export.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const headers = [
+      "ID",
+      "Name",
+      "Created Date",
+      "Mobile",
+      "Alt Phone",
+      "Email",
+      "Secondary Email",
+      "City",
+      "Address",
+      "Postal Code",
+      "Designation",
+      "Company",
+      "Location",
+      "Parent Name",
+      "Department",
+      "Course",
+      "Assigned To",
+      "Status",
+    ]
+
+    const rows = listToExport.map((prospect) => {
+      const assignedTc = getAssignedTelecaller(prospect.assignedTo)
+      return [
+        prospect.id,
+        prospect.name || "",
+        formatCreatedDateTime(prospect.createdAt),
+        prospect.mobile || "",
+        prospect.altPhone || "",
+        prospect.email || "",
+        prospect.secondaryEmail || "",
+        prospect.city || "",
+        prospect.address || "",
+        prospect.postalCode || "",
+        prospect.designation || "",
+        prospect.company || "",
+        prospect.location || "",
+        prospect.parentName || "",
+        prospect.department || "",
+        prospect.courseInterest || "",
+        assignedTc?.name || "Unassigned",
+        prospect.status || "",
+      ]
+    })
+
+    const bom = "\uFEFF"
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n")
+
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `spoc_prospects_${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Download completed",
+      description: `Exported ${listToExport.length} prospect(s) with Created Date.`,
+    })
   }
 
   const handleBulkAssign = async () => {
@@ -364,7 +457,7 @@ export default function spocProspectsPage() {
                   <SelectItem value="Unknown">Unknown</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={handleDownloadCSV} title="Download Prospects CSV">
                 <Download className="h-4 w-4" />
               </Button>
               {selectedProspectIds.length > 0 && (
@@ -401,6 +494,17 @@ export default function spocProspectsPage() {
                   </TableHead>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead className="min-w-[190px]">
+                    <button
+                      type="button"
+                      onClick={toggleCreatedTimeSort}
+                      className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold focus:outline-none select-none group"
+                      title={createdTimeSortOrder === "desc" ? "Sorted: Newest imported first (click for oldest)" : "Sorted: Oldest imported first (click for newest)"}
+                    >
+                      <span>Created Date</span>
+                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                    </button>
+                  </TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Alt Phone</TableHead>
                   <TableHead>Email</TableHead>
@@ -422,7 +526,7 @@ export default function spocProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={20} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -446,6 +550,12 @@ export default function spocProspectsPage() {
                           {prospect.id}
                         </TableCell>
                         <TableCell className="font-medium">{prospect.name}</TableCell>
+                        <TableCell className="min-w-[190px]">
+                          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>{formatCreatedDateTime(prospect.createdAt)}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {prospect.mobile}
                         </TableCell>

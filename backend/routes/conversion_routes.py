@@ -12,7 +12,9 @@ def get_qualified_leads(
     course: Optional[str] = Query(None),
     module: Optional[str] = Query(None),
     lead_source: Optional[str] = Query(None),
-    search: Optional[str] = Query(None)
+    search: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
 ):
     """Get all unconverted qualified leads."""
     try:
@@ -21,7 +23,9 @@ def get_qualified_leads(
             course=course,
             module=module,
             lead_source=lead_source,
-            search=search
+            search=search,
+            start_date=start_date,
+            end_date=end_date,
         )
         return leads
     except Exception as e:
@@ -44,7 +48,9 @@ def get_converted_enquiries(
     course: Optional[str] = Query(None),
     module: Optional[str] = Query(None),
     payment_status: Optional[str] = Query(None),
-    search: Optional[str] = Query(None)
+    search: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
 ):
     """Get all converted enquiries."""
     try:
@@ -54,7 +60,9 @@ def get_converted_enquiries(
             module=module,
             payment_status=payment_status,
             search=search,
-            pending_only=False
+            pending_only=False,
+            start_date=start_date,
+            end_date=end_date,
         )
         return enquiries
     except Exception as e:
@@ -66,7 +74,9 @@ def get_payment_pending(
     telecaller_id: Optional[int] = Query(None),
     course: Optional[str] = Query(None),
     module: Optional[str] = Query(None),
-    search: Optional[str] = Query(None)
+    search: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
 ):
     """Get converted enquiries with pending amount > 0."""
     try:
@@ -76,7 +86,9 @@ def get_payment_pending(
             module=module,
             payment_status="Payment Pending",
             search=search,
-            pending_only=True
+            pending_only=True,
+            start_date=start_date,
+            end_date=end_date,
         )
         return enquiries
     except Exception as e:

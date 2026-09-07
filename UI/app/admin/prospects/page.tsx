@@ -21,6 +21,8 @@ import {
   MapPin,
   Calendar,
   UserPlus,
+  Clock,
+  ArrowUpDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,7 +61,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label"
-import { cn } from "@/lib/utils"
+import { cn, formatCreatedDateTime } from "@/lib/utils"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 import {
   type ProspectStatus,
   mockCourses,
@@ -108,6 +111,15 @@ export default function AdminProspectsPage() {
   const [targetTelecallerId, setTargetTelecallerId] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
+  const [createdTimeSortOrder, setCreatedTimeSortOrder] = useState<"desc" | "asc">("desc")
+
+  const toggleCreatedTimeSort = () => {
+    setCreatedTimeSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+    setCurrentPage(1)
+  }
 
   const dashboardOptions = [
     { value: "student_admission", label: "Student Admission" },
@@ -168,9 +180,14 @@ export default function AdminProspectsPage() {
     }
     if (assignedFilter === "unassigned") p.assignment = "unassigned"
     else if (assignedFilter !== "all") p.assignedTo = Number(assignedFilter)
-    if (courseFilter !== "all") p.courseInterest = courseFilter
+    if (createdStartDate) p.startDate = createdStartDate
+    if (createdEndDate) p.endDate = createdEndDate
+    if (createdTimeSortOrder) {
+      p.sortBy = "created_at"
+      p.sortOrder = createdTimeSortOrder
+    }
     return p
-  }, [currentPage, debouncedSearch, statusFilter, assignedFilter, courseFilter])
+  }, [currentPage, debouncedSearch, statusFilter, assignedFilter, courseFilter, createdTimeSortOrder, createdStartDate, createdEndDate])
 
   // Convert a server list row into the UI shape the table expects, synthesizing
   // the single-element assignment array the adapter needs from the joined cols.
@@ -343,6 +360,112 @@ export default function AdminProspectsPage() {
     }
   }
 
+  const handleDownloadCSV = () => {
+    const listToExport = selectedProspectIds.length > 0
+      ? prospects.filter((p) => selectedProspectIds.includes(p.id))
+      : paginatedProspects
+
+    if (listToExport.length === 0) {
+      toast({
+        title: "No prospects to download",
+        description: "There are no prospects available to export.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const headers = [
+      "ID",
+      "Name",
+      "Created Date",
+      "College Name",
+      "URL",
+      "Lead ID",
+      "Mobile",
+      "Alt Phone 1",
+      "Alt Phone 2",
+      "Alt Phone 3",
+      "Email",
+      "Secondary Email",
+      "Alt Email",
+      "City",
+      "Address",
+      "Postal Code",
+      "Designation",
+      "Company",
+      "Location",
+      "Parent Name",
+      "Department",
+      "Course",
+      "Dashboard",
+      "Lead Source",
+      "Lead Type",
+      "Tags",
+      "Comments",
+      "Follow-up Date",
+      "Assigned To",
+      "Status",
+      "Last Call",
+    ]
+
+    const rows = listToExport.map((prospect) => {
+      const assignedTc = getAssignedTelecaller(prospect.assignedTo)
+      return [
+        prospect.id,
+        prospect.name || "",
+        formatCreatedDateTime(prospect.createdAt),
+        prospect.college_name || "",
+        prospect.website || "",
+        prospect.lead_id || "",
+        prospect.mobile || "",
+        prospect.altPhone || "",
+        prospect.alt_phone_2 || "",
+        prospect.alt_phone_3 || "",
+        prospect.email || "",
+        prospect.secondaryEmail || "",
+        prospect.alt_email || "",
+        prospect.city || "",
+        prospect.address || "",
+        prospect.postalCode || "",
+        prospect.designation || "",
+        prospect.company || "",
+        prospect.location || "",
+        prospect.parentName || "",
+        prospect.department || "",
+        prospect.courseInterest || "",
+        prospect.dashboard || "",
+        prospect.lead_source || "",
+        prospect.lead_type || "",
+        Array.isArray(prospect.tags) ? prospect.tags.join("; ") : (prospect.tags || ""),
+        prospect.comments || "",
+        prospect.follow_up_date || "",
+        assignedTc?.name || prospect.assigned_to_name || "Unassigned",
+        prospect.status || "",
+        prospect.lastCall || "",
+      ]
+    })
+
+    const bom = "\uFEFF"
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n")
+
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `prospects_${new Date().toISOString().split("T")[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast({
+      title: "Download completed",
+      description: `Exported ${listToExport.length} prospect(s) with Created Date.`,
+    })
+  }
+
   const handleBulkAssign = async () => {
     if (!targetDashboard || !targetTelecallerId || selectedProspectIds.length === 0) {
       if (!targetDashboard) {
@@ -512,6 +635,8 @@ export default function AdminProspectsPage() {
               follow_up_date: "",
               lead_id: "",
               tags: "",
+              lead_source: "",
+              lead_type: "",
               website: "",
             })
             setIsProspectDialogOpen(true)
@@ -665,7 +790,24 @@ export default function AdminProspectsPage() {
                   <SelectItem value="Unknown">Unknown</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon">
+              <CreatedDateFilter
+                startDate={createdStartDate}
+                endDate={createdEndDate}
+                preset={createdDatePreset}
+                onChange={(start, end, preset) => {
+                  setCreatedStartDate(start)
+                  setCreatedEndDate(end)
+                  setCreatedDatePreset(preset)
+                  setCurrentPage(1)
+                }}
+                onClear={() => {
+                  setCreatedStartDate("")
+                  setCreatedEndDate("")
+                  setCreatedDatePreset("all")
+                  setCurrentPage(1)
+                }}
+              />
+              <Button variant="outline" size="icon" onClick={handleDownloadCSV} title="Download Prospects CSV">
                 <Download className="h-4 w-4" />
               </Button>
               {selectedProspectIds.length > 0 && (
@@ -719,6 +861,17 @@ export default function AdminProspectsPage() {
                   </TableHead>
                   <TableHead className="w-16">ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead className="min-w-[190px]">
+                    <button
+                      type="button"
+                      onClick={toggleCreatedTimeSort}
+                      className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold focus:outline-none select-none group"
+                      title={createdTimeSortOrder === "desc" ? "Sorted: Newest imported first (click for oldest)" : "Sorted: Oldest imported first (click for newest)"}
+                    >
+                      <span>Created Date</span>
+                      <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                    </button>
+                  </TableHead>
                   <TableHead>College Name</TableHead>
                   <TableHead>URL</TableHead>
                   <TableHead>Lead ID</TableHead>
@@ -753,7 +906,7 @@ export default function AdminProspectsPage() {
               <TableBody>
                 {paginatedProspects.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={32} className="h-24 text-center">
+                    <TableCell colSpan={33} className="h-24 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Users className="h-8 w-8" />
                         <p>No prospects found</p>
@@ -777,6 +930,12 @@ export default function AdminProspectsPage() {
                           {prospect.id}
                         </TableCell>
                         <TableCell className="font-medium">{prospect.name}</TableCell>
+                        <TableCell className="min-w-[190px]">
+                          <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span>{formatCreatedDateTime(prospect.createdAt)}</span>
+                          </div>
+                        </TableCell>
                         <TableCell>{prospect.college_name || <span className="text-slate-300">—</span>}</TableCell>
                         <TableCell className="max-w-[200px]">
                           {prospect.website ? (

@@ -22,10 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatISTDate, formatISTDateTime } from "@/lib/utils"
+import { formatISTDate, formatISTDateTime, formatCreatedDateTime } from "@/lib/utils"
 import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 export default function ConvertedEnquiriesPage() {
   const { toast } = useToast()
@@ -34,6 +35,9 @@ export default function ConvertedEnquiriesPage() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all")
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
   
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [telecallers, setTelecallers] = useState<any[]>([])
@@ -68,6 +72,8 @@ export default function ConvertedEnquiriesPage() {
       if (courseFilter !== "all") params.course = courseFilter
       if (moduleFilter !== "all") params.module = moduleFilter
       if (paymentStatusFilter !== "all") params.payment_status = paymentStatusFilter
+      if (createdStartDate) params.start_date = createdStartDate
+      if (createdEndDate) params.end_date = createdEndDate
 
       const data = await conversionApi.getConvertedEnquiries(params)
       setEnquiries(data)
@@ -88,14 +94,15 @@ export default function ConvertedEnquiriesPage() {
       fetchEnquiries()
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, paymentStatusFilter])
+  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, paymentStatusFilter, createdStartDate, createdEndDate])
 
   const exportToCSV = () => {
-    const headers = ["#", "Lead ID", "Student Name", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Telecaller", "Converted Date"]
+    const headers = ["#", "Lead ID", "Student Name", "Created Date", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Telecaller", "Converted Date"]
     const rows = enquiries.map((enq: any, idx: number) => [
       idx + 1,
       enq.original_lead_id || "",
       enq.student_name || "",
+      formatCreatedDateTime(enq.prospect_created_at || enq.created_at || enq.createdAt),
       enq.mobile || "",
       enq.course_name || "",
       enq.course_module || "",
@@ -207,6 +214,22 @@ export default function ConvertedEnquiriesPage() {
                   <SelectItem value="Refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
+
+              <CreatedDateFilter
+                startDate={createdStartDate}
+                endDate={createdEndDate}
+                preset={createdDatePreset}
+                onChange={(start, end, preset) => {
+                  setCreatedStartDate(start)
+                  setCreatedEndDate(end)
+                  setCreatedDatePreset(preset)
+                }}
+                onClear={() => {
+                  setCreatedStartDate("")
+                  setCreatedEndDate("")
+                  setCreatedDatePreset("all")
+                }}
+              />
             </div>
           </div>
         </CardHeader>
@@ -218,6 +241,7 @@ export default function ConvertedEnquiriesPage() {
                   <TableHead className="w-12 text-muted-foreground font-medium">#</TableHead>
                   <TableHead className="text-muted-foreground font-medium whitespace-nowrap">Lead ID</TableHead>
                   <TableHead className="text-muted-foreground font-medium min-w-[150px]">Student Name</TableHead>
+                  <TableHead className="text-muted-foreground font-medium min-w-[170px] whitespace-nowrap">Created Date</TableHead>
                   <TableHead className="text-muted-foreground font-medium">Mobile</TableHead>
                   <TableHead className="text-muted-foreground font-medium min-w-[150px]">Course</TableHead>
                   <TableHead className="text-muted-foreground font-medium text-right">Total Fee (₹)</TableHead>
@@ -230,7 +254,7 @@ export default function ConvertedEnquiriesPage() {
               <TableBody>
                 {enquiries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       No converted enquiries found matching your criteria.
                     </TableCell>
                   </TableRow>
@@ -243,6 +267,9 @@ export default function ConvertedEnquiriesPage() {
                         <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
                         <TableCell className="font-medium text-foreground whitespace-nowrap">{enq.original_lead_id}</TableCell>
                         <TableCell className="font-medium text-foreground">{enq.student_name}</TableCell>
+                        <TableCell className="min-w-[170px] text-xs text-muted-foreground whitespace-nowrap">
+                          {formatCreatedDateTime(enq.prospect_created_at || enq.created_at || enq.createdAt)}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{enq.mobile || "-"}</TableCell>
                         <TableCell>
                           <span className="text-sm text-foreground">{enq.course_name || "-"}</span>

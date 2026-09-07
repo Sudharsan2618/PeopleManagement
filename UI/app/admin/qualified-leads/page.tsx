@@ -22,10 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatISTDateTime } from "@/lib/utils"
+import { formatISTDateTime, formatCreatedDateTime } from "@/lib/utils"
 import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 export default function QualifiedLeadsPage() {
   const { toast } = useToast()
@@ -34,6 +35,9 @@ export default function QualifiedLeadsPage() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [leadSourceFilter, setLeadSourceFilter] = useState<string>("all")
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
   const [leads, setLeads] = useState<any[]>([])
   const [telecallers, setTelecallers] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
@@ -67,6 +71,8 @@ export default function QualifiedLeadsPage() {
       if (courseFilter !== "all") params.course = courseFilter
       if (moduleFilter !== "all") params.module = moduleFilter
       if (leadSourceFilter !== "all") params.lead_source = leadSourceFilter
+      if (createdStartDate) params.start_date = createdStartDate
+      if (createdEndDate) params.end_date = createdEndDate
 
       const data = await conversionApi.getQualifiedLeads(params)
       setLeads(data)
@@ -81,6 +87,7 @@ export default function QualifiedLeadsPage() {
     const headers = [
       "Lead ID",
       "Student Name",
+      "Created Date",
       "Mobile",
       "Course",
       "Lead Source",
@@ -100,6 +107,7 @@ export default function QualifiedLeadsPage() {
       return [
         lead.lead_id || `QL-${lead.id}`,
         lead.name,
+        formatCreatedDateTime(lead.created_at || lead.createdAt),
         lead.mobile || "",
         lead.course_interest || "",
         leadSources.join(", "),
@@ -131,7 +139,7 @@ export default function QualifiedLeadsPage() {
       fetchLeads()
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, leadSourceFilter])
+  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, leadSourceFilter, createdStartDate, createdEndDate])
 
   if (isLoading && leads.length === 0) return <PageSkeleton />
 
@@ -218,6 +226,22 @@ export default function QualifiedLeadsPage() {
                   <SelectItem value="Walk-in">Walk-in</SelectItem>
                 </SelectContent>
               </Select>
+
+              <CreatedDateFilter
+                startDate={createdStartDate}
+                endDate={createdEndDate}
+                preset={createdDatePreset}
+                onChange={(start, end, preset) => {
+                  setCreatedStartDate(start)
+                  setCreatedEndDate(end)
+                  setCreatedDatePreset(preset)
+                }}
+                onClear={() => {
+                  setCreatedStartDate("")
+                  setCreatedEndDate("")
+                  setCreatedDatePreset("all")
+                }}
+              />
             </div>
           </div>
         </CardHeader>
@@ -229,6 +253,7 @@ export default function QualifiedLeadsPage() {
                   <TableHead className="w-12 text-muted-foreground font-medium">#</TableHead>
                   <TableHead className="text-muted-foreground font-medium whitespace-nowrap">Lead ID</TableHead>
                   <TableHead className="text-muted-foreground font-medium min-w-[150px]">Student Name</TableHead>
+                  <TableHead className="text-muted-foreground font-medium min-w-[170px] whitespace-nowrap">Created Date</TableHead>
                   <TableHead className="text-muted-foreground font-medium">Mobile</TableHead>
                   <TableHead className="text-muted-foreground font-medium min-w-[150px]">Course</TableHead>
                   <TableHead className="text-muted-foreground font-medium">Lead Source</TableHead>
@@ -241,7 +266,7 @@ export default function QualifiedLeadsPage() {
               <TableBody>
                 {leads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       No admission students found matching your criteria.
                     </TableCell>
                   </TableRow>
@@ -258,6 +283,9 @@ export default function QualifiedLeadsPage() {
                         <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
                         <TableCell className="font-medium text-foreground whitespace-nowrap">{lead.lead_id || `QL-${lead.id}`}</TableCell>
                         <TableCell className="font-medium text-foreground">{lead.name}</TableCell>
+                        <TableCell className="min-w-[170px] text-xs text-muted-foreground whitespace-nowrap">
+                          {formatCreatedDateTime(lead.created_at || lead.createdAt)}
+                        </TableCell>
                         <TableCell className="text-muted-foreground">{lead.mobile || "-"}</TableCell>
                         <TableCell>
                           <span className="text-sm text-foreground">{lead.course_interest || "-"}</span>

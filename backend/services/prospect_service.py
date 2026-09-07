@@ -109,11 +109,21 @@ class ProspectService:
         proposed_for: Optional[str] = None,
         closing_reason: Optional[str] = None,
         campaign_id: Optional[int] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ):
         """Build the shared WHERE clause (+ params) for prospect list / ids
         queries. All predicates reference alias `p` (prospects)."""
         conditions: List[str] = []
         params: List[any] = []
+
+        if start_date:
+            conditions.append("p.created_at::date >= %s")
+            params.append(start_date)
+
+        if end_date:
+            conditions.append("p.created_at::date <= %s")
+            params.append(end_date)
 
         if search and search.strip():
             term = f"%{search.strip()}%"
@@ -219,6 +229,10 @@ class ProspectService:
         proposed_for: Optional[str] = None,
         closing_reason: Optional[str] = None,
         campaign_id: Optional[int] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = "desc",
     ) -> dict:
         """Return a filtered, paginated slice of prospects with the latest
         assignment (telecaller name + date + dashboard) joined in.
@@ -248,7 +262,7 @@ class ProspectService:
         where_clause, params = ProspectService._build_prospect_filters(
             search, status, assignment, assigned_to, course_interest,
             tags, exclude_campaign_id, department, lead_source, lead_type, proposed_for,
-            closing_reason, campaign_id,
+            closing_reason, campaign_id, start_date, end_date,
         )
 
         # Cache the filtered total briefly so paging within one filter set
@@ -256,6 +270,13 @@ class ProspectService:
         count_query = f"SELECT COUNT(*) AS total FROM prospects p {where_clause}"
         # repr() keeps the key hashable (params may contain lists, e.g. tag arrays).
         total = _cached_count(("total", where_clause, repr(params)), count_query, tuple(params))
+
+        if sort_by == "created_at":
+            direction = "ASC" if sort_order and sort_order.lower() == "asc" else "DESC"
+            id_direction = direction
+            order_clause = f"ORDER BY p.created_at {direction} NULLS LAST, p.id {id_direction}"
+        else:
+            order_clause = "ORDER BY p.updated_at DESC"
 
         list_query = f"""
             SELECT
@@ -300,7 +321,7 @@ class ProspectService:
                 LIMIT 1
             ) la ON TRUE
             {where_clause}
-            ORDER BY p.updated_at DESC
+            {order_clause}
             LIMIT %s OFFSET %s
         """
         items = execute_query(
@@ -338,6 +359,10 @@ class ProspectService:
         proposed_for: Optional[str] = None,
         closing_reason: Optional[str] = None,
         campaign_id: Optional[int] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = "desc",
         limit: int = 100000,
     ) -> dict:
         """Return just the ids of every prospect matching the given filters, in
@@ -347,13 +372,20 @@ class ProspectService:
         where_clause, params = ProspectService._build_prospect_filters(
             search, status, assignment, assigned_to, course_interest,
             tags, exclude_campaign_id, department, lead_source, lead_type, proposed_for,
-            closing_reason, campaign_id,
+            closing_reason, campaign_id, start_date, end_date,
         )
+        if sort_by == "created_at":
+            direction = "ASC" if sort_order and sort_order.lower() == "asc" else "DESC"
+            id_direction = direction
+            order_clause = f"ORDER BY p.created_at {direction} NULLS LAST, p.id {id_direction}"
+        else:
+            order_clause = "ORDER BY p.updated_at DESC"
+
         query = f"""
             SELECT p.id
             FROM prospects p
             {where_clause}
-            ORDER BY p.updated_at DESC
+            {order_clause}
             LIMIT %s
         """
         rows = execute_query(query, tuple(params) + (limit,), fetch="all")

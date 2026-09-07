@@ -22,11 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatISTDate, formatISTDateTime } from "@/lib/utils"
+import { formatISTDate, formatISTDateTime, formatCreatedDateTime } from "@/lib/utils"
 import { conversionApi, coursesApi } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 export default function TelecallerPaymentPendingPage() {
   const { user } = useAuth()
@@ -34,6 +35,9 @@ export default function TelecallerPaymentPendingPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
 
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
@@ -50,22 +54,24 @@ export default function TelecallerPaymentPendingPage() {
       const cData = await coursesApi.getAll()
       setCourses(cData)
     } catch (err) {
-      console.error("Failed to load filters", err)
+      console.error(err)
     }
   }
 
   const fetchEnquiries = async () => {
-    if (!user) return
     setIsLoading(true)
     try {
-      const params: any = { telecaller_id: user.id }
+      const params: any = { pending_only: true }
       if (searchQuery) params.search = searchQuery
+      if (user?.id) params.telecaller_id = user.id
       if (courseFilter !== "all") params.course = courseFilter
       if (moduleFilter !== "all") params.module = moduleFilter
+      if (createdStartDate) params.start_date = createdStartDate
+      if (createdEndDate) params.end_date = createdEndDate
 
-      const data = await conversionApi.getPaymentPending(params)
+      const data = await conversionApi.getConvertedEnquiries(params)
       setEnquiries(data)
-    } catch (err: any) {
+    } catch (err) {
       toast({ title: "Error", description: "Failed to fetch pending payments", variant: "destructive" })
     } finally {
       setIsLoading(false)
@@ -76,6 +82,7 @@ export default function TelecallerPaymentPendingPage() {
     const headers = [
       "Lead ID",
       "Student Name",
+      "Created Date",
       "Mobile",
       "Course",
       "Total Fee",
@@ -87,6 +94,7 @@ export default function TelecallerPaymentPendingPage() {
     const rows = enquiries.map((enq) => [
       enq.original_lead_id,
       enq.student_name,
+      formatCreatedDateTime(enq.prospect_created_at || enq.created_at || enq.createdAt),
       enq.mobile || "",
       enq.course_name || "",
       Number(enq.course_fee || 0),
@@ -115,7 +123,7 @@ export default function TelecallerPaymentPendingPage() {
     if (user) {
       fetchEnquiries()
     }
-  }, [user, courseFilter, moduleFilter])
+  }, [user, courseFilter, moduleFilter, createdStartDate, createdEndDate])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -183,6 +191,22 @@ export default function TelecallerPaymentPendingPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <CreatedDateFilter
+                startDate={createdStartDate}
+                endDate={createdEndDate}
+                preset={createdDatePreset}
+                onChange={(start, end, preset) => {
+                  setCreatedStartDate(start)
+                  setCreatedEndDate(end)
+                  setCreatedDatePreset(preset)
+                }}
+                onClear={() => {
+                  setCreatedStartDate("")
+                  setCreatedEndDate("")
+                  setCreatedDatePreset("all")
+                }}
+              />
             </div>
           </div>
         </CardHeader>
@@ -193,6 +217,7 @@ export default function TelecallerPaymentPendingPage() {
                 <TableHead className="w-[60px] text-xs font-semibold uppercase text-muted-foreground">#</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Lead ID</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Student Name</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground min-w-[160px] whitespace-nowrap">Created Date</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Mobile</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Course</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Total Fee</TableHead>
@@ -206,7 +231,7 @@ export default function TelecallerPaymentPendingPage() {
             <TableBody>
               {enquiries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground text-sm">
+                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground text-sm">
                     No pending payment records found.
                   </TableCell>
                 </TableRow>
@@ -219,6 +244,9 @@ export default function TelecallerPaymentPendingPage() {
                       <Link href={`/telecaller/converted-enquiries/${enq.id}`} className="hover:underline text-primary">
                         {enq.student_name}
                       </Link>
+                    </TableCell>
+                    <TableCell className="min-w-[160px] text-xs text-muted-foreground whitespace-nowrap">
+                      {formatCreatedDateTime(enq.prospect_created_at || enq.created_at || enq.createdAt)}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{enq.mobile || "—"}</TableCell>
                     <TableCell className="text-xs font-medium">{enq.course_name}</TableCell>

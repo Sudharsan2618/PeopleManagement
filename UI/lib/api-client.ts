@@ -285,6 +285,10 @@ export interface ProspectListParams {
   leadType?: string
   closingReason?: string
   campaignId?: number
+  startDate?: string
+  endDate?: string
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
 }
 
 // Filters shared by /prospects/list and /prospects/ids (no pagination).
@@ -301,6 +305,10 @@ export interface ProspectFilterParams {
   leadType?: string
   closingReason?: string
   campaignId?: number
+  startDate?: string
+  endDate?: string
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
 }
 
 export interface Course {
@@ -545,6 +553,10 @@ export const prospectsApi = {
     if (params.leadType) qs.set("lead_type", params.leadType)
     if (params.closingReason) qs.set("closing_reason", params.closingReason)
     if (params.campaignId != null) qs.set("campaign_id", String(params.campaignId))
+    if (params.startDate) qs.set("start_date", params.startDate)
+    if (params.endDate) qs.set("end_date", params.endDate)
+    if (params.sortBy) qs.set("sort_by", params.sortBy)
+    if (params.sortOrder) qs.set("sort_order", params.sortOrder)
     return apiRequest<PaginatedProspects>(`/prospects/list?${qs.toString()}`)
   },
   // Ids of every prospect matching the filters (for select-all / range select).
@@ -562,6 +574,10 @@ export const prospectsApi = {
     if (params.leadType) qs.set("lead_type", params.leadType)
     if (params.closingReason) qs.set("closing_reason", params.closingReason)
     if (params.campaignId != null) qs.set("campaign_id", String(params.campaignId))
+    if (params.startDate) qs.set("start_date", params.startDate)
+    if (params.endDate) qs.set("end_date", params.endDate)
+    if (params.sortBy) qs.set("sort_by", params.sortBy)
+    if (params.sortOrder) qs.set("sort_order", params.sortOrder)
     return apiRequest<{ ids: number[]; total: number }>(`/prospects/ids?${qs.toString()}`)
   },
   getDistinctTags: () => apiRequest<string[]>("/prospects/distinct-tags"),

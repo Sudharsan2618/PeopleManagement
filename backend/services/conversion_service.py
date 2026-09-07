@@ -14,7 +14,9 @@ class ConversionService:
         course: Optional[str] = None,
         module: Optional[str] = None,
         lead_source: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> List[Dict]:
         query = """
             SELECT p.*,
@@ -57,6 +59,12 @@ class ConversionService:
             query += " AND (p.name ILIKE %s OR p.mobile ILIKE %s OR p.lead_id ILIKE %s)"
             search_term = f"%{search}%"
             params.extend([search_term, search_term, search_term])
+        if start_date:
+            query += " AND p.created_at::date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND p.created_at::date <= %s"
+            params.append(end_date)
             
         query += " ORDER BY p.updated_at DESC"
         
@@ -152,13 +160,16 @@ class ConversionService:
         module: Optional[str] = None,
         payment_status: Optional[str] = None,
         search: Optional[str] = None,
-        pending_only: bool = False
+        pending_only: bool = False,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> List[Dict]:
         query = """
             SELECT ce.*,
                    p.name as student_name,
                    p.mobile,
                    p.email,
+                   p.created_at as prospect_created_at,
                    COALESCE(
                        to_char((SELECT ph.payment_date FROM payment_history ph WHERE ph.converted_enquiry_id = ce.id AND ph.amount > 0 ORDER BY ph.payment_date DESC, ph.created_at DESC LIMIT 1), 'YYYY-MM-DD'),
                        p.payment_date
@@ -189,6 +200,12 @@ class ConversionService:
             query += " AND (p.name ILIKE %s OR p.mobile ILIKE %s OR ce.original_lead_id ILIKE %s)"
             search_term = f"%{search}%"
             params.extend([search_term, search_term, search_term])
+        if start_date:
+            query += " AND (COALESCE(p.created_at, ce.created_at))::date >= %s"
+            params.append(start_date)
+        if end_date:
+            query += " AND (COALESCE(p.created_at, ce.created_at))::date <= %s"
+            params.append(end_date)
             
         query += " ORDER BY ce.converted_at DESC"
         

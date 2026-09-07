@@ -22,11 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatISTDate, formatISTDateTime } from "@/lib/utils"
+import { formatISTDate, formatISTDateTime, formatCreatedDateTime } from "@/lib/utils"
 import { conversionApi, coursesApi } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 export default function TelecallerConvertedEnquiriesPage() {
   const { user } = useAuth()
@@ -35,6 +36,9 @@ export default function TelecallerConvertedEnquiriesPage() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all")
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
   
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
@@ -64,6 +68,8 @@ export default function TelecallerConvertedEnquiriesPage() {
       if (courseFilter !== "all") params.course = courseFilter
       if (moduleFilter !== "all") params.module = moduleFilter
       if (paymentStatusFilter !== "all") params.payment_status = paymentStatusFilter
+      if (createdStartDate) params.start_date = createdStartDate
+      if (createdEndDate) params.end_date = createdEndDate
 
       const data = await conversionApi.getConvertedEnquiries(params)
       setEnquiries(data)
@@ -82,7 +88,7 @@ export default function TelecallerConvertedEnquiriesPage() {
     if (user) {
       fetchEnquiries()
     }
-  }, [user, courseFilter, moduleFilter, paymentStatusFilter])
+  }, [user, courseFilter, moduleFilter, paymentStatusFilter, createdStartDate, createdEndDate])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -92,11 +98,12 @@ export default function TelecallerConvertedEnquiriesPage() {
   }, [searchQuery])
 
   const exportToCSV = () => {
-    const headers = ["#", "Lead ID", "Student Name", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Converted Date"]
+    const headers = ["#", "Lead ID", "Student Name", "Created Date", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Converted Date"]
     const rows = enquiries.map((enq: any, idx: number) => [
       idx + 1,
       enq.original_lead_id || "",
       enq.student_name || "",
+      formatCreatedDateTime(enq.prospect_created_at || enq.created_at || enq.createdAt),
       enq.mobile || "",
       enq.course_name || "",
       enq.course_module || "",
@@ -194,6 +201,22 @@ export default function TelecallerConvertedEnquiriesPage() {
                   <SelectItem value="Payment Pending">Payment Pending</SelectItem>
                 </SelectContent>
               </Select>
+
+              <CreatedDateFilter
+                startDate={createdStartDate}
+                endDate={createdEndDate}
+                preset={createdDatePreset}
+                onChange={(start, end, preset) => {
+                  setCreatedStartDate(start)
+                  setCreatedEndDate(end)
+                  setCreatedDatePreset(preset)
+                }}
+                onClear={() => {
+                  setCreatedStartDate("")
+                  setCreatedEndDate("")
+                  setCreatedDatePreset("all")
+                }}
+              />
             </div>
           </div>
         </CardHeader>
@@ -204,6 +227,7 @@ export default function TelecallerConvertedEnquiriesPage() {
                 <TableHead className="w-[60px] text-xs font-semibold uppercase text-muted-foreground">#</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Lead ID</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Student Name</TableHead>
+                <TableHead className="text-xs font-semibold uppercase text-muted-foreground min-w-[160px] whitespace-nowrap">Created Date</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Mobile</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Course</TableHead>
                 <TableHead className="text-xs font-semibold uppercase text-muted-foreground">Module</TableHead>
@@ -218,7 +242,7 @@ export default function TelecallerConvertedEnquiriesPage() {
             <TableBody>
               {enquiries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground text-sm">
+                  <TableCell colSpan={13} className="text-center py-8 text-muted-foreground text-sm">
                     No converted enquiries found.
                   </TableCell>
                 </TableRow>
@@ -233,6 +257,9 @@ export default function TelecallerConvertedEnquiriesPage() {
                       <Link href={`/telecaller/converted-enquiries/${enq.id}`} className="hover:underline text-primary">
                         {enq.student_name}
                       </Link>
+                    </TableCell>
+                    <TableCell className="min-w-[160px] text-xs text-muted-foreground whitespace-nowrap">
+                      {formatCreatedDateTime(enq.prospect_created_at || enq.created_at || enq.createdAt)}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{enq.mobile || "—"}</TableCell>
                     <TableCell className="text-xs font-medium">{enq.course_name}</TableCell>

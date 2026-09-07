@@ -27,7 +27,7 @@ import { useAuth } from "@/lib/auth-context"
 import { usersApi, SpocReportsApi, adaptApiUserToUiUser, adminApi } from "@/lib/api-client"
 import { DashboardSkeleton } from "@/components/ui/loading-skeletons"
 import { Button } from "@/components/ui/button"
-import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 // ─── Colors for charts ──────────────────────────────────────────
 const OUTCOME_COLORS: Record<string, string> = {
@@ -236,7 +236,12 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <DateRangePicker onRangeChange={handleRangeChange} defaultStart={startDate} defaultEnd={endDate} />
+          <CreatedDateFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(start, end) => handleRangeChange(start, end)}
+            align="end"
+          />
           <Button onClick={() => fetchData()} variant="outline" size="sm" disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh

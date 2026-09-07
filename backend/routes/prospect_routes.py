@@ -40,6 +40,10 @@ def list_prospects(
     lead_type: Optional[str] = Query(None, description="One or more lead types, comma-separated (overlap match)"),
     closing_reason: Optional[str] = Query(None, description="Substring match on closing reason"),
     campaign_id: Optional[int] = Query(None, description="Only prospects messaged in this WhatsApp campaign"),
+    start_date: Optional[str] = Query(None, description="Filter prospects created on or after this date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="Filter prospects created on or before this date (YYYY-MM-DD)"),
+    sort_by: Optional[str] = Query(None, description="Column to sort by (e.g. created_at)"),
+    sort_order: Optional[str] = Query("desc", description="'asc' | 'desc'"),
 ):
     """Paginated, server-filtered prospect list with the latest assignment
     joined in. Declared before /{prospect_id} so the literal path wins."""
@@ -59,6 +63,10 @@ def list_prospects(
             lead_type=lead_type,
             closing_reason=closing_reason,
             campaign_id=campaign_id,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -78,6 +86,10 @@ def list_prospect_ids(
     lead_type: Optional[str] = Query(None),
     closing_reason: Optional[str] = Query(None),
     campaign_id: Optional[int] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_order: Optional[str] = Query("desc"),
 ):
     """Ids of every prospect matching the filters (same order as /list). Backs
     'select all filtered' and range selection in the recipient pickers."""
@@ -95,6 +107,10 @@ def list_prospect_ids(
             lead_type=lead_type,
             closing_reason=closing_reason,
             campaign_id=campaign_id,
+            start_date=start_date,
+            end_date=end_date,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

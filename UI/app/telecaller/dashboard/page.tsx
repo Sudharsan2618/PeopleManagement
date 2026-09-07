@@ -33,6 +33,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { normalizeCourseInterest } from "../utils"
 import { CourseMultiSelect } from "@/components/ui/course-multi-select"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 
 
@@ -97,6 +98,7 @@ import {
 
 
   Clock,
+  ArrowUpDown,
 
 
 
@@ -1030,7 +1032,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 
 
-import { cn } from "@/lib/utils"
+import { cn, formatCreatedDateTime } from "@/lib/utils"
 
 
 
@@ -7101,6 +7103,12 @@ export default function TelecallerDashboard() {
 
 
   const [searchQuery, setSearchQuery] = useState("")
+  const [createdTimeSortOrder, setCreatedTimeSortOrder] = useState<"desc" | "asc">("desc")
+
+  const toggleCreatedTimeSort = () => {
+    setCreatedTimeSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+  }
+
 
 
 
@@ -7165,6 +7173,9 @@ export default function TelecallerDashboard() {
 
 
   const [leadTypeFilter, setLeadTypeFilter] = useState<string[]>([])
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
 
 
 
@@ -18379,7 +18390,7 @@ export default function TelecallerDashboard() {
 
 
 
-        ["Name", "Mobile", "Email", "Course", "Location", "Status", "Outcome", "Calls", "Last Call"],
+        ["Name", "Created Date", "Mobile", "Email", "Course", "Location", "Status", "Outcome", "Calls", "Last Call"],
 
 
 
@@ -18412,6 +18423,7 @@ export default function TelecallerDashboard() {
 
 
           p.name,
+          formatCreatedDateTime(p.createdAt),
 
 
 
@@ -18635,7 +18647,7 @@ export default function TelecallerDashboard() {
 
 
 
-        head: [["Name", "Mobile", "Email", "Course", "Location", "Status", "Outcome", "Calls", "Last Call"]],
+        head: [["Name", "Created Date", "Mobile", "Email", "Course", "Location", "Status", "Outcome", "Calls", "Last Call"]],
 
 
 
@@ -18795,7 +18807,7 @@ export default function TelecallerDashboard() {
 
 
 
-        ["Name", "Mobile", "Email", "Course Interest", "Location", "Status", "Outcome", "Total Calls", "Last Call", "Comments"],
+        ["Name", "Created Date", "Mobile", "Email", "Course Interest", "Location", "Status", "Outcome", "Total Calls", "Last Call", "Comments"],
 
 
 
@@ -18828,6 +18840,7 @@ export default function TelecallerDashboard() {
 
 
           p.name,
+          formatCreatedDateTime(p.createdAt),
 
 
 
@@ -19899,7 +19912,7 @@ export default function TelecallerDashboard() {
 
 
 
-        return bCreated - aCreated
+        return createdTimeSortOrder === "asc" ? aCreated - bCreated : bCreated - aCreated
 
 
 
@@ -20075,7 +20088,7 @@ export default function TelecallerDashboard() {
 
 
 
-  }, [prospects])
+  }, [prospects, createdTimeSortOrder])
 
 
 
@@ -20634,6 +20647,27 @@ export default function TelecallerDashboard() {
 
 
 
+      // Created Date filter
+      let matchesCreatedDate = true
+      if (createdStartDate || createdEndDate) {
+        const raw = prospect.createdAt || prospect.created_at
+        if (!raw) {
+          matchesCreatedDate = false
+        } else {
+          const d = new Date(raw)
+          if (isNaN(d.getTime())) {
+            matchesCreatedDate = false
+          } else {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            const pDate = `${y}-${m}-${day}`
+            if (createdStartDate && pDate < createdStartDate) matchesCreatedDate = false
+            if (createdEndDate && pDate > createdEndDate) matchesCreatedDate = false
+          }
+        }
+      }
+
       // Stat card filter
 
 
@@ -20879,9 +20913,9 @@ export default function TelecallerDashboard() {
         }
       }
 
-      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesStatCard
+      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesCreatedDate && matchesStatCard
     })
-  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats])
+  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, createdStartDate, createdEndDate, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats])
 
 
 
@@ -20985,7 +21019,7 @@ export default function TelecallerDashboard() {
 
 
 
-  }, [searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, statCardFilter])
+  }, [searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, statCardFilter, createdStartDate, createdEndDate])
 
 
 
@@ -21074,6 +21108,8 @@ export default function TelecallerDashboard() {
 
 
       { key: "name", label: "Student Name", hasData: true, alwaysVisible: true },
+
+      { key: "createdAt", label: "Created Date", hasData: true, alwaysVisible: true },
 
 
 
@@ -24020,6 +24056,7 @@ export default function TelecallerDashboard() {
   const exportColumns = [
     { header: "Lead ID", key: "lead_id" },
     { header: viewMode === "college_contact" ? "College Name" : "Student Name", key: viewMode === "college_contact" ? "collegeName" : "name" },
+    { header: "Created Date", key: "createdAt" },
     { header: "Mobile", key: "mobile" },
     { header: "Alt Phone 1", key: "altPhone" },
     { header: "Alt Phone 2", key: "altPhone2" },
@@ -24053,6 +24090,7 @@ export default function TelecallerDashboard() {
     { header: "#", key: "index" },
     { header: "Lead ID", key: "lead_id" },
     { header: viewMode === "college_contact" ? "College Name" : "Student Name", key: viewMode === "college_contact" ? "collegeName" : "name" },
+    { header: "Created Date", key: "createdAt" },
     { header: "Point of Contact", key: "parentName" },
     { header: "Mobile", key: "mobile" },
     { header: "Alt Phone 1", key: "altPhone" },
@@ -24110,6 +24148,9 @@ export default function TelecallerDashboard() {
       if (col.key === "collegeName") {
         val = prospect.collegeName || prospect.college_name || prospect.name || prospect.organization_name || prospect.institution_name || "-"
       }
+      if (col.key === "createdAt") {
+        val = formatCreatedDateTime(val)
+      }
       if (Array.isArray(val)) val = val.join(", ")
       if (col.key === "status") val = resolveStatusForExport(prospect, val)
       if (["callbackDateTime", "lastCallAt", "follow_up_date"].includes(col.key)) {
@@ -24131,6 +24172,9 @@ export default function TelecallerDashboard() {
       const row: any = {}
       columns.forEach(col => {
         let val = prospect[col.key]
+        if (col.key === "createdAt") {
+          val = formatCreatedDateTime(val)
+        }
         if (Array.isArray(val)) val = val.join(", ")
         if (col.key === 'status') val = resolveStatusForExport(prospect, val)
         if (col.key === 'callbackDateTime' || col.key === 'lastCallAt' || col.key === 'follow_up_date') {
@@ -24154,6 +24198,9 @@ export default function TelecallerDashboard() {
         let val: any = prospect[col.key]
         if (col.key === 'index') {
           val = index + 1
+        }
+        if (col.key === "createdAt") {
+          val = formatCreatedDateTime(val)
         }
         if (Array.isArray(val)) val = val.join(", ")
         if (col.key === 'status') val = resolveStatusForExport(prospect, val)
@@ -24181,6 +24228,13 @@ export default function TelecallerDashboard() {
     if (courseFilter && courseFilter.length > 0 && !(courseFilter.length === 1 && courseFilter[0] === "all")) filters.push(`Course: ${courseFilter.join(", ")}`)
     if (leadSourceFilter.length > 0) filters.push(`Lead Source: ${leadSourceFilter.join(", ")}`)
     if (leadTypeFilter.length > 0) filters.push(`Lead Type: ${leadTypeFilter.join(", ")}`)
+    if (createdStartDate || createdEndDate) {
+      if (createdStartDate && createdEndDate && createdStartDate === createdEndDate) {
+        filters.push(`Created Date: ${createdStartDate}`)
+      } else {
+        filters.push(`Created Date: ${createdStartDate || "Start"} to ${createdEndDate || "End"}`)
+      }
+    }
     return filters.length > 0 ? filters.join(" | ") : "No filters applied"
   }
 
@@ -27731,23 +27785,44 @@ export default function TelecallerDashboard() {
 
 
 
-                {/* Date Filter */}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                {/* Created Date Filter */}
+                <CreatedDateFilter
+                  startDate={createdStartDate}
+                  endDate={createdEndDate}
+                  preset={createdDatePreset}
+                  onChange={(start, end, preset) => {
+                    setCreatedStartDate(start)
+                    setCreatedEndDate(end)
+                    setCreatedDatePreset(preset)
+                  }}
+                  onClear={() => {
+                    setCreatedStartDate("")
+                    setCreatedEndDate("")
+                    setCreatedDatePreset("all")
+                  }}
+                />
 
                 {/* Active filter badges */}
+                {(createdStartDate || createdEndDate) && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+                    Created Date: {createdDatePreset !== "custom" && createdDatePreset !== "all"
+                      ? (createdDatePreset === "today" ? "Today" : createdDatePreset === "yesterday" ? "Yesterday" : createdDatePreset === "last_7" ? "Last 7 Days" : createdDatePreset === "last_30" ? "Last 30 Days" : createdDatePreset === "this_month" ? "This Month" : createdDatePreset)
+                      : createdStartDate === createdEndDate
+                        ? createdStartDate
+                        : `${createdStartDate || "Start"} to ${createdEndDate || "End"}`}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreatedStartDate("")
+                        setCreatedEndDate("")
+                        setCreatedDatePreset("all")
+                      }}
+                      className="hover:text-destructive cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
 
 
 
@@ -28501,6 +28576,7 @@ export default function TelecallerDashboard() {
 
                             col.key === "name" && "min-w-[160px] sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
                             col.key === "collegeName" && viewMode === "college_contact" && "min-w-[160px] sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                            col.key === "createdAt" && "min-w-[190px]",
 
 
 
@@ -28924,7 +29000,19 @@ export default function TelecallerDashboard() {
 
 
 
-                          {col.label}
+                          {col.key === "createdAt" ? (
+                            <button
+                              type="button"
+                              onClick={toggleCreatedTimeSort}
+                              className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold focus:outline-none select-none group"
+                              title={createdTimeSortOrder === "desc" ? "Sorted: Newest imported first (click for oldest)" : "Sorted: Oldest imported first (click for newest)"}
+                            >
+                              <span>{col.label}</span>
+                              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                            </button>
+                          ) : (
+                            col.label
+                          )}
 
 
 
@@ -29406,6 +29494,16 @@ export default function TelecallerDashboard() {
 
 
 
+
+                            case "createdAt":
+                              return (
+                                <TableCell key="createdAt" className="min-w-[190px]">
+                                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                                    <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    <span>{formatCreatedDateTime(prospect.createdAt)}</span>
+                                  </div>
+                                </TableCell>
+                              )
 
                             case "parentName":
 
