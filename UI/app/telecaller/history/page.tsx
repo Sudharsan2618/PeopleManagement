@@ -119,7 +119,8 @@ import {
 
 
 
-import { cn } from "@/lib/utils"
+import { cn, formatCreatedDateTime } from "@/lib/utils"
+import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 
 
@@ -712,6 +713,9 @@ export default function CallHistoryPage() {
 
 
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" })
+  const [createdStartDate, setCreatedStartDate] = useState<string>("")
+  const [createdEndDate, setCreatedEndDate] = useState<string>("")
+  const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
 
 
 
@@ -809,7 +813,7 @@ export default function CallHistoryPage() {
   const [attachPdf, setAttachPdf] = useState(true)
 
   // Column selector state
-  const ALL_EXPORT_COLUMNS = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+  const ALL_EXPORT_COLUMNS = ["Lead ID", "Date", "Time", "Prospect Name", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false)
   const [exportFormat, setExportFormat] = useState<"excel" | "pdf">("excel")
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set(ALL_EXPORT_COLUMNS))
@@ -974,7 +978,7 @@ export default function CallHistoryPage() {
       return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-");
     };
 
-    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
+    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
 
     const rows = reportLogs.map(log => {
       const prospect = prospects[log.prospect_id] || log;
@@ -1026,6 +1030,7 @@ export default function CallHistoryPage() {
         dt.toLocaleDateString('en-IN'),
         dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         cleanText(prospectName),
+        cleanText(formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt)),
         cleanText(prospectMobile),
         cleanText(prospect?.alt_phone || ""),
         cleanText(prospect?.alt_phone_2 || ""),
@@ -1094,7 +1099,7 @@ export default function CallHistoryPage() {
     const toStr = emailToDate ? formatToDDMMYYYY(emailToDate) : "";
     doc.text(`Date range: ${fromStr} to ${toStr}`, 40, 72);
 
-    const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(emailReportType !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"];
+    const headers = ["Lead ID", "Date", "Time", "Prospect", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(emailReportType !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"];
 
     const rows = reportLogs.map(log => {
       const prospect = prospects[log.prospect_id] || log;
@@ -1146,6 +1151,7 @@ export default function CallHistoryPage() {
         dt.toLocaleDateString('en-IN'),
         dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         prospectName,
+        formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt),
         prospectMobile,
         prospect?.alt_phone || "—",
         prospect?.alt_phone_2 || "—",
@@ -1218,7 +1224,7 @@ export default function CallHistoryPage() {
       return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-");
     };
 
-    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
+    const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(contactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"];
 
     const rows = filteredLogs.map(log => {
       const prospect = prospects[log.prospect_id] || log;
@@ -1270,6 +1276,7 @@ export default function CallHistoryPage() {
         dt.toLocaleDateString('en-IN'),
         dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         cleanText(prospectName),
+        cleanText(formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt)),
         cleanText(prospectMobile),
         cleanText(prospect?.alt_phone || ""),
         cleanText(prospect?.alt_phone_2 || ""),
@@ -1308,10 +1315,10 @@ export default function CallHistoryPage() {
     });
 
     const summaryRows = [
-      Array(31).fill(""),
-      ["SUMMARY", ...Array(30).fill("")],
-      ["Total Records", filteredLogs.length.toString(), ...Array(29).fill("")],
-      ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), ...Array(29).fill("")])
+      Array(32).fill(""),
+      ["SUMMARY", ...Array(31).fill("")],
+      ["Total Records", filteredLogs.length.toString(), ...Array(30).fill("")],
+      ...Object.entries(outcomeCounts).map(([outcome, count]) => [outcome, count.toString(), ...Array(30).fill("")])
     ];
 
     const data = [headers, ...rows, ...summaryRows];
@@ -1811,7 +1818,7 @@ This is an automated report from the TATTI CRM System.
         return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
       }
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(exportContactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect Name", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", ...(exportContactMode !== "college" ? ["Course"] : []), "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
 
       const rows = exportData.map(log => {
 
@@ -1887,7 +1894,18 @@ This is an automated report from the TATTI CRM System.
 
         }
 
-
+        let proposedFor: string[] = []
+        try {
+          if ((prospect as any)?.proposed_for) {
+            if (Array.isArray((prospect as any).proposed_for)) {
+              proposedFor = (prospect as any).proposed_for
+            } else if (typeof (prospect as any).proposed_for === 'string') {
+              proposedFor = JSON.parse((prospect as any).proposed_for || '[]')
+            }
+          }
+        } catch (e) {
+          proposedFor = []
+        }
 
         return [
 
@@ -1906,6 +1924,10 @@ This is an automated report from the TATTI CRM System.
 
 
           cleanText(prospectName),
+
+
+
+          cleanText(formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt)),
 
 
 
@@ -2628,21 +2650,11 @@ This is an automated report from the TATTI CRM System.
 
         const cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
 
-
-
+        // Replace em dash and other problematic dashes with regular hyphen
         return cleaned.replace(/[\u2014\u2015\u2013\u2012\u2010\u2212]/g, "-")
-
-
-
       }
 
-
-
-
-
-
-
-      const allHeaders = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const allHeaders = ["Lead ID", "Date", "Time", "Prospect Name", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
       const headers = allHeaders.filter(h => selectedColumns.has(h))
 
 
@@ -2683,7 +2695,7 @@ This is an automated report from the TATTI CRM System.
 
             } else if (typeof prospect.lead_source === 'string') {
 
-              leadSource = JSON.parse(prospect.lead_source || '[]')
+              leadSource = JSON.parse(prospect.lead_source || '[]');
 
             }
 
@@ -2709,7 +2721,7 @@ This is an automated report from the TATTI CRM System.
 
             } else if (typeof prospect.lead_type === 'string') {
 
-              leadType = JSON.parse(prospect.lead_type || '[]')
+              leadType = JSON.parse(prospect.lead_type || '[]');
 
             }
 
@@ -2721,7 +2733,18 @@ This is an automated report from the TATTI CRM System.
 
         }
 
-
+        let proposedFor: string[] = []
+        try {
+          if ((prospect as any)?.proposed_for) {
+            if (Array.isArray((prospect as any).proposed_for)) {
+              proposedFor = (prospect as any).proposed_for
+            } else if (typeof (prospect as any).proposed_for === 'string') {
+              proposedFor = JSON.parse((prospect as any).proposed_for || '[]')
+            }
+          }
+        } catch (e) {
+          proposedFor = []
+        }
 
         return [
 
@@ -2741,7 +2764,7 @@ This is an automated report from the TATTI CRM System.
 
           cleanText(prospectName),
 
-
+          cleanText(formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt)),
 
           cleanText(prospectMobile),
 
@@ -2956,7 +2979,7 @@ This is an automated report from the TATTI CRM System.
         toast({ title: "No data found", description: "No call logs found matching the current filters.", variant: "destructive" })
         return
       }
-      const allPdfHeaders = ["Lead ID", "Date", "Time", "Prospect Name", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
+      const allPdfHeaders = ["Lead ID", "Date", "Time", "Prospect Name", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Website", "Tags", "Comments", "Follow-up Date", "Outcome", "Status After", "Notes"]
       const pdfHeaders = selectedColumns.size === 0 ? allPdfHeaders : allPdfHeaders.filter(h => selectedColumns.has(h))
       const rows = filteredLogs.map(log => {
         const prospect = prospects[log.prospect_id] || log
@@ -2972,7 +2995,9 @@ This is an automated report from the TATTI CRM System.
           prospect ? (prospect.lead_id || (log as any).prospect_lead_id || (log as any).lead_id || "—") : "—",
           dt.toLocaleDateString('en-IN'),
           dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          prospectName, prospectMobile,
+          prospectName,
+          formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt),
+          prospectMobile,
           prospect?.alt_phone || "—", prospect?.alt_phone_2 || "—", prospect?.alt_phone_3 || "—",
           prospect?.email || "—", prospect?.secondary_email || "—", prospect?.alternative_email || "—",
           prospect?.location || "—", prospect?.city || "—", prospect?.address || "—", prospect?.postal_code || "—",
@@ -3389,7 +3414,18 @@ This is an automated report from the TATTI CRM System.
 
         }
 
-
+        let proposedFor: string[] = []
+        try {
+          if ((prospect as any)?.proposed_for) {
+            if (Array.isArray((prospect as any).proposed_for)) {
+              proposedFor = (prospect as any).proposed_for
+            } else if (typeof (prospect as any).proposed_for === 'string') {
+              proposedFor = JSON.parse((prospect as any).proposed_for || '[]')
+            }
+          }
+        } catch (e) {
+          proposedFor = []
+        }
 
         return [
 
@@ -3409,7 +3445,7 @@ This is an automated report from the TATTI CRM System.
 
           prospectName,
 
-
+          formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt),
 
           prospectMobile,
 
@@ -3542,7 +3578,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-      const headers = ["Lead ID", "Date", "Time", "Prospect", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
+      const headers = ["Lead ID", "Date", "Time", "Prospect", "Created Date", "Mobile", "Alt Phone", "Alt Phone 2", "Alt Phone 3", "Email", "Secondary Email", "Alt Email", "Location", "City", "Address", "Postal Code", "Course", "Lead Source", "Lead Type", ...(contactMode === "college" ? ["Proposed For"] : []), "Status", "Parent Name", "Department", "Designation", "Company", "College Name", "Tags", "Comments", "Follow-up Date", "Outcome", "Status", "Notes"]
 
 
 
@@ -4243,7 +4279,28 @@ This is an automated report from the TATTI CRM System.
         }
       }
 
-      return matchesSearch && matchesDate
+      // Created Date filter (Prospect created_at)
+      let matchesCreatedDate = true
+      if (createdStartDate || createdEndDate) {
+        const raw = prospect?.created_at || (prospect as any)?.createdAt
+        if (!raw) {
+          matchesCreatedDate = false
+        } else {
+          const d = new Date(raw)
+          if (isNaN(d.getTime())) {
+            matchesCreatedDate = false
+          } else {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, "0")
+            const day = String(d.getDate()).padStart(2, "0")
+            const pDate = `${y}-${m}-${day}`
+            if (createdStartDate && pDate < createdStartDate) matchesCreatedDate = false
+            if (createdEndDate && pDate > createdEndDate) matchesCreatedDate = false
+          }
+        }
+      }
+
+      return matchesSearch && matchesDate && matchesCreatedDate
     })
 
     const expandedLogs = baseLogs.flatMap((log) =>
@@ -4257,7 +4314,7 @@ This is an automated report from the TATTI CRM System.
       if (courseFilter.includes("Unknown") && (!courseName || courseName === "Unknown")) return true
       return courseFilter.includes(courseName)
     })
-  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange])
+  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange, createdStartDate, createdEndDate])
 
   const paginatedLogs = useMemo(() => {
 
@@ -4314,7 +4371,7 @@ This is an automated report from the TATTI CRM System.
 
     setCurrentPage(1)
 
-  }, [searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange])
+  }, [searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange, createdStartDate, createdEndDate])
 
 
 
@@ -5670,8 +5727,23 @@ This is an automated report from the TATTI CRM System.
                   />
 
                 </div>
-
               )}
+
+              <CreatedDateFilter
+                startDate={createdStartDate}
+                endDate={createdEndDate}
+                preset={createdDatePreset}
+                onChange={(start, end, preset) => {
+                  setCreatedStartDate(start)
+                  setCreatedEndDate(end)
+                  setCreatedDatePreset(preset)
+                }}
+                onClear={() => {
+                  setCreatedStartDate("")
+                  setCreatedEndDate("")
+                  setCreatedDatePreset("all")
+                }}
+              />
 
 
 
@@ -5826,6 +5898,7 @@ This is an automated report from the TATTI CRM System.
 
 
                   <TableHead className="min-w-[160px] font-semibold sticky left-[140px] z-20 bg-slate-50 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">Prospect</TableHead>
+                  <TableHead className="min-w-[160px] font-semibold whitespace-nowrap">Created Date</TableHead>
 
 
 
@@ -5965,7 +6038,7 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                    <TableCell colSpan={32} className="h-40 text-center">
+                    <TableCell colSpan={33} className="h-40 text-center">
 
 
 
@@ -6061,6 +6134,9 @@ This is an automated report from the TATTI CRM System.
 
                         <TableCell className="min-w-[160px] sticky left-[140px] z-20 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
                           <span className="font-semibold text-slate-800 text-sm">{prospect?.name || `Prospect #${log.prospect_id}`}</span>
+                        </TableCell>
+                        <TableCell className="min-w-[160px] whitespace-nowrap text-xs text-muted-foreground">
+                          {formatCreatedDateTime(prospect?.created_at || (prospect as any)?.createdAt)}
                         </TableCell>
 
 
