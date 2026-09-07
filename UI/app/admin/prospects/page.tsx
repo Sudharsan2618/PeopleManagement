@@ -180,6 +180,7 @@ export default function AdminProspectsPage() {
     }
     if (assignedFilter === "unassigned") p.assignment = "unassigned"
     else if (assignedFilter !== "all") p.assignedTo = Number(assignedFilter)
+    if (courseFilter && courseFilter !== "all") p.courseInterest = courseFilter
     if (createdStartDate) p.startDate = createdStartDate
     if (createdEndDate) p.endDate = createdEndDate
     if (createdTimeSortOrder) {
