@@ -1,0 +1,5799 @@
+[
+  {
+    "action": "UPDATE",
+    "excel_row": 2,
+    "db_id": 16716,
+    "college": "Ashok",
+    "lead_id": "00Qfw0000043Ux7EAE",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9994163022"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9750955592"
+      },
+      "alt_phone_2": {
+        "old": "9994163022",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 3,
+    "db_id": 16710,
+    "college": "Murali",
+    "lead_id": "00Qfw0000043UxDEAU",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4522530070"
+      },
+      "alt_phone_2": {
+        "old": "4522530070",
+        "new": null
+      },
+      "email": {
+        "old": "placement@smcet.edu.in",
+        "new": "acmdu1881@americancollege.edu.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 4,
+    "db_id": 16704,
+    "college": "K. Chitra Chellam",
+    "lead_id": "00Qfw0000043UxQEAU",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4612345655"
+      },
+      "secondary_email": {
+        "old": "info@fathimacollegemdu.org",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 5,
+    "db_id": 16705,
+    "college": "Govindammal Adithanar college for Women",
+    "lead_id": "00Qfw0000043UxUEAU",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4639220533"
+      },
+      "alt_phone_2": {
+        "old": "4639220533",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 6,
+    "db_id": 16700,
+    "college": "Holy Cross Home Science College for Women",
+    "lead_id": "00Qfw0000043UxVEAU",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9894757079"
+      },
+      "alt_phone": {
+        "old": "9894757079",
+        "new": "4612328295"
+      },
+      "alt_phone_2": {
+        "old": "4612328295",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 7,
+    "db_id": 16740,
+    "college": "Dr. G U Pope College of Engineering",
+    "lead_id": "00Qfw0000043UxZEAU",
+    "diffs": {
+      "alt_phone": {
+        "old": "04630-273933",
+        "new": "4630273233"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 8,
+    "db_id": 17665,
+    "college": "T.D.M.N.S. College, T. Kallikulam",
+    "lead_id": "00Qfw0000043UxvEAE",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4637220250"
+      },
+      "alt_phone_2": {
+        "old": "4637220250",
+        "new": "9791847623"
+      },
+      "email": {
+        "old": null,
+        "new": "tdmnscollege@gmail.com"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "tdmnscplacement@gmail.com"
+      },
+      "designation": {
+        "old": null,
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 9,
+    "db_id": 16721,
+    "college": "Dr. Kalaiselvi",
+    "lead_id": "00Qfw0000043Uy1EAE",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9361401452"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4285240147"
+      },
+      "alt_phone_2": {
+        "old": "4285240147",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 10,
+    "db_id": 16718,
+    "college": "Banu",
+    "lead_id": "00Qfw0000043Uy5EAE",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4258220496"
+      },
+      "alt_phone_2": {
+        "old": "4258220496",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 11,
+    "db_id": 16701,
+    "college": "s. Hemalatha",
+    "lead_id": "00Qfw0000043UyBEAU",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4258230678"
+      },
+      "alt_phone_2": {
+        "old": "4258230678",
+        "new": "9095627330"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 13,
+    "db_id": 16706,
+    "college": "Arignar Anna College",
+    "lead_id": "00Qfw0000043oqoEAA",
+    "diffs": {
+      "alt_phone": {
+        "old": "263146",
+        "new": "4652263122"
+      },
+      "alt_phone_2": {
+        "old": "4652263122",
+        "new": null
+      },
+      "designation": {
+        "old": "Principal 263146",
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 14,
+    "db_id": 16699,
+    "college": "joesway",
+    "lead_id": "00Qfw0000043oqpEAA",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443698181"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9443698181"
+      },
+      "alt_phone_2": {
+        "old": "9443698181",
+        "new": "4652261473"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 15,
+    "db_id": 16844,
+    "college": "Muslim Arts College",
+    "lead_id": "00Qfw0000043oqsEAA",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4651248397"
+      },
+      "alt_phone_2": {
+        "old": "4651248397",
+        "new": null
+      },
+      "email": {
+        "old": null,
+        "new": "mail@muslimartscollege.in"
+      },
+      "designation": {
+        "old": null,
+        "new": "Placement Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 16,
+    "db_id": 16793,
+    "college": "Noorl Islam Arts and Science College",
+    "lead_id": "00Qfw0000043oquEAA",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443595350"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9443595350"
+      },
+      "alt_phone_2": {
+        "old": "9443595350",
+        "new": null
+      },
+      "alternative_email": {
+        "old": "nicollege2001@yachoo.co.in",
+        "new": null
+      },
+      "designation": {
+        "old": "9486856121 principal",
+        "new": "Placement Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 17,
+    "db_id": 16697,
+    "college": "Saji",
+    "lead_id": "00Qfw0000043oqwEAA",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9944440750"
+      },
+      "alt_phone": {
+        "old": "9443993325",
+        "new": "9944440750"
+      },
+      "alt_phone_2": {
+        "old": "9944440750",
+        "new": "9443993325"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 18,
+    "db_id": 16719,
+    "college": "Herald",
+    "lead_id": "00Qfw0000043oqxEAA",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9994758999"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4652231807"
+      },
+      "alt_phone_2": {
+        "old": "4652231807",
+        "new": null
+      },
+      "alternative_email": {
+        "old": "sccprincipal2yahoo.com",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 19,
+    "db_id": 16795,
+    "college": "Dr. Umayal Ramanathan College for Women",
+    "lead_id": "00Qfw0000043orBEAQ",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8056671420"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4565227861"
+      },
+      "alt_phone_2": {
+        "old": "4565227861",
+        "new": null
+      },
+      "designation": {
+        "old": null,
+        "new": "placement officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 20,
+    "db_id": 16711,
+    "college": "sumsudin ibrahim",
+    "lead_id": "00Qfw0000043orCEAQ",
+    "diffs": {
+      "mobile": {
+        "old": "9566735863",
+        "new": "6369316050"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9566735863"
+      },
+      "alt_phone_2": {
+        "old": "6369316050",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 21,
+    "db_id": 16738,
+    "college": "Bharath Institute of Higher Education and Research",
+    "lead_id": "00Qfw0000043orVEAQ",
+    "diffs": {
+      "alt_phone": {
+        "old": "4422290125",
+        "new": "4422290742"
+      },
+      "alt_phone_2": {
+        "old": "4422290742",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 22,
+    "db_id": 16767,
+    "college": "Rajalakshmi Engineering College",
+    "lead_id": "00Qfw0000043ordEAA",
+    "diffs": {
+      "alt_phone": {
+        "old": "4426461316",
+        "new": "4426442472"
+      },
+      "alt_phone_2": {
+        "old": "4426442472",
+        "new": "4426461316"
+      },
+      "alt_phone_3": {
+        "old": "67181111",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 23,
+    "db_id": 16698,
+    "college": "Manikandan -",
+    "lead_id": "00Qfw0000043os4EAA",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4272912495"
+      },
+      "alt_phone_2": {
+        "old": "4272912495",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 24,
+    "db_id": 16796,
+    "college": "Thangavel Women\u2019s Arts and Science College(Sri Ganesh Institution)",
+    "lead_id": "00Qfw0000043osGEAQ",
+    "diffs": {
+      "mobile": {
+        "old": "8760415744",
+        "new": "9047122111"
+      },
+      "alt_phone": {
+        "old": "9791303546",
+        "new": "8760415744"
+      },
+      "alt_phone_2": {
+        "old": "9047122111",
+        "new": null
+      },
+      "alternative_email": {
+        "old": "principalthangavelcollege@gmail.com",
+        "new": null
+      },
+      "designation": {
+        "old": "9791303546 Dr.V.Padmavathi Principal",
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 25,
+    "db_id": 16798,
+    "college": "C. Abdul Hakeem College",
+    "lead_id": "00Qfw0000043ouvEAA",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "placement@cahc.edu.in"
+      },
+      "designation": {
+        "old": null,
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 26,
+    "db_id": 16708,
+    "college": "Ram jayanthi",
+    "lead_id": "00Qfw0000043ovGEAQ",
+    "diffs": {
+      "mobile": {
+        "old": "9486861877",
+        "new": "9442237027"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9486861877"
+      },
+      "alt_phone_2": {
+        "old": "9442237027",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 27,
+    "db_id": 16709,
+    "college": "Victoria",
+    "lead_id": "00Qfw0000043ovdEAA",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9442085333"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9442085333"
+      },
+      "alt_phone_2": {
+        "old": "9442085333",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 28,
+    "db_id": 16702,
+    "college": "Fatima College (Autonomous)",
+    "lead_id": "00Qfw000005ICmEEAW",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4522668016"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 29,
+    "db_id": 16792,
+    "college": "St. John's College",
+    "lead_id": "00Qfw000005gckPEAQ",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9944216699"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4622572218"
+      },
+      "alt_phone_2": {
+        "old": "4622572218",
+        "new": null
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "principal@stjohnscollege.edu.in"
+      },
+      "designation": {
+        "old": null,
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 30,
+    "db_id": 16714,
+    "college": "Dr. Boominathan",
+    "lead_id": "00Qfw000005rG0fEAE",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4324220304"
+      },
+      "alt_phone_2": {
+        "old": "4324220304",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 31,
+    "db_id": 16713,
+    "college": "Subramanya College of Arts and Science",
+    "lead_id": "00Qfw000005we3uEAA",
+    "diffs": {
+      "mobile": {
+        "old": "9566715858",
+        "new": "6385574004"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9566715858"
+      },
+      "alt_phone_2": {
+        "old": "6385574004",
+        "new": null
+      },
+      "email": {
+        "old": "hrscas09@gmail.com",
+        "new": "scas_09@yahoo.co.in"
+      },
+      "alternative_email": {
+        "old": "Scas_09@yahoo.co.in",
+        "new": "hrscas09@gmail.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 32,
+    "db_id": 16794,
+    "college": "Ambai Arts College",
+    "lead_id": "00Qfw000006R8UHEA0",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9344278055"
+      },
+      "alt_phone_2": {
+        "old": "9344278055",
+        "new": null
+      },
+      "designation": {
+        "old": null,
+        "new": "HOD"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 33,
+    "db_id": 16790,
+    "college": "Rajapalayam Rajus' College",
+    "lead_id": "00Qfw000006jGtgEAE",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9942330335"
+      },
+      "alt_phone_2": {
+        "old": "9942330335",
+        "new": null
+      },
+      "designation": {
+        "old": null,
+        "new": "Placement Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 35,
+    "db_id": 16737,
+    "college": "Thiru Seven Hills Polytechnic College",
+    "lead_id": "00Qfw000007ubFUEAY",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4424764492"
+      },
+      "alt_phone_2": {
+        "old": "4424764492",
+        "new": "7067316980"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4563289119"
+      },
+      "alternative_email": {
+        "old": null,
+        "new": "vpmmecw@rediffmail.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 36,
+    "db_id": 16722,
+    "college": "Thai Moogambigai Polytechnic College",
+    "lead_id": "00Qfw000009CrGREA0",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7200093593"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4445548359"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 37,
+    "db_id": 16801,
+    "college": "Little Flower Polytechnic College",
+    "lead_id": "00Qfw000009CrGXEA0",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "9778914285"
+      },
+      "email": {
+        "old": "placementlf@gmail.com",
+        "new": "placements@lfdc.edu.in"
+      },
+      "designation": {
+        "old": null,
+        "new": "Placement Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 38,
+    "db_id": 16803,
+    "college": "Jaya Polytechnic College",
+    "lead_id": "00Qfw000009CrGdEAK",
+    "diffs": {
+      "mobile": {
+        "old": "8807450450",
+        "new": "9962300441"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "8807450450"
+      },
+      "email": {
+        "old": "info@jayapolytechnic.co.in",
+        "new": null
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "admission@jec.ac.in"
+      },
+      "designation": {
+        "old": null,
+        "new": "Placement - Eashwari Mam"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 39,
+    "db_id": 16723,
+    "college": "Selvaraj",
+    "lead_id": "00Qfw000009CrGhEAK",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4426385713"
+      },
+      "alt_phone_2": {
+        "old": "4426385713",
+        "new": "4426382921"
+      },
+      "email": {
+        "old": "pmcplacement1@gmail.com",
+        "new": "mpcplacement1@gmail.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 40,
+    "db_id": 16748,
+    "college": "Jai Shriram Engineering College",
+    "lead_id": "00Qfw000009Cu40EAC",
+    "diffs": {
+      "mobile": {
+        "old": "9786921919",
+        "new": "97869 21919"
+      },
+      "alt_phone": {
+        "old": "9047098310",
+        "new": "90470 98310"
+      },
+      "designation": {
+        "old": null,
+        "new": "Administrative Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 41,
+    "db_id": 16733,
+    "college": "ADHI COLLEGE OF ENGINEERING",
+    "lead_id": "00Qfw000009Cu4FEAS",
+    "diffs": {
+      "mobile": {
+        "old": "9952971485",
+        "new": "8939942596"
+      },
+      "alt_phone": {
+        "old": "8939942596",
+        "new": null
+      },
+      "designation": {
+        "old": "Krishnamoorthy K.P",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 42,
+    "db_id": 16777,
+    "college": "Sri Sivasubramaniya Nadar College of Engineering",
+    "lead_id": "00Qfw000009D2tLEAS",
+    "diffs": {
+      "mobile": {
+        "old": "9849803017",
+        "new": "98498 03017"
+      },
+      "alt_phone_2": {
+        "old": "4427469700",
+        "new": "4427469700,4427469772"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4427469700"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "placement@snuchennai.edu.in, placement@ssn.edu.in"
+      },
+      "designation": {
+        "old": "M S Alphin",
+        "new": "Faculty In-Charge - Career Development Centre"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 43,
+    "db_id": 16785,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw000009DPbLEAW",
+    "diffs": {
+      "alt_phone": {
+        "old": "4427277260",
+        "new": "4652260511"
+      },
+      "alt_phone_2": {
+        "old": "4652260511",
+        "new": "044-27277260"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4146224500"
+      },
+      "email": {
+        "old": "deanucen@gmail.com",
+        "new": "ucev_auc@yahoo.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 44,
+    "db_id": 16776,
+    "college": "Sri Ramanujar Engineering College, Chennai",
+    "lead_id": "00Qfw000009DPbNEAW",
+    "diffs": {
+      "alt_phone": {
+        "old": "9444859455",
+        "new": "+91 94448 59455"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "044 22751380"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "admissions@sriramanujar.ac.in"
+      },
+      "designation": {
+        "old": "Deiva Manohari",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 45,
+    "db_id": 16749,
+    "college": "Jawahar Engineering College",
+    "lead_id": "00Qfw000009DPbQEAW",
+    "diffs": {
+      "alt_phone": {
+        "old": "4423763281",
+        "new": "044-2376 3281"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 46,
+    "db_id": 16771,
+    "college": "Sree Sastha Institute of Engineering and Technology",
+    "lead_id": "00Qfw000009DPbXEAW",
+    "diffs": {
+      "alt_phone_2": {
+        "old": "7358039155",
+        "new": "044-26440165"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "7358039155"
+      },
+      "designation": {
+        "old": null,
+        "new": "Prinicpal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 47,
+    "db_id": 16739,
+    "college": "Dhanalakshmi College of Engineering",
+    "lead_id": "00Qfw000009DPbZEAW",
+    "diffs": {
+      "alt_phone": {
+        "old": "4471700800",
+        "new": "044 7170 0800"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 48,
+    "db_id": 16724,
+    "college": "Bhajarang Engineering College",
+    "lead_id": "00Qfw000009DPbeEAG",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "044 2762 4665"
+      },
+      "alt_phone_2": {
+        "old": "044 2762 4665",
+        "new": "4427697540"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 49,
+    "db_id": 16766,
+    "college": "Prathyusha Engineering College (PEC)",
+    "lead_id": "00Qfw000009DPbhEAG",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9445382005"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "044 3767 3767"
+      },
+      "alt_phone_2": {
+        "old": "9445382005",
+        "new": "4427620331"
+      },
+      "email": {
+        "old": "prathyusha@principal.edu.in",
+        "new": "principal@prathyusha.edu.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 50,
+    "db_id": 16804,
+    "college": "Panimalar Engineering College, Chennai",
+    "lead_id": "00Qfw000009DPbiEAG",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4426490505"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 52,
+    "db_id": 16742,
+    "college": "Gojan School of Business and Technology",
+    "lead_id": "00Qfw00000ARoZYEA1",
+    "diffs": {
+      "alt_phone": {
+        "old": "1072398485",
+        "new": "7010723984/85"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 53,
+    "db_id": 16744,
+    "college": "Imayam College of Education",
+    "lead_id": "00Qfw00000DPXAVEA5",
+    "diffs": {
+      "alt_phone": {
+        "old": "4327239301",
+        "new": "4327290404"
+      },
+      "alt_phone_2": {
+        "old": "4327290404",
+        "new": "4327239301"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4327239660"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 54,
+    "db_id": 16731,
+    "college": "ACT College of Engineering and Technology",
+    "lead_id": "00Qfw00000FIT4aEAH",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "044 - 27293090"
+      },
+      "alt_phone_2": {
+        "old": "044 - 27293090",
+        "new": "(044) 29895090"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 55,
+    "db_id": 16736,
+    "college": "Asan Memorial College of Engineering and Technology",
+    "lead_id": "00Qfw00000FIT4eEAH",
+    "diffs": {
+      "mobile": {
+        "old": "8327447106",
+        "new": "9789745649"
+      },
+      "alt_phone_2": {
+        "old": "9789745649",
+        "new": "(044) 27447283, 27447106"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "9790130194"
+      },
+      "designation": {
+        "old": "Gunasageran",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 56,
+    "db_id": 16751,
+    "college": "Jeppiaar Institute of Technology",
+    "lead_id": "00Qfw00000FIT4iEAH",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "7401222010"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "network@jeppiaarinstitute.org"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 57,
+    "db_id": 16754,
+    "college": "Lord Venkateswaraa Engineering College",
+    "lead_id": "00Qfw00000FIT4mEAH",
+    "diffs": {
+      "alt_phone": {
+        "old": "044 - 27222238",
+        "new": "4427258047"
+      },
+      "alt_phone_2": {
+        "old": "4427258047",
+        "new": "4422260925"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "(044) 27258047, 27258048"
+      },
+      "alternative_email": {
+        "old": "Lordvenkateswaraaenggcollege@yahoo.com",
+        "new": "lordvenkateswaraaenggcollege@yahoo.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 58,
+    "db_id": 16752,
+    "college": "Pallavan College of Engineering",
+    "lead_id": "00Qfw00000FIT4oEAH",
+    "diffs": {
+      "alt_phone": {
+        "old": "4427277721",
+        "new": "044 - 27277967"
+      },
+      "alt_phone_2": {
+        "old": "044 - 27277967",
+        "new": "4427277721"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "pce_kanchi@rediffmail.com,admin@pallavan.edu.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 59,
+    "db_id": 16763,
+    "college": "PB College of Engineering",
+    "lead_id": "00Qfw00000FIT4pEAH",
+    "diffs": {
+      "alt_phone_2": {
+        "old": "9600113031",
+        "new": "9551525439"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "(044) 24766386, 27198033,9600113031"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "pbce@pbce.co.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 60,
+    "db_id": 16768,
+    "college": "Rajiv Gandhi College of Engineering",
+    "lead_id": "00Qfw00000FIT4qEAH",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "044 - 4269 3949, 2619 4729"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "principal@rgce.edu.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 61,
+    "db_id": 16783,
+    "college": "Thirumalai College of Engineering (TEC)",
+    "lead_id": "00Qfw00000FIT4vEAH",
+    "diffs": {
+      "alt_phone": {
+        "old": "4427277866",
+        "new": "(044) 27277866"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "829tpc@gmail.com,thirumalaiengg1999@yahoo.co.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 62,
+    "db_id": 16779,
+    "college": "SRM Valliammai Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000FIT4wEAH",
+    "diffs": {
+      "alt_phone": {
+        "old": "4427454784",
+        "new": "044 \u2013 27454784"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "726, 27451498"
+      },
+      "designation": {
+        "old": "M.VENKATESH M",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 63,
+    "db_id": 16735,
+    "college": "Arulmigu Meenakshi Amman College of Engineering - AMACE",
+    "lead_id": "00Qfw00000FIT50EAH",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "(044) 247226, 247515, 247517"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "9080205377"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "admin@amace.edu.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 64,
+    "db_id": 16769,
+    "college": "SKP Engineering College",
+    "lead_id": "00Qfw00000FIT53EAH",
+    "diffs": {
+      "alt_phone_3": {
+        "old": null,
+        "new": "9487512927"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 65,
+    "db_id": 16772,
+    "college": "Sri Balaji Chockalingam Engineering College - SBCEC",
+    "lead_id": "00Qfw00000FIT54EAH",
+    "diffs": {
+      "mobile": {
+        "old": "9790523875",
+        "new": "222075"
+      },
+      "alt_phone": {
+        "old": "4173227393",
+        "new": "04173 - 227393"
+      },
+      "alt_phone_2": {
+        "old": "222075",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 66,
+    "db_id": 16784,
+    "college": "Thiruvalluvar College of Engineering and Technology",
+    "lead_id": "00Qfw00000FIT56EAH",
+    "diffs": {
+      "alt_phone": {
+        "old": "4183203083",
+        "new": "04183 - 203083"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 67,
+    "db_id": 16595,
+    "college": "Shivani Engineering College",
+    "lead_id": "00Qfw00000IKhuTEAT",
+    "diffs": {
+      "alt_phone": {
+        "old": "4288255716",
+        "new": "8610840833"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 68,
+    "db_id": 16755,
+    "college": "MIET Engineering College",
+    "lead_id": "00Qfw00000IKhuVEAT",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "mech.hod@miet.edu"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 69,
+    "db_id": 16758,
+    "college": "Mahath amma Institute of engineering and technology",
+    "lead_id": "00Qfw00000IKhubEAD",
+    "diffs": {
+      "alt_phone": {
+        "old": "8056928011",
+        "new": "918056928011"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "8072986343/9180569 28011"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "maietpdkt@gmail.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 70,
+    "db_id": 16770,
+    "college": "Shanmuganathan Engineering college",
+    "lead_id": "00Qfw00000IKhueEAD",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "7373731541"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 71,
+    "db_id": 16747,
+    "college": "J P College of Engineering",
+    "lead_id": "00Qfw00000IKhulEAD",
+    "diffs": {
+      "designation": {
+        "old": "9486125284 AYYAPPAN INCUBATION",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 72,
+    "db_id": 16762,
+    "college": "Muthayammal Engineering College",
+    "lead_id": "00Qfw00000IKhurEAD",
+    "diffs": {
+      "designation": {
+        "old": "9940967537 placement",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 73,
+    "db_id": 16732,
+    "college": "A.K.T. Memorial College of Engineering and Technology",
+    "lead_id": "00Qfw00000IKhusEAD",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "principal.aktmcet@gmail.com"
+      },
+      "alternative_email": {
+        "old": "principal.aktmcet@gmail.com",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 74,
+    "db_id": 16743,
+    "college": "Idhaya Engineering College for Women",
+    "lead_id": "00Qfw00000IKhutEAD",
+    "diffs": {
+      "mobile": {
+        "old": "9894254784",
+        "new": "98942 54784"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "258326"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "principal@iecw.edu.in"
+      },
+      "alternative_email": {
+        "old": "principal@iecw.edu.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 75,
+    "db_id": 16757,
+    "college": "Maha Barathi Engineering college",
+    "lead_id": "00Qfw00000IKhuuEAD",
+    "diffs": {
+      "designation": {
+        "old": "9585525333 baskaran",
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 76,
+    "db_id": 16765,
+    "college": "Podhigai College of Engineering and technology",
+    "lead_id": "00Qfw00000IKhuxEAD",
+    "diffs": {
+      "alt_phone": {
+        "old": "4179292228",
+        "new": null
+      },
+      "email": {
+        "old": "podhigaitech@gmail.com",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 77,
+    "db_id": 16761,
+    "college": "Mount Zion college of engineering",
+    "lead_id": "00Qfw00000IKiiTEAT",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "contactmountzion@gmail.com"
+      },
+      "alternative_email": {
+        "old": "contactmountzion@gmail.com",
+        "new": null
+      },
+      "designation": {
+        "old": null,
+        "new": "principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 78,
+    "db_id": 16778,
+    "college": "Sri Venkateswara College of Engineering",
+    "lead_id": "00Qfw00000M5k0qEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "044-27152000"
+      },
+      "email": {
+        "old": "hod@svce.ac.in",
+        "new": "hodee@svce.ac.in"
+      },
+      "secondary_email": {
+        "old": "acm@svce.ac.in",
+        "new": "placement@svce.ac.in"
+      },
+      "designation": {
+        "old": "A.K. BOOBALASENTHILRAJ",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 79,
+    "db_id": 16764,
+    "college": "P T Lee Chengalvaraya Naickerprivate Industrial Training Institute",
+    "lead_id": "00Qfw00000MasWyEAJ",
+    "diffs": {
+      "alt_phone": {
+        "old": "7373123570",
+        "new": "917373123570"
+      },
+      "alt_phone_2": {
+        "old": "4427294093",
+        "new": "4426433090"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4427294093"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "ptleecniti@gmail.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 80,
+    "db_id": 15535,
+    "college": "prabhagaran",
+    "lead_id": "00Qfw00000OVELpEAP",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4173242648"
+      },
+      "alt_phone_3": {
+        "old": "4173242648",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 81,
+    "db_id": 15576,
+    "college": "kalaichalwan",
+    "lead_id": "00Qfw00000OVELqEAP",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9655144999"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9943182849"
+      },
+      "alt_phone_2": {
+        "old": "9655144999",
+        "new": null
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4173242648"
+      },
+      "email": {
+        "old": "principal@apce.in",
+        "new": "bharathiyar@biew.ac.in"
+      },
+      "secondary_email": {
+        "old": "apceplacement08@gmail.com",
+        "new": "placement@biew.ac.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 82,
+    "db_id": 15578,
+    "college": "C Abdul Hakeem College of Engineering and Technology",
+    "lead_id": "00Qfw00000OVELrEAP",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4172267387"
+      },
+      "alt_phone_2": {
+        "old": "4172267387",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 83,
+    "db_id": 16773,
+    "college": "SRI KRISHNA ENGINEERING COLLEGE",
+    "lead_id": "00Qfw00000UxBizEAF",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "principal@skcet.ac.in"
+      },
+      "alternative_email": {
+        "old": "principal@skcet.ac.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 84,
+    "db_id": 16750,
+    "college": "Jayaram College of Engineering and Technology",
+    "lead_id": "00Qfw00000UyD1JEAV",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4327230270"
+      },
+      "alt_phone_2": {
+        "old": "4327230270",
+        "new": "4327230290"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "eee_hod@jayaramcet.edu"
+      },
+      "designation": {
+        "old": "Sharmila",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 86,
+    "db_id": 16569,
+    "college": "Ranipettai Engineering College",
+    "lead_id": "00Qfw00000UynUSEAZ",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9790022606"
+      },
+      "alt_phone": {
+        "old": "9790022606",
+        "new": "4172299501"
+      },
+      "alt_phone_2": {
+        "old": "4172299501",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 87,
+    "db_id": 16725,
+    "college": "Principal",
+    "lead_id": "00Qfw00000UywxcEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8248278383"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9345363117"
+      },
+      "alt_phone_2": {
+        "old": "8248278383",
+        "new": null
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "9787567892"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 88,
+    "db_id": 16665,
+    "college": "United Institute of Technology",
+    "lead_id": "00Qfw00000UzS1TEAV",
+    "diffs": {
+      "alt_phone": {
+        "old": "9281090009",
+        "new": "4223508080"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 90,
+    "db_id": 16667,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1WEAV",
+    "diffs": {
+      "alt_phone": {
+        "old": "4223508080",
+        "new": "4173244400"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4173244401"
+      },
+      "alt_phone_3": {
+        "old": "4173244400",
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 91,
+    "db_id": 16668,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1XEAV",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 92,
+    "db_id": 16669,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1YEAV",
+    "diffs": {
+      "alt_phone": {
+        "old": "4173244401",
+        "new": "4427277220"
+      },
+      "alt_phone_2": {
+        "old": "4427277220",
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 93,
+    "db_id": 16670,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1aEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4142241000"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4142230652"
+      },
+      "alt_phone_3": {
+        "old": "4142241000",
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 94,
+    "db_id": 16786,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1bEAF",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "plsenthilkumar@gcetj.edu.in"
+      },
+      "alternative_email": {
+        "old": "plsenthilkumar@gcetj.edu.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 95,
+    "db_id": 16671,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1cEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4567260262"
+      },
+      "alt_phone_2": {
+        "old": "4567260262",
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 96,
+    "db_id": 16672,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1dEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": "4142230652",
+        "new": "4366245234"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 98,
+    "db_id": 16673,
+    "college": "University College of Engineering",
+    "lead_id": "00Qfw00000UzS1fEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4312407946"
+      },
+      "alt_phone_2": {
+        "old": "4312407946",
+        "new": "4146224500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 99,
+    "db_id": 16674,
+    "college": "University Departments of Anna University",
+    "lead_id": "00Qfw00000UzS1hEAF",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9840282128"
+      },
+      "alt_phone": {
+        "old": "4366245234",
+        "new": "4422358314"
+      },
+      "alt_phone_2": {
+        "old": "4422358314",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 101,
+    "db_id": 16676,
+    "college": "University V.O.C. College of Engineering",
+    "lead_id": "00Qfw00000UzS1jEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4612310044"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 102,
+    "db_id": 16677,
+    "college": "Unnamalai Institute of Technology",
+    "lead_id": "00Qfw00000UzS1kEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4632221232"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 103,
+    "db_id": 16788,
+    "college": "V P Muthaiah Pillai Meenakshi Ammal Engineering College for Women",
+    "lead_id": "00Qfw00000UzS1lEAF",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "070673 16980"
+      },
+      "alt_phone": {
+        "old": "04563 - 289001",
+        "new": "4563289119"
+      },
+      "email": {
+        "old": null,
+        "new": "vpmmecw@rediffmail.com"
+      },
+      "alternative_email": {
+        "old": "vpmmecw@rediffmail.com",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 104,
+    "db_id": 16678,
+    "college": "V R S College of Engineering and Technology",
+    "lead_id": "00Qfw00000UzS1mEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4149298053"
+      },
+      "alt_phone_2": {
+        "old": "4149298053",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 105,
+    "db_id": 16679,
+    "college": "V S A Group of Institutions",
+    "lead_id": "00Qfw00000UzS1nEAF",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443143131"
+      },
+      "alt_phone_2": {
+        "old": "9443143131",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 106,
+    "db_id": 16680,
+    "college": "V S B College of Engineering Technical Campus",
+    "lead_id": "00Qfw00000UzS1oEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4259302407"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 108,
+    "db_id": 16682,
+    "college": "Vaigai College of Engineering",
+    "lead_id": "00Qfw00000UzS1rEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": "4259302407",
+        "new": "9444605532"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 110,
+    "db_id": 16684,
+    "college": "Varuvan Vadivelan Institute of Technology",
+    "lead_id": "00Qfw00000UzS1tEAF",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9942113333"
+      },
+      "alt_phone_2": {
+        "old": "9942113333",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 111,
+    "db_id": 16685,
+    "college": "Veerammal Engineering College",
+    "lead_id": "00Qfw00000UzS1uEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4543268444"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 113,
+    "db_id": 16687,
+    "college": "Velalar College of Engineering and Technology (Autonomous)",
+    "lead_id": "00Qfw00000UzS1wEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4242244202"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4242244203"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 115,
+    "db_id": 16689,
+    "college": "Velammal Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000UzS1yEAF",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9444371947"
+      },
+      "alt_phone": {
+        "old": "4242244203",
+        "new": "4426590758"
+      },
+      "alt_phone_2": {
+        "old": "4426590758",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 116,
+    "db_id": 16690,
+    "college": "Velammal Institute of Technology",
+    "lead_id": "00Qfw00000UzS1zEAF",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7200542884"
+      },
+      "alt_phone_2": {
+        "old": "7200542884",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 117,
+    "db_id": 16691,
+    "college": "Vetri Vinayaha College of Engineering and Technology",
+    "lead_id": "00Qfw00000UzS20EAF",
+    "diffs": {
+      "alt_phone": {
+        "old": "9444371947",
+        "new": "8344927744"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 118,
+    "db_id": 16692,
+    "college": "Vi Institute of Technology",
+    "lead_id": "00Qfw00000UzS21EAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4427401696"
+      },
+      "alt_phone_2": {
+        "old": "4427401696",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 119,
+    "db_id": 16693,
+    "college": "Vidhya Vikkas College of Engineering and Technology",
+    "lead_id": "00Qfw00000UzS22EAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4288282222"
+      },
+      "alt_phone_2": {
+        "old": "4288282222",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 120,
+    "db_id": 16694,
+    "college": "Vins Christian College of Engineering",
+    "lead_id": "00Qfw00000UzS23EAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9787455000"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 121,
+    "db_id": 16695,
+    "college": "Vins Christian Womens College of Engineering",
+    "lead_id": "00Qfw00000UzS24EAF",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9786105989"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 122,
+    "db_id": 16789,
+    "college": "Vivekanandha College of Engineering for Women (Autonomous)",
+    "lead_id": "00Qfw00000UzS25EAF",
+    "diffs": {
+      "alt_phone_3": {
+        "old": "94443316542",
+        "new": null
+      },
+      "designation": {
+        "old": "9659845742  college number",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 123,
+    "db_id": 16696,
+    "college": "Vivekanandha College of Technology for Women",
+    "lead_id": "00Qfw00000UzS26EAF",
+    "diffs": {
+      "mobile": {
+        "old": "9787455000",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 124,
+    "db_id": 15610,
+    "college": "EASA College of Engineering and Technology",
+    "lead_id": "00Qfw00000V07uAEAR",
+    "diffs": {
+      "alternative_email": {
+        "old": ": info@easatech.com",
+        "new": "info@easatech.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 125,
+    "db_id": 15614,
+    "college": "placement",
+    "lead_id": "00Qfw00000V07uBEAR",
+    "diffs": {
+      "alternative_email": {
+        "old": "ontact@ esec.ac.in",
+        "new": "contact@esec.ac.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 126,
+    "db_id": 15664,
+    "college": "udhaya kumar",
+    "lead_id": "00Qfw00000V07uCEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9944492926"
+      },
+      "alt_phone_2": {
+        "old": "9944492926",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 127,
+    "db_id": 15672,
+    "college": "Karaikudi Institute of Technology",
+    "lead_id": "00Qfw00000V07uDEAR",
+    "diffs": {
+      "alternative_email": {
+        "old": "kitandkimtechnicalcampus @yahoo.com",
+        "new": "kitandkimtechnicalcampus@yahoo.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 128,
+    "db_id": 15680,
+    "college": "Kings Engineering College",
+    "lead_id": "00Qfw00000V07uEEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9444411193"
+      },
+      "alt_phone": {
+        "old": "9444411193",
+        "new": "4471224400"
+      },
+      "alt_phone_2": {
+        "old": "4471224400",
+        "new": null
+      },
+      "email": {
+        "old": "princial@kingsedu.ac.in",
+        "new": "placement2@kingston.ac.in"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "princial@kingsedu.ac.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 129,
+    "db_id": 16500,
+    "college": "D.Shanmuga Sundaram",
+    "lead_id": "00Qfw00000V07uFEAR",
+    "diffs": {
+      "designation": {
+        "old": "9443023112 principal",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 130,
+    "db_id": 16753,
+    "college": "Krishnaswamy Collge of Engineering and Technology,Cuddalore",
+    "lead_id": "00Qfw00000V0BT9EAN",
+    "diffs": {
+      "email": {
+        "old": "info@kcet.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 132,
+    "db_id": 15529,
+    "college": "A R Engineering College",
+    "lead_id": "00Qfw00000V0cgEEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "04146232131",
+        "new": "4146232121"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4146232131"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 135,
+    "db_id": 15532,
+    "college": "A V S Engineering College",
+    "lead_id": "00Qfw00000V0cgHEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9442700200"
+      },
+      "alt_phone_2": {
+        "old": "9442700200",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 139,
+    "db_id": 15537,
+    "college": "principal",
+    "lead_id": "00Qfw00000V0cgMEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4344261020"
+      },
+      "alt_phone_2": {
+        "old": "4344261020",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 144,
+    "db_id": 15542,
+    "college": "Alagappa Chettair Government College of Engineering and Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0cgREAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4565224528",
+        "new": "4565224535"
+      },
+      "alt_phone_2": {
+        "old": "4565224535",
+        "new": "4565224528"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 145,
+    "db_id": 15543,
+    "college": "Al-Ameen Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0cgSEAR",
+    "diffs": {
+      "designation": {
+        "old": "8075645101",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 146,
+    "db_id": 17368,
+    "college": "sample college",
+    "lead_id": "00Qfw00000V0cgThggf",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9884487551"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9884487553"
+      },
+      "email": {
+        "old": "scollege@gmail.com",
+        "new": "ace@alphagroup.edu"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 148,
+    "db_id": 15546,
+    "college": "AMRITA College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cgVEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4222685000"
+      },
+      "alt_phone_2": {
+        "old": "4222685000",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 149,
+    "db_id": 15547,
+    "college": "Anand Institute of Higher Technology",
+    "lead_id": "00Qfw00000V0cgWEAR",
+    "diffs": {
+      "designation": {
+        "old": "9840930319 sathish kumar",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 151,
+    "db_id": 15549,
+    "college": "Anjalai Ammal-Mahalingam Engineering College",
+    "lead_id": "00Qfw00000V0cgYEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4374232516",
+        "new": "4374232696"
+      },
+      "alt_phone_2": {
+        "old": "4374232696",
+        "new": "4374232516"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 152,
+    "db_id": 15550,
+    "college": "Dean",
+    "lead_id": "00Qfw00000V0cgZEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4222984002"
+      },
+      "alt_phone_2": {
+        "old": "4222984002",
+        "new": "4622551298"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 153,
+    "db_id": 15551,
+    "college": "Anna University Regional Campus",
+    "lead_id": "00Qfw00000V0cgaEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4522555544"
+      },
+      "alt_phone_2": {
+        "old": "4522555544",
+        "new": "4622551298"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 157,
+    "db_id": 15555,
+    "college": "Annai Mira College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cgeEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443711881"
+      },
+      "alt_phone_2": {
+        "old": "9443711881",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 161,
+    "db_id": 15559,
+    "college": "Annamalaiar College of Engineering",
+    "lead_id": "00Qfw00000V0cgjEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "80150497274173247442",
+        "new": "4173247442"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 162,
+    "db_id": 15560,
+    "college": "Annapoorana Engineering College",
+    "lead_id": "00Qfw00000V0cgkEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9786911333"
+      },
+      "alt_phone_2": {
+        "old": "9786911333",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 171,
+    "db_id": 15568,
+    "college": "Arunai Engineering College",
+    "lead_id": "00Qfw00000V0cguEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4175222001",
+        "new": "4175255103"
+      },
+      "alt_phone_2": {
+        "old": "4175255103",
+        "new": "4175222001"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 174,
+    "db_id": 15571,
+    "college": "AVS College of Technology",
+    "lead_id": "00Qfw00000V0cgxEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443317915"
+      },
+      "alt_phone_2": {
+        "old": "9443317915",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 176,
+    "db_id": 15573,
+    "college": "Bethlahem Institute of Engineering",
+    "lead_id": "00Qfw00000V0cgzEAB",
+    "diffs": {
+      "designation": {
+        "old": "9677443026 vice principal",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 178,
+    "db_id": 15575,
+    "college": "principal",
+    "lead_id": "00Qfw00000V0ch1EAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8939690965"
+      },
+      "alt_phone_2": {
+        "old": "8939690965",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 180,
+    "db_id": 15579,
+    "college": "C K College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ch3EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4142227454",
+        "new": "4142227455"
+      },
+      "alt_phone_2": {
+        "old": "4142227455",
+        "new": "4142227454"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 181,
+    "db_id": 15580,
+    "college": "principal",
+    "lead_id": "00Qfw00000V0ch4EAB",
+    "diffs": {
+      "mobile": {
+        "old": "9688794333",
+        "new": "9688 794 333"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4222636054"
+      },
+      "alt_phone_2": {
+        "old": "4222636054",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 183,
+    "db_id": 15582,
+    "college": "C S I College of Engineering",
+    "lead_id": "00Qfw00000V0ch6EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4232517474"
+      },
+      "alt_phone_2": {
+        "old": "4232517474",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 200,
+    "db_id": 15599,
+    "college": "Dhanalakshmi Srinivasan Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0chQEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4328220075",
+        "new": "4328220444"
+      },
+      "alt_phone_2": {
+        "old": "4328220444",
+        "new": "4328220075"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 201,
+    "db_id": 15600,
+    "college": "Dhanalakshmi Srinivasan College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0chREAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4427442844",
+        "new": "4427443844"
+      },
+      "alt_phone_2": {
+        "old": "4427443844",
+        "new": "4427442844"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 202,
+    "db_id": 15601,
+    "college": "Dhanalakshmi Srinivasan College of Engineering",
+    "lead_id": "00Qfw00000V0chSEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4222935353"
+      },
+      "alt_phone_2": {
+        "old": "4222935353",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 209,
+    "db_id": 15608,
+    "college": "Dr. Sivanthi Aditanar College of Engineering",
+    "lead_id": "00Qfw00000V0chbEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4639220702",
+        "new": "4639220700"
+      },
+      "alt_phone_2": {
+        "old": "4639220700",
+        "new": "4639220702"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 213,
+    "db_id": 15613,
+    "college": "Er. Perumal Manimekalai College of Engineering",
+    "lead_id": "00Qfw00000V0chfEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9894583832"
+      },
+      "alt_phone": {
+        "old": "9894583832",
+        "new": "4344257242"
+      },
+      "alt_phone_2": {
+        "old": "4344257242",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 217,
+    "db_id": 15617,
+    "college": "G K M College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0chkEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4422792401",
+        "new": "4422794023"
+      },
+      "alt_phone_2": {
+        "old": "4422794023",
+        "new": "4422792401"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 221,
+    "db_id": 16506,
+    "college": "Mahendra College of Engineering",
+    "lead_id": "00Qfw00000V0cjXEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4272482884"
+      },
+      "alt_phone_2": {
+        "old": "4272482884",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 225,
+    "db_id": 16509,
+    "college": "Mailam Engineering College",
+    "lead_id": "00Qfw00000V0cjcEAB",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4147241551"
+      },
+      "email": {
+        "old": "principal@mailamengg.com",
+        "new": "placementofficer@mailamengg.com"
+      },
+      "secondary_email": {
+        "old": "placementofficer@mailamengg.com",
+        "new": "principal@mailamengg.com"
+      },
+      "designation": {
+        "old": "9384124855 sathish kumar",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 226,
+    "db_id": 16510,
+    "college": "Mangayarkarasi College of Engineering",
+    "lead_id": "00Qfw00000V0cjdEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4522668635",
+        "new": "914522668635"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "914522665455"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 227,
+    "db_id": 16511,
+    "college": "MAR Ephraem College of Engineering & Technology",
+    "lead_id": "00Qfw00000V0cjeEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4147241551",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 228,
+    "db_id": 16512,
+    "college": "Maria College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cjfEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4522665455",
+        "new": "4651282310"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 230,
+    "db_id": 16514,
+    "college": "Meenakshi College of Engineering",
+    "lead_id": "00Qfw00000V0cjhEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8925977079"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 231,
+    "db_id": 16515,
+    "college": "Meenakshi Ramaswamy Engineering College",
+    "lead_id": "00Qfw00000V0cjiEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9790841893"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 232,
+    "db_id": 16516,
+    "college": "Meenakshi Sundararajan Engineering College",
+    "lead_id": "00Qfw00000V0cjjEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "8925977079",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 233,
+    "db_id": 16517,
+    "college": "Mepco Schlenk Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0cjkEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9790841893",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4562235120"
+      },
+      "email": {
+        "old": "info@mrengineeringcollege.org",
+        "new": "msec@mepcoeng.ac.in"
+      },
+      "designation": {
+        "old": "9965048331 principal",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 234,
+    "db_id": 16518,
+    "college": "Mohamed Sathak A J College of Engineering",
+    "lead_id": "00Qfw00000V0cjmEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9940004500"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 235,
+    "db_id": 16519,
+    "college": "Mohamed Sathak Engineering College",
+    "lead_id": "00Qfw00000V0cjnEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4562235120",
+        "new": "8925912336"
+      },
+      "designation": {
+        "old": "9952224083 sabari ramachandran",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 236,
+    "db_id": 16520,
+    "college": "Mookambigai College of Engineering",
+    "lead_id": "00Qfw00000V0cjoEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9940004500",
+        "new": null
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4339262141"
+      },
+      "alt_phone_2": {
+        "old": "4339262141",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 237,
+    "db_id": 16521,
+    "college": "Mother Terasa College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cjpEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "8925912336",
+        "new": "9942988608"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 239,
+    "db_id": 16523,
+    "college": "Mr. A. Sabarinathan",
+    "lead_id": "00Qfw00000V0cjtEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "9942988608",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 240,
+    "db_id": 16524,
+    "college": "Nadar Saraswathi College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cjuEAB",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4546263902"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 242,
+    "db_id": 16526,
+    "college": "Narasus Sarathy Institute of Technology",
+    "lead_id": "00Qfw00000V0cjwEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4290249661"
+      },
+      "alt_phone_2": {
+        "old": "4290249661",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 243,
+    "db_id": 16527,
+    "college": "Narayanaguru College of Engineering",
+    "lead_id": "00Qfw00000V0cjxEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9400980010"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 244,
+    "db_id": 16528,
+    "college": "National Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0cjyEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9385976684"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 245,
+    "db_id": 16529,
+    "college": "Nehru Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cjzEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "9400980010",
+        "new": "8870005337"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 246,
+    "db_id": 16530,
+    "college": "Nellai College of Engineering",
+    "lead_id": "00Qfw00000V0ck1EAB",
+    "diffs": {
+      "mobile": {
+        "old": "9385976684",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4635256344"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 247,
+    "db_id": 16531,
+    "college": "Nelliandavar Institute of Technology",
+    "lead_id": "00Qfw00000V0ck2EAB",
+    "diffs": {
+      "mobile": {
+        "old": "8870005337",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": "04222206148",
+        "new": null
+      },
+      "designation": {
+        "old": "2380007 engineering number",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 248,
+    "db_id": 16532,
+    "college": "New Prince Shri Bhavani College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ck3EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4635256344",
+        "new": "9152666444"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 249,
+    "db_id": 16533,
+    "college": "OASYS Institute of Technology",
+    "lead_id": "00Qfw00000V0ck4EAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7401298259"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 250,
+    "db_id": 16534,
+    "college": "Oxford College of Engineering",
+    "lead_id": "00Qfw00000V0ck5EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "9152666444",
+        "new": "9964313495"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 251,
+    "db_id": 16535,
+    "college": "Oxford Engineering College",
+    "lead_id": "00Qfw00000V0ck6EAB",
+    "diffs": {
+      "mobile": {
+        "old": "7401298259",
+        "new": "8072471490"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 252,
+    "db_id": 16536,
+    "college": "P A College of Engineering and Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0ck7EAB",
+    "diffs": {
+      "mobile": {
+        "old": "9964313495",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 253,
+    "db_id": 16537,
+    "college": "P G P College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ck9EAB",
+    "diffs": {
+      "mobile": {
+        "old": "8072471490",
+        "new": "8939808574"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4428311313"
+      },
+      "alt_phone_2": {
+        "old": "4428311313",
+        "new": null
+      },
+      "designation": {
+        "old": "9840890011 placement",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 255,
+    "db_id": 16539,
+    "college": "P P G Institute of Technology",
+    "lead_id": "00Qfw00000V0ckBEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "8939808574",
+        "new": "9047777977"
+      },
+      "designation": {
+        "old": "9003927788 keerthika placement",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 257,
+    "db_id": 16541,
+    "college": "P S N A Colllege of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckDEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9047777977",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 258,
+    "db_id": 16542,
+    "college": "P S N College of Engineering and Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0ckEEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9363491894"
+      },
+      "designation": {
+        "old": "9500608896 principal",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 259,
+    "db_id": 16543,
+    "college": "P S R Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0ckFEAR",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4562239600"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 260,
+    "db_id": 16544,
+    "college": "principal",
+    "lead_id": "00Qfw00000V0ckGEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9445055991"
+      },
+      "alt_phone_2": {
+        "old": "9445055991",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 261,
+    "db_id": 16545,
+    "college": "P T R College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckIEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4562239600",
+        "new": "4526915079"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 262,
+    "db_id": 16546,
+    "college": "Paavai College of Engineering",
+    "lead_id": "00Qfw00000V0ckJEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4286243058",
+        "new": "4286243038"
+      },
+      "alt_phone_2": {
+        "old": "4286243038",
+        "new": "4286243058"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 263,
+    "db_id": 16547,
+    "college": "Pandian Saraswathi Yadav Engineering College",
+    "lead_id": "00Qfw00000V0ckLEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4526915079",
+        "new": "7373002628"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 264,
+    "db_id": 16548,
+    "college": "Parisutham Institute of Technology and Science",
+    "lead_id": "00Qfw00000V0ckNEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4362255954"
+      },
+      "alt_phone_2": {
+        "old": "4362255954",
+        "new": "4362256585"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 265,
+    "db_id": 16549,
+    "college": "Park College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckOEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "7373002628",
+        "new": "9443752222"
+      },
+      "designation": {
+        "old": "7708344415 placement",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 266,
+    "db_id": 16550,
+    "college": "Pavendhar Bharathidasan College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckPEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9791899998"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 267,
+    "db_id": 16551,
+    "college": "PERI Institute of Technology",
+    "lead_id": "00Qfw00000V0ckQEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9443752222",
+        "new": "9150594222"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4435055400"
+      },
+      "alt_phone_2": {
+        "old": "4435055400",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 268,
+    "db_id": 16552,
+    "college": "PET Engineering College",
+    "lead_id": "00Qfw00000V0ckREAR",
+    "diffs": {
+      "mobile": {
+        "old": "9791899998",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4637220099"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 269,
+    "db_id": 16553,
+    "college": "Pollachi Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckTEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "9150594222",
+        "new": "9342224893"
+      },
+      "designation": {
+        "old": "8925995644 krishna",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 270,
+    "db_id": 16554,
+    "college": "Ponjesly College of Engineering",
+    "lead_id": "00Qfw00000V0ckUEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9489986220"
+      },
+      "alt_phone": {
+        "old": "4637220099",
+        "new": "4652259680"
+      },
+      "alt_phone_2": {
+        "old": "4652259680",
+        "new": null
+      },
+      "designation": {
+        "old": "9363789289 placement officer",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 271,
+    "db_id": 16557,
+    "college": "PSG College of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0ckZEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4222572177",
+        "new": "984010040"
+      },
+      "email": {
+        "old": "placement@psgtech.ac.in",
+        "new": "prince@princedrkvasudevan.com"
+      },
+      "secondary_email": {
+        "old": "dean.admn@psgtech.ac.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 272,
+    "db_id": 16555,
+    "college": "Prince Shri Venkateshwara Padmavathy Enginering College",
+    "lead_id": "00Qfw00000V0ckXEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "9342224893",
+        "new": "9047040413"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 273,
+    "db_id": 16556,
+    "college": "Priyadarshini Engineering College",
+    "lead_id": "00Qfw00000V0ckYEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9047583337"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9047666428"
+      },
+      "alt_phone_2": {
+        "old": "9047583337",
+        "new": null
+      },
+      "designation": {
+        "old": "9363789289 placement",
+        "new": "Hod"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 274,
+    "db_id": 16557,
+    "college": "PSG College of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0ckZEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9047040413",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4222572477"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 275,
+    "db_id": 16558,
+    "college": "PSG Institute of Technology and Applied Research",
+    "lead_id": "00Qfw00000V0ckaEAB",
+    "diffs": {
+      "alt_phone_2": {
+        "old": "9047666428",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 276,
+    "db_id": 16559,
+    "college": "R M D Engineering College",
+    "lead_id": "00Qfw00000V0ckbEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4222572477",
+        "new": "4467919191"
+      },
+      "alt_phone_2": {
+        "old": "4467919191",
+        "new": "4467919190"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 277,
+    "db_id": 16560,
+    "college": "R M K College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckcEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "914467906790"
+      },
+      "alt_phone_2": {
+        "old": "914467906790",
+        "new": null
+      },
+      "email": {
+        "old": "pnp@rmkec.ac.in",
+        "new": "principal@rmkec.ac.in"
+      },
+      "secondary_email": {
+        "old": "principal@rmkec.ac.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 278,
+    "db_id": 16561,
+    "college": "R V S College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckeEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4467919190",
+        "new": null
+      },
+      "email": {
+        "old": "principalcet@rvsgroup.com",
+        "new": "drgmohankumarnit@gmail.com"
+      },
+      "secondary_email": {
+        "old": "drgmohankumarnit@gmail.com",
+        "new": "principalcet@rvsgroup.com"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 279,
+    "db_id": 16562,
+    "college": "R V S College of Engineering",
+    "lead_id": "00Qfw00000V0ckfEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9976441414",
+        "new": "99764 41414"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "98424 49283"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 280,
+    "db_id": 16563,
+    "college": "R V S Padmavathy College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckgEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4437906060"
+      },
+      "alt_phone_2": {
+        "old": "4437906060",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 281,
+    "db_id": 16564,
+    "college": "R V S Technical Campus-Coimbatore",
+    "lead_id": "00Qfw00000V0ckhEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9842449283",
+        "new": "8903949934"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4222687200"
+      },
+      "alt_phone_2": {
+        "old": "4222687200",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 283,
+    "db_id": 16566,
+    "college": "Rajalakshmi Institute of Technology",
+    "lead_id": "00Qfw00000V0ckkEAB",
+    "diffs": {
+      "mobile": {
+        "old": "8903949934",
+        "new": "8925977445"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 285,
+    "db_id": 16568,
+    "college": "Ramco Institute of Technology",
+    "lead_id": "00Qfw00000V0cknEAB",
+    "diffs": {
+      "mobile": {
+        "old": "8925977445",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4563233401"
+      },
+      "email": {
+        "old": "rit@ritrjpm.ac.in",
+        "new": "principal@ritrjpm.ac.in"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "rit@ritrjpm.ac.in"
+      },
+      "alternative_email": {
+        "old": "principal@ritrjpm.ac.in",
+        "new": null
+      },
+      "designation": {
+        "old": "hari haran",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 286,
+    "db_id": 16570,
+    "college": "Rathinam Technical Campus",
+    "lead_id": "00Qfw00000V0ckoEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4563233401",
+        "new": "8448448909"
+      },
+      "designation": {
+        "old": "6380514008  placement",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 287,
+    "db_id": 16571,
+    "college": "Renganayagi Varatharaj College of Engineering",
+    "lead_id": "00Qfw00000V0ckpEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9750970177"
+      },
+      "designation": {
+        "old": "9750970112  vice principal tamil selvi",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 288,
+    "db_id": 16572,
+    "college": "Roever College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0ckqEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4328278110"
+      },
+      "alt_phone_2": {
+        "old": "4328278110",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 289,
+    "db_id": 16573,
+    "college": "Rohini College of Engineering & Technology",
+    "lead_id": "00Qfw00000V0ckrEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "9750970177",
+        "new": "8531088888"
+      },
+      "email": {
+        "old": "admin@rcet.org.in",
+        "new": "principal@roedvrengg.edu.in"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "admin@rcet.org.in"
+      },
+      "alternative_email": {
+        "old": "principal@roedvrengg.edu.in",
+        "new": null
+      },
+      "designation": {
+        "old": "9750970177  principal",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 290,
+    "db_id": 16574,
+    "college": "Rrase College of Engineering",
+    "lead_id": "00Qfw00000V0cksEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9363304040"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 291,
+    "db_id": 16575,
+    "college": "S A Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0cktEAB",
+    "diffs": {
+      "mobile": {
+        "old": "8531088888",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4426801499"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 292,
+    "db_id": 16576,
+    "college": "S K R Engineering College",
+    "lead_id": "00Qfw00000V0ckvEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "9363304040",
+        "new": "9789055447"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 293,
+    "db_id": 16577,
+    "college": "S N S College of Engineering (Autonomous),",
+    "lead_id": "00Qfw00000V0ckwEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4426801499",
+        "new": "7550316709"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 294,
+    "db_id": 16578,
+    "college": "S N S College of Technology (Autonomous),",
+    "lead_id": "00Qfw00000V0ckxEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "9789055447",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 295,
+    "db_id": 16579,
+    "college": "S S M College of Engineering",
+    "lead_id": "00Qfw00000V0ckyEAB",
+    "diffs": {
+      "mobile": {
+        "old": "7550316709",
+        "new": null
+      },
+      "email": {
+        "old": "enquiries@ssmce.ac.in",
+        "new": "principal@ssmce.org.in"
+      },
+      "secondary_email": {
+        "old": null,
+        "new": "enquiries@ssmce.ac.in"
+      },
+      "alternative_email": {
+        "old": "principal@ssmce.org.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 296,
+    "db_id": 15618,
+    "college": "placement officer",
+    "lead_id": "00Qfw00000V0cmbEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9790753493"
+      },
+      "alt_phone": {
+        "old": "9790753493",
+        "new": "4162230900"
+      },
+      "alt_phone_2": {
+        "old": "4162230900",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 298,
+    "db_id": 15620,
+    "college": "placement officer",
+    "lead_id": "00Qfw00000V0cmdEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9842072372"
+      },
+      "alt_phone_2": {
+        "old": "9842072372",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 299,
+    "db_id": 15621,
+    "college": "Global Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cmeEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443132622"
+      },
+      "alt_phone_2": {
+        "old": "9443132622",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 302,
+    "db_id": 15624,
+    "college": "Government College of Engineering (Autonomous)",
+    "lead_id": "00Qfw00000V0cmiEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4343266067"
+      },
+      "alt_phone_2": {
+        "old": "4343266067",
+        "new": "4272346157"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4272346102"
+      },
+      "designation": {
+        "old": "jamuna 9940867428 placement",
+        "new": "Placement Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 303,
+    "db_id": 15625,
+    "college": "Government College of Engineering (Autonomous)",
+    "lead_id": "00Qfw00000V0cmjEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4272346102",
+        "new": "4272346157"
+      },
+      "alt_phone_2": {
+        "old": "4272346157",
+        "new": "4272346102"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 304,
+    "db_id": 15626,
+    "college": "Government College of Engineering",
+    "lead_id": "00Qfw00000V0cmkEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8300424565"
+      },
+      "alt_phone": {
+        "old": "8300424565",
+        "new": "4342290070"
+      },
+      "alt_phone_2": {
+        "old": "4342290070",
+        "new": "4622552450"
+      },
+      "alt_phone_3": {
+        "old": null,
+        "new": "4622552448"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 305,
+    "db_id": 15627,
+    "college": "Government College of Engineering",
+    "lead_id": "00Qfw00000V0cmlEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4362221112"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4622552450"
+      },
+      "alt_phone_3": {
+        "old": "4362221112",
+        "new": "4622552448"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 306,
+    "db_id": 15628,
+    "college": "Government College of Engineering",
+    "lead_id": "00Qfw00000V0cmmEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4546282555"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4622552450"
+      },
+      "alt_phone_3": {
+        "old": "4546282555",
+        "new": "4622552448"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 307,
+    "db_id": 15629,
+    "college": "Government College of Engineering",
+    "lead_id": "00Qfw00000V0cmnEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4622552450"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4622552448"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 308,
+    "db_id": 15630,
+    "college": "Government College of Engineering",
+    "lead_id": "00Qfw00000V0cmoEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4622552448",
+        "new": "4622552450"
+      },
+      "alt_phone_2": {
+        "old": "4622552450",
+        "new": "4622552448"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 311,
+    "db_id": 15633,
+    "college": "GRT Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cmrEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4427885400"
+      },
+      "alt_phone_2": {
+        "old": "4427885400",
+        "new": null
+      },
+      "designation": {
+        "old": "Placement Officer  8939861899",
+        "new": "Placement Officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 312,
+    "db_id": 15634,
+    "college": "Hindustan Institute of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0cmsEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4222610788"
+      },
+      "alt_phone_2": {
+        "old": "4222610788",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 315,
+    "db_id": 15637,
+    "college": "HOSUR INSTITUTE OF TECH AND SCIENCE",
+    "lead_id": "00Qfw00000V0cmvEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9443195346"
+      },
+      "alt_phone_2": {
+        "old": "9443195346",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 318,
+    "db_id": 16745,
+    "college": "Indira Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cn1EAB",
+    "diffs": {
+      "mobile": {
+        "old": "9841735858",
+        "new": null
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4427650160"
+      },
+      "alt_phone_2": {
+        "old": "4427650160",
+        "new": null
+      },
+      "email": {
+        "old": "contact@indiraeducational.org",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 319,
+    "db_id": 15640,
+    "college": "Indra Ganesan College of Engineering",
+    "lead_id": "00Qfw00000V0cn2EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "8508688845"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 320,
+    "db_id": 15641,
+    "college": "Infant Jesus College of Engineering",
+    "lead_id": "00Qfw00000V0cn3EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4630302600"
+      },
+      "alt_phone_2": {
+        "old": "4630302600",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 327,
+    "db_id": 16746,
+    "college": "J N N Institute of Engineering",
+    "lead_id": "00Qfw00000V0cnAEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9710116569"
+      },
+      "alt_phone_2": {
+        "old": "9710116569",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 332,
+    "db_id": 15652,
+    "college": "Jaya College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cnIEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4426493505",
+        "new": "4426492525"
+      },
+      "alt_phone_2": {
+        "old": "4426492525",
+        "new": "4426493505"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 334,
+    "db_id": 15654,
+    "college": "Jaya Institute of Technology",
+    "lead_id": "00Qfw00000V0cnKEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7338786128"
+      },
+      "alt_phone": {
+        "old": "7338786128",
+        "new": "4427894111"
+      },
+      "alt_phone_2": {
+        "old": "4427894111",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 335,
+    "db_id": 15655,
+    "college": "Jaya Sakthi Engineering College",
+    "lead_id": "00Qfw00000V0cnLEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "26344282",
+        "new": "4426340250"
+      },
+      "alt_phone_2": {
+        "old": "4426340250",
+        "new": "26344282"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 336,
+    "db_id": 15656,
+    "college": "Jayalakshmi Institute of Technology",
+    "lead_id": "00Qfw00000V0cnMEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9087666101"
+      },
+      "alt_phone_2": {
+        "old": "9087666101",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 337,
+    "db_id": 15657,
+    "college": "Jayam College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cnNEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9942277777"
+      },
+      "alt_phone_2": {
+        "old": "9942277777",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 338,
+    "db_id": 15658,
+    "college": "Jayamatha Engineering College",
+    "lead_id": "00Qfw00000V0cnOEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4652263841",
+        "new": "4652263440"
+      },
+      "alt_phone_2": {
+        "old": "4652263440",
+        "new": "4652263841"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 339,
+    "db_id": 15659,
+    "college": "Jayaraj Annapackiam CSI College of Engineering",
+    "lead_id": "00Qfw00000V0cnPEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9442242889"
+      },
+      "alt_phone_2": {
+        "old": "4639279906",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 342,
+    "db_id": 15662,
+    "college": "Jerusalem College of Engineering (Autonomous)",
+    "lead_id": "00Qfw00000V0cnUEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4422461404",
+        "new": "4422460131"
+      },
+      "alt_phone_2": {
+        "old": "4422460131",
+        "new": "4422461404"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 343,
+    "db_id": 15663,
+    "college": "K C G College of Technology",
+    "lead_id": "00Qfw00000V0cnVEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4428389001",
+        "new": "4424503232"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4428389001"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 345,
+    "db_id": 15666,
+    "college": "K Ramakrishnan College of Engineering (Autonomous)",
+    "lead_id": "00Qfw00000V0cnXEAR",
+    "diffs": {
+      "designation": {
+        "old": "principal assistant 9750934677",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 347,
+    "db_id": 15668,
+    "college": "K S R College of Engineering (Autonomous )",
+    "lead_id": "00Qfw00000V0cnZEAR",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "914288274213"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 348,
+    "db_id": 15669,
+    "college": "K S Rangasamy College of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0cnaEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "274744",
+        "new": "4288274741"
+      },
+      "alt_phone_2": {
+        "old": "4288274741",
+        "new": "274744"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 350,
+    "db_id": 15671,
+    "college": "Kamaraj College of Engineering and Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0cncEAB",
+    "diffs": {
+      "designation": {
+        "old": "placement officer 8098089461 praveen kumar",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 352,
+    "db_id": 15674,
+    "college": "Karpagam Institute of Technology",
+    "lead_id": "00Qfw00000V0cnfEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4223502440",
+        "new": "4226454553"
+      },
+      "alt_phone_2": {
+        "old": "4226454553",
+        "new": "4223502440"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 353,
+    "db_id": 15675,
+    "college": "Karpagavinayaga College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cngEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4471565100"
+      },
+      "alt_phone_2": {
+        "old": "4471565100",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 355,
+    "db_id": 15677,
+    "college": "KGISL Institute of Technology",
+    "lead_id": "00Qfw00000V0cniEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4224419999"
+      },
+      "alt_phone_2": {
+        "old": "4224419999",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 357,
+    "db_id": 15679,
+    "college": "Kings College of Engineering",
+    "lead_id": "00Qfw00000V0cnkEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "6380989024"
+      },
+      "alt_phone": {
+        "old": "6380989024",
+        "new": "4362282474"
+      },
+      "alt_phone_2": {
+        "old": "4362282474",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 358,
+    "db_id": 15681,
+    "college": "Kingston Engineering College",
+    "lead_id": "00Qfw00000V0cnlEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7402614999"
+      },
+      "alt_phone": {
+        "old": "7402614999",
+        "new": "4162298300"
+      },
+      "alt_phone_2": {
+        "old": "4162298300",
+        "new": null
+      },
+      "alternative_email": {
+        "old": "Placement2@kingston.ac.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 359,
+    "db_id": 15682,
+    "college": "principal",
+    "lead_id": "00Qfw00000V0cnmEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9500941414"
+      },
+      "alt_phone_2": {
+        "old": "9500941414",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 360,
+    "db_id": 16488,
+    "college": "Kongu Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0cnnEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "494226555"
+      },
+      "alt_phone_2": {
+        "old": "494226555",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 361,
+    "db_id": 16489,
+    "college": "principal",
+    "lead_id": "00Qfw00000V0cnpEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4222661515",
+        "new": "42222661121"
+      },
+      "alt_phone_2": {
+        "old": "42222661121",
+        "new": "4222661515"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 366,
+    "db_id": 16494,
+    "college": "Loyola Institute of Technology and Science",
+    "lead_id": "00Qfw00000V0cnvEAB",
+    "diffs": {
+      "designation": {
+        "old": "9244775545 principal",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 372,
+    "db_id": 16501,
+    "college": "M.A.M. College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0co3EAB",
+    "diffs": {
+      "email": {
+        "old": "admin@mamcet.com",
+        "new": "headsdp@mamcet.com"
+      },
+      "secondary_email": {
+        "old": "headsdp@mamcet.com",
+        "new": "admin@mamcet.com"
+      },
+      "designation": {
+        "old": "principal 8754793383",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 373,
+    "db_id": 16502,
+    "college": "Madha Engineering",
+    "lead_id": "00Qfw00000V0co5EAB",
+    "diffs": {
+      "email": {
+        "old": "info@madhaengineeringcollege.com",
+        "new": null
+      },
+      "secondary_email": {
+        "old": "principal@madhaengineeringcollege.com",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 374,
+    "db_id": 16580,
+    "college": "S Veerasamy Chettiar College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0coDEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9025262526"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 375,
+    "db_id": 16581,
+    "college": "salem college of engineering and technology ",
+    "lead_id": "00Qfw00000V0coFEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9384816697",
+        "new": "9715252012"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "91 9384816697"
+      },
+      "alt_phone_2": {
+        "old": "91 9715252012",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 376,
+    "db_id": 16582,
+    "college": "SAMS College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0coGEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8925832436"
+      },
+      "alt_phone_2": {
+        "old": "8925832436",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 377,
+    "db_id": 16583,
+    "college": "Sapthagiri College of Engineering",
+    "lead_id": "00Qfw00000V0coHEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8825894351"
+      },
+      "alt_phone_2": {
+        "old": "4348247201",
+        "new": null
+      },
+      "designation": {
+        "old": "9715252012 another number wats up",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 380,
+    "db_id": 16586,
+    "college": "Sardar Raja College of Engineering",
+    "lead_id": "00Qfw00000V0coKEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "8220077053"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 381,
+    "db_id": 16587,
+    "college": "Sasurie College of Engineering",
+    "lead_id": "00Qfw00000V0coLEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9488891111"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 382,
+    "db_id": 16588,
+    "college": "Satyam College of Engineering & Technology",
+    "lead_id": "00Qfw00000V0coMEAR",
+    "diffs": {
+      "mobile": {
+        "old": "8220077053",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4652644225"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 383,
+    "db_id": 16589,
+    "college": "Saveetha Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0coNEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9488891111",
+        "new": "8939902737"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 384,
+    "db_id": 16590,
+    "college": "SBM College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0coOEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4652644225",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 385,
+    "db_id": 16591,
+    "college": "SCAD College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0coPEAR",
+    "diffs": {
+      "mobile": {
+        "old": "8939902737",
+        "new": "9942978676"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4634261200"
+      },
+      "alt_phone_2": {
+        "old": "4634261200",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 386,
+    "db_id": 16592,
+    "college": "Selvam College of Technology",
+    "lead_id": "00Qfw00000V0coQEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9486648899"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 387,
+    "db_id": 16593,
+    "college": "Sembodai Rukmani Varatharajan Engineering College",
+    "lead_id": "00Qfw00000V0coREAR",
+    "diffs": {
+      "mobile": {
+        "old": "9942978676",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "INSERT",
+    "excel_row": 388,
+    "lead_id": "00Qfw00000V0coS",
+    "college": "Sengunthar College of Engineering",
+    "mobile": null,
+    "alt_phone": "4288250444",
+    "alt_phone_2": "4288255716",
+    "email": "info@scteng.co.in"
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 389,
+    "db_id": 16594,
+    "college": "Sethu Institute of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0coTEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9943367007"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 390,
+    "db_id": 16596,
+    "college": "Shree Motilal Kanhaiyalal (SMK)Fomra Institute of Technology",
+    "lead_id": "00Qfw00000V0coVEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "9943367007",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 391,
+    "db_id": 16597,
+    "college": "Shree Sathyam College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0coWEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4283244080"
+      },
+      "alt_phone_2": {
+        "old": "4283244080",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 392,
+    "db_id": 16598,
+    "college": "Shree Venkateshwara Hi-Tech Engineering College",
+    "lead_id": "00Qfw00000V0coXEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "986547777"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9865066242"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 393,
+    "db_id": 16599,
+    "college": "Shreenivasa Engineering College",
+    "lead_id": "00Qfw00000V0coYEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9442554159"
+      },
+      "alt_phone_2": {
+        "old": "9442554159",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 394,
+    "db_id": 16600,
+    "college": "Shri Angalamman College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0coZEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9865066242",
+        "new": null
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "0431 265 0336"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 398,
+    "db_id": 16604,
+    "college": "SOLAMALAI COLLEGE OF ENGINEERIG",
+    "lead_id": "00Qfw00000V0codEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4522429280"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 399,
+    "db_id": 16605,
+    "college": "Sona College of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0coeEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4274099999",
+        "new": "4274099888"
+      },
+      "alt_phone_2": {
+        "old": "4274099888",
+        "new": "4274099999"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 400,
+    "db_id": 16606,
+    "college": "Sree Krishna College of Engineering",
+    "lead_id": "00Qfw00000V0cofEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9894216849"
+      },
+      "alt_phone_2": {
+        "old": "9894216849",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 401,
+    "db_id": 16607,
+    "college": "Sree Raaja Raajan College of Engineering & Technology",
+    "lead_id": "00Qfw00000V0cogEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "7373711333"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 402,
+    "db_id": 16608,
+    "college": "Sree Sakthi Engineering College",
+    "lead_id": "00Qfw00000V0cohEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "924450444"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9244502222"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 403,
+    "db_id": 16609,
+    "college": "Sree Sowdambiga College of Engineering",
+    "lead_id": "00Qfw00000V0cojEAB",
+    "diffs": {
+      "mobile": {
+        "old": "7373711333",
+        "new": null
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4566229801"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 404,
+    "db_id": 16610,
+    "college": "SRG Engineering College",
+    "lead_id": "00Qfw00000V0cokEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9244502222",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 405,
+    "db_id": 16611,
+    "college": "Sri Bharathi Engineering College for Women",
+    "lead_id": "00Qfw00000V0comEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4566229801",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 407,
+    "db_id": 16613,
+    "college": "Sri Jayaram Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cooEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "6383265315"
+      },
+      "alt_phone_2": {
+        "old": "6383265315",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 409,
+    "db_id": 16615,
+    "college": "Sri Krishna College of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0corEAB",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4222984568"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 410,
+    "db_id": 16616,
+    "college": "Sri Krishna Engineering College",
+    "lead_id": "00Qfw00000V0cosEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "8110862000"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 411,
+    "db_id": 16617,
+    "college": "Sri Nandhanam College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0couEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "095435 44354"
+      },
+      "alt_phone": {
+        "old": "095435 44354",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 412,
+    "db_id": 16775,
+    "college": "Sri Ram Engineering College",
+    "lead_id": "00Qfw00000V0covEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9003043144"
+      },
+      "alt_phone": {
+        "old": "9003043144",
+        "new": "4427689364"
+      },
+      "alt_phone_2": {
+        "old": "4427689364",
+        "new": null
+      },
+      "designation": {
+        "old": null,
+        "new": "Principal"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 413,
+    "db_id": 16618,
+    "college": "Sri Ramakrishna College of Engineering",
+    "lead_id": "00Qfw00000V0cowEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "8110862000",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 414,
+    "db_id": 16619,
+    "college": "Sri Ramakrishna Engineering College (Autonomous)",
+    "lead_id": "00Qfw00000V0coxEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "7530089997"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 415,
+    "db_id": 16620,
+    "college": "Sri Ramakrishna Institute of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0coyEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4222605577",
+        "new": "914222605577"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 416,
+    "db_id": 16621,
+    "college": "Sri Ranganathar Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cp0EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "7530089997",
+        "new": "7402667999"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 418,
+    "db_id": 16623,
+    "college": "Sri Sai Ram Institute of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0cp2EAB",
+    "diffs": {
+      "mobile": {
+        "old": "7402667999",
+        "new": "60004446342"
+      },
+      "alt_phone_2": {
+        "old": "60004446342",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 419,
+    "db_id": 16624,
+    "college": "Sri Sai Ranganathan Engineering College",
+    "lead_id": "00Qfw00000V0cp3EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4222619100"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 420,
+    "db_id": 16625,
+    "college": "Sri Sairam Enginering College (Autonomous)",
+    "lead_id": "00Qfw00000V0cp4EAB",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4422512222"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 421,
+    "db_id": 16626,
+    "college": "Sri Sapthagiri Institute of Technology",
+    "lead_id": "00Qfw00000V0cp5EAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9244924462"
+      },
+      "alt_phone_2": {
+        "old": "9244924462",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 422,
+    "db_id": 16627,
+    "college": "Sri Shakthi Institute of Engineering and Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0cp6EAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4422512222",
+        "new": "9444620505"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 424,
+    "db_id": 16629,
+    "college": "Sri Subramanya College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cp9EAB",
+    "diffs": {
+      "mobile": {
+        "old": "9444620505",
+        "new": null
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4545255132"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 425,
+    "db_id": 16630,
+    "college": "Sri Venkateswara College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cpBEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9176745678"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "4427664444"
+      },
+      "alt_phone_2": {
+        "old": "4427664444",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 426,
+    "db_id": 16631,
+    "college": "Sri Venkateswara Institute of Science and Technology",
+    "lead_id": "00Qfw00000V0cpCEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4427600731",
+        "new": "4427666699"
+      },
+      "alt_phone_2": {
+        "old": "4427666699",
+        "new": "4427600731"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 427,
+    "db_id": 16632,
+    "college": "Sri Venkateswaraa College of Technology",
+    "lead_id": "00Qfw00000V0cpDEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9176745678",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 428,
+    "db_id": 16633,
+    "college": "Sri Vidhya College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cpEEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4562267467"
+      },
+      "alt_phone_2": {
+        "old": "4562267467",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 431,
+    "db_id": 16636,
+    "college": "St. Annes College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cpIEAR",
+    "diffs": {
+      "alt_phone_2": {
+        "old": null,
+        "new": "4142242661"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 433,
+    "db_id": 16638,
+    "college": "St. Joseph\u2019s College of Engineering",
+    "lead_id": "00Qfw00000V0cpKEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4142242661",
+        "new": "4424501060"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 434,
+    "db_id": 16639,
+    "college": "St. Josephs College of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cpLEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9150076739"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 436,
+    "db_id": 16641,
+    "college": "St. Mother Theresa Engineering College",
+    "lead_id": "00Qfw00000V0cpOEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "9150076739",
+        "new": "9443201279"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 438,
+    "db_id": 16643,
+    "college": "St. Xavier Catholic College of Engineering",
+    "lead_id": "00Qfw00000V0cpQEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9443201279",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 440,
+    "db_id": 16645,
+    "college": "Stella Marys College of Engineering",
+    "lead_id": "00Qfw00000V0cpSEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4651239122"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 442,
+    "db_id": 16647,
+    "college": "Suguna College of Engineering",
+    "lead_id": "00Qfw00000V0cpVEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "4651239122",
+        "new": "8778791124"
+      },
+      "alt_phone_2": {
+        "old": "8778791124",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 444,
+    "db_id": 16649,
+    "college": "Surya Engineering College",
+    "lead_id": "00Qfw00000V0cpXEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "9976675222"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 445,
+    "db_id": 16650,
+    "college": "Surya Group of Institutions",
+    "lead_id": "00Qfw00000V0cpYEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7598469950"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 446,
+    "db_id": 16651,
+    "college": "Syed Ammal Engineering College",
+    "lead_id": "00Qfw00000V0cpZEAR",
+    "diffs": {
+      "alt_phone": {
+        "old": "9976675222",
+        "new": "8489304000"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 447,
+    "db_id": 16652,
+    "college": "T J S Engineering College",
+    "lead_id": "00Qfw00000V0cpaEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4427967602"
+      },
+      "alt_phone_2": {
+        "old": "4427967602",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 448,
+    "db_id": 16653,
+    "college": "T S M Jain College of Technology",
+    "lead_id": "00Qfw00000V0cpbEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "8489304000",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 450,
+    "db_id": 16654,
+    "college": "Tagore Engineering College",
+    "lead_id": "00Qfw00000V0cpdEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7540054222"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 451,
+    "db_id": 16655,
+    "college": "Tagore Institute of Engineering and Technology",
+    "lead_id": "00Qfw00000V0cpeEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9786400274"
+      },
+      "alt_phone": {
+        "old": "9786400274",
+        "new": "4282231474"
+      },
+      "alt_phone_2": {
+        "old": "4282231474",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 452,
+    "db_id": 16656,
+    "college": "Tamilnadu College of Engineering",
+    "lead_id": "00Qfw00000V0cpfEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "7540054222",
+        "new": "4212332588"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 453,
+    "db_id": 16657,
+    "college": "Thamirabharani Engineering College",
+    "lead_id": "00Qfw00000V0cpgEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4622301266"
+      },
+      "alt_phone_2": {
+        "old": "4622301266",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 454,
+    "db_id": 16658,
+    "college": "Thanthai Periyar Government Institute of Technology",
+    "lead_id": "00Qfw00000V0cpiEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4162267762",
+        "new": "4162907762"
+      },
+      "alt_phone_2": {
+        "old": "4162907762",
+        "new": "4162267762"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 455,
+    "db_id": 16659,
+    "college": "The Kavery College of Engineering",
+    "lead_id": "00Qfw00000V0cpjEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9524936156"
+      },
+      "alt_phone": {
+        "old": "9524936156",
+        "new": "4298279158"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 456,
+    "db_id": 16660,
+    "college": "Theni Kammavar Sangam College of Technology",
+    "lead_id": "00Qfw00000V0cpkEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4546250496"
+      },
+      "alt_phone_2": {
+        "old": "4546250496",
+        "new": "4546250494"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 457,
+    "db_id": 16661,
+    "college": "Thiagarajar College of Engineering (Autonomous)",
+    "lead_id": "00Qfw00000V0cplEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4298279158",
+        "new": "4522482240"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 458,
+    "db_id": 16662,
+    "college": "Trichy Engineering College",
+    "lead_id": "00Qfw00000V0cpoEAB",
+    "diffs": {
+      "alt_phone": {
+        "old": "4546250494",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 459,
+    "db_id": 16663,
+    "college": "Udaya School of Engineering",
+    "lead_id": "00Qfw00000V0cppEAB",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9281090009"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 461,
+    "db_id": 16715,
+    "college": "Nadar Saraswathi College of Arts and Science",
+    "lead_id": "00Qfw00000VC9AjEAL",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9688044417"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9688044417"
+      },
+      "alt_phone_2": {
+        "old": "9688044417",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 462,
+    "db_id": 16712,
+    "college": "Krishnasamy College of Science,Arts & Management for Women",
+    "lead_id": "00Qfw00000VCRfNEAX",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4142285751"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 463,
+    "db_id": 16703,
+    "college": "Lady Doak College",
+    "lead_id": "00Qfw00000VCweIEAT",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4522530527"
+      },
+      "email": {
+        "old": "principal@ldc.edu.in ,",
+        "new": "cgpc@ldc.edu.in"
+      },
+      "alternative_email": {
+        "old": "cgpc@ldc.edu.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 464,
+    "db_id": 16800,
+    "college": "St. Joseph's College of Arts & Science",
+    "lead_id": "00Qfw00000VCy1nEAD",
+    "diffs": {
+      "alt_phone": {
+        "old": null,
+        "new": "4142286311"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 465,
+    "db_id": 16707,
+    "college": "St. Jude's College",
+    "lead_id": "00Qfw00000VD1fgEAD",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "7708491097"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "7708491097"
+      },
+      "alt_phone_2": {
+        "old": "7708491097",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 466,
+    "db_id": 16791,
+    "college": "V.S.S. GOVERNMENT arts COLLEGE",
+    "lead_id": "00Qfw0000043Tg0EAE",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "8667336185"
+      },
+      "alt_phone_2": {
+        "old": "04577-299850",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 467,
+    "db_id": 16780,
+    "college": "St. Michael College of Engineering and Technology",
+    "lead_id": "00Qfw00000VJrQGEA1",
+    "diffs": {
+      "secondary_email": {
+        "old": null,
+        "new": "principal@smcet.edu.in"
+      },
+      "alternative_email": {
+        "old": "principal@smcet.edu.in",
+        "new": null
+      },
+      "designation": {
+        "old": null,
+        "new": "placement officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 468,
+    "db_id": 16720,
+    "college": "Arcot Sri Mahalakshmi Women's College",
+    "lead_id": "00Qfw00000VKJb5EAH",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9566383823"
+      },
+      "alt_phone": {
+        "old": null,
+        "new": "9566383823"
+      },
+      "alt_phone_2": {
+        "old": "9566383823",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 472,
+    "db_id": 16805,
+    "college": "Sriram Polytechnic College",
+    "lead_id": "00QJ3000001eJ6nMAE",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9789349209"
+      },
+      "alt_phone_2": {
+        "old": "044 2768 9180",
+        "new": null
+      },
+      "email": {
+        "old": "srptplacements@gmail.com,srptcprincipal@gmail",
+        "new": "srptcprincipal@gmail.com"
+      },
+      "designation": {
+        "old": "sathiyanathan placement officer",
+        "new": "Hod,placement officer"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 473,
+    "db_id": 15557,
+    "college": "Principal",
+    "lead_id": "00Qfw00000V0cggEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9841011485",
+        "new": "9841011759"
+      },
+      "alt_phone": {
+        "old": "9841011759",
+        "new": "9841011485"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 474,
+    "db_id": 16806,
+    "college": "K S R Institute for Engineering and Technology",
+    "lead_id": "00Qfw00000YoClaEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": "4288274213",
+        "new": "914288274213"
+      },
+      "alt_phone_2": {
+        "old": null,
+        "new": "4288274213"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 475,
+    "db_id": 15614,
+    "college": "placement",
+    "lead_id": "00Qfw00000V07uBEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9842674222",
+        "new": "9442132706"
+      },
+      "alt_phone": {
+        "old": "9442132706",
+        "new": "9842674222"
+      },
+      "alternative_email": {
+        "old": "ontact@ esec.ac.in",
+        "new": null
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 477,
+    "db_id": 16808,
+    "college": "Sri Venkateswara College of Engineering",
+    "lead_id": "00Qfw00000YoCldEAF",
+    "diffs": {
+      "alt_phone": {
+        "old": "7152000875",
+        "new": "04427152000-875"
+      }
+    }
+  }
+]

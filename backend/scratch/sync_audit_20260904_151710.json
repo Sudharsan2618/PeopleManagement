@@ -1,0 +1,69 @@
+[
+  {
+    "action": "UPDATE",
+    "excel_row": 125,
+    "db_id": 15614,
+    "college": "placement",
+    "lead_id": "00Qfw00000V07uBEAR",
+    "diffs": {
+      "mobile": {
+        "old": "9442132706",
+        "new": "9842674222"
+      },
+      "alt_phone": {
+        "old": "9842674222",
+        "new": "9442132706"
+      },
+      "alternative_email": {
+        "old": null,
+        "new": "contact@esec.ac.in"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 159,
+    "db_id": 15557,
+    "college": "Principal",
+    "lead_id": "00Qfw00000V0cggEAB",
+    "diffs": {
+      "mobile": {
+        "old": "9841011759",
+        "new": "9841011485"
+      },
+      "alt_phone": {
+        "old": "9841011485",
+        "new": "9841011759"
+      }
+    }
+  },
+  {
+    "action": "UPDATE",
+    "excel_row": 271,
+    "db_id": 16557,
+    "college": "PSG College of Technology (Autonomous)",
+    "lead_id": "00Qfw00000V0ckZEAR",
+    "diffs": {
+      "mobile": {
+        "old": null,
+        "new": "9047040413"
+      },
+      "alt_phone": {
+        "old": "4222572177",
+        "new": "984010040"
+      },
+      "alt_phone_2": {
+        "old": "4222572477",
+        "new": null
+      },
+      "email": {
+        "old": "placement@psgtech.ac.in",
+        "new": "prince@princedrkvasudevan.com"
+      },
+      "secondary_email": {
+        "old": "dean.admn@psgtech.ac.in",
+        "new": null
+      }
+    }
+  }
+]
