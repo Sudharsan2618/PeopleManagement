@@ -7,6 +7,7 @@ from datetime import datetime
 from database.connection import get_db_connection
 from services.whatsapp_service import WhatsAppService
 from utils.timezone_utils import get_ist_now
+from services.providers.router import get_default_provider, get_provider_for_number
 
 class WhatsAppCampaignService:
     @staticmethod
@@ -53,13 +54,10 @@ class WhatsAppCampaignService:
 
     @staticmethod
     async def run_campaign_async(campaign_id: int):
-        """Asynchronously process a campaign and send messages via Meta API."""
+        """Asynchronously process a campaign via the provider abstraction."""
         import asyncio
-        import httpx
-        from arq.connections import RedisSettings
         from config import Settings
-        from utils.phone_utils import format_for_meta
-        
+
         settings = Settings()
         with get_db_connection() as conn:
             cur = conn.cursor()
@@ -68,14 +66,24 @@ class WhatsAppCampaignService:
                 cur.execute("UPDATE whatsapp_campaigns SET status = 'sending' WHERE id = %s", (campaign_id,))
                 conn.commit()
 
-                # 2. Get campaign info
-                cur.execute("SELECT template_name, language_code, parameters FROM whatsapp_campaigns WHERE id = %s", (campaign_id,))
+                # 2. Get campaign info (including wa_number_id)
+                cur.execute("SELECT template_name, language_code, parameters, wa_number_id FROM whatsapp_campaigns WHERE id = %s", (campaign_id,))
                 row = cur.fetchone()
                 if not row: return
-                
+
                 template_name = row[0]
                 language_code = row[1]
                 campaign_params = row[2] if isinstance(row[2], dict) else json.loads(row[2] or "{}")
+                wa_number_id = row[3]
+
+                # Resolve provider for this campaign
+                if wa_number_id:
+                    provider = get_provider_for_number(wa_number_id)
+                else:
+                    provider, _ = get_default_provider()
+
+                if not provider.supports_templates():
+                    raise RuntimeError("Campaign requires template support — switch to a Cloud API number.")
                 
                 # 3. Get queued messages with prospect data
                 cur.execute(
@@ -93,14 +101,13 @@ class WhatsAppCampaignService:
                 consecutive_failures = 0
                 held_count = 0
 
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    for msg_data in queued_messages:
+                for msg_data in queued_messages:
                         msg_id, mobile, p_name, p_location, p_course, p_email, p_source = msg_data
-                        
+
                         try:
                             # Build components dynamically based on mapping
                             components = []
-                            
+
                             # Handle Header (Image)
                             header_config = campaign_params.get("header", {})
                             if header_config.get("type") == "image":
@@ -123,9 +130,9 @@ class WhatsAppCampaignService:
                                 body_params = []
                                 for mapping in body_mappings:
                                     val = ""
-                                    m_type = mapping.get("type") # 'field' or 'static'
+                                    m_type = mapping.get("type")
                                     m_value = mapping.get("value")
-                                    
+
                                     if m_type == "static":
                                         val = m_value
                                     elif m_type == "field":
@@ -137,9 +144,9 @@ class WhatsAppCampaignService:
                                             "source": p_source
                                         }
                                         val = str(field_map.get(m_value, ""))
-                                    
+
                                     body_params.append({"type": "text", "text": val or " "})
-                                
+
                                 components.append({
                                     "type": "body",
                                     "parameters": body_params
@@ -164,67 +171,45 @@ class WhatsAppCampaignService:
                                         ]
                                     })
 
-                            # Send via WhatsApp API
-                            wa_url = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
-                            wa_headers = {
-                                "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-                                "Content-Type": "application/json"
-                            }
-                            
-                            clean_lang = "en" if "en" in language_code.lower() else language_code
-                            
-                            payload = {
-                                "messaging_product": "whatsapp",
-                                "to": format_for_meta(mobile),
-                                "type": "template",
-                                "template": {
-                                    "name": template_name,
-                                    "language": {"code": clean_lang},
-                                    "components": components if components else None
-                                }
-                            }
-                            
-                            resp = await client.post(wa_url, headers=wa_headers, json=payload)
-                            result = resp.json()
+                            # Send via the provider abstraction
+                            send_result = await asyncio.to_thread(
+                                provider.send_template, mobile, template_name,
+                                language_code, components if components else None
+                            )
 
-                            if resp.status_code in [200, 201] and "messages" in result:
-                                msg_obj = result["messages"][0]
-                                meta_id = msg_obj.get("id")
-                                # Meta returns message_status — 'accepted' is normal,
-                                # 'held_for_quality_assessment' means Meta will NOT deliver
+                            if send_result.success:
+                                meta_id = send_result.message_id
+                                raw = send_result.raw_response or {}
+                                msg_obj = (raw.get("messages") or [{}])[0]
                                 meta_status = (msg_obj.get("message_status") or "accepted").lower()
 
                                 if meta_status == "held_for_quality_assessment":
-                                    # Meta accepted the API call but will silently drop it.
-                                    # Mark it as 'failed' with a clear reason so it surfaces in the UI.
                                     cur.execute(
                                         "UPDATE whatsapp_messages SET status = 'failed', meta_message_id = %s, payload = %s WHERE id = %s",
                                         (meta_id, json.dumps({
                                             "error": "held_for_quality_assessment",
-                                            "reason": "Meta is holding this message — account quality is low or template is flagged. Message will NOT be delivered.",
-                                            "raw": result,
+                                            "reason": "Meta is holding this message — account quality is low or template is flagged.",
+                                            "raw": raw,
                                         }), msg_id)
                                     )
                                     held_count += 1
                                 else:
-                                    # 'accepted' — message is in Meta's queue. Actual delivery confirmed via webhook.
                                     cur.execute(
                                         "UPDATE whatsapp_messages SET status = 'sent', meta_message_id = %s, sent_at = %s, payload = %s WHERE id = %s",
-                                        (meta_id, get_ist_now(), json.dumps({"meta_response": result}), msg_id)
+                                        (meta_id, get_ist_now(), json.dumps({"meta_response": raw}), msg_id)
                                     )
                                     consecutive_failures = 0
                             else:
-                                error_msg = str(result.get("error", result))
+                                error_msg = send_result.error or "Unknown error"
                                 cur.execute(
                                     "UPDATE whatsapp_messages SET status = 'failed', payload = %s WHERE id = %s",
-                                    (json.dumps({"error": error_msg, "status_code": resp.status_code, "raw": result}), msg_id)
+                                    (json.dumps({"error": error_msg}), msg_id)
                                 )
                                 consecutive_failures += 1
-                                # Circuit breaker: stop the campaign if Meta keeps rejecting
                                 if consecutive_failures >= 5:
                                     conn.commit()
                                     raise RuntimeError(
-                                        f"Aborting campaign — {consecutive_failures} consecutive Meta API failures. "
+                                        f"Aborting campaign — {consecutive_failures} consecutive failures. "
                                         f"Last error: {error_msg}"
                                     )
                         except RuntimeError:

@@ -17,6 +17,7 @@ class ConversionService:
         search: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        tags: Optional[str] = None,
     ) -> List[Dict]:
         query = """
             SELECT p.*,
@@ -65,9 +66,14 @@ class ConversionService:
         if end_date:
             query += " AND p.created_at::date <= %s"
             params.append(end_date)
-            
+        if tags:
+            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+            if tag_list:
+                query += " AND (jsonb_typeof(p.tags) = 'array' AND p.tags ?| %s)"
+                params.append(tag_list)
+
         query += " ORDER BY p.updated_at DESC"
-        
+
         return execute_query(query, tuple(params))
 
     @staticmethod
@@ -163,6 +169,7 @@ class ConversionService:
         pending_only: bool = False,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        tags: Optional[str] = None,
     ) -> List[Dict]:
         query = """
             SELECT ce.*,
@@ -206,9 +213,14 @@ class ConversionService:
         if end_date:
             query += " AND (COALESCE(p.created_at, ce.created_at))::date <= %s"
             params.append(end_date)
-            
+        if tags:
+            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+            if tag_list:
+                query += " AND (jsonb_typeof(p.tags) = 'array' AND p.tags ?| %s)"
+                params.append(tag_list)
+
         query += " ORDER BY ce.converted_at DESC"
-        
+
         return execute_query(query, tuple(params))
 
     @staticmethod

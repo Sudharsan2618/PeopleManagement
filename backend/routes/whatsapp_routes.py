@@ -642,3 +642,187 @@ async def resend_failed(campaign_id: int):
         return await WhatsAppCampaignService.resend_failed_campaign_messages(campaign_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── WhatsApp Number Management (provider toggle) ────────────────────────────
+
+@router.get("/numbers")
+def list_numbers():
+    """List all configured WhatsApp numbers with provider and status."""
+    try:
+        return WhatsAppService.get_all_numbers_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/numbers")
+def add_number(payload: dict = Body(...)):
+    """Add a new WhatsApp number configuration."""
+    try:
+        from database.connection import execute_insert
+        from utils.timezone_utils import get_ist_now
+        now = get_ist_now()
+        row_id = execute_insert(
+            """
+            INSERT INTO whatsapp_numbers
+                (phone_number, display_label, provider,
+                 cloud_phone_number_id, cloud_waba_id, cloud_access_token,
+                 baileys_session_id, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                payload.get("phone_number", ""),
+                payload.get("display_label", ""),
+                payload.get("provider", "cloud"),
+                payload.get("cloud_phone_number_id"),
+                payload.get("cloud_waba_id"),
+                payload.get("cloud_access_token"),
+                payload.get("baileys_session_id"),
+                now, now,
+            ),
+        )
+        return {"id": row_id, "message": "Number added"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/numbers/{number_id}")
+def update_number(number_id: int, payload: dict = Body(...)):
+    """Update a number's config (toggle provider, change creds, etc.)."""
+    try:
+        from database.connection import execute_update_delete
+        from utils.timezone_utils import get_ist_now
+        sets = []
+        vals = []
+        allowed = [
+            "phone_number", "display_label", "provider", "is_active",
+            "cloud_phone_number_id", "cloud_waba_id", "cloud_access_token",
+            "baileys_session_id", "baileys_status",
+        ]
+        for key in allowed:
+            if key in payload:
+                sets.append(f"{key} = %s")
+                vals.append(payload[key])
+        if not sets:
+            return {"message": "Nothing to update"}
+        sets.append("updated_at = %s")
+        vals.append(get_ist_now())
+        vals.append(number_id)
+        execute_update_delete(
+            f"UPDATE whatsapp_numbers SET {', '.join(sets)} WHERE id = %s", tuple(vals)
+        )
+        return {"message": "Number updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/numbers/{number_id}")
+def delete_number(number_id: int):
+    """Deactivate (soft-delete) a number configuration."""
+    try:
+        from database.connection import execute_update_delete
+        execute_update_delete(
+            "UPDATE whatsapp_numbers SET is_active = false WHERE id = %s", (number_id,)
+        )
+        return {"message": "Number deactivated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Baileys Session Management (proxy to bridge) ────────────────────────────
+
+@router.post("/baileys/start-session")
+def start_baileys_session(number_id: int = Body(..., embed=True)):
+    """Tell the bridge to start a Baileys session. Returns QR data if needed."""
+    try:
+        from services.providers.router import get_provider_for_number
+        provider = get_provider_for_number(number_id)
+        if provider.provider_name != "baileys":
+            raise HTTPException(status_code=400, detail="Number is not configured for Baileys")
+        result = provider.start_session()
+        if result.get("success") or result.get("qr"):
+            from database.connection import execute_update_delete
+            execute_update_delete(
+                "UPDATE whatsapp_numbers SET baileys_status = 'qr_pending' WHERE id = %s",
+                (number_id,),
+            )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/baileys/qr/{number_id}")
+def get_baileys_qr(number_id: int):
+    """Proxy QR code from bridge for frontend display."""
+    try:
+        from services.providers.router import get_provider_for_number
+        provider = get_provider_for_number(number_id)
+        if provider.provider_name != "baileys":
+            raise HTTPException(status_code=400, detail="Not a Baileys number")
+        return provider.get_qr()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/baileys/status/{number_id}")
+def get_baileys_status(number_id: int):
+    """Get connection status for a Baileys session."""
+    try:
+        from services.providers.router import get_provider_for_number
+        provider = get_provider_for_number(number_id)
+        status = provider.get_connection_status()
+        if status.get("connected"):
+            from database.connection import execute_update_delete
+            from utils.timezone_utils import get_ist_now
+            execute_update_delete(
+                "UPDATE whatsapp_numbers SET baileys_status = 'connected', baileys_last_seen = %s WHERE id = %s",
+                (get_ist_now(), number_id),
+            )
+        return status
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/baileys/logout/{number_id}")
+def logout_baileys_session(number_id: int):
+    """Disconnect and clear a Baileys session."""
+    try:
+        from services.providers.router import get_provider_for_number
+        from database.connection import execute_update_delete
+        provider = get_provider_for_number(number_id)
+        if provider.provider_name != "baileys":
+            raise HTTPException(status_code=400, detail="Not a Baileys number")
+        result = provider.logout()
+        execute_update_delete(
+            "UPDATE whatsapp_numbers SET baileys_status = 'disconnected' WHERE id = %s",
+            (number_id,),
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Baileys Inbound Webhooks (called by bridge, not Meta) ────────────────────
+
+@router.post("/baileys-webhook")
+async def baileys_webhook(request: Request):
+    """Receive normalized inbound messages from the Baileys bridge."""
+    data = await request.json()
+    try:
+        from services.webhook_service import WebhookService
+        return WebhookService.process_baileys_event(data)
+    except Exception as e:
+        print(f"Baileys webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@router.post("/baileys-status-webhook")
+async def baileys_status_webhook(request: Request):
+    """Receive delivery/read receipts from the Baileys bridge."""
+    data = await request.json()
+    try:
+        from services.webhook_service import WebhookService
+        return WebhookService.process_baileys_status(data)
+    except Exception as e:
+        print(f"Baileys status webhook error: {e}")
+        return {"status": "error", "message": str(e)}

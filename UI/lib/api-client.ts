@@ -1016,6 +1016,38 @@ export const whatsappApi = {
   resendFailed: (campaignId: number) => apiRequest<any>(`/whatsapp/campaigns/${campaignId}/resend-failed`, {
     method: "POST",
   }),
+
+  // Number management
+  getNumbers: () => apiRequest<any[]>("/whatsapp/numbers"),
+  addNumber: (data: {
+    phone_number: string
+    display_label?: string
+    provider: "cloud" | "baileys"
+    cloud_phone_number_id?: string
+    cloud_waba_id?: string
+    cloud_access_token?: string
+  }) => apiRequest<any>("/whatsapp/numbers", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+  updateNumber: (id: number, data: Record<string, any>) => apiRequest<any>(`/whatsapp/numbers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  }),
+  deleteNumber: (id: number) => apiRequest<any>(`/whatsapp/numbers/${id}`, {
+    method: "DELETE",
+  }),
+
+  // Baileys session
+  startBaileysSession: (numberId: number) => apiRequest<any>(`/whatsapp/baileys/start-session`, {
+    method: "POST",
+    body: JSON.stringify({ number_id: numberId }),
+  }),
+  getBaileysQr: (numberId: number) => apiRequest<any>(`/whatsapp/baileys/qr/${numberId}`),
+  getBaileysStatus: (numberId: number) => apiRequest<any>(`/whatsapp/baileys/status/${numberId}`),
+  logoutBaileys: (numberId: number) => apiRequest<any>(`/whatsapp/baileys/logout/${numberId}`, {
+    method: "POST",
+  }),
 }
 
 // Salesforce API — email via the TATTI CRM Apex "lead-event" bridge
@@ -1094,12 +1126,13 @@ export const adminApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<any[]>(`/admin/prospect-pipeline${query}`)
   },
-  getReports: (telecallerId?: number, startDate?: string, endDate?: string, prospectType?: string) => {
+  getReports: (telecallerId?: number, startDate?: string, endDate?: string, prospectType?: string, tags?: string) => {
     const params = new URLSearchParams()
     if (telecallerId) params.append('telecaller_id', telecallerId.toString())
     if (startDate) params.append('start_date', startDate)
     if (endDate) params.append('end_date', endDate)
     if (prospectType) params.append('prospect_type', prospectType)
+    if (tags) params.append('tags', tags)
     const query = params.toString() ? `?${params.toString()}` : ''
     return apiRequest<any>(`/admin/reports${query}`)
   },

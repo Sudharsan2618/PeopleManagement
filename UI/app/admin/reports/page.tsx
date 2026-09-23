@@ -97,6 +97,7 @@ import {
   SelectValue,
 
 } from "@/components/ui/select"
+import { TagFilter } from "@/components/tag-filter"
 
 
 
@@ -294,6 +295,8 @@ export default function ReportsPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("all")
 
   const [availableCourses, setAvailableCourses] = useState<string[]>([])
+
+  const [tagFilter, setTagFilter] = useState("")
 
 
 
@@ -1628,7 +1631,7 @@ export default function ReportsPage() {
 
         const fetchProspectsTask = cachedProspects ? Promise.resolve(cachedProspects) : prospectsApi.getAll();
         const [reports, prospects, callLogs] = await Promise.all([
-          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, activeTabType),
+          adminApi.getReports(selectedTelecallerId ?? undefined, startDate, endDate, activeTabType, tagFilter || undefined),
           fetchProspectsTask,
           callLogsApi.getAll(startDate, endDate, selectedTelecallerId ?? undefined, activeTabType),
         ])
@@ -2033,7 +2036,7 @@ export default function ReportsPage() {
 
     fetchData()
 
-  }, [selectedTelecallerId, startDate, endDate, activeTabType])
+  }, [selectedTelecallerId, startDate, endDate, activeTabType, tagFilter])
 
 
 
@@ -2382,6 +2385,8 @@ export default function ReportsPage() {
         <div className="flex flex-wrap items-center gap-2">
 
           <DateRangePicker onRangeChange={handleRangeChange} defaultStart={startDate} defaultEnd={endDate} />
+
+          <TagFilter value={tagFilter} onChange={setTagFilter} />
 
           <Select value={exportType} onValueChange={(value: "entire" | "status") => setExportType(value)}>
 

@@ -25,6 +25,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
+import { TagFilter } from "@/components/tag-filter"
 import {
   prospectsApi,
   usersApi,
@@ -89,6 +90,7 @@ export default function AssignProspectsPage() {
   const [searchInput, setSearchInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("") // debounced
   const [filterStatus, setFilterStatus] = useState("all")
+  const [tagFilter, setTagFilter] = useState("")
   const [selectedProspects, setSelectedProspects] = useState<number[]>([])
   const [selectedDashboard, setSelectedDashboard] = useState<string>("")
   const [selectedTelecaller, setSelectedTelecaller] = useState<string>("")
@@ -112,7 +114,7 @@ export default function AssignProspectsPage() {
   // Any change to search or filter resets to page 1.
   useEffect(() => {
     setPage(1)
-  }, [searchQuery, filterStatus])
+  }, [searchQuery, filterStatus, tagFilter])
 
   // Reference data (telecallers + per-telecaller counts) — fetched once.
   const fetchReferenceData = useCallback(async () => {
@@ -141,12 +143,13 @@ export default function AssignProspectsPage() {
       search: searchQuery,
       status,
       assignment,
+      tags: tagFilter || undefined,
     })
     if (seq !== requestSeq.current) return // a newer request already fired
     setProspects(res.items)
     setTotal(res.total)
     setUnassignedTotal(res.unassigned_total)
-  }, [page, searchQuery, filterStatus])
+  }, [page, searchQuery, filterStatus, tagFilter])
 
   // Initial load: reference data + first page together.
   useEffect(() => {
@@ -404,6 +407,7 @@ export default function AssignProspectsPage() {
                   <SelectItem value="lost">Lost</SelectItem>
                 </SelectContent>
               </Select>
+              <TagFilter value={tagFilter} onChange={setTagFilter} />
             </div>
           </div>
         </CardHeader>

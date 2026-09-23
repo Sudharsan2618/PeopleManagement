@@ -27,6 +27,7 @@ import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
+import { TagFilter } from "@/components/tag-filter"
 
 export default function PaymentPendingPage() {
   const { toast } = useToast()
@@ -37,6 +38,7 @@ export default function PaymentPendingPage() {
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
+  const [tagFilter, setTagFilter] = useState("")
 
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [telecallers, setTelecallers] = useState<any[]>([])
@@ -72,6 +74,7 @@ export default function PaymentPendingPage() {
       if (moduleFilter !== "all") params.module = moduleFilter
       if (createdStartDate) params.start_date = createdStartDate
       if (createdEndDate) params.end_date = createdEndDate
+      if (tagFilter) params.tags = tagFilter
 
       const data = await conversionApi.getPaymentPending(params)
       setEnquiries(data)
@@ -129,7 +132,7 @@ export default function PaymentPendingPage() {
       fetchEnquiries()
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, createdStartDate, createdEndDate])
+  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, createdStartDate, createdEndDate, tagFilter])
 
   if (isLoading && enquiries.length === 0) return <PageSkeleton />
 
@@ -202,6 +205,8 @@ export default function PaymentPendingPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <TagFilter value={tagFilter} onChange={setTagFilter} />
 
               <CreatedDateFilter
                 startDate={createdStartDate}

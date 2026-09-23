@@ -117,6 +117,7 @@ const adminNav: NavItem[] = [
       { title: "Campaigns", href: "/admin/whatsapp/campaigns", icon: Send },
       { title: "Flows", href: "/admin/whatsapp/flows", icon: Layers },
       { title: "Submissions", href: "/admin/whatsapp/submissions", icon: ClipboardList },
+      { title: "Numbers", href: "/admin/whatsapp/numbers", icon: Phone },
     ],
   },
   { title: "Email Templates", href: "/admin/email-templates", icon: Mail },

@@ -71,6 +71,7 @@ import { prospectsApi, assignmentsApi, usersApi, coursesApi, adaptApiProspectToU
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { ProspectTimelineHistory } from "@/components/prospect-timeline-history"
+import { TagFilter } from "@/components/tag-filter"
 
 const statusColors: Record<ProspectStatus, string> = {
   Pending: "bg-[#FCF4D6] text-yellow-800 border-yellow-200",
@@ -102,6 +103,7 @@ export default function AdminProspectsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [assignedFilter, setAssignedFilter] = useState<string>("all")
   const [courseFilter, setCourseFilter] = useState<string>("all")
+  const [tagFilter, setTagFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedProspect, setSelectedProspect] = useState<any | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -181,6 +183,7 @@ export default function AdminProspectsPage() {
     if (assignedFilter === "unassigned") p.assignment = "unassigned"
     else if (assignedFilter !== "all") p.assignedTo = Number(assignedFilter)
     if (courseFilter && courseFilter !== "all") p.courseInterest = courseFilter
+    if (tagFilter) p.tags = tagFilter
     if (createdStartDate) p.startDate = createdStartDate
     if (createdEndDate) p.endDate = createdEndDate
     if (createdTimeSortOrder) {
@@ -188,7 +191,7 @@ export default function AdminProspectsPage() {
       p.sortOrder = createdTimeSortOrder
     }
     return p
-  }, [currentPage, debouncedSearch, statusFilter, assignedFilter, courseFilter, createdTimeSortOrder, createdStartDate, createdEndDate])
+  }, [currentPage, debouncedSearch, statusFilter, assignedFilter, courseFilter, tagFilter, createdTimeSortOrder, createdStartDate, createdEndDate])
 
   // Convert a server list row into the UI shape the table expects, synthesizing
   // the single-element assignment array the adapter needs from the joined cols.
@@ -791,6 +794,14 @@ export default function AdminProspectsPage() {
                   <SelectItem value="Unknown">Unknown</SelectItem>
                 </SelectContent>
               </Select>
+              <TagFilter
+                value={tagFilter}
+                onChange={(v) => {
+                  setTagFilter(v)
+                  setCurrentPage(1)
+                }}
+                className="w-[180px]"
+              />
               <CreatedDateFilter
                 startDate={createdStartDate}
                 endDate={createdEndDate}

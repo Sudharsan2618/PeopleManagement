@@ -426,11 +426,20 @@ def get_prospect_pipeline(start_date: str = None, end_date: str = None):
 
 @router.get("/reports")
 
-def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_date: str = None, prospect_type: str = None):
+def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_date: str = None, prospect_type: str = None, tags: str = None):
 
     """Consolidated analytics for the admin reports screen."""
 
 
+
+    def _tag_clause(alias, p_list):
+        if tags:
+            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+            if tag_list:
+                tbl = alias if alias and alias.strip() else 'prospects'
+                p_list.append(tag_list)
+                return f" AND (jsonb_typeof({tbl}.tags) = 'array' AND {tbl}.tags ?| %s) "
+        return ""
 
     # Helper for adding prospect_type filter when joining with prospects table
 
@@ -490,11 +499,15 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pt_filter = ""
 
-    if prospect_type:
+    tag_filter_1 = ""
+
+    if prospect_type or tags:
 
         pt_join = " LEFT JOIN prospects p ON p.id = cl.prospect_id "
 
         pt_filter = _pt_clause("p", params)
+
+        tag_filter_1 = _tag_clause("p", params)
 
 
 
@@ -518,7 +531,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
         {pt_join}
 
-        WHERE 1=1 {pt_filter}
+        WHERE 1=1 {pt_filter} {tag_filter_1}
 
         GROUP BY d.day
 
@@ -584,11 +597,15 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pt_filter = ""
 
-    if prospect_type:
+    tag_filter_3 = ""
+
+    if prospect_type or tags:
 
         pt_join = " JOIN prospects p ON p.id = cl.prospect_id "
 
         pt_filter = _pt_clause("p", params)
+
+        tag_filter_3 = _tag_clause("p", params)
 
 
 
@@ -726,7 +743,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
             {pt_join}
 
-            WHERE 1=1 {tc_clause} {date_clause} {pt_filter}
+            WHERE 1=1 {tc_clause} {date_clause} {pt_filter} {tag_filter_3}
 
             ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
 
@@ -764,13 +781,17 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pt_filter_pa = _pt_clause("p_pa", pa_params)
 
-    
+    tag_filter_pa = _tag_clause("p_pa", pa_params)
+
+
 
     cl_params = []
 
     date_clause = _date_filter_clause("cl.called_at::date", start_date, end_date, cl_params)
 
     pt_filter_cl = _pt_clause("p_cl", cl_params)
+
+    tag_filter_cl = _tag_clause("p_cl", cl_params)
 
     
 
@@ -786,9 +807,9 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
             FROM prospect_assignments pa
 
-            {'JOIN prospects p_pa ON p_pa.id = pa.prospect_id' if prospect_type else ''}
+            {'JOIN prospects p_pa ON p_pa.id = pa.prospect_id' if prospect_type or tags else ''}
 
-            WHERE 1=1 {pa_date_clause} {pt_filter_pa}
+            WHERE 1=1 {pa_date_clause} {pt_filter_pa} {tag_filter_pa}
 
         ),
 
@@ -812,9 +833,9 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
             FROM call_logs cl
 
-            {'LEFT JOIN prospects p_cl ON p_cl.id = cl.prospect_id' if prospect_type else ''}
+            {'LEFT JOIN prospects p_cl ON p_cl.id = cl.prospect_id' if prospect_type or tags else ''}
 
-            WHERE 1=1 {date_clause} {pt_filter_cl}
+            WHERE 1=1 {date_clause} {pt_filter_cl} {tag_filter_cl}
 
             ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
 
@@ -948,7 +969,9 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pt_filter = _pt_clause("", params)
 
-    
+    tag_filter_6 = _tag_clause("", params)
+
+
 
     conversion_funnel = execute_query(f"""
 
@@ -960,7 +983,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
         FROM prospects
 
-        WHERE 1=1 {date_clause} {pt_filter}
+        WHERE 1=1 {date_clause} {pt_filter} {tag_filter_6}
 
         GROUP BY status
 
@@ -982,11 +1005,13 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
         tc_clause = " AND cl.telecaller_id = %s "
 
-    pt_join = " JOIN prospects p ON p.id = cl.prospect_id " if prospect_type else ""
+    pt_join = " JOIN prospects p ON p.id = cl.prospect_id " if prospect_type or tags else ""
 
     pt_filter = _pt_clause("p", params)
 
-    
+    tag_filter_7 = _tag_clause("p", params)
+
+
 
     call_summary = execute_query(f"""
 
@@ -1010,7 +1035,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
             {pt_join}
 
-            WHERE 1=1 {date_clause} {tc_clause} {pt_filter}
+            WHERE 1=1 {date_clause} {tc_clause} {pt_filter} {tag_filter_7}
 
             ORDER BY cl.prospect_id, cl.called_at DESC, cl.id DESC
 
@@ -1056,11 +1081,13 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
         pending_tc_clause = " AND pa.telecaller_id = %s "
 
-    pt_join_pa = " JOIN prospects p ON p.id = pa.prospect_id " if prospect_type else ""
+    pt_join_pa = " JOIN prospects p ON p.id = pa.prospect_id " if prospect_type or tags else ""
 
     pt_filter_pa = _pt_clause("p", pending_params)
 
-    
+    tag_filter_pa2 = _tag_clause("p", pending_params)
+
+
 
     pending_calls = execute_query(f"""
 
@@ -1070,7 +1097,7 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
         {pt_join_pa}
 
-        WHERE 1=1 {pending_date_clause} {pending_tc_clause} {pt_filter_pa}
+        WHERE 1=1 {pending_date_clause} {pending_tc_clause} {pt_filter_pa} {tag_filter_pa2}
 
         AND pa.prospect_id NOT IN (
 
@@ -1092,9 +1119,11 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pt_filter_enroll = _pt_clause("prospects", enroll_params)
 
+    tag_filter_enroll = _tag_clause("prospects", enroll_params)
+
     total_enrollments = execute_query(f"""
 
-        SELECT COUNT(*) as count FROM prospects WHERE status = 'admission_done' {enroll_date_clause} {pt_filter_enroll}
+        SELECT COUNT(*) as count FROM prospects WHERE status = 'admission_done' {enroll_date_clause} {pt_filter_enroll} {tag_filter_enroll}
 
     """, tuple(enroll_params) if enroll_params else None, fetch="one")
 
@@ -1106,9 +1135,11 @@ def get_admin_reports(telecaller_id: int = None, start_date: str = None, end_dat
 
     pt_filter_prosp = _pt_clause("prospects", prospect_params)
 
+    tag_filter_prosp = _tag_clause("prospects", prospect_params)
+
     total_prospects = execute_query(f"""
 
-        SELECT COUNT(*) as count FROM prospects WHERE 1=1 {prospect_date_clause} {pt_filter_prosp}
+        SELECT COUNT(*) as count FROM prospects WHERE 1=1 {prospect_date_clause} {pt_filter_prosp} {tag_filter_prosp}
 
     """, tuple(prospect_params) if prospect_params else None, fetch="one")
 

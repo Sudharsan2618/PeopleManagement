@@ -53,6 +53,7 @@ import { Badge } from "@/components/ui/badge"
 import { MessageBubble } from "@/components/whatsapp/message-bubble"
 import { ContactPanel } from "@/components/whatsapp/contact-panel"
 import { ConnectionBadge } from "@/components/whatsapp/connection-badge"
+import { NumberManager } from "@/components/whatsapp/number-manager"
 import { 
   Sheet, 
   SheetContent, 
@@ -180,13 +181,14 @@ function useRecipientPicker(opts: { active: boolean; excludeCampaignId?: number 
   }
 }
 
-const WHATSAPP_TABS = ["inbox", "templates", "campaigns", "flows", "submissions"] as const
+const WHATSAPP_TABS = ["inbox", "templates", "campaigns", "flows", "submissions", "numbers"] as const
 const TAB_LABELS: Record<string, string> = {
   inbox: "Inbox",
   templates: "Templates",
   campaigns: "Campaigns",
   flows: "Flows",
   submissions: "Submissions",
+  numbers: "Numbers",
 }
 
 export default function WhatsAppAdmin() {
@@ -280,6 +282,7 @@ export default function WhatsAppAdmin() {
     template_name: "",
     language_code: "",
     recipient_ids: [] as number[],
+    wa_number_id: null as number | null,
     parameters: {
       header: {} as any,
       body_variables: [] as any[],
@@ -291,6 +294,7 @@ export default function WhatsAppAdmin() {
       default: { type: "document", media_ids: [] as string[], caption: "" }
     }
   })
+  const [waNumbers, setWaNumbers] = useState<any[]>([])
   const [isCustomHeader, setIsCustomHeader] = useState(false)
 
   // Distinct prospect tags for the recipient-picker tag filters (loaded lazily).
@@ -479,15 +483,17 @@ export default function WhatsAppAdmin() {
       setIsLoading(true)
       // Note: prospects are NOT loaded here — the campaign recipient pickers
       // fetch them server-paginated on demand (see useRecipientPicker).
-      const [tpls, flws, campsData, convs, assets] = await Promise.all([
+      const [tpls, flws, campsData, convs, assets, nums] = await Promise.all([
         whatsappApi.getTemplates(),
         whatsappApi.getFlows(),
         whatsappApi.getCampaigns(1, campaignPagination.pageSize),
         whatsappApi.getConversations(1, 20),
-        whatsappApi.getMediaAssets()
+        whatsappApi.getMediaAssets(),
+        whatsappApi.getNumbers().catch(() => []),
       ])
       setTemplates(tpls)
       setFlows(flws)
+      setWaNumbers(nums)
       setCampaigns(campsData.items)
       setCampaignPagination(prev => ({
         ...prev,
@@ -2259,6 +2265,12 @@ export default function WhatsAppAdmin() {
               )}
             </Card>
           )}
+
+          {activeTab === "numbers" && (
+            <div className="p-4">
+              <NumberManager />
+            </div>
+          )}
         </div>
       </div>
 
@@ -2371,6 +2383,31 @@ export default function WhatsAppAdmin() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {waNumbers.length > 0 && (
+                    <div className="grid gap-2">
+                      <Label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Send From</Label>
+                      <Select
+                        value={newCampaign.wa_number_id ? String(newCampaign.wa_number_id) : "default"}
+                        onValueChange={(v) => setNewCampaign({...newCampaign, wa_number_id: v === "default" ? null : Number(v)})}
+                      >
+                        <SelectTrigger className="border-2 h-10 font-semibold text-slate-800">
+                          <SelectValue placeholder="Default number" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default number</SelectItem>
+                          {waNumbers.filter((n: any) => n.provider === "cloud").map((n: any) => (
+                            <SelectItem key={n.id} value={String(n.id)}>
+                              {n.display_label || n.phone_number} (Cloud API)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[10px] text-muted-foreground">
+                        Only Cloud API numbers support template campaigns
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

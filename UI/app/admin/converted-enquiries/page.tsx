@@ -27,6 +27,7 @@ import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
+import { TagFilter } from "@/components/tag-filter"
 
 export default function ConvertedEnquiriesPage() {
   const { toast } = useToast()
@@ -35,6 +36,7 @@ export default function ConvertedEnquiriesPage() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all")
+  const [tagFilter, setTagFilter] = useState("")
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
@@ -74,6 +76,7 @@ export default function ConvertedEnquiriesPage() {
       if (paymentStatusFilter !== "all") params.payment_status = paymentStatusFilter
       if (createdStartDate) params.start_date = createdStartDate
       if (createdEndDate) params.end_date = createdEndDate
+      if (tagFilter) params.tags = tagFilter
 
       const data = await conversionApi.getConvertedEnquiries(params)
       setEnquiries(data)
@@ -94,7 +97,7 @@ export default function ConvertedEnquiriesPage() {
       fetchEnquiries()
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, paymentStatusFilter, createdStartDate, createdEndDate])
+  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, paymentStatusFilter, tagFilter, createdStartDate, createdEndDate])
 
   const exportToCSV = () => {
     const headers = ["#", "Lead ID", "Student Name", "Created Date", "Mobile", "Course", "Module", "Total Fee", "Paid", "Pending", "Payment Status", "Telecaller", "Converted Date"]
@@ -214,6 +217,8 @@ export default function ConvertedEnquiriesPage() {
                   <SelectItem value="Refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
+
+              <TagFilter value={tagFilter} onChange={setTagFilter} />
 
               <CreatedDateFilter
                 startDate={createdStartDate}

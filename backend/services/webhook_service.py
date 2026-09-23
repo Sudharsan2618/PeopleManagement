@@ -280,3 +280,168 @@ class WebhookService:
                 conn.rollback()
             finally:
                 cur.close()
+
+    # ── Baileys bridge webhooks ──────────────────────────────────────────────
+
+    @staticmethod
+    def process_baileys_event(data: dict):
+        """Handle normalized inbound message from the Baileys bridge.
+
+        Expected payload:
+            source:       "baileys"
+            session_id:   bridge session key
+            from:         sender phone (e.g. "919876543210")
+            message_id:   Baileys message key id
+            timestamp:    unix seconds
+            type:         "text"|"image"|"video"|"audio"|"document"
+            body:         text content
+            media:        {mime_type, url?} (for media messages)
+            profile_name: sender's WhatsApp push name
+        """
+        from_mobile = clean_phone_number(data.get("from", ""))
+        msg_id = data.get("message_id")
+        msg_type = data.get("type", "text")
+        body = data.get("body", "")
+        profile_name = (data.get("profile_name") or "").strip() or None
+        session_id = data.get("session_id")
+
+        if msg_type in ("image", "video", "audio", "document") and not body:
+            body = f"[{msg_type.title()}]"
+
+        created_at = get_ist_now()
+        ts = data.get("timestamp")
+        if ts:
+            try:
+                created_at = datetime.fromtimestamp(int(ts), tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Asia/Kolkata"))
+            except Exception:
+                pass
+
+        # Resolve wa_number_id from session_id
+        wa_number_id = None
+        try:
+            from database.connection import execute_query as _eq
+            row = _eq(
+                "SELECT id FROM whatsapp_numbers WHERE baileys_session_id = %s AND is_active = true",
+                (session_id,), fetch="one"
+            )
+            if row:
+                wa_number_id = row["id"]
+        except Exception:
+            pass
+
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            try:
+                now = get_ist_now()
+                cur.execute(
+                    "SELECT id FROM prospects WHERE mobile LIKE %s",
+                    (f"%{from_mobile[-10:]}",)
+                )
+                prospect = cur.fetchone()
+
+                if not prospect:
+                    new_name = profile_name or "WhatsApp Contact"
+                    cur.execute(
+                        """
+                        INSERT INTO prospects (name, mobile, status, created_at, updated_at)
+                        VALUES (%s, %s, 'new', %s, %s) RETURNING id
+                        """,
+                        (new_name, from_mobile, now, now)
+                    )
+                    prospect_id = cur.fetchone()[0]
+                else:
+                    prospect_id = prospect[0]
+                    if profile_name:
+                        cur.execute(
+                            """
+                            UPDATE prospects
+                            SET name = CASE WHEN name IS NULL OR name = '' OR name = 'WhatsApp Contact'
+                                            THEN %s ELSE name END
+                            WHERE id = %s
+                            """,
+                            (profile_name, prospect_id)
+                        )
+
+                cur.execute(
+                    "SELECT campaign_id FROM whatsapp_messages WHERE prospect_id = %s AND campaign_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+                    (prospect_id,)
+                )
+                last_campaign = cur.fetchone()
+                campaign_id = last_campaign[0] if last_campaign else None
+
+                cur.execute(
+                    """
+                    INSERT INTO whatsapp_messages
+                        (prospect_id, campaign_id, meta_message_id, direction, message_type,
+                         status, body, payload, created_at, provider, wa_number_id)
+                    VALUES (%s, %s, %s, 'inbound', %s, 'delivered', %s, %s, %s, 'baileys', %s)
+                    ON CONFLICT DO NOTHING
+                    """,
+                    (prospect_id, campaign_id, msg_id, msg_type, body,
+                     json.dumps(data), created_at, wa_number_id)
+                )
+                conn.commit()
+            except Exception as e:
+                print(f"Error handling Baileys inbound: {e}")
+                conn.rollback()
+            finally:
+                cur.close()
+
+        return {"status": "ok"}
+
+    @staticmethod
+    def process_baileys_status(data: dict):
+        """Handle delivery/read receipts from the Baileys bridge.
+
+        Expected payload:
+            message_id:  Baileys message key id
+            status:      "delivered"|"read"|"played"
+            timestamp:   unix seconds
+        """
+        msg_id = data.get("message_id")
+        status = data.get("status", "")
+        if not msg_id:
+            return {"status": "ignored"}
+
+        timestamp = get_ist_now()
+        ts = data.get("timestamp")
+        if ts:
+            try:
+                timestamp = datetime.fromtimestamp(int(ts), tz=ZoneInfo("UTC")).astimezone(ZoneInfo("Asia/Kolkata"))
+            except Exception:
+                pass
+
+        if status == "played":
+            status = "read"
+
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            try:
+                if status == "delivered":
+                    cur.execute(
+                        "UPDATE whatsapp_messages SET status = %s, delivered_at = %s WHERE meta_message_id = %s",
+                        (status, timestamp, msg_id)
+                    )
+                elif status == "read":
+                    cur.execute(
+                        "UPDATE whatsapp_messages SET status = %s, read_at = %s WHERE meta_message_id = %s",
+                        (status, timestamp, msg_id)
+                    )
+
+                cur.execute(
+                    """
+                    UPDATE whatsapp_campaigns
+                    SET delivered_count = (SELECT count(*) FROM whatsapp_messages WHERE campaign_id = whatsapp_campaigns.id AND status IN ('delivered', 'read')),
+                        read_count = (SELECT count(*) FROM whatsapp_messages WHERE campaign_id = whatsapp_campaigns.id AND status = 'read')
+                    WHERE id = (SELECT campaign_id FROM whatsapp_messages WHERE meta_message_id = %s)
+                    """,
+                    (msg_id,)
+                )
+                conn.commit()
+            except Exception as e:
+                print(f"Error handling Baileys status: {e}")
+                conn.rollback()
+            finally:
+                cur.close()
+
+        return {"status": "ok"}

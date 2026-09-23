@@ -242,110 +242,77 @@ async def task_complete_lead_and_send_prospectus(
 
 
 async def _send_text(wa_phone: str, text: str, settings: Settings):
-    """Send a plain text WhatsApp message."""
-    url     = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "recipient_type"   : "individual",
-        "to"               : format_for_meta(wa_phone),
-        "type"             : "text",
-        "text"             : {"body": text},
-    }
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type" : "application/json",
-    }
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp   = await client.post(url, headers=headers, json=payload)
-        result = resp.json()
-    if resp.status_code == 200 and "messages" in result:
-        log.info("✅ Caption text sent → %s | msg_id=%s", wa_phone, result["messages"][0]["id"])
+    """Send a plain text WhatsApp message via the provider abstraction."""
+    import asyncio
+    from services.providers.router import get_default_provider
+
+    def _sync_send():
+        provider, _ = get_default_provider()
+        return provider.send_text(wa_phone, text)
+
+    result = await asyncio.to_thread(_sync_send)
+    if result.success:
+        log.info("✅ Caption text sent → %s | msg_id=%s", wa_phone, result.message_id)
     else:
-        log.error("❌ Caption text send failed → %s | error=%s", wa_phone, result)
+        log.error("❌ Caption text send failed → %s | error=%s", wa_phone, result.error)
 
 
 async def _send_custom_media(wa_phone: str, media_id: str, settings: Settings):
-    """Send a single media asset (no caption — caption is sent separately as text).
-    Looks up file_type from the media library to use the correct WA message type.
-    """
+    """Send a single media asset via the provider abstraction."""
     if not media_id:
         log.warning("_send_custom_media called with empty media_id — skipping")
         return
 
+    import asyncio
     from database.connection import execute_query as _eq
+    from services.providers.router import get_default_provider
 
-    asset     = _eq("SELECT file_type, file_name FROM whatsapp_media_assets WHERE media_id = %s", (media_id,), fetch="one")
+    asset = _eq("SELECT file_type, file_name FROM whatsapp_media_assets WHERE media_id = %s",
+                (media_id,), fetch="one")
     file_type = (asset or {}).get("file_type", "") or ""
     file_name = (asset or {}).get("file_name", "Document") or "Document"
 
     if file_type.startswith("video/"):
-        wa_type     = "video"
-        media_block = {"id": media_id}
+        wa_type = "video"
     elif file_type.startswith("image/"):
-        wa_type     = "image"
-        media_block = {"id": media_id}
+        wa_type = "image"
     else:
-        wa_type     = "document"
-        media_block = {"id": media_id, "filename": file_name}
+        wa_type = "document"
 
-    url     = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "recipient_type"   : "individual",
-        "to"               : format_for_meta(wa_phone),
-        "type"             : wa_type,
-        wa_type            : media_block,
-    }
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type" : "application/json",
-    }
+    def _sync_send():
+        provider, _ = get_default_provider()
+        return provider.send_media(wa_phone, wa_type, media_id, filename=file_name)
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        resp   = await client.post(url, headers=headers, json=payload)
-        result = resp.json()
-
-    if resp.status_code == 200 and "messages" in result:
-        log.info("✅ Custom media sent → %s | type=%s | msg_id=%s", wa_phone, wa_type, result["messages"][0]["id"])
+    result = await asyncio.to_thread(_sync_send)
+    if result.success:
+        log.info("✅ Custom media sent → %s | type=%s | msg_id=%s", wa_phone, wa_type, result.message_id)
     else:
-        log.error("❌ Custom media send failed → %s | type=%s | error=%s", wa_phone, wa_type, result)
+        log.error("❌ Custom media send failed → %s | type=%s | error=%s", wa_phone, wa_type, result.error)
 
 
 async def _send_prospectus(wa_phone: str, settings: Settings):
-    """Async HTTP call to WhatsApp Cloud API using httpx."""
-    url     = f"https://graph.facebook.com/v19.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "recipient_type"   : "individual",
-        "to"               : format_for_meta(wa_phone),
-        "type"             : "document",
-        "document"         : {
-            "id"      : settings.WHATSAPP_PROSPECTUS_MEDIA_ID,
-            "caption" : settings.PROSPECTUS_MESSAGE,
-            "filename": "PMIST_Prospectus_2026.pdf",
-        },
-    }
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type" : "application/json",
-    }
+    """Send prospectus PDF via the provider abstraction."""
+    import asyncio
+    from services.providers.router import get_default_provider
+
+    def _sync_send():
+        provider, _ = get_default_provider()
+        return provider.send_media(
+            wa_phone, "document",
+            settings.WHATSAPP_PROSPECTUS_MEDIA_ID,
+            caption=settings.PROSPECTUS_MESSAGE,
+            filename="PMIST_Prospectus_2026.pdf",
+        )
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp   = await client.post(url, headers=headers, json=payload)
-            result = resp.json()
-
-        if resp.status_code == 200 and "messages" in result:
-            log.info(
-                "✅ Prospectus sent → %s | msg_id=%s",
-                wa_phone, result["messages"][0]["id"],
-            )
+        result = await asyncio.to_thread(_sync_send)
+        if result.success:
+            log.info("✅ Prospectus sent → %s | msg_id=%s", wa_phone, result.message_id)
         else:
-            log.error("❌ Prospectus send failed for %s: %s", wa_phone, result)
-
-    except httpx.TimeoutException:
+            log.error("❌ Prospectus send failed for %s: %s", wa_phone, result.error)
+    except Exception:
         log.error("❌ Timeout sending prospectus to %s", wa_phone)
-        raise   # ARQ will retry
+        raise
 
 
 def _get_contact_name(contacts: list, wa_phone: str) -> str:

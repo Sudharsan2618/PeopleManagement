@@ -86,6 +86,10 @@ class Settings(BaseSettings):
     EXOTEL_SUBDOMAIN   : str = "api.exotel.com"
     EXOTEL_CALLBACK_URL: str = ""  # Webhook URL for call status/recording (e.g., https://your-domain.com/calls/complete)
 
+    # Baileys Bridge (unofficial WhatsApp Web provider)
+    BAILEYS_BRIDGE_URL    : str = "http://localhost:3001"
+    BAILEYS_BRIDGE_SECRET : str = ""
+
     # Prospectus message body
     PROSPECTUS_MESSAGE : str = (
         "Hi 👋\n\n"

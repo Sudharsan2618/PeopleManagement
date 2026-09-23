@@ -15,6 +15,7 @@ def get_qualified_leads(
     search: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    tags: Optional[str] = Query(None),
 ):
     """Get all unconverted qualified leads."""
     try:
@@ -26,6 +27,7 @@ def get_qualified_leads(
             search=search,
             start_date=start_date,
             end_date=end_date,
+            tags=tags,
         )
         return leads
     except Exception as e:
@@ -51,6 +53,7 @@ def get_converted_enquiries(
     search: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    tags: Optional[str] = Query(None),
 ):
     """Get all converted enquiries."""
     try:
@@ -63,6 +66,7 @@ def get_converted_enquiries(
             pending_only=False,
             start_date=start_date,
             end_date=end_date,
+            tags=tags,
         )
         return enquiries
     except Exception as e:
@@ -77,6 +81,7 @@ def get_payment_pending(
     search: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
+    tags: Optional[str] = Query(None),
 ):
     """Get converted enquiries with pending amount > 0."""
     try:
@@ -89,6 +94,7 @@ def get_payment_pending(
             pending_only=True,
             start_date=start_date,
             end_date=end_date,
+            tags=tags,
         )
         return enquiries
     except Exception as e:

@@ -11,8 +11,7 @@ import uuid
 
 log = logging.getLogger(__name__)
 
-# Cloud API number-health cache (5-min TTL) for the inbox connection badge.
-_phone_status_cache = {"data": None, "exp": 0.0}
+# Legacy Cloud API number-health cache removed — now inside CloudAPIProvider.
 
 try:
     from google.cloud import storage as _gcs
@@ -22,156 +21,91 @@ except Exception:  # pragma: no cover - optional dependency
 
 from utils.phone_utils import format_for_meta
 from database.connection import execute_query, execute_insert
+from services.providers.router import get_default_provider, get_provider_for_number, get_all_numbers
+from services.providers.base import SendResult
 
+# Legacy globals — used only by GCS / media helpers that remain Cloud-specific.
 WABA_ID = os.getenv("WHATSAPP_WABA_ID")
 ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 VERSION = "v19.0"
 BASE_URL = f"https://graph.facebook.com/{VERSION}"
 
+def _resolve_provider(wa_number_id: int = None):
+    """Return (provider, number_config) for the given number, or the default."""
+    if wa_number_id:
+        p = get_provider_for_number(wa_number_id)
+        return p, p.number_config
+    return get_default_provider()
+
+
 class WhatsAppService:
     @staticmethod
-    def get_templates():
-        """Fetch all message templates from WhatsApp Business Account."""
-        url = f"{BASE_URL}/{WABA_ID}/message_templates"
-        headers = {
-            "Authorization": f"Bearer {ACCESS_TOKEN}"
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("data", [])
-        else:
-            raise Exception(f"Error fetching templates: {response.status_code} - {response.text}")
+    def get_templates(wa_number_id: int = None):
+        """Fetch all message templates (Cloud API only)."""
+        provider, _ = _resolve_provider(wa_number_id)
+        if not provider.supports_templates():
+            return []
+        return provider.get_templates()
 
     @staticmethod
-    def get_flows():
-        """Fetch WhatsApp Flows."""
-        url = f"{BASE_URL}/{WABA_ID}/flows"
-        headers = {
-            "Authorization": f"Bearer {ACCESS_TOKEN}"
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("data", [])
-        else:
-            raise Exception(f"Error fetching flows: {response.status_code} - {response.text}")
+    def get_flows(wa_number_id: int = None):
+        """Fetch WhatsApp Flows (Cloud API only)."""
+        provider, _ = _resolve_provider(wa_number_id)
+        if not provider.supports_flows():
+            return []
+        return provider.get_flows()
 
     @staticmethod
-    def send_template_message(to: str, template_name: str, language_code: str = "en_US", components: list = None, prospect_id: int = None):
-        """Send a template message to a specific number."""
-        url = f"{BASE_URL}/{PHONE_NUMBER_ID}/messages"
-        headers = {
-            "Authorization": f"Bearer {ACCESS_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        to = format_for_meta(to)
-        
-        # Injected components (like Flows)
-        injected_components = []
+    def send_template_message(to: str, template_name: str, language_code: str = "en_US",
+                              components: list = None, prospect_id: int = None,
+                              wa_number_id: int = None):
+        """Send a template message via the resolved provider."""
+        provider, cfg = _resolve_provider(wa_number_id)
 
-        # Fixes for specific templates
-        if template_name == "degreecourse":
-            if language_code == "en_US":
-                language_code = "en"
-            
-            # Check if flow button is already in components, if not, add it
-            has_flow = any(c.get("sub_type") == "flow" for c in (components or []))
-            if not has_flow:
-                injected_components.append({
-                    "type": "button",
-                    "sub_type": "flow",
-                    "index": 0,
-                    "parameters": [
-                        {
-                            "type": "action",
-                            "action": {
-                                "flow_token": str(uuid.uuid4()), 
-                                "flow_action_data": {} 
-                            }
-                        }
-                    ]
-                })
+        if not provider.supports_templates():
+            raise Exception("Template messages require a Cloud API number.")
 
-        final_components = (components or []) + injected_components
-
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": to,
-            "type": "template",
-            "template": {
-                "name": template_name,
-                "language": {
-                    "code": language_code
-                }
-            }
-        }
-        if final_components:
-            payload["template"]["components"] = final_components
-
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code in [200, 201]:
-            result = response.json()
-            # Log the outbound message so it appears in the prospect's thread
-            meta_id = None
-            try:
-                meta_id = result.get("messages", [{}])[0].get("id")
-            except Exception:
-                pass
+        result = provider.send_template(to, template_name, language_code, components)
+        if result.success:
             WhatsAppService.log_outbound(
                 prospect_id=prospect_id,
                 message_type="template",
                 status="sent",
-                meta_message_id=meta_id,
+                meta_message_id=result.message_id,
                 body="",
                 template_name=template_name,
+                provider=provider.provider_name,
+                wa_number_id=provider.wa_number_id or None,
             )
-            return result
-        else:
-            try:
-                error_data = response.json()
-            except:
-                error_data = response.text
-            raise Exception(f"Meta API Error {response.status_code}: {error_data}")
+            return result.raw_response or {"messages": [{"id": result.message_id}]}
+        raise Exception(result.error)
 
     @staticmethod
-    def send_text_message(to: str, text: str, prospect_id: int = None):
-        """Send a simple text message (within 24h window)."""
-        to = format_for_meta(to)
-        url = f"{BASE_URL}/{PHONE_NUMBER_ID}/messages"
-        headers = {
-            "Authorization": f"Bearer {ACCESS_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": to,
-            "type": "text",
-            "text": {"body": text}
-        }
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code in [200, 201]:
-            result = response.json()
-            meta_id = None
-            try:
-                meta_id = result.get("messages", [{}])[0].get("id")
-            except Exception:
-                pass
+    def send_text_message(to: str, text: str, prospect_id: int = None,
+                          wa_number_id: int = None):
+        """Send a text message via the resolved provider."""
+        provider, cfg = _resolve_provider(wa_number_id)
+
+        result = provider.send_text(to, text)
+        if result.success:
             WhatsAppService.log_outbound(
                 prospect_id=prospect_id,
                 message_type="text",
                 status="sent",
-                meta_message_id=meta_id,
+                meta_message_id=result.message_id,
                 body=text,
+                provider=provider.provider_name,
+                wa_number_id=provider.wa_number_id or None,
             )
-            return result
-        else:
-            error_data = response.json() if response.content else {"error": response.text}
-            raise Exception(f"Meta API Error: {response.status_code} - {error_data}")
+            return result.raw_response or {"messages": [{"id": result.message_id}]}
+        raise Exception(result.error)
 
     @staticmethod
     def log_outbound(prospect_id: int, message_type: str, status: str = "sent",
                      meta_message_id: str = None, body: str = "",
-                     template_name: str = None, campaign_id: int = None):
+                     template_name: str = None, campaign_id: int = None,
+                     provider: str = "cloud", wa_number_id: int = None):
         """Persist an outbound message row so it shows in the prospect's thread.
 
         No-op when prospect_id is missing (e.g. admin test sends by raw number)."""
@@ -185,15 +119,16 @@ class WhatsAppService:
                 """
                 INSERT INTO whatsapp_messages
                     (prospect_id, campaign_id, meta_message_id, direction, message_type,
-                     status, body, template_name, sent_at, created_at)
-                VALUES (%s, %s, %s, 'outbound', %s, %s, %s, %s, %s, %s)
+                     status, body, template_name, sent_at, created_at,
+                     provider, wa_number_id)
+                VALUES (%s, %s, %s, 'outbound', %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (prospect_id, campaign_id, meta_message_id, message_type,
-                 status, body, template_name, now, now),
+                 status, body, template_name, now, now,
+                 provider, wa_number_id if wa_number_id else None),
             )
         except Exception as e:
-            # Never let logging failure break the actual send
             print(f"log_outbound failed: {e}")
             return None
 
@@ -234,37 +169,25 @@ class WhatsAppService:
         }
 
     @staticmethod
-    def upload_media(file_content: bytes, file_type: str, file_name: str, nickname: str):
-        """Upload a file to Meta and save to local Media Library."""
+    def upload_media(file_content: bytes, file_type: str, file_name: str, nickname: str,
+                     wa_number_id: int = None):
+        """Upload a file to Meta and save to local Media Library (Cloud API only)."""
         from database.connection import execute_insert
-        
-        url = f"{BASE_URL}/{PHONE_NUMBER_ID}/media"
-        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
-        
-        files = {
-            "file": (file_name, file_content, file_type)
-        }
-        data = {
-            "messaging_product": "whatsapp"
-        }
-        
-        response = requests.post(url, headers=headers, data=data, files=files)
-        meta_data = response.json()
-        
-        if "id" in meta_data:
-            media_id = meta_data["id"]
-            # Save to database
-            asset_id = execute_insert(
-                """
-                INSERT INTO whatsapp_media_assets (nickname, media_id, file_type, file_name)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id
-                """,
-                (nickname, media_id, file_type, file_name)
-            )
-            return {"id": asset_id, "nickname": nickname, "media_id": media_id}
-        else:
-            raise Exception(f"Meta Media Upload Failed: {meta_data}")
+
+        provider, _ = _resolve_provider(wa_number_id)
+        if not provider.supports_templates():
+            raise Exception("Media upload requires a Cloud API number.")
+
+        media_id = provider.upload_media(file_content, file_type, file_name)
+        asset_id = execute_insert(
+            """
+            INSERT INTO whatsapp_media_assets (nickname, media_id, file_type, file_name)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id
+            """,
+            (nickname, media_id, file_type, file_name),
+        )
+        return {"id": asset_id, "nickname": nickname, "media_id": media_id}
 
     @staticmethod
     def get_media_assets():
@@ -376,68 +299,37 @@ class WhatsAppService:
         return blob.generate_signed_url(expiration=timedelta(seconds=ttl), version="v4")
 
     @staticmethod
-    def fetch_media(media_id: str):
+    def fetch_media(media_id: str, wa_number_id: int = None):
         """Resolve a Meta media_id and return (data_bytes, content_type).
 
-        Cloud API media isn't a public URL — it's a two-step exchange: look up
-        the media_id to get a short-lived, token-authenticated download URL, then
-        download the bytes with the same bearer. Used by the inbox media proxy so
-        the browser can play/view inbound voice notes, images and videos.
-
-        The media is buffered fully (WhatsApp media is small, <=16MB) rather than
-        streamed chunked: browser <audio>/<video> elements reject length-less
-        chunked responses for container formats like Ogg, and a buffered body
-        lets the proxy serve a Content-Length and HTTP Range requests (seeking).
-
-        Raises LookupError when the media can't be resolved (expired/deleted).
+        Uses the Cloud API provider to download media. Falls back to legacy
+        globals if no wa_number_id is specified.
         """
-        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
-        meta = requests.get(f"{BASE_URL}/{media_id}", headers=headers, timeout=15)
-        if meta.status_code != 200:
-            raise LookupError(f"media lookup failed: {meta.status_code} {meta.text[:200]}")
-        info = meta.json()
-        url = info.get("url")
-        if not url:
-            raise LookupError("media url missing in Meta response")
-        resp = requests.get(url, headers=headers, timeout=30)
-        if resp.status_code != 200:
-            raise LookupError(f"media download failed: {resp.status_code}")
-        content_type = resp.headers.get("Content-Type") or info.get("mime_type") or "application/octet-stream"
-        return resp.content, content_type
+        provider, _ = _resolve_provider(wa_number_id)
+        if hasattr(provider, "fetch_media"):
+            return provider.fetch_media(media_id)
+        # Baileys media comes via URL, not Meta media_id — shouldn't reach here
+        raise LookupError("Media fetch not supported for this provider")
 
     @staticmethod
-    def get_phone_status():
-        """Cloud API number health for the inbox header badge (5-min TTL cache).
+    def get_phone_status(wa_number_id: int = None):
+        """Connection/health status for a number via its provider."""
+        provider, _ = _resolve_provider(wa_number_id)
+        return provider.get_connection_status()
 
-        Since a Cloud API number has no 'scan-QR / is-it-connected' surface, this
-        surfaces the useful equivalents: the display number, verified name,
-        Meta quality rating (GREEN/YELLOW/RED) and messaging-limit tier.
-        """
-        now = time.time()
-        cached = _phone_status_cache
-        if cached["data"] is not None and cached["exp"] > now:
-            return cached["data"]
-        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
-        fields = "display_phone_number,verified_name,quality_rating,messaging_limit_tier"
-        try:
-            resp = requests.get(f"{BASE_URL}/{PHONE_NUMBER_ID}", headers=headers,
-                                params={"fields": fields}, timeout=15)
-            if resp.status_code != 200:
-                data = {"connected": False, "error": f"{resp.status_code}"}
-            else:
-                j = resp.json()
-                data = {
-                    "connected": True,
-                    "display_phone_number": j.get("display_phone_number"),
-                    "verified_name": j.get("verified_name"),
-                    "quality_rating": j.get("quality_rating"),
-                    "messaging_limit_tier": j.get("messaging_limit_tier"),
-                }
-        except requests.RequestException as e:
-            data = {"connected": False, "error": str(e)}
-        cached["data"] = data
-        cached["exp"] = now + 300
-        return data
+    @staticmethod
+    def get_all_numbers_status():
+        """Return all configured numbers with their connection status."""
+        numbers = get_all_numbers()
+        result = []
+        for n in numbers:
+            try:
+                p = get_provider_for_number(n["id"])
+                status = p.get_connection_status()
+            except Exception:
+                status = {"connected": False, "error": "provider init failed"}
+            result.append({**n, "status": status})
+        return result
 
     @staticmethod
     def get_unread_count(telecaller_id: int):

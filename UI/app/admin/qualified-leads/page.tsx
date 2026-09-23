@@ -27,6 +27,7 @@ import { conversionApi, usersApi, coursesApi } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
+import { TagFilter } from "@/components/tag-filter"
 
 export default function QualifiedLeadsPage() {
   const { toast } = useToast()
@@ -35,6 +36,7 @@ export default function QualifiedLeadsPage() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [leadSourceFilter, setLeadSourceFilter] = useState<string>("all")
+  const [tagFilter, setTagFilter] = useState("")
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
@@ -73,6 +75,7 @@ export default function QualifiedLeadsPage() {
       if (leadSourceFilter !== "all") params.lead_source = leadSourceFilter
       if (createdStartDate) params.start_date = createdStartDate
       if (createdEndDate) params.end_date = createdEndDate
+      if (tagFilter) params.tags = tagFilter
 
       const data = await conversionApi.getQualifiedLeads(params)
       setLeads(data)
@@ -139,7 +142,7 @@ export default function QualifiedLeadsPage() {
       fetchLeads()
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, leadSourceFilter, createdStartDate, createdEndDate])
+  }, [searchQuery, telecallerFilter, courseFilter, moduleFilter, leadSourceFilter, tagFilter, createdStartDate, createdEndDate])
 
   if (isLoading && leads.length === 0) return <PageSkeleton />
 
@@ -226,6 +229,8 @@ export default function QualifiedLeadsPage() {
                   <SelectItem value="Walk-in">Walk-in</SelectItem>
                 </SelectContent>
               </Select>
+
+              <TagFilter value={tagFilter} onChange={setTagFilter} />
 
               <CreatedDateFilter
                 startDate={createdStartDate}
