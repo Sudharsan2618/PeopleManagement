@@ -20918,9 +20918,13 @@ export default function TelecallerDashboard() {
         }
       }
 
-      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesCreatedDate && matchesStatCard
+      const matchesTag =
+        !tagFilter ||
+        (Array.isArray(prospect.tags) && prospect.tags.includes(tagFilter))
+
+      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesCreatedDate && matchesStatCard && matchesTag
     })
-  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, createdStartDate, createdEndDate, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats])
+  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, createdStartDate, createdEndDate, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats, tagFilter])
 
 
 
