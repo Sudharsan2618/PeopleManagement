@@ -9356,6 +9356,7 @@ export default function TelecallerDashboard() {
 
 
             is_imported: p.is_imported || false,
+            tags: p.tags || [],
 
 
 
