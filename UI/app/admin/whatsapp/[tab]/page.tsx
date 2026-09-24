@@ -1269,7 +1269,7 @@ export default function WhatsAppAdmin() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-20px)] -mt-6 -mx-4 bg-[#F6F7F9]">
+    <div className="flex flex-col h-[calc(100vh-20px)] -mt-6 -mx-4 lg:-mx-6 bg-[#F6F7F9]">
       {/* Mini Header */}
       <div className="flex items-center justify-between px-6 py-2 bg-white/50 backdrop-blur-sm border-b shrink-0">
         <div className="flex items-center gap-4">
@@ -1307,7 +1307,7 @@ export default function WhatsAppAdmin() {
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 overflow-hidden p-3 flex gap-3 h-[calc(100vh-144px)]">
+      <div className="flex-1 overflow-hidden p-3 flex gap-3 min-h-0">
         <div className="h-full w-full relative flex flex-col min-h-0">
           {activeTab === "inbox" && (
             <div className="h-full flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-0">
@@ -1968,7 +1968,7 @@ export default function WhatsAppAdmin() {
                                         Launch
                                       </Button>
                                     )}
-                                    {(camp.status === 'failed' || camp.status === 'sending') && (
+                                    {camp.status === 'failed' && (
                                       <Button
                                         size="sm"
                                         variant="outline"

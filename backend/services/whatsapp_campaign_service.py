@@ -340,7 +340,7 @@ class WhatsAppCampaignService:
                 
                 conn.commit()
 
-                if current_status in ['completed', 'sending', 'sent', 'failed'] and new_msg_ids:
+                if current_status in ['completed', 'sent', 'failed'] and new_msg_ids:
                     import asyncio
                     asyncio.create_task(WhatsAppCampaignService.run_campaign_async(campaign_id))
                 

@@ -34,6 +34,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { normalizeCourseInterest } from "../utils"
 import { CourseMultiSelect } from "@/components/ui/course-multi-select"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
+import { TagFilter } from "@/components/tag-filter"
 
 
 
@@ -7173,6 +7174,7 @@ export default function TelecallerDashboard() {
 
 
   const [leadTypeFilter, setLeadTypeFilter] = useState<string[]>([])
+  const [tagFilter, setTagFilter] = useState<string>("")
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
@@ -10851,7 +10853,11 @@ export default function TelecallerDashboard() {
 
 
 
-        return matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType
+        const matchesTag =
+          !tagFilter ||
+          (Array.isArray(prospect.tags) && prospect.tags.includes(tagFilter))
+
+        return matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesTag
 
 
 
@@ -27524,7 +27530,8 @@ export default function TelecallerDashboard() {
                   </div>
                 )}
 
-
+                {/* Tag Filter */}
+                <TagFilter value={tagFilter} onChange={setTagFilter} className="w-full sm:w-40" />
 
 
 

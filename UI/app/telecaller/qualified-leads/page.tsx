@@ -28,6 +28,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
+import { TagFilter } from "@/components/tag-filter"
 
 export default function TelecallerQualifiedLeadsPage() {
   const { user } = useAuth()
@@ -36,6 +37,7 @@ export default function TelecallerQualifiedLeadsPage() {
   const [courseFilter, setCourseFilter] = useState<string>("all")
   const [moduleFilter, setModuleFilter] = useState<string>("all")
   const [leadSourceFilter, setLeadSourceFilter] = useState<string>("all")
+  const [tagFilter, setTagFilter] = useState<string>("")
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
@@ -69,6 +71,7 @@ export default function TelecallerQualifiedLeadsPage() {
       if (leadSourceFilter !== "all") params.lead_source = leadSourceFilter
       if (createdStartDate) params.start_date = createdStartDate
       if (createdEndDate) params.end_date = createdEndDate
+      if (tagFilter) params.tags = tagFilter
 
       const data = await conversionApi.getQualifiedLeads(params)
       setLeads(data)
@@ -130,7 +133,7 @@ export default function TelecallerQualifiedLeadsPage() {
     if (user) {
       fetchLeads()
     }
-  }, [user, courseFilter, moduleFilter, leadSourceFilter, createdStartDate, createdEndDate])
+  }, [user, courseFilter, moduleFilter, leadSourceFilter, createdStartDate, createdEndDate, tagFilter])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -198,6 +201,8 @@ export default function TelecallerQualifiedLeadsPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <TagFilter value={tagFilter} onChange={setTagFilter} />
 
               <CreatedDateFilter
                 startDate={createdStartDate}

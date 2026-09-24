@@ -28,6 +28,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { PageSkeleton } from "@/components/ui/loading-skeletons"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
+import { TagFilter } from "@/components/tag-filter"
 
 export default function TelecallerPaymentPendingPage() {
   const { user } = useAuth()
@@ -38,6 +39,7 @@ export default function TelecallerPaymentPendingPage() {
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
+  const [tagFilter, setTagFilter] = useState<string>("")
 
   const [enquiries, setEnquiries] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
@@ -68,6 +70,7 @@ export default function TelecallerPaymentPendingPage() {
       if (moduleFilter !== "all") params.module = moduleFilter
       if (createdStartDate) params.start_date = createdStartDate
       if (createdEndDate) params.end_date = createdEndDate
+      if (tagFilter) params.tags = tagFilter
 
       const data = await conversionApi.getConvertedEnquiries(params)
       setEnquiries(data)
@@ -123,7 +126,7 @@ export default function TelecallerPaymentPendingPage() {
     if (user) {
       fetchEnquiries()
     }
-  }, [user, courseFilter, moduleFilter, createdStartDate, createdEndDate])
+  }, [user, courseFilter, moduleFilter, createdStartDate, createdEndDate, tagFilter])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -191,6 +194,8 @@ export default function TelecallerPaymentPendingPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <TagFilter value={tagFilter} onChange={setTagFilter} />
 
               <CreatedDateFilter
                 startDate={createdStartDate}
