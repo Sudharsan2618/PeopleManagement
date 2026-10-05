@@ -8,6 +8,7 @@ from models.schemas import (
     TelecallerAssignmentCount,
 )
 from services.assignment_service import AssignmentService
+from utils.cache import invalidate_prospect_cache
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
 
@@ -45,6 +46,7 @@ def bulk_create_assignments(payload: BulkAssignmentCreate):
             assigned_date=payload.assigned_date,
             dashboard=payload.dashboard,
         )
+        invalidate_prospect_cache()
         return {"message": "Assignments created successfully", "assigned_count": assigned_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -99,6 +101,7 @@ def create_assignment(assignment: ProspectAssignmentCreate):
             assigned_date=assignment.assigned_date,
             dashboard=assignment.dashboard
         )
+        invalidate_prospect_cache()
         return AssignmentService.get_assignment_by_id(assignment_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -112,6 +115,7 @@ def bulk_unassign_prospects(prospect_ids: List[int] = Body(...)):
 
     try:
         updated_count = AssignmentService.bulk_unassign_prospects(prospect_ids)
+        invalidate_prospect_cache()
         return {"message": "Assignments cleared successfully", "updated_count": updated_count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -126,6 +130,7 @@ def delete_assignment(assignment_id: int):
     
     try:
         AssignmentService.delete_assignment(assignment_id)
+        invalidate_prospect_cache()
         return {"message": "Assignment deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

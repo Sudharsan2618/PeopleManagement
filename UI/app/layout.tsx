@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { IBM_Plex_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth-context'
+import { QueryProvider } from '@/lib/query-client'
 import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
@@ -27,10 +28,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${ibmPlexSans.variable} bg-background`}>
       <body className="font-sans antialiased">
-        <AuthProvider>
-            {children}
-          <Toaster />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+              {children}
+            <Toaster />
+          </AuthProvider>
+        </QueryProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

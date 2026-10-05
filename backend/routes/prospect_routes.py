@@ -10,6 +10,7 @@ from models.schemas import (
 )
 from services.prospect_service import ProspectService
 from services.activity_service import ActivityService
+from utils.cache import cached_route, invalidate_prospect_cache
 
 router = APIRouter(prefix="/prospects", tags=["prospects"])
 
@@ -25,6 +26,7 @@ def get_all_prospects():
 
 
 @router.get("/list", response_model=PaginatedProspects)
+@cached_route(namespace="prospects_list", ttl_seconds=180)
 def list_prospects(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=200),
@@ -117,6 +119,7 @@ def list_prospect_ids(
 
 
 @router.get("/distinct-lead-sources", response_model=List[str])
+@cached_route(namespace="prospects_distinct_lead_sources", ttl_seconds=180)
 def get_distinct_lead_sources():
     """Distinct lead_source values for filter dropdowns."""
     try:
@@ -126,6 +129,7 @@ def get_distinct_lead_sources():
 
 
 @router.get("/distinct-lead-types", response_model=List[str])
+@cached_route(namespace="prospects_distinct_lead_types", ttl_seconds=180)
 def get_distinct_lead_types():
     """Distinct lead_type values for filter dropdowns."""
     try:
@@ -135,6 +139,7 @@ def get_distinct_lead_types():
 
 
 @router.get("/distinct-tags", response_model=List[str])
+@cached_route(namespace="prospects_distinct_tags", ttl_seconds=180)
 def get_distinct_tags():
     """Distinct prospect tags for tag filter dropdowns."""
     try:
@@ -144,6 +149,7 @@ def get_distinct_tags():
 
 
 @router.get("/distinct-course-interests", response_model=List[str])
+@cached_route(namespace="prospects_distinct_courses", ttl_seconds=180)
 def get_distinct_course_interests():
     """Distinct course_interest values for course filter dropdowns."""
     try:
@@ -153,6 +159,7 @@ def get_distinct_course_interests():
 
 
 @router.get("/distinct-statuses", response_model=List[str])
+@cached_route(namespace="prospects_distinct_statuses", ttl_seconds=180)
 def get_distinct_statuses():
     """Distinct status values for status filter dropdowns."""
     try:
@@ -189,6 +196,7 @@ def get_activities_feed(
 
 
 @router.get("/stats", response_model=ProspectStats)
+@cached_route(namespace="prospects_stats", ttl_seconds=180)
 def get_prospect_stats():
     """Get overall prospect summary statistics (total, assigned, qualified, pending).
     Declared before /{prospect_id} so the literal path wins."""
@@ -285,6 +293,7 @@ def create_prospect(prospect: ProspectCreate):
             start_month=prospect.start_month,
             year=prospect.year
         )
+        invalidate_prospect_cache()
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -386,6 +395,7 @@ def update_prospect(prospect_id: int, prospect: ProspectUpdate):
             update_kwargs["updated_by_name"] = prospect.updated_by_name
         
         ProspectService.update_prospect(**update_kwargs)
+        invalidate_prospect_cache()
         return ProspectService.get_prospect_by_id(prospect_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -409,6 +419,7 @@ def delete_prospect(prospect_id: int):
     
     try:
         ProspectService.delete_prospect(prospect_id)
+        invalidate_prospect_cache()
         return {"message": "Prospect deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -439,6 +450,7 @@ def bulk_import_prospects(data: List[ProspectCreate], update_existing: bool = Qu
     try:
         prospects_dicts = [p.model_dump() for p in data]
         result = ProspectService.create_bulk_prospects(prospects_dicts, update_existing=update_existing)
+        invalidate_prospect_cache()
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

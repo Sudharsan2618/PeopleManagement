@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { QUERY_KEYS } from "@/lib/query-client"
 import Link from "next/link"
 import {
   Users,
@@ -155,16 +157,6 @@ export default function AdminProspectsPage() {
     lead_type: "",
     website: "",
   })
-  const [prospects, setProspects] = useState<any[]>([]) // adapted current page
-  const [total, setTotal] = useState(0)
-  const [stats, setStats] = useState({ total: 0, assigned: 0, qualified: 0, pending: 0 })
-  const [telecallers, setTelecallers] = useState<any[]>([])
-  const [courses, setCourses] = useState<any[]>([])
-  const [dynamicStatuses, setDynamicStatuses] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isFetching, setIsFetching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
   // Debounce search → the API only fires 350ms after typing stops.
   const [debouncedSearch, setDebouncedSearch] = useState("")
   useEffect(() => {
@@ -172,7 +164,16 @@ export default function AdminProspectsPage() {
     return () => clearTimeout(t)
   }, [searchQuery])
 
-  // Map the current UI filters → server query params.
+  // ── TanStack Query wiring ─────────────────────────────────────────────────
+  // Each useQuery call has its own cache slot keyed by the parameters that
+  // make its result unique.  When the user navigates away and comes back,
+  // TanStack Query serves the cached data immediately (no loading flash) and
+  // only re-fetches in the background once the staleTime (3 min) has elapsed.
+
+  const queryClient = useQueryClient()
+
+  // Build the params object that identifies which page/filter combo we're on.
+  // Memoised so stable references don't trigger extra renders.
   const buildParams = useCallback(() => {
     const p: any = { page: currentPage, pageSize: ITEMS_PER_PAGE }
     if (debouncedSearch) p.search = debouncedSearch
@@ -193,8 +194,41 @@ export default function AdminProspectsPage() {
     return p
   }, [currentPage, debouncedSearch, statusFilter, assignedFilter, courseFilter, tagFilter, createdTimeSortOrder, createdStartDate, createdEndDate])
 
-  // Convert a server list row into the UI shape the table expects, synthesizing
-  // the single-element assignment array the adapter needs from the joined cols.
+  const currentParams = buildParams()
+
+  // ── Query: paginated prospects list ────────────────────────────────────────
+  // Cache key includes every filter param — different filter = different slot.
+  const listQuery = useQuery({
+    queryKey: QUERY_KEYS.prospectsList(currentParams),
+    queryFn:  () => prospectsApi.list(currentParams),
+    // Keep showing previous-page data while the new page loads (no flicker).
+    placeholderData: (prev) => prev,
+  })
+
+  // ── Query: stats (4 summary cards) ────────────────────────────────────────
+  const statsQuery = useQuery({
+    queryKey: QUERY_KEYS.prospectsStats(),
+    queryFn:  () => prospectsApi.getStats(),
+  })
+
+  // ── Query: reference data (telecallers, courses, statuses) ────────────────
+  // This data changes very rarely so the 3-min stale window is very comfortable.
+  const refQuery = useQuery({
+    queryKey: QUERY_KEYS.prospectsRef(),
+    queryFn:  async () => {
+      const [apiUsers, apiCourses, apiCourseInterests, apiStatuses] = await Promise.all([
+        usersApi.getByRole("telecaller"),
+        coursesApi.getAll(),
+        prospectsApi.getDistinctCourseInterests(),
+        prospectsApi.getDistinctStatuses(),
+      ])
+      return { apiUsers, apiCourses, apiCourseInterests, apiStatuses }
+    },
+  })
+
+  // ── Derive UI state from query results ────────────────────────────────────
+  const requestSeq = useRef(0) // kept for API compatibility; not used by TQ
+
   const adaptRow = (row: ProspectListItem) => {
     const synthetic =
       row.assigned_to != null
@@ -206,132 +240,66 @@ export default function AdminProspectsPage() {
           }]
         : []
     const adapted = adaptApiProspectToUiProspect(row as any, synthetic as any)
-    // Ensure website and array fields are directly mapped from the list response
     adapted.website = row.website || ""
-    
-    // Parse JSON strings if needed for array fields
+
     const parseArray = (value: any): string[] => {
       if (Array.isArray(value)) return value
       if (typeof value === 'string') {
-        try {
-          return JSON.parse(value || '[]')
-        } catch {
-          return []
-        }
+        try { return JSON.parse(value || '[]') } catch { return [] }
       }
       return []
     }
-    
+
     adapted.lead_source = parseArray(row.lead_source)
-    adapted.lead_type = parseArray(row.lead_type)
-    adapted.tags = parseArray(row.tags)
+    adapted.lead_type   = parseArray(row.lead_type)
+    adapted.tags        = parseArray(row.tags)
     return adapted
   }
 
-  // Guards against out-of-order responses overwriting fresher data.
-  const requestSeq = useRef(0)
-  const fetchProspects = useCallback(async () => {
-    const seq = ++requestSeq.current
-    const res = await prospectsApi.list(buildParams())
-    if (seq !== requestSeq.current) return
-    setProspects(res.items.map(adaptRow))
-    setTotal(res.total)
-  }, [buildParams])
+  // Prospects list
+  const prospects = (listQuery.data?.items ?? []).map(adaptRow)
+  const total     = listQuery.data?.total ?? 0
 
-  const fetchStats = useCallback(async () => {
-    setStats(await prospectsApi.getStats())
-  }, [])
+  // Stats
+  const stats = statsQuery.data ?? { total: 0, assigned: 0, qualified: 0, pending: 0 }
 
-  const fetchReference = useCallback(async () => {
-    const [apiUsers, apiCourses, apiCourseInterests, apiStatuses] = await Promise.all([
-      usersApi.getByRole("telecaller"),
-      coursesApi.getAll(),
-      prospectsApi.getDistinctCourseInterests(),
-      prospectsApi.getDistinctStatuses(),
-    ])
-    setTelecallers(apiUsers.map(adaptApiUserToUiUser))
-    setCourses(apiCourses)
-    // Set courses from distinct course interests in prospects
-    if (apiCourseInterests.length > 0) {
-      setCourses(apiCourseInterests.map((course, index) => ({
-        id: index,
-        code: course,
-        name: course,
-      })))
+  // Reference data
+  const telecallers = (refQuery.data?.apiUsers ?? []).map(adaptApiUserToUiUser)
+
+  // Derive courses from distinct course interests (same logic as before)
+  const courses: any[] = (() => {
+    const interests = refQuery.data?.apiCourseInterests ?? []
+    if (interests.length > 0) {
+      return interests.map((c, i) => ({ id: i, code: c, name: c }))
     }
-    // Set statuses from distinct statuses in prospects
-    if (apiStatuses.length > 0) {
-      // Map backend statuses to UI statuses
-      const uiStatuses = apiStatuses.map(status => {
-        const statusMap: Record<string, string> = {
-          'new': 'Pending',
-          'contacted': 'InProgress',
-          'warm': 'Callback',
-          'hot': 'Qualified',
-          'visit_scheduled': 'Callback',
-          'visit_done': 'InProgress',
-          'admission_done': 'Enrolled',
-          'cold_no_response': 'DNC',
-          'cold_not_interested': 'NotInterested',
-          'lost': 'Archived',
-        }
-        return statusMap[status] || status
-      })
-      // Remove duplicates and filter out empty values
-      const uniqueUiStatuses = [...new Set(uiStatuses)].filter(s => s)
-      // Update the status filter options dynamically
-      if (uniqueUiStatuses.length > 0) {
-        // We'll use this to populate the status dropdown
-        setDynamicStatuses(uniqueUiStatuses)
-      }
-    }
-  }, [])
+    return refQuery.data?.apiCourses ?? []
+  })()
 
+  // Derive dynamic statuses (same mapping logic as before)
+  const dynamicStatuses: string[] = (() => {
+    const raw = refQuery.data?.apiStatuses ?? []
+    if (raw.length === 0) return []
+    const statusMap: Record<string, string> = {
+      'new': 'Pending', 'contacted': 'InProgress', 'warm': 'Callback',
+      'hot': 'Qualified', 'visit_scheduled': 'Callback', 'visit_done': 'InProgress',
+      'admission_done': 'Enrolled', 'cold_no_response': 'DNC',
+      'cold_not_interested': 'NotInterested', 'lost': 'Archived',
+    }
+    return [...new Set(raw.map(s => statusMap[s] || s))].filter(Boolean)
+  })()
+
+  // Loading / error states
+  const isLoading  = listQuery.isLoading || statsQuery.isLoading || refQuery.isLoading
+  const isFetching = listQuery.isFetching
+  const error      = listQuery.error?.message ?? statsQuery.error?.message ?? refQuery.error?.message ?? null
+
+  // ── Cache invalidation after mutations ────────────────────────────────────
+  // Calling this after any create/update/delete/assign triggers a background
+  // refetch of all 3 queries so the UI shows the latest data.
   const refreshAfterMutation = useCallback(async () => {
-    await Promise.all([fetchProspects(), fetchStats(), fetchReference()])
-  }, [fetchProspects, fetchStats, fetchReference])
+    await queryClient.invalidateQueries({ queryKey: ["prospects"] })
+  }, [queryClient])
 
-  // Initial load: reference data + first page + stats.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        setIsLoading(true)
-        await Promise.all([fetchReference(), fetchProspects(), fetchStats()])
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to fetch data")
-          toast({
-            title: "Error fetching prospects",
-            description: err instanceof Error ? err.message : "Please try again.",
-            variant: "destructive",
-          })
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    })()
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Refetch the page whenever paging/search/filters change (after first paint).
-  const didMount = useRef(false)
-  useEffect(() => {
-    if (!didMount.current) { didMount.current = true; return }
-    let cancelled = false
-    ;(async () => {
-      try {
-        setIsFetching(true)
-        await fetchProspects()
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to fetch data")
-      } finally {
-        if (!cancelled) setIsFetching(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [fetchProspects])
 
   // Pagination is server-driven now.
   const paginatedProspects = prospects
