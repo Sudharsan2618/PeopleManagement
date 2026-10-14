@@ -1,7 +1,5 @@
 """
-Migration: performance indexes for the paginated / server-filtered prospect
-queue used by the admin "Assign Prospects" screen (and, going forward, the
-other admin lists).
+Migration: performance indexes for prospect lists and related lookup queries.
 
 What each index backs:
   - idx_prospects_updated_at        -> default ORDER BY p.updated_at DESC
@@ -9,6 +7,8 @@ What each index backs:
   - idx_prospects_prospect_type     -> dashboard/prospect_type filtering
   - idx_assignments_prospect_latest -> the LEFT JOIN LATERAL that picks each
                                        prospect's most recent assignment
+  - idx_call_logs_prospect_course_latest -> latest per-course call status for
+                                            each prospect, without repeated scans
 
 Safe to run repeatedly: every statement uses IF NOT EXISTS.
 
@@ -21,7 +21,13 @@ from pathlib import Path
 # Add backend/ to path to import the database connection helpers
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from database.connection import execute_update_delete
+from database.connection import execute_update_delete, get_db_cursor
+
+CALL_LOG_COURSE_INDEX = (
+    "CREATE INDEX IF NOT EXISTS idx_call_logs_prospect_course_latest "
+    "ON call_logs (prospect_id, (trim(COALESCE(course_interest, ''))), called_at DESC, id DESC) "
+    "INCLUDE (status_after_call)"
+)
 
 STATEMENTS = [
     # Trigram search needs the pg_trgm extension.
@@ -52,10 +58,22 @@ STATEMENTS = [
     # Latest-assignment-per-prospect lookup (the lateral join).
     "CREATE INDEX IF NOT EXISTS idx_assignments_prospect_latest "
     "ON prospect_assignments (prospect_id, assigned_date DESC, created_at DESC)",
+
 ]
 
 
 def migrate():
+    try:
+        # Building this index can take longer than the normal per-query timeout.
+        # Keep the timeout override limited to this transaction.
+        with get_db_cursor() as cursor:
+            cursor.execute("SET LOCAL statement_timeout = 0")
+            cursor.execute(CALL_LOG_COURSE_INDEX)
+        print("SUCCESS: created idx_call_logs_prospect_course_latest")
+    except Exception as e:
+        print(f"ERROR creating idx_call_logs_prospect_course_latest\n  -> {e}")
+        raise
+
     for stmt in STATEMENTS:
         try:
             execute_update_delete(stmt)
@@ -63,6 +81,7 @@ def migrate():
         except Exception as e:
             print(f"ERROR running: {stmt}\n  -> {e}")
             raise
+
     print("\nAll performance indexes are in place.")
 
 

@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react"
 import { Calendar, ChevronDown, X } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, formatISTDateTime, parseISTDate } from "@/lib/utils"
 
 export interface CreatedDateFilterProps {
+  label?: string
+  includeTime?: boolean
   startDate?: string
   endDate?: string
   preset?: string
@@ -17,6 +19,8 @@ export interface CreatedDateFilterProps {
 }
 
 export function CreatedDateFilter({
+  label = "Created Date",
+  includeTime = false,
   startDate = "",
   endDate = "",
   preset: externalPreset,
@@ -50,10 +54,88 @@ export function CreatedDateFilter({
     return `${year}-${month}-${day}`
   }
 
+  const formatDateTimeStr = (d: Date): string => {
+    const year = d.getUTCFullYear()
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0")
+    const day = String(d.getUTCDate()).padStart(2, "0")
+    const hours = String(d.getUTCHours()).padStart(2, "0")
+    const minutes = String(d.getUTCMinutes()).padStart(2, "0")
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
+  const getISTDateParts = (date: Date) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date)
+    return Object.fromEntries(parts.map(({ type, value }) => [type, value]))
+  }
+
+  const parseDateTimeInput = (value: string) =>
+    value ? parseISTDate(`${value}:00`) : null
+
+  const getTimeParts = (value: string) => {
+    const time = value.split("T")[1] || "00:00"
+    const [rawHours, minutes] = time.split(":")
+    const hours = Number(rawHours)
+    return {
+      hour: String(hours % 12 || 12).padStart(2, "0"),
+      minute: minutes || "00",
+      period: hours >= 12 ? "PM" : "AM",
+    }
+  }
+
+  const updateDateTime = (
+    value: string,
+    setValue: (nextValue: string) => void,
+    part: "date" | "hour" | "minute" | "period",
+    nextPart: string,
+  ) => {
+    const [date = "", time = "00:00"] = value.split("T")
+    if (part === "date") {
+      setValue(nextPart ? `${nextPart}T${time}` : "")
+      return
+    }
+
+    const { hour, minute, period } = getTimeParts(value)
+    const nextHour = part === "hour" ? nextPart : hour
+    const nextMinute = part === "minute" ? nextPart : minute
+    const nextPeriod = part === "period" ? nextPart : period
+    let hours24 = Number(nextHour) % 12
+    if (nextPeriod === "PM") hours24 += 12
+    setValue(`${date}T${String(hours24).padStart(2, "0")}:${nextMinute}`)
+  }
+
+  const addPresetDays = (date: Date, days: number) => {
+    const result = new Date(date)
+    if (includeTime) {
+      result.setUTCDate(result.getUTCDate() + days)
+    } else {
+      result.setDate(result.getDate() + days)
+    }
+    return result
+  }
+
+  const formatPresetBoundary = (d: Date, endOfDay = false) => {
+    if (!includeTime) return formatDateStr(d)
+    const boundary = new Date(d)
+    boundary.setUTCHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, 0, 0)
+    return formatDateTimeStr(boundary)
+  }
+
   const handlePresetSelect = (presetKey: string) => {
     setSelectedPreset(presetKey)
-    const today = new Date()
-    const todayStr = formatDateStr(today)
+    const now = new Date()
+    const today = includeTime
+      ? (() => {
+        const parts = getISTDateParts(now)
+        return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)))
+      })()
+      : now
+    const todayStart = formatPresetBoundary(today)
+    const todayEnd = formatPresetBoundary(today, true)
 
     if (presetKey === "all") {
       setCustomStart("")
@@ -64,52 +146,52 @@ export function CreatedDateFilter({
     }
 
     if (presetKey === "today") {
-      setCustomStart(todayStr)
-      setCustomEnd(todayStr)
-      onChange(todayStr, todayStr, "today")
+      setCustomStart(todayStart)
+      setCustomEnd(todayEnd)
+      onChange(todayStart, todayEnd, "today")
       setOpen(false)
       return
     }
 
     if (presetKey === "yesterday") {
-      const y = new Date()
-      y.setDate(y.getDate() - 1)
-      const yStr = formatDateStr(y)
-      setCustomStart(yStr)
-      setCustomEnd(yStr)
-      onChange(yStr, yStr, "yesterday")
+      const y = addPresetDays(today, -1)
+      const yesterdayStart = formatPresetBoundary(y)
+      const yesterdayEnd = formatPresetBoundary(y, true)
+      setCustomStart(yesterdayStart)
+      setCustomEnd(yesterdayEnd)
+      onChange(yesterdayStart, yesterdayEnd, "yesterday")
       setOpen(false)
       return
     }
 
     if (presetKey === "last_7") {
-      const d7 = new Date()
-      d7.setDate(d7.getDate() - 6)
-      const start = formatDateStr(d7)
+      const d7 = addPresetDays(today, -6)
+      const start = formatPresetBoundary(d7)
       setCustomStart(start)
-      setCustomEnd(todayStr)
-      onChange(start, todayStr, "last_7")
+      setCustomEnd(todayEnd)
+      onChange(start, todayEnd, "last_7")
       setOpen(false)
       return
     }
 
     if (presetKey === "last_30") {
-      const d30 = new Date()
-      d30.setDate(d30.getDate() - 29)
-      const start = formatDateStr(d30)
+      const d30 = addPresetDays(today, -29)
+      const start = formatPresetBoundary(d30)
       setCustomStart(start)
-      setCustomEnd(todayStr)
-      onChange(start, todayStr, "last_30")
+      setCustomEnd(todayEnd)
+      onChange(start, todayEnd, "last_30")
       setOpen(false)
       return
     }
 
     if (presetKey === "this_month") {
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-      const start = formatDateStr(firstDay)
+      const firstDay = includeTime
+        ? new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1))
+        : new Date(today.getFullYear(), today.getMonth(), 1)
+      const start = formatPresetBoundary(firstDay)
       setCustomStart(start)
-      setCustomEnd(todayStr)
-      onChange(start, todayStr, "this_month")
+      setCustomEnd(todayEnd)
+      onChange(start, todayEnd, "this_month")
       setOpen(false)
       return
     }
@@ -143,6 +225,12 @@ export function CreatedDateFilter({
 
   const formatDisplayDate = (dStr: string) => {
     if (!dStr) return ""
+    if (includeTime && dStr.includes("T")) {
+      const date = parseDateTimeInput(dStr)
+      return date
+        ? formatISTDateTime(date, { dateStyle: "short", timeStyle: "short" })
+        : dStr
+    }
     const parts = dStr.split("-")
     if (parts.length === 3) {
       const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
@@ -151,26 +239,26 @@ export function CreatedDateFilter({
     return dStr
   }
 
-  let triggerLabel = "Created Date"
+  let triggerLabel = label
   if (selectedPreset === "today") {
-    triggerLabel = "Created: Today"
+    triggerLabel = `${label}: Today`
   } else if (selectedPreset === "yesterday") {
-    triggerLabel = "Created: Yesterday"
+    triggerLabel = `${label}: Yesterday`
   } else if (selectedPreset === "last_7") {
-    triggerLabel = "Created: Last 7 Days"
+    triggerLabel = `${label}: Last 7 Days`
   } else if (selectedPreset === "last_30") {
-    triggerLabel = "Created: Last 30 Days"
+    triggerLabel = `${label}: Last 30 Days`
   } else if (selectedPreset === "this_month") {
-    triggerLabel = "Created: This Month"
+    triggerLabel = `${label}: This Month`
   } else if (startDate || endDate) {
     if (startDate && endDate && startDate === endDate) {
-      triggerLabel = `Created: ${formatDisplayDate(startDate)}`
+      triggerLabel = `${label}: ${formatDisplayDate(startDate)}`
     } else if (startDate && endDate) {
-      triggerLabel = `Created: ${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`
+      triggerLabel = `${label}: ${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`
     } else if (startDate) {
-      triggerLabel = `Created: From ${formatDisplayDate(startDate)}`
+      triggerLabel = `${label}: From ${formatDisplayDate(startDate)}`
     } else if (endDate) {
-      triggerLabel = `Created: Up to ${formatDisplayDate(endDate)}`
+      triggerLabel = `${label}: Up to ${formatDisplayDate(endDate)}`
     }
   }
 
@@ -225,7 +313,7 @@ export function CreatedDateFilter({
         <div className="flex items-center justify-between pb-2 border-b">
           <div className="flex items-center gap-1.5 font-medium text-sm">
             <Calendar className="h-4 w-4 text-primary" />
-            <span>Filter by Created Date</span>
+            <span>Filter by {label}</span>
           </div>
           {isFiltered && (
             <button
@@ -260,32 +348,148 @@ export function CreatedDateFilter({
         {/* Custom Range Inputs */}
         <div className="space-y-3 pt-2 border-t">
           <div className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-            Custom Date Range
+            {includeTime ? "Custom Date/Time Range" : "Custom Date Range"}
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={cn("gap-2", includeTime ? "space-y-3" : "grid grid-cols-2")}>
             <div>
-              <label className="text-[11px] text-muted-foreground block mb-1">From</label>
+              <label className="text-[11px] text-muted-foreground block mb-1">{includeTime ? "From date (IST)" : "From"}</label>
               <input
                 type="date"
-                value={customStart}
+                value={includeTime ? customStart.split("T")[0] || "" : customStart}
                 onChange={(e) => {
-                  setCustomStart(e.target.value)
+                  if (includeTime) {
+                    updateDateTime(customStart, setCustomStart, "date", e.target.value)
+                  } else {
+                    setCustomStart(e.target.value)
+                  }
                   setSelectedPreset("custom")
                 }}
                 className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              {includeTime && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Hour</label>
+                    <select
+                      aria-label="From hour"
+                      value={getTimeParts(customStart).hour}
+                      disabled={!customStart}
+                      onChange={(e) => {
+                        updateDateTime(customStart, setCustomStart, "hour", e.target.value)
+                        setSelectedPreset("custom")
+                      }}
+                      className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0")).map((hour) => (
+                        <option key={hour} value={hour}>{hour}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Minute</label>
+                    <select
+                      aria-label="From minute"
+                      value={getTimeParts(customStart).minute}
+                      disabled={!customStart}
+                      onChange={(e) => {
+                        updateDateTime(customStart, setCustomStart, "minute", e.target.value)
+                        setSelectedPreset("custom")
+                      }}
+                      className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      {Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")).map((minute) => (
+                        <option key={minute} value={minute}>{minute}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">AM/PM</label>
+                    <select
+                      aria-label="From AM or PM"
+                      value={getTimeParts(customStart).period}
+                      disabled={!customStart}
+                      onChange={(e) => {
+                        updateDateTime(customStart, setCustomStart, "period", e.target.value)
+                        setSelectedPreset("custom")
+                      }}
+                      className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
-              <label className="text-[11px] text-muted-foreground block mb-1">To</label>
+              <label className="text-[11px] text-muted-foreground block mb-1">{includeTime ? "To date (IST)" : "To"}</label>
               <input
                 type="date"
-                value={customEnd}
+                value={includeTime ? customEnd.split("T")[0] || "" : customEnd}
                 onChange={(e) => {
-                  setCustomEnd(e.target.value)
+                  if (includeTime) {
+                    updateDateTime(customEnd, setCustomEnd, "date", e.target.value)
+                  } else {
+                    setCustomEnd(e.target.value)
+                  }
                   setSelectedPreset("custom")
                 }}
                 className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              {includeTime && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Hour</label>
+                    <select
+                      aria-label="To hour"
+                      value={getTimeParts(customEnd).hour}
+                      disabled={!customEnd}
+                      onChange={(e) => {
+                        updateDateTime(customEnd, setCustomEnd, "hour", e.target.value)
+                        setSelectedPreset("custom")
+                      }}
+                      className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0")).map((hour) => (
+                        <option key={hour} value={hour}>{hour}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">Minute</label>
+                    <select
+                      aria-label="To minute"
+                      value={getTimeParts(customEnd).minute}
+                      disabled={!customEnd}
+                      onChange={(e) => {
+                        updateDateTime(customEnd, setCustomEnd, "minute", e.target.value)
+                        setSelectedPreset("custom")
+                      }}
+                      className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      {Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, "0")).map((minute) => (
+                        <option key={minute} value={minute}>{minute}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-muted-foreground block mb-1">AM/PM</label>
+                    <select
+                      aria-label="To AM or PM"
+                      value={getTimeParts(customEnd).period}
+                      disabled={!customEnd}
+                      onChange={(e) => {
+                        updateDateTime(customEnd, setCustomEnd, "period", e.target.value)
+                        setSelectedPreset("custom")
+                      }}
+                      className="w-full text-xs h-8 px-2 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 pt-1">

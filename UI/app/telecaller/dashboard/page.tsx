@@ -1033,7 +1033,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 
 
-import { cn, formatCreatedDateTime } from "@/lib/utils"
+import { cn, formatCreatedDateTime, formatISTDateTime, parseISTDate } from "@/lib/utils"
 
 
 
@@ -7055,6 +7055,33 @@ const getProspectDashboard = (prospect: any, assignment: any) => {
 
 
 
+type ProspectQueueItem = {
+  id: string | number
+  lastCallAt?: string | null
+  createdAt?: string | null
+}
+
+function sortProspectsByLastCall<T extends ProspectQueueItem>(
+  rows: T[],
+  order: "asc" | "desc",
+): T[] {
+  return [...rows].sort((a, b) => {
+    const aLastCall = a.lastCallAt ? parseISTDate(a.lastCallAt).getTime() : Number.NaN
+    const bLastCall = b.lastCallAt ? parseISTDate(b.lastCallAt).getTime() : Number.NaN
+    const aHasCall = Number.isFinite(aLastCall)
+    const bHasCall = Number.isFinite(bLastCall)
+
+    if (aHasCall !== bHasCall) return aHasCall ? -1 : 1
+    if (aHasCall && bHasCall && aLastCall !== bLastCall) {
+      return order === "desc" ? bLastCall - aLastCall : aLastCall - bLastCall
+    }
+
+    const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0
+    const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0
+    return bCreated - aCreated
+  })
+}
+
 export default function TelecallerDashboard() {
 
 
@@ -7105,9 +7132,36 @@ export default function TelecallerDashboard() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [createdTimeSortOrder, setCreatedTimeSortOrder] = useState<"desc" | "asc">("desc")
+  const [lastCallSortOrder, setLastCallSortOrder] = useState<"desc" | "asc">("desc")
+  const [prospectQueueOrder, setProspectQueueOrder] = useState<string[]>([])
+  const prospectQueueOrderRef = useRef(prospectQueueOrder)
+  prospectQueueOrderRef.current = prospectQueueOrder
 
   const toggleCreatedTimeSort = () => {
-    setCreatedTimeSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+    const nextOrder = createdTimeSortOrder === "desc" ? "asc" : "desc"
+    setCreatedTimeSortOrder(nextOrder)
+    const sorted = [...prospects].sort((a, b) => {
+      const aCreated = new Date(a.createdAt).getTime()
+      const bCreated = new Date(b.createdAt).getTime()
+      if (aCreated !== bCreated) {
+        return nextOrder === "asc" ? aCreated - bCreated : bCreated - aCreated
+      }
+      if (a.callbackDateTime && !b.callbackDateTime) return -1
+      if (!a.callbackDateTime && b.callbackDateTime) return 1
+      if (a.callbackDateTime && b.callbackDateTime) {
+        return new Date(a.callbackDateTime).getTime() - new Date(b.callbackDateTime).getTime()
+      }
+      return 0
+    })
+    setProspectQueueOrder(sorted.map((prospect) => String(prospect.id)))
+  }
+
+  const toggleLastCallSort = () => {
+    const nextOrder = lastCallSortOrder === "desc" ? "asc" : "desc"
+    setLastCallSortOrder(nextOrder)
+    setProspectQueueOrder(
+      sortProspectsByLastCall(prospects, nextOrder).map((prospect) => String(prospect.id))
+    )
   }
 
 
@@ -7178,6 +7232,9 @@ export default function TelecallerDashboard() {
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
+  const [lastCallStartDate, setLastCallStartDate] = useState<string>("")
+  const [lastCallEndDate, setLastCallEndDate] = useState<string>("")
+  const [lastCallDatePreset, setLastCallDatePreset] = useState<string>("all")
 
 
 
@@ -7660,7 +7717,7 @@ export default function TelecallerDashboard() {
 
 
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (options: { preserveQueueOrder?: boolean } = {}) => {
 
 
 
@@ -9651,6 +9708,21 @@ export default function TelecallerDashboard() {
         })
       })
       setProspects(expandedProspects)
+      if (options.preserveQueueOrder && prospectQueueOrderRef.current.length > 0) {
+        const availableIds = new Set(expandedProspects.map((prospect: any) => String(prospect.id)))
+        const preservedIds = prospectQueueOrderRef.current.filter((id) => availableIds.has(id))
+        const preservedIdSet = new Set(preservedIds)
+        const newLeadIds = sortProspectsByLastCall(
+          expandedProspects.filter((prospect: any) => !preservedIdSet.has(String(prospect.id))),
+          "desc"
+        ).map((prospect: any) => String(prospect.id))
+        setProspectQueueOrder([...preservedIds, ...newLeadIds])
+      } else {
+        setLastCallSortOrder("desc")
+        setProspectQueueOrder(
+          sortProspectsByLastCall(expandedProspects, "desc").map((prospect: any) => String(prospect.id))
+        )
+      }
 
 
 
@@ -19822,278 +19894,20 @@ export default function TelecallerDashboard() {
 
 
   const sortedProspects = useMemo(() => {
+    if (prospectQueueOrder.length === 0) {
+      return sortProspectsByLastCall(prospects, lastCallSortOrder)
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    const orderIndex = new Map(prospectQueueOrder.map((id, index) => [id, index]))
     return [...prospects].sort((a, b) => {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      const aCreated = new Date(a.createdAt).getTime()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      const bCreated = new Date(b.createdAt).getTime()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      if (aCreated !== bCreated) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        return createdTimeSortOrder === "asc" ? aCreated - bCreated : bCreated - aCreated
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      if (a.callbackDateTime && !b.callbackDateTime) return -1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      if (!a.callbackDateTime && b.callbackDateTime) return 1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      if (a.callbackDateTime && b.callbackDateTime) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        return new Date(a.callbackDateTime).getTime() - new Date(b.callbackDateTime).getTime()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      const aIndex = orderIndex.get(String(a.id))
+      const bIndex = orderIndex.get(String(b.id))
+      if (aIndex !== undefined && bIndex !== undefined) return aIndex - bIndex
+      if (aIndex !== undefined) return -1
+      if (bIndex !== undefined) return 1
       return 0
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  }, [prospects, createdTimeSortOrder])
+  }, [prospects, prospectQueueOrder, lastCallSortOrder])
 
 
 
@@ -20317,55 +20131,20 @@ export default function TelecallerDashboard() {
 
 
 
+      const normalizedSearchQuery = searchQuery.toLowerCase()
+      const lastCallSearchText = prospect.lastCallAt
+        ? (() => {
+          const lastCallDate = parseISTDate(prospect.lastCallAt)
+          return Number.isNaN(lastCallDate.getTime())
+            ? prospect.lastCallAt.toLowerCase()
+            : `${prospect.lastCallAt} ${formatISTDateTime(lastCallDate, { dateStyle: "short", timeStyle: "short" })}`.toLowerCase()
+        })()
+        : ""
       const matchesSearch =
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        (prospect.name && prospect.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        (prospect.name && prospect.name.toLowerCase().includes(normalizedSearchQuery)) ||
         (prospect.mobile && prospect.mobile.includes(searchQuery)) ||
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        (prospect.lead_id && prospect.lead_id.toLowerCase().includes(searchQuery.toLowerCase()))
+        (prospect.lead_id && prospect.lead_id.toLowerCase().includes(normalizedSearchQuery)) ||
+        lastCallSearchText.includes(normalizedSearchQuery)
 
 
 
@@ -20673,6 +20452,28 @@ export default function TelecallerDashboard() {
         }
       }
 
+      let matchesLastCallDate = true
+      if (lastCallStartDate || lastCallEndDate) {
+        const raw = prospect.lastCallAt
+        if (!raw) {
+          matchesLastCallDate = false
+        } else {
+          const calledAt = parseISTDate(raw)
+          const start = lastCallStartDate ? parseISTDate(`${lastCallStartDate}:00`) : null
+          const end = lastCallEndDate ? parseISTDate(`${lastCallEndDate}:59.999`) : null
+          if (
+            Number.isNaN(calledAt.getTime()) ||
+            (start && Number.isNaN(start.getTime())) ||
+            (end && Number.isNaN(end.getTime()))
+          ) {
+            matchesLastCallDate = false
+          } else {
+            if (start && calledAt < start) matchesLastCallDate = false
+            if (end && calledAt > end) matchesLastCallDate = false
+          }
+        }
+      }
+
       // Stat card filter
 
 
@@ -20922,9 +20723,9 @@ export default function TelecallerDashboard() {
         !tagFilter ||
         (Array.isArray(prospect.tags) && prospect.tags.includes(tagFilter))
 
-      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesCreatedDate && matchesStatCard && matchesTag
+      return matchesSearch && matchesStatus && matchesCourse && matchesLeadSource && matchesLeadType && matchesCreatedDate && matchesLastCallDate && matchesStatCard && matchesTag
     })
-  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, createdStartDate, createdEndDate, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats, tagFilter])
+  }, [sortedProspects, searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, createdStartDate, createdEndDate, lastCallStartDate, lastCallEndDate, viewMode, callLogs, statCardFilter, assignments, singleDate, useSingleDate, countMode, telecallerStats, tagFilter])
 
 
 
@@ -21028,7 +20829,7 @@ export default function TelecallerDashboard() {
 
 
 
-  }, [searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, statCardFilter, createdStartDate, createdEndDate])
+  }, [searchQuery, statusFilter, courseFilter, leadSourceFilter, leadTypeFilter, statCardFilter, createdStartDate, createdEndDate, lastCallStartDate, lastCallEndDate])
 
 
 
@@ -23808,14 +23609,7 @@ export default function TelecallerDashboard() {
 
 
 
-
-
-
-
-
-
-
-      await fetchData()
+      await fetchData({ preserveQueueOrder: true })
 
 
 
@@ -24257,6 +24051,14 @@ export default function TelecallerDashboard() {
     })
   }
 
+  const formatLastCallFilterBoundary = (value: string) => {
+    if (!value) return ""
+    const date = parseISTDate(`${value}:00`)
+    return Number.isNaN(date.getTime())
+      ? value
+      : formatISTDateTime(date, { dateStyle: "short", timeStyle: "short" })
+  }
+
   const getFiltersText = () => {
     const filters = []
     if (searchQuery) filters.push(`Search: ${searchQuery}`)
@@ -24269,6 +24071,13 @@ export default function TelecallerDashboard() {
         filters.push(`Created Date: ${createdStartDate}`)
       } else {
         filters.push(`Created Date: ${createdStartDate || "Start"} to ${createdEndDate || "End"}`)
+      }
+    }
+    if (lastCallStartDate || lastCallEndDate) {
+      if (lastCallStartDate && lastCallEndDate && lastCallStartDate === lastCallEndDate) {
+        filters.push(`Last Call Date/Time: ${formatLastCallFilterBoundary(lastCallStartDate)}`)
+      } else {
+        filters.push(`Last Call Date/Time: ${formatLastCallFilterBoundary(lastCallStartDate) || "Start"} to ${formatLastCallFilterBoundary(lastCallEndDate) || "End"}`)
       }
     }
     return filters.length > 0 ? filters.join(" | ") : "No filters applied"
@@ -24700,7 +24509,7 @@ export default function TelecallerDashboard() {
 
 
 
-              onClick={fetchData}
+              onClick={() => fetchData()}
 
 
 
@@ -25938,7 +25747,7 @@ export default function TelecallerDashboard() {
 
 
 
-            <Button onClick={fetchData} variant="outline" size="sm" disabled={isLoading}>
+            <Button onClick={() => fetchData()} variant="outline" size="sm" disabled={isLoading}>
 
 
 
@@ -26641,7 +26450,7 @@ export default function TelecallerDashboard() {
                   <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      placeholder="Search by name, mobile, or lead ID..."
+                      placeholder="Search name, mobile, lead ID, or last call date/time..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 w-full sm:w-64"
@@ -27839,6 +27648,24 @@ export default function TelecallerDashboard() {
                   }}
                 />
 
+                <CreatedDateFilter
+                  label="Last Call Date/Time"
+                  includeTime
+                  startDate={lastCallStartDate}
+                  endDate={lastCallEndDate}
+                  preset={lastCallDatePreset}
+                  onChange={(start, end, preset) => {
+                    setLastCallStartDate(start)
+                    setLastCallEndDate(end)
+                    setLastCallDatePreset(preset)
+                  }}
+                  onClear={() => {
+                    setLastCallStartDate("")
+                    setLastCallEndDate("")
+                    setLastCallDatePreset("all")
+                  }}
+                />
+
                 {/* Active filter badges */}
                 {(createdStartDate || createdEndDate) && (
                   <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
@@ -27853,6 +27680,27 @@ export default function TelecallerDashboard() {
                         setCreatedStartDate("")
                         setCreatedEndDate("")
                         setCreatedDatePreset("all")
+                      }}
+                      className="hover:text-destructive cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+
+                {(lastCallStartDate || lastCallEndDate) && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+                    Last Call Date/Time: {lastCallDatePreset !== "custom" && lastCallDatePreset !== "all"
+                      ? (lastCallDatePreset === "today" ? "Today" : lastCallDatePreset === "yesterday" ? "Yesterday" : lastCallDatePreset === "last_7" ? "Last 7 Days" : lastCallDatePreset === "last_30" ? "Last 30 Days" : lastCallDatePreset === "this_month" ? "This Month" : lastCallDatePreset)
+                      : lastCallStartDate === lastCallEndDate
+                        ? formatLastCallFilterBoundary(lastCallStartDate)
+                        : `${formatLastCallFilterBoundary(lastCallStartDate) || "Start"} to ${formatLastCallFilterBoundary(lastCallEndDate) || "End"}`}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLastCallStartDate("")
+                        setLastCallEndDate("")
+                        setLastCallDatePreset("all")
                       }}
                       className="hover:text-destructive cursor-pointer"
                     >
@@ -29043,6 +28891,16 @@ export default function TelecallerDashboard() {
                               onClick={toggleCreatedTimeSort}
                               className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold focus:outline-none select-none group"
                               title={createdTimeSortOrder === "desc" ? "Sorted: Newest imported first (click for oldest)" : "Sorted: Oldest imported first (click for newest)"}
+                            >
+                              <span>{col.label}</span>
+                              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+                            </button>
+                          ) : col.key === "lastCallAt" ? (
+                            <button
+                              type="button"
+                              onClick={toggleLastCallSort}
+                              className="inline-flex items-center gap-1.5 hover:text-foreground font-semibold focus:outline-none select-none group"
+                              title={lastCallSortOrder === "desc" ? "Sorted: Most recently called first (click for oldest)" : "Sorted: Least recently called first (click for newest)"}
                             >
                               <span>{col.label}</span>
                               <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
@@ -32413,22 +32271,7 @@ export default function TelecallerDashboard() {
 
 
                                   {prospect.lastCallAt
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                    ? new Date(prospect.lastCallAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })
+                                    ? formatISTDateTime(prospect.lastCallAt, { dateStyle: "short", timeStyle: "short" })
 
 
 
@@ -37615,18 +37458,5 @@ export default function TelecallerDashboard() {
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

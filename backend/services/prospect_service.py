@@ -66,30 +66,49 @@ class ProspectService:
     def get_all_prospects() -> List[dict]:
         """Get all prospects."""
         query = """
+            WITH latest_course_calls AS MATERIALIZED (
+                SELECT DISTINCT ON (
+                           cl.prospect_id,
+                           trim(COALESCE(cl.course_interest, ''))
+                       )
+                       cl.prospect_id,
+                       trim(COALESCE(cl.course_interest, '')) AS course,
+                       cl.status_after_call
+                FROM call_logs cl
+                WHERE trim(COALESCE(cl.course_interest, '')) <> ''
+                ORDER BY
+                    cl.prospect_id,
+                    trim(COALESCE(cl.course_interest, '')),
+                    cl.called_at DESC,
+                    cl.id DESC
+            ),
+            course_statuses AS (
+                SELECT
+                    p.id AS prospect_id,
+                    json_object_agg(
+                        c.course,
+                        COALESCE(lcc.status_after_call, p.status)
+                    ) AS course_statuses
+                FROM prospects p
+                CROSS JOIN LATERAL (
+                    SELECT DISTINCT trim(c_raw) AS course
+                    FROM unnest(string_to_array(COALESCE(p.course_interest, ''), ',')) AS c_raw
+                    WHERE trim(c_raw) <> ''
+                ) c
+                LEFT JOIN latest_course_calls lcc
+                    ON lcc.prospect_id = p.id
+                   AND lcc.course = c.course
+                GROUP BY p.id
+            )
             SELECT id, name, mobile, email, location, sourced_from, status, 
                    course_interest, parent_name, department, assigned_to, closing_reason, tags,
                    lead_source, lead_type, proposed_for, alt_phone, alt_phone_2, alt_phone_3, secondary_email, alternative_email, college_name,
                    city, address, postal_code, designation,
                    created_by, created_at, updated_at, prospect_type, company, comments, follow_up_date, is_imported,
                    lead_id, website, course_fee, amount_paid, payment_status, payment_mode, payment_date, transaction_id, batch, start_month, year,
-                   -- Compute per-course latest status for multi-course prospects.
-                   (
-                       SELECT json_object_agg(c.course, COALESCE(cs.status_after_call, p.status))
-                       FROM (
-                           SELECT DISTINCT trim(c_raw) AS course
-                           FROM unnest(string_to_array(COALESCE(p.course_interest, ''), ',')) AS c_raw
-                           WHERE trim(c_raw) <> ''
-                       ) c
-                       LEFT JOIN LATERAL (
-                           SELECT cl2.status_after_call
-                           FROM call_logs cl2
-                           WHERE cl2.prospect_id = p.id
-                             AND trim(COALESCE(cl2.course_interest, '')) = c.course
-                           ORDER BY cl2.called_at DESC, cl2.id DESC
-                           LIMIT 1
-                       ) cs ON TRUE
-                   ) AS course_statuses
+                   cs.course_statuses
             FROM prospects p
+            LEFT JOIN course_statuses cs ON cs.prospect_id = p.id
             ORDER BY updated_at DESC
         """
         return execute_query(query, fetch="all")

@@ -119,7 +119,7 @@ import {
 
 
 
-import { cn, formatCreatedDateTime } from "@/lib/utils"
+import { cn, formatCreatedDateTime, formatISTDateTime, parseISTDate } from "@/lib/utils"
 import { CreatedDateFilter } from "@/components/ui/created-date-filter"
 
 
@@ -708,11 +708,9 @@ export default function CallHistoryPage() {
 
 
 
-  const [dateFilter, setDateFilter] = useState("all")
-
-
-
-  const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" })
+  const [callDateStart, setCallDateStart] = useState("")
+  const [callDateEnd, setCallDateEnd] = useState("")
+  const [callDatePreset, setCallDatePreset] = useState("all")
   const [createdStartDate, setCreatedStartDate] = useState<string>("")
   const [createdEndDate, setCreatedEndDate] = useState<string>("")
   const [createdDatePreset, setCreatedDatePreset] = useState<string>("all")
@@ -4254,28 +4252,20 @@ This is an automated report from the TATTI CRM System.
         }
       }
 
-      // Date filter
-      let matchesDate = true
-      if (dateFilter !== "all") {
-        const logDate = new Date(log.called_at)
-        const now = new Date()
-        const todayStr = now.toLocaleDateString("en-CA")
-        const logDateStr = logDate.toLocaleDateString("en-CA")
-        if (dateFilter === "today") {
-          matchesDate = logDateStr === todayStr
-        } else if (dateFilter === "week") {
-          const weekAgo = new Date(now)
-          weekAgo.setDate(weekAgo.getDate() - 7)
-          matchesDate = logDate >= weekAgo
-        } else if (dateFilter === "month") {
-          const monthAgo = new Date(now)
-          monthAgo.setMonth(monthAgo.getMonth() - 1)
-          matchesDate = logDate >= monthAgo
-        } else if (dateFilter === "custom" && customDateRange.from && customDateRange.to) {
-          const fromDate = new Date(customDateRange.from)
-          const toDate = new Date(customDateRange.to)
-          toDate.setHours(23, 59, 59, 999)
-          matchesDate = logDate >= fromDate && logDate <= toDate
+      let matchesCallDate = true
+      if (callDateStart || callDateEnd) {
+        const calledAt = parseISTDate(log.called_at)
+        const start = callDateStart ? parseISTDate(`${callDateStart}:00`) : null
+        const end = callDateEnd ? parseISTDate(`${callDateEnd}:59.999`) : null
+        if (
+          Number.isNaN(calledAt.getTime()) ||
+          (start && Number.isNaN(start.getTime())) ||
+          (end && Number.isNaN(end.getTime()))
+        ) {
+          matchesCallDate = false
+        } else {
+          if (start && calledAt < start) matchesCallDate = false
+          if (end && calledAt > end) matchesCallDate = false
         }
       }
 
@@ -4300,7 +4290,7 @@ This is an automated report from the TATTI CRM System.
         }
       }
 
-      return matchesSearch && matchesDate && matchesCreatedDate
+      return matchesSearch && matchesCallDate && matchesCreatedDate
     })
 
     const expandedLogs = baseLogs.flatMap((log) =>
@@ -4314,7 +4304,7 @@ This is an automated report from the TATTI CRM System.
       if (courseFilter.includes("Unknown") && (!courseName || courseName === "Unknown")) return true
       return courseFilter.includes(courseName)
     })
-  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange, createdStartDate, createdEndDate])
+  }, [filteredCallLogsForStats, prospects, searchQuery, outcomeFilter, callDateStart, callDateEnd, courseFilter, createdStartDate, createdEndDate])
 
   const paginatedLogs = useMemo(() => {
 
@@ -4371,7 +4361,7 @@ This is an automated report from the TATTI CRM System.
 
     setCurrentPage(1)
 
-  }, [searchQuery, outcomeFilter, dateFilter, courseFilter, customDateRange, createdStartDate, createdEndDate])
+  }, [searchQuery, outcomeFilter, callDateStart, callDateEnd, courseFilter, createdStartDate, createdEndDate])
 
 
 
@@ -5648,86 +5638,23 @@ This is an automated report from the TATTI CRM System.
 
 
 
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-
-
-
-                <SelectTrigger className="w-full sm:w-36 h-9 rounded-lg">
-
-
-
-                  <SelectValue placeholder="Date" />
-
-
-
-                </SelectTrigger>
-
-
-
-                <SelectContent>
-
-
-
-                  <SelectItem value="all">All Time</SelectItem>
-
-
-
-                  <SelectItem value="today">Today</SelectItem>
-
-
-
-                  <SelectItem value="week">This Week</SelectItem>
-
-
-
-                  <SelectItem value="month">This Month</SelectItem>
-
-
-
-                  <SelectItem value="custom">Custom Range</SelectItem>
-
-
-
-                </SelectContent>
-
-
-
-              </Select>
-
-
-
-              {dateFilter === "custom" && (
-
-                <div className="flex items-center gap-2">
-
-                  <Input
-
-                    type="date"
-
-                    value={customDateRange.from}
-
-                    onChange={(e) => setCustomDateRange({ ...customDateRange, from: e.target.value })}
-
-                    className="w-36 h-9 rounded-lg"
-
-                  />
-
-                  <span className="text-muted-foreground">to</span>
-
-                  <Input
-
-                    type="date"
-
-                    value={customDateRange.to}
-
-                    onChange={(e) => setCustomDateRange({ ...customDateRange, to: e.target.value })}
-
-                    className="w-36 h-9 rounded-lg"
-
-                  />
-
-                </div>
-              )}
+              <CreatedDateFilter
+                label="Call Date/Time"
+                includeTime
+                startDate={callDateStart}
+                endDate={callDateEnd}
+                preset={callDatePreset}
+                onChange={(start, end, preset) => {
+                  setCallDateStart(start)
+                  setCallDateEnd(end)
+                  setCallDatePreset(preset)
+                }}
+                onClear={() => {
+                  setCallDateStart("")
+                  setCallDateEnd("")
+                  setCallDatePreset("all")
+                }}
+              />
 
               <CreatedDateFilter
                 startDate={createdStartDate}
@@ -6456,14 +6383,9 @@ This is an automated report from the TATTI CRM System.
 
 
 
-                          {new Date(log.called_at).toLocaleString("en-IN", {
-
-
-
+                          {formatISTDateTime(log.called_at, {
+                            timeZone: "Asia/Kolkata",
                             day: '2-digit',
-
-
-
                             month: 'short',
 
 
@@ -7066,10 +6988,6 @@ This is an automated report from the TATTI CRM System.
 
 
 }
-
-
-
-
 
 
 
