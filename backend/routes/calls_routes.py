@@ -27,6 +27,19 @@ class CallEndRequest(BaseModel):
     duration: Optional[int] = 0
 
 
+@router.get("/health")
+async def calls_health():
+    """
+    Diagnostic endpoint — confirms whether Exotel telephony is configured on
+    this running instance, without leaking any secret values.
+
+    Returns booleans for each required field plus a masked CallerId / subdomain,
+    so you can verify from the deployed URL that the env vars took effect and
+    that calls will run in LIVE mode (not simulation).
+    """
+    return ExotelService.config_status()
+
+
 @router.post("/start")
 async def start_call(req: CallStartRequest):
     """
