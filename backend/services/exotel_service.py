@@ -39,6 +39,39 @@ class ExotelService:
         settings = Settings()
         return bool(settings.EXOTEL_SID and settings.EXOTEL_API_KEY and settings.EXOTEL_API_TOKEN and settings.EXOTEL_CALLER_ID)
 
+    @staticmethod
+    def _mask(value: str) -> str:
+        """Mask a secret/number for safe display (keeps last 4 chars)."""
+        if not value:
+            return ""
+        v = str(value)
+        return ("•" * max(0, len(v) - 4)) + v[-4:] if len(v) > 4 else "••••"
+
+    @classmethod
+    def config_status(cls) -> Dict[str, Any]:
+        """Report whether Exotel is wired up, without exposing secret values.
+
+        `mode` is 'live' when every required field is present (real calls will be
+        placed) or 'simulation' otherwise (calls return fake SIDs and never dial).
+        """
+        settings = Settings()
+        configured = cls.is_configured()
+        return {
+            "configured": configured,
+            "mode": "live" if configured else "simulation",
+            "fields": {
+                "EXOTEL_SID": bool(settings.EXOTEL_SID),
+                "EXOTEL_API_KEY": bool(settings.EXOTEL_API_KEY),
+                "EXOTEL_API_TOKEN": bool(settings.EXOTEL_API_TOKEN),
+                "EXOTEL_CALLER_ID": bool(settings.EXOTEL_CALLER_ID),
+                "EXOTEL_CALLBACK_URL": bool(settings.EXOTEL_CALLBACK_URL),
+            },
+            "subdomain": settings.EXOTEL_SUBDOMAIN,
+            "caller_id_masked": cls._mask(settings.EXOTEL_CALLER_ID),
+            "callback_url": settings.EXOTEL_CALLBACK_URL,
+            "active_sessions": len(_call_sessions),
+        }
+
     @classmethod
     async def initiate_call(
         cls,
