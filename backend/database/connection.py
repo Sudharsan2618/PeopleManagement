@@ -18,13 +18,23 @@ log = logging.getLogger(__name__)
 
 # Database configuration.
 # NOTE for Cloud Run: connect_timeout covers TCP only — DNS+SSL handshake can
-# stall indefinitely without sslmode set. Render.com PG requires SSL, so we
-# pin sslmode=require for deterministic, fast handshake on cold start.
+# stall indefinitely without sslmode set. Neon requires SSL, so we pin
+# sslmode=require for a deterministic, fast handshake on cold start.
+#
+# Session GUCs (timezone, statement_timeout, idle_in_transaction_session_timeout)
+# are intentionally NOT passed as libpq startup `options` here. Neon's connection
+# pooler (PgBouncer — the "-pooler" host used in production) rejects
+# statement_timeout / idle_in_transaction_session_timeout as startup parameters
+# ("unsupported startup parameter in options"), which breaks every connection.
+# Instead they are enforced as SERVER-SIDE defaults on the database, which apply
+# to every new session on BOTH the pooled and the direct endpoint:
+#     ALTER DATABASE "peopleManagement" SET statement_timeout = '15000';
+#     ALTER DATABASE "peopleManagement" SET idle_in_transaction_session_timeout = '15000';
+#     ALTER DATABASE "peopleManagement" SET timezone = 'Asia/Kolkata';
 # statement_timeout caps any single query so a runaway can't pin a pooled
 # connection forever; idle_in_transaction_session_timeout reclaims connections
-# left mid-transaction. Both are server-side, in ms, and overridable via env.
-STATEMENT_TIMEOUT_MS = os.getenv("DB_STATEMENT_TIMEOUT_MS", "15000")
-IDLE_TX_TIMEOUT_MS = os.getenv("DB_IDLE_TX_TIMEOUT_MS", "15000")
+# left mid-transaction. Set DB_OPTIONS only for extra, pooler-safe GUCs if needed.
+DB_OPTIONS = os.getenv("DB_OPTIONS", "").strip()
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
@@ -34,11 +44,6 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD", "password"),
     "connect_timeout": 30,
     "sslmode": os.getenv("DB_SSLMODE", "require"),
-    "options": (
-        "-c timezone=Asia/Kolkata "
-        f"-c statement_timeout={STATEMENT_TIMEOUT_MS} "
-        f"-c idle_in_transaction_session_timeout={IDLE_TX_TIMEOUT_MS}"
-    ),
     # TCP keepalives so idle sockets to the remote DB don't silently go stale
     # between requests (complements the liveness check in getconn()).
     "keepalives": 1,
@@ -46,6 +51,11 @@ DB_CONFIG = {
     "keepalives_interval": 10,
     "keepalives_count": 3,
 }
+
+# Only attach libpq `options` when explicitly provided (pooler-safe GUCs only);
+# Neon's pooler rejects startup options such as statement_timeout.
+if DB_OPTIONS:
+    DB_CONFIG["options"] = DB_OPTIONS
 
 log.info("🔧 PostgreSQL config loaded: host=%s db=%s user=%s sslmode=%s", DB_CONFIG["host"], DB_CONFIG["database"], DB_CONFIG["user"], DB_CONFIG["sslmode"])
 

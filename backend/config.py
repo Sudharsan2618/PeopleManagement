@@ -15,10 +15,11 @@ class Settings(BaseSettings):
     )
 
     # PostgreSQL (CEMS Core) — Neon (migrated from Render Oct 2026).
-    # Direct (unpooled) endpoint — the app runs its own psycopg2 pool and sets
-    # statement_timeout/idle_in_transaction_session_timeout via startup options,
-    # which Neon's PgBouncer pooler (-pooler host) rejects. Use the direct host.
-    DB_HOST            : str = "ep-holy-flower-aox5u4ew.c-2.ap-southeast-1.aws.neon.tech"
+    # Pooler endpoint (-pooler host), recommended for Cloud Run's serverless
+    # scale. Session GUCs (statement_timeout, idle_in_transaction_session_timeout,
+    # timezone) are NOT sent as startup options — the pooler rejects them — they
+    # are set as server-side defaults on the DB (see database/connection.py).
+    DB_HOST            : str = "ep-holy-flower-aox5u4ew-pooler.c-2.ap-southeast-1.aws.neon.tech"
     DB_PORT            : str = "5432"
     DB_NAME            : str = "peopleManagement"
     DB_USER            : str = "neondb_owner"
