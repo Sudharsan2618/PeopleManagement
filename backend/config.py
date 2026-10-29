@@ -14,12 +14,15 @@ class Settings(BaseSettings):
         extra="ignore"  # Allow extra fields in .env without crashing
     )
 
-    # PostgreSQL (CEMS Core)
-    DB_HOST            : str = "dpg-ctlpcvrqf0us7389o680-a.singapore-postgres.render.com"
+    # PostgreSQL (CEMS Core) — Neon (migrated from Render Oct 2026).
+    # Direct (unpooled) endpoint — the app runs its own psycopg2 pool and sets
+    # statement_timeout/idle_in_transaction_session_timeout via startup options,
+    # which Neon's PgBouncer pooler (-pooler host) rejects. Use the direct host.
+    DB_HOST            : str = "ep-holy-flower-aox5u4ew.c-2.ap-southeast-1.aws.neon.tech"
     DB_PORT            : str = "5432"
     DB_NAME            : str = "peopleManagement"
-    DB_USER            : str = "admin"
-    DB_PASSWORD        : str = "kbOZpYYBZLfoeQRlBFajBfxi8A2JwPwk"
+    DB_USER            : str = "neondb_owner"
+    DB_PASSWORD        : str = "npg_DP8caWlmBu2h"
 
     # WhatsApp / Meta
     WHATSAPP_ACCESS_TOKEN       : str
